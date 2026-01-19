@@ -2,95 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Financial Ledger Design System
+   Professional, clean aesthetic inspired by modern accounting tools
+   All colors are HSL
 */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core surfaces - Clean white with subtle warmth */
+    --background: 210 20% 98%;
+    --foreground: 220 30% 15%;
 
+    /* Cards - Pure white for data display */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 30% 15%;
 
+    /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 30% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Professional navy blue */
+    --primary: 220 65% 30%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Soft slate */
+    --secondary: 215 20% 93%;
+    --secondary-foreground: 220 30% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted surfaces */
+    --muted: 215 15% 95%;
+    --muted-foreground: 215 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Warm amber for highlights */
+    --accent: 38 95% 50%;
+    --accent-foreground: 220 30% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status colors */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 70% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 30% 15%;
+    --info: 200 95% 45%;
+    --info-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Invoice status colors */
+    --status-draft: 215 15% 60%;
+    --status-pending: 38 92% 50%;
+    --status-approved: 200 95% 45%;
+    --status-paid: 142 70% 40%;
+    --status-overdue: 0 72% 51%;
+
+    /* Borders and inputs */
+    --border: 215 25% 88%;
+    --input: 215 25% 88%;
+    --ring: 220 65% 30%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Sidebar - Darker for contrast */
+    --sidebar-background: 220 30% 15%;
+    --sidebar-foreground: 215 20% 85%;
+    --sidebar-primary: 38 95% 50%;
+    --sidebar-primary-foreground: 220 30% 15%;
+    --sidebar-accent: 220 30% 22%;
+    --sidebar-accent-foreground: 215 20% 90%;
+    --sidebar-border: 220 25% 25%;
+    --sidebar-ring: 38 95% 50%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Chart colors for reports */
+    --chart-1: 220 65% 30%;
+    --chart-2: 38 95% 50%;
+    --chart-3: 142 70% 40%;
+    --chart-4: 200 95% 45%;
+    --chart-5: 280 60% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 220 30% 8%;
+    --foreground: 215 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 30% 12%;
+    --card-foreground: 215 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 30% 12%;
+    --popover-foreground: 215 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 215 80% 60%;
+    --primary-foreground: 220 30% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 25% 20%;
+    --secondary-foreground: 215 20% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 25% 18%;
+    --muted-foreground: 215 15% 55%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 38 95% 55%;
+    --accent-foreground: 220 30% 8%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 220 30% 8%;
+    --info: 200 95% 50%;
+    --info-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --status-draft: 215 15% 50%;
+    --status-pending: 38 92% 55%;
+    --status-approved: 200 95% 50%;
+    --status-paid: 142 70% 45%;
+    --status-overdue: 0 62% 50%;
+
+    --border: 220 25% 22%;
+    --input: 220 25% 22%;
+    --ring: 215 80% 60%;
+
+    --sidebar-background: 220 30% 6%;
+    --sidebar-foreground: 215 20% 85%;
+    --sidebar-primary: 38 95% 55%;
+    --sidebar-primary-foreground: 220 30% 8%;
+    --sidebar-accent: 220 30% 15%;
+    --sidebar-accent-foreground: 215 20% 90%;
+    --sidebar-border: 220 25% 15%;
+    --sidebar-ring: 38 95% 55%;
+
+    --chart-1: 215 80% 60%;
+    --chart-2: 38 95% 55%;
+    --chart-3: 142 70% 45%;
+    --chart-4: 200 95% 50%;
+    --chart-5: 280 60% 55%;
   }
 }
 
@@ -99,7 +144,96 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Monospace for numbers/amounts */
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Data table styling */
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table th {
+    @apply text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4;
+  }
+
+  .data-table td {
+    @apply py-3 px-4 border-b border-border;
+  }
+
+  .data-table tr:hover td {
+    @apply bg-muted/50;
+  }
+
+  /* Amount formatting */
+  .amount {
+    @apply font-mono tabular-nums text-right;
+  }
+
+  .amount-positive {
+    @apply text-success;
+  }
+
+  .amount-negative {
+    @apply text-destructive;
+  }
+
+  /* Status badges */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .status-draft {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .status-pending {
+    @apply bg-warning/15 text-warning;
+  }
+
+  .status-approved {
+    @apply bg-info/15 text-info;
+  }
+
+  .status-paid {
+    @apply bg-success/15 text-success;
+  }
+
+  .status-overdue {
+    @apply bg-destructive/15 text-destructive;
+  }
+
+  /* Stat cards */
+  .stat-card {
+    @apply bg-card rounded-xl border border-border p-6 shadow-sm transition-shadow hover:shadow-md;
+  }
+
+  .stat-value {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  .stat-label {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* Sidebar nav items */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors;
+  }
+
+  .nav-item.active {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium;
   }
 }

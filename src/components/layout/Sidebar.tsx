@@ -1,0 +1,101 @@
+import { Link, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  FileText,
+  PlusCircle,
+  BarChart3,
+  Settings,
+  LogOut,
+  Receipt,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const navigation = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Invoices", href: "/invoices", icon: FileText },
+  { name: "New Invoice", href: "/invoices/new", icon: PlusCircle },
+  { name: "Reports", href: "/reports", icon: BarChart3 },
+];
+
+const secondaryNav = [
+  { name: "Settings", href: "/settings", icon: Settings },
+];
+
+export function Sidebar() {
+  const location = useLocation();
+
+  const isActive = (href: string) => {
+    if (href === "/") return location.pathname === "/";
+    return location.pathname.startsWith(href);
+  };
+
+  return (
+    <aside className="flex h-screen w-64 flex-col bg-sidebar">
+      {/* Logo */}
+      <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
+          <Receipt className="h-5 w-5 text-sidebar-primary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-base font-semibold text-sidebar-foreground">Expense Ledger</h1>
+          <p className="text-xs text-sidebar-foreground/60">Invoice Tracker</p>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1 px-3 py-4">
+        <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+          Menu
+        </div>
+        {navigation.map((item) => (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "nav-item",
+              isActive(item.href) && "active"
+            )}
+          >
+            <item.icon className="h-5 w-5" />
+            {item.name}
+          </Link>
+        ))}
+
+        <div className="my-4 border-t border-sidebar-border" />
+
+        <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+          System
+        </div>
+        {secondaryNav.map((item) => (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "nav-item",
+              isActive(item.href) && "active"
+            )}
+          >
+            <item.icon className="h-5 w-5" />
+            {item.name}
+          </Link>
+        ))}
+      </nav>
+
+      {/* User section */}
+      <div className="border-t border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
+            JD
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">John Doe</p>
+            <p className="text-xs text-sidebar-foreground/60">Administrator</p>
+          </div>
+          <button className="p-2 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}

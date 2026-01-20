@@ -290,14 +290,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 <SelectTrigger className={cn(requires1180Fields && !form.cbs_code && 'border-destructive')}>
                   <SelectValue placeholder={loadingCbsCodes ? 'Loading...' : 'Select CBS code'}>
                     {form.cbs_code && (() => {
-                      const selected = cbsCodes.find(c => c.code === form.cbs_code);
+                      const selected = cbsCodes.find(c => String(c.code) === form.cbs_code);
                       return selected ? `${selected.code} - ${getDescription(selected)}` : form.cbs_code;
                     })()}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-popover max-h-[300px] z-50">
                   {cbsCodes.map((cbs: CbsCode) => (
-                    <SelectItem key={cbs.code} value={cbs.code}>
+                    <SelectItem key={cbs.code} value={String(cbs.code)}>
                       {cbs.code} - {getDescription(cbs)}
                     </SelectItem>
                   ))}

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { InvoiceTable, Invoice } from "@/components/invoices/InvoiceTable";
-import { mockInvoices } from "@/data/mockInvoices";
+import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,104 +13,187 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle, Filter, Download, Search } from "lucide-react";
-import { InvoiceStatus } from "@/components/invoices/StatusBadge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { PlusCircle, Filter, Search, ArrowRightLeft } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/formatters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Invoices() {
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  const { getDescription } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [accountFilter, setAccountFilter] = useState<string>("all");
+  const [currencyFilter, setCurrencyFilter] = useState<string>("all");
 
-  // Get unique categories
-  const categories = [...new Set(mockInvoices.map((i) => i.category))];
-
-  // Filter invoices
-  const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch =
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-    const matchesCategory = categoryFilter === "all" || invoice.category === categoryFilter;
-
-    return matchesSearch && matchesStatus && matchesCategory;
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['invoiceTransactions'],
+    queryFn: () => fetchRecentTransactions(100),
   });
 
-  const handleDelete = (id: string) => {
-    setInvoices(invoices.filter((i) => i.id !== id));
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: fetchAccounts,
+  });
+
+  // Get unique accounts from transactions
+  const usedAccounts = [...new Set(transactions.map((t) => t.master_acct_code).filter(Boolean))];
+
+  // Filter transactions
+  const filteredTransactions = transactions.filter((tx) => {
+    const matchesSearch =
+      tx.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tx.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tx.master_acct_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tx.document?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesAccount = accountFilter === "all" || tx.master_acct_code === accountFilter;
+    const matchesCurrency = currencyFilter === "all" || tx.currency === currencyFilter;
+
+    return matchesSearch && matchesAccount && matchesCurrency;
+  });
+
+  const getAccountDescription = (code: string) => {
+    const account = accounts.find(a => a.code === code);
+    return account ? getDescription(account) : code;
   };
 
   return (
     <MainLayout 
       title="Invoices" 
-      subtitle={`${filteredInvoices.length} invoices found`}
+      subtitle={`${filteredTransactions.length} transactions found`}
       actions={
         <Button asChild>
-          <Link to="/invoices/new">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Invoice
+          <Link to="/transactions">
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
+            New Transaction
           </Link>
         </Button>
       }
     >
       <div className="space-y-6 animate-fade-in">
         {/* Filters */}
-        <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by invoice #, vendor, or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by description, name, account, or document..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {/* Account Filter */}
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Account" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  {usedAccounts.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Currency Filter */}
+              <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">All Currencies</SelectItem>
+                  <SelectItem value="DOP">DOP</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Category Filter */}
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Export */}
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          </div>
-        </div>
-
-        {/* Invoice Table */}
-        <InvoiceTable invoices={filteredInvoices} onDelete={handleDelete} />
+        {/* Transactions Table */}
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Currency</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">ITBIS</TableHead>
+                    <TableHead>Pay Method</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    [...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        {[...Array(9)].map((_, j) => (
+                          <TableCell key={j}>
+                            <Skeleton className="h-4 w-full" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : filteredTransactions.length > 0 ? (
+                    filteredTransactions.map((tx, index) => (
+                      <TableRow key={tx.id || index}>
+                        <TableCell className="font-mono text-sm">
+                          {formatDate(tx.transaction_date)}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                              {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {tx.description || "-"}
+                        </TableCell>
+                        <TableCell>{tx.name || "-"}</TableCell>
+                        <TableCell>{tx.currency}</TableCell>
+                        <TableCell className="text-right font-mono font-medium">
+                          {formatCurrency(tx.amount, tx.currency)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
+                        </TableCell>
+                        <TableCell>{tx.pay_method || "-"}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        No transactions found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

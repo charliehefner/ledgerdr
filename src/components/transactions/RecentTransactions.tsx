@@ -45,6 +45,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Status</TableHead>
                 <TableHead className="w-24">Date</TableHead>
                 <TableHead className="w-48">Account</TableHead>
                 <TableHead className="min-w-[200px]">Description</TableHead>
@@ -57,7 +58,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    {[...Array(6)].map((_, j) => (
+                    {[...Array(7)].map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -66,7 +67,21 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 ))
               ) : transactions.length > 0 ? (
                 transactions.map((tx, index) => (
-                  <TableRow key={tx.id || index}>
+                  <TableRow 
+                    key={tx.id || index}
+                    className={tx.is_void ? "opacity-50 bg-muted/30" : ""}
+                  >
+                    <TableCell>
+                      {tx.is_void ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-destructive/10 text-destructive">
+                          VOID
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                          Active
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       {formatDate(tx.transaction_date)}
                     </TableCell>
@@ -92,7 +107,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No transactions yet. Add your first transaction above.
                   </TableCell>
                 </TableRow>

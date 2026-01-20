@@ -41,6 +41,7 @@ export interface Transaction {
   comments?: string;
   exchange_rate?: number;
   is_internal: boolean;
+  is_void?: boolean;
 }
 
 export async function fetchAccounts(): Promise<Account[]> {
@@ -93,4 +94,13 @@ export async function deleteTransaction(id: string | number): Promise<void> {
     headers,
   });
   if (!response.ok) throw new Error('Failed to delete transaction');
+}
+
+export async function voidTransaction(id: string | number): Promise<Transaction> {
+  const response = await fetch(`${API_BASE_URL}/transactions/${id}/void`, {
+    method: 'POST',
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to void transaction');
+  return response.json();
 }

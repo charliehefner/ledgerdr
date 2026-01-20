@@ -91,10 +91,10 @@ export default function Reports() {
 
   // Account/CBS pair totals
   const accountCbsPairs = [
-    { label: "Account 4030 / CBS 13", accounts: ["4030"], cbs: "13" },
-    { label: "Account 4040 / CBS 14", accounts: ["4040"], cbs: "14" },
-    { label: "Accounts 4080, 4082 / CBS 12", accounts: ["4080", "4082"], cbs: "12" },
-    { label: "Accounts 4050, 4060 / CBS 15", accounts: ["4050", "4060"], cbs: "15" },
+    { label: "Agrochemicals", accounts: ["4030"], cbs: "13" },
+    { label: "Diesel", accounts: ["4040"], cbs: "14" },
+    { label: "Fertilizer", accounts: ["4080", "4082"], cbs: "12" },
+    { label: "Oil and Grease", accounts: ["4050", "4060"], cbs: "15" },
   ];
 
   const accountCbsTotals = accountCbsPairs.map(pair => {

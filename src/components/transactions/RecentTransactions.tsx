@@ -20,10 +20,13 @@ interface RecentTransactionsProps {
 export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const { getDescription } = useLanguage();
 
-  const { data: transactions = [], isLoading } = useQuery({
+  const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['recentTransactions', refreshKey],
     queryFn: () => fetchRecentTransactions(20),
   });
+
+  // Filter out voided transactions
+  const transactions = allTransactions.filter(tx => !tx.is_void);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],

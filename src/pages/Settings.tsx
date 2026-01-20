@@ -17,12 +17,20 @@ import {
   Bell, 
   Palette,
   Save,
-  TestTube
+  TestTube,
+  Lock
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
+  const { canModifySettings } = useAuth();
+
   const handleTestConnection = () => {
+    if (!canModifySettings) {
+      toast.error("You don't have permission to modify settings");
+      return;
+    }
     toast.info("Testing database connection...");
     setTimeout(() => {
       toast.success("Database connection successful!");
@@ -30,12 +38,29 @@ export default function Settings() {
   };
 
   const handleSave = () => {
+    if (!canModifySettings) {
+      toast.error("You don't have permission to modify settings");
+      return;
+    }
     toast.success("Settings saved successfully!");
   };
 
   return (
     <MainLayout title="Settings" subtitle="Configure your application">
       <div className="max-w-3xl space-y-8 animate-fade-in">
+        {/* Access Restriction Banner */}
+        {!canModifySettings && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-center gap-3">
+            <Lock className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="font-medium text-destructive">View Only Access</p>
+              <p className="text-sm text-muted-foreground">
+                You can view settings but cannot make structural changes. Contact an admin for modifications.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Database Connection */}
         <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
@@ -54,28 +79,28 @@ export default function Settings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="host">Host</Label>
-                <Input id="host" placeholder="db.example.com" />
+                <Input id="host" placeholder="db.example.com" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="port">Port</Label>
-                <Input id="port" placeholder="5432" />
+                <Input id="port" placeholder="5432" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="database">Database Name</Label>
-                <Input id="database" placeholder="expense_ledger" />
+                <Input id="database" placeholder="expense_ledger" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="user">Username</Label>
-                <Input id="user" placeholder="db_user" />
+                <Input id="user" placeholder="db_user" disabled={!canModifySettings} />
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="••••••••" />
+                <Input id="password" type="password" placeholder="••••••••" disabled={!canModifySettings} />
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={handleTestConnection}>
+              <Button variant="outline" onClick={handleTestConnection} disabled={!canModifySettings}>
                 <TestTube className="mr-2 h-4 w-4" />
                 Test Connection
               </Button>
@@ -104,7 +129,7 @@ export default function Settings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="currency">Default Currency</Label>
-                <Select defaultValue="usd">
+                <Select defaultValue="usd" disabled={!canModifySettings}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -118,7 +143,7 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dateFormat">Date Format</Label>
-                <Select defaultValue="mdy">
+                <Select defaultValue="mdy" disabled={!canModifySettings}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -138,6 +163,7 @@ export default function Settings() {
                 type="number" 
                 placeholder="8.0" 
                 className="w-32"
+                disabled={!canModifySettings}
               />
             </div>
           </div>
@@ -165,7 +191,7 @@ export default function Settings() {
                   Get notified when invoices become overdue
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch defaultChecked disabled={!canModifySettings} />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -175,7 +201,7 @@ export default function Settings() {
                   Remind about upcoming due dates
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch defaultChecked disabled={!canModifySettings} />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -185,7 +211,7 @@ export default function Settings() {
                   Receive a weekly expense summary email
                 </p>
               </div>
-              <Switch />
+              <Switch disabled={!canModifySettings} />
             </div>
           </div>
         </div>
@@ -206,12 +232,14 @@ export default function Settings() {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end">
-          <Button size="lg" onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" />
-            Save Settings
-          </Button>
-        </div>
+        {canModifySettings && (
+          <div className="flex justify-end">
+            <Button size="lg" onClick={handleSave}>
+              <Save className="mr-2 h-4 w-4" />
+              Save Settings
+            </Button>
+          </div>
+        )}
       </div>
     </MainLayout>
   );

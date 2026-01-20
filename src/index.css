@@ -63,15 +63,16 @@
 
     --radius: 0.5rem;
 
-    /* Sidebar - Darker for contrast */
-    --sidebar-background: 220 30% 15%;
-    --sidebar-foreground: 215 20% 85%;
+    /* Sidebar - Light blue professional look */
+    --sidebar-background: 210 40% 55%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 38 95% 50%;
     --sidebar-primary-foreground: 220 30% 15%;
-    --sidebar-accent: 220 30% 22%;
-    --sidebar-accent-foreground: 215 20% 90%;
-    --sidebar-border: 220 25% 25%;
+    --sidebar-accent: 210 45% 48%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 35% 50%;
     --sidebar-ring: 38 95% 50%;
+    --sidebar-logo-background: 0 0% 100%;
 
     /* Chart colors for reports */
     --chart-1: 220 65% 30%;

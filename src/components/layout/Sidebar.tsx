@@ -34,7 +34,7 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col bg-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
+      <div className="flex h-16 items-center justify-center border-b border-sidebar-border bg-white/95 mx-3 mt-3 rounded-lg">
         <img src={jordLogo} alt="Jord Dominicana" className="h-8" />
       </div>
 

@@ -28,9 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Transaction, updateTransaction, deleteTransaction, fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
+import { Transaction, updateTransaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
 import { toast } from "sonner";
-import { Trash2, Loader2 } from "lucide-react";
+import { Ban, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface EditTransactionDialogProps {
@@ -46,7 +46,7 @@ export function EditTransactionDialog({
 }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
   const { getDescription } = useLanguage();
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   
   const [formData, setFormData] = useState({
     transaction_date: "",
@@ -112,18 +112,18 @@ export function EditTransactionDialog({
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteTransaction(transaction!.id!),
+  const voidMutation = useMutation({
+    mutationFn: () => voidTransaction(transaction!.id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
-      toast.success("Transaction deleted successfully");
+      toast.success("Transaction voided successfully");
       onOpenChange(false);
-      setShowDeleteConfirm(false);
+      setShowVoidConfirm(false);
     },
     onError: (error) => {
-      toast.error(`Failed to delete: ${error.message}`);
+      toast.error(`Failed to void: ${error.message}`);
     },
   });
 
@@ -351,15 +351,20 @@ export function EditTransactionDialog({
             </div>
 
             <DialogFooter className="flex justify-between">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
+              {!transaction.is_void && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setShowVoidConfirm(true)}
+                  disabled={voidMutation.isPending}
+                >
+                  <Ban className="mr-2 h-4 w-4" />
+                  Void
+                </Button>
+              )}
+              {transaction.is_void && (
+                <span className="text-muted-foreground italic">This transaction is voided</span>
+              )}
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -368,7 +373,7 @@ export function EditTransactionDialog({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
+                <Button type="submit" disabled={updateMutation.isPending || transaction.is_void}>
                   {updateMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
@@ -380,27 +385,26 @@ export function EditTransactionDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog open={showVoidConfirm} onOpenChange={setShowVoidConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
+            <AlertDialogTitle>Void Transaction?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete
-              transaction #{transaction.id}.
+              This will mark transaction #{transaction.id} as voided. The transaction will remain in records but be marked as void.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => voidMutation.mutate()}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? (
+              {voidMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Ban className="mr-2 h-4 w-4" />
               )}
-              Delete
+              Void
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

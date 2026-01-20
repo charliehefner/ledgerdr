@@ -1,7 +1,18 @@
 import { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, LogOut, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -11,6 +22,14 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
@@ -42,6 +61,30 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
               <Bell className="h-5 w-5" />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
             </button>
+
+            {/* User menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="capitalize">{user?.username}</span>
+                  <span className="text-xs text-muted-foreground capitalize">({user?.role})</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="capitalize">{user?.username}</span>
+                    <span className="text-xs font-normal text-muted-foreground capitalize">{user?.role}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {actions}
           </div>

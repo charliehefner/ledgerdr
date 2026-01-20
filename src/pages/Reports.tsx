@@ -398,36 +398,42 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[1200px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">ITBIS</TableHead>
-                    <TableHead>Pay Method</TableHead>
+                    <TableHead className="w-24">Date</TableHead>
+                    <TableHead className="w-20">Account</TableHead>
+                    <TableHead className="w-20">Project</TableHead>
+                    <TableHead className="w-24">CBS Code</TableHead>
+                    <TableHead className="min-w-[180px]">Description</TableHead>
+                    <TableHead className="w-20">Currency</TableHead>
+                    <TableHead className="w-28 text-right">Amount</TableHead>
+                    <TableHead className="w-24 text-right">ITBIS</TableHead>
+                    <TableHead className="w-24">Pay Method</TableHead>
+                    <TableHead className="w-28">Document</TableHead>
+                    <TableHead className="min-w-[120px]">Name</TableHead>
+                    <TableHead className="w-20 text-right">Ex. Rate</TableHead>
+                    <TableHead className="w-16 text-center">Internal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                         Loading transactions...
                       </TableCell>
                     </TableRow>
                   ) : transactions.length > 0 ? (
                     transactions.map((tx, index) => (
                       <TableRow key={tx.id || index}>
-                        <TableCell className="font-mono text-sm">
+                        <TableCell className="font-mono text-sm whitespace-nowrap">
                           {formatDate(tx.transaction_date)}
                         </TableCell>
-                        <TableCell className="font-mono">{tx.master_acct_code}</TableCell>
+                        <TableCell className="font-mono">{tx.master_acct_code || "-"}</TableCell>
                         <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">
-                          {tx.description}
+                        <TableCell className="font-mono">{tx.cbs_code || "-"}</TableCell>
+                        <TableCell className="max-w-[180px] truncate">
+                          {tx.description || "-"}
                         </TableCell>
                         <TableCell>{tx.currency}</TableCell>
                         <TableCell className="text-right font-mono font-medium">
@@ -437,11 +443,19 @@ export default function Reports() {
                           {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
                         </TableCell>
                         <TableCell>{tx.pay_method || "-"}</TableCell>
+                        <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
+                        <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {tx.exchange_rate || "-"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {tx.is_internal ? "Yes" : "No"}
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                         No transactions found
                       </TableCell>
                     </TableRow>

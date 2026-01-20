@@ -262,9 +262,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 onValueChange={(value) => updateField('project_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.project_code && 'border-destructive')}>
-                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select project'} />
+                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select project'}>
+                    {form.project_code && (() => {
+                      const selected = projects.find(p => p.code === form.project_code);
+                      return selected ? `${selected.code} - ${getDescription(selected)}` : form.project_code;
+                    })()}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-popover max-h-[300px]">
+                <SelectContent className="bg-popover max-h-[300px] z-50">
                   {projects.map((project: Project) => (
                     <SelectItem key={project.code} value={project.code}>
                       {project.code} - {getDescription(project)}
@@ -283,9 +288,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 onValueChange={(value) => updateField('cbs_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.cbs_code && 'border-destructive')}>
-                  <SelectValue placeholder={loadingCbsCodes ? 'Loading...' : 'Select CBS code'} />
+                  <SelectValue placeholder={loadingCbsCodes ? 'Loading...' : 'Select CBS code'}>
+                    {form.cbs_code && (() => {
+                      const selected = cbsCodes.find(c => c.code === form.cbs_code);
+                      return selected ? `${selected.code} - ${getDescription(selected)}` : form.cbs_code;
+                    })()}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-popover max-h-[300px]">
+                <SelectContent className="bg-popover max-h-[300px] z-50">
                   {cbsCodes.map((cbs: CbsCode) => (
                     <SelectItem key={cbs.code} value={cbs.code}>
                       {cbs.code} - {getDescription(cbs)}

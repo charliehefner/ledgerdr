@@ -8,6 +8,7 @@ import {
   fetchAccounts,
   fetchProjects,
   fetchCbsCodes,
+  fetchRecentTransactions,
   createTransaction,
   Account,
   Project,
@@ -77,7 +78,33 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryFn: fetchCbsCodes,
   });
 
+  const { data: existingTransactions = [] } = useQuery({
+    queryKey: ['existingTransactions'],
+    queryFn: () => fetchRecentTransactions(500),
+  });
+
   const requires1180Fields = form.master_acct_code === '1180';
+
+  const checkForDuplicate = () => {
+    if (!form.transaction_date || !form.master_acct_code || !form.amount) {
+      return false;
+    }
+    
+    const formDate = form.transaction_date.toISOString().split('T')[0];
+    const formAmount = parseFloat(form.amount);
+    const formName = (form.name || '').trim().toLowerCase();
+    
+    return existingTransactions.some(tx => {
+      const txDate = tx.transaction_date?.split('T')[0];
+      const txName = (tx.name || '').trim().toLowerCase();
+      return (
+        txDate === formDate &&
+        tx.master_acct_code === form.master_acct_code &&
+        tx.amount === formAmount &&
+        txName === formName
+      );
+    });
+  };
 
   const isValid = () => {
     if (!form.transaction_date || !form.master_acct_code || !form.description || !form.amount) {
@@ -98,6 +125,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       } else {
         toast.error('Please fill in all required fields');
       }
+      return;
+    }
+
+    if (checkForDuplicate()) {
+      toast.error('Duplicate transaction detected. A transaction with the same date, account, amount, and name already exists.');
       return;
     }
 

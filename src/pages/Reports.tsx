@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { fetchRecentTransactions, Transaction } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Download, FileSpreadsheet, FileText, Calendar } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +49,8 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const COLORS = [
   "hsl(220, 65%, 30%)",
@@ -53,8 +61,15 @@ const COLORS = [
   "hsl(15, 85%, 55%)",
 ];
 
+type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "description" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "exchange_rate" | "is_internal";
+type SortDirection = "asc" | "desc" | null;
+
 export default function Reports() {
   const [limit, setLimit] = useState("50");
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['reportTransactions', limit],
@@ -62,7 +77,85 @@ export default function Reports() {
   });
 
   // Exclude voided transactions from reports
-  const transactions = allTransactions.filter((tx) => !tx.is_void);
+  const nonVoidedTransactions = allTransactions.filter((tx) => !tx.is_void);
+
+  // Filter by date range
+  const transactions = useMemo(() => {
+    let filtered = nonVoidedTransactions;
+    
+    if (startDate) {
+      filtered = filtered.filter(tx => {
+        const txDate = new Date(tx.transaction_date);
+        return txDate >= startDate;
+      });
+    }
+    
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(tx => {
+        const txDate = new Date(tx.transaction_date);
+        return txDate <= endOfDay;
+      });
+    }
+    
+    return filtered;
+  }, [nonVoidedTransactions, startDate, endDate]);
+
+  // Sorted transactions
+  const sortedTransactions = useMemo(() => {
+    if (!sortKey || !sortDirection) return transactions;
+    
+    return [...transactions].sort((a, b) => {
+      let aVal: any = a[sortKey];
+      let bVal: any = b[sortKey];
+      
+      // Handle nulls
+      if (aVal == null) aVal = "";
+      if (bVal == null) bVal = "";
+      
+      // Handle numbers
+      if (sortKey === "amount" || sortKey === "itbis" || sortKey === "exchange_rate") {
+        aVal = parseFloat(String(aVal)) || 0;
+        bVal = parseFloat(String(bVal)) || 0;
+      }
+      
+      // Handle booleans
+      if (sortKey === "is_internal") {
+        aVal = aVal ? 1 : 0;
+        bVal = bVal ? 1 : 0;
+      }
+      
+      // Handle dates
+      if (sortKey === "transaction_date") {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [transactions, sortKey, sortDirection]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") setSortDirection("desc");
+      else if (sortDirection === "desc") {
+        setSortKey(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortKey !== columnKey) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    if (sortDirection === "asc") return <ArrowUp className="ml-1 h-3 w-3" />;
+    return <ArrowDown className="ml-1 h-3 w-3" />;
+  };
 
   // Calculate totals by currency (parse amount as it comes as string from API)
   const totalsByCurrency = transactions.reduce((acc, tx) => {
@@ -124,14 +217,22 @@ export default function Reports() {
     };
   });
 
+  const formatExcelDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   const exportToExcel = () => {
-    if (transactions.length === 0) {
+    if (sortedTransactions.length === 0) {
       toast.error("No transactions to export");
       return;
     }
 
-    const exportData = transactions.map(tx => ({
-      "Date": tx.transaction_date,
+    const exportData = sortedTransactions.map(tx => ({
+      "Date": formatExcelDate(tx.transaction_date),
       "Account": tx.master_acct_code,
       "Project": tx.project_code || "",
       "CBS Code": tx.cbs_code || "",
@@ -161,7 +262,7 @@ export default function Reports() {
   };
 
   const exportToPDF = () => {
-    if (transactions.length === 0) {
+    if (sortedTransactions.length === 0) {
       toast.error("No transactions to export");
       return;
     }
@@ -173,7 +274,7 @@ export default function Reports() {
     doc.text("Transaction Report", 14, 22);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-    doc.text(`Total Transactions: ${transactions.length}`, 14, 36);
+    doc.text(`Total Transactions: ${sortedTransactions.length}`, 14, 36);
 
     // Summary by currency
     let yPos = 44;
@@ -183,8 +284,8 @@ export default function Reports() {
     });
 
     // Table
-    const tableData = transactions.map(tx => [
-      tx.transaction_date,
+    const tableData = sortedTransactions.map(tx => [
+      formatExcelDate(tx.transaction_date),
       tx.master_acct_code,
       tx.description?.substring(0, 30) || "",
       tx.currency,
@@ -210,10 +311,50 @@ export default function Reports() {
       title="Reports"
       subtitle="Transaction analytics and exports"
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Date Range Filters */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate ? format(startDate, "dd/MM/yyyy") : "Start Date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={setStartDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {endDate ? format(endDate, "dd/MM/yyyy") : "End Date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={endDate}
+                onSelect={setEndDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          {(startDate || endDate) && (
+            <Button variant="ghost" size="sm" onClick={() => { setStartDate(undefined); setEndDate(undefined); }}>
+              Clear
+            </Button>
+          )}
           <Select value={limit} onValueChange={setLimit}>
             <SelectTrigger className="w-[140px]">
-              <Calendar className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover">
@@ -401,19 +542,45 @@ export default function Reports() {
               <Table className="min-w-[1200px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-24">Date</TableHead>
-                    <TableHead className="w-20">Account</TableHead>
-                    <TableHead className="w-20">Project</TableHead>
-                    <TableHead className="w-24">CBS Code</TableHead>
-                    <TableHead className="min-w-[180px]">Description</TableHead>
-                    <TableHead className="w-20">Currency</TableHead>
-                    <TableHead className="w-28 text-right">Amount</TableHead>
-                    <TableHead className="w-24 text-right">ITBIS</TableHead>
-                    <TableHead className="w-24">Pay Method</TableHead>
-                    <TableHead className="w-28">Document</TableHead>
-                    <TableHead className="min-w-[120px]">Name</TableHead>
-                    <TableHead className="w-20 text-right">Ex. Rate</TableHead>
-                    <TableHead className="w-16 text-center">Internal</TableHead>
+                    <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transaction_date")}>
+                      <div className="flex items-center">Date<SortIcon columnKey="transaction_date" /></div>
+                    </TableHead>
+                    <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("master_acct_code")}>
+                      <div className="flex items-center">Account<SortIcon columnKey="master_acct_code" /></div>
+                    </TableHead>
+                    <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("project_code")}>
+                      <div className="flex items-center">Project<SortIcon columnKey="project_code" /></div>
+                    </TableHead>
+                    <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("cbs_code")}>
+                      <div className="flex items-center">CBS Code<SortIcon columnKey="cbs_code" /></div>
+                    </TableHead>
+                    <TableHead className="min-w-[180px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
+                      <div className="flex items-center">Description<SortIcon columnKey="description" /></div>
+                    </TableHead>
+                    <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("currency")}>
+                      <div className="flex items-center">Currency<SortIcon columnKey="currency" /></div>
+                    </TableHead>
+                    <TableHead className="w-28 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <div className="flex items-center justify-end">Amount<SortIcon columnKey="amount" /></div>
+                    </TableHead>
+                    <TableHead className="w-24 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itbis")}>
+                      <div className="flex items-center justify-end">ITBIS<SortIcon columnKey="itbis" /></div>
+                    </TableHead>
+                    <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("pay_method")}>
+                      <div className="flex items-center">Pay Method<SortIcon columnKey="pay_method" /></div>
+                    </TableHead>
+                    <TableHead className="w-28 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("document")}>
+                      <div className="flex items-center">Document<SortIcon columnKey="document" /></div>
+                    </TableHead>
+                    <TableHead className="min-w-[120px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                      <div className="flex items-center">Name<SortIcon columnKey="name" /></div>
+                    </TableHead>
+                    <TableHead className="w-20 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("exchange_rate")}>
+                      <div className="flex items-center justify-end">Ex. Rate<SortIcon columnKey="exchange_rate" /></div>
+                    </TableHead>
+                    <TableHead className="w-16 text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
+                      <div className="flex items-center justify-center">Internal<SortIcon columnKey="is_internal" /></div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -423,8 +590,8 @@ export default function Reports() {
                         Loading transactions...
                       </TableCell>
                     </TableRow>
-                  ) : transactions.length > 0 ? (
-                    transactions.map((tx, index) => (
+                  ) : sortedTransactions.length > 0 ? (
+                    sortedTransactions.map((tx, index) => (
                       <TableRow key={tx.id || index}>
                         <TableCell className="font-mono text-sm whitespace-nowrap">
                           {formatDate(tx.transaction_date)}

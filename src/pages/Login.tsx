@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock, User } from "lucide-react";
+import jordLogo from "@/assets/jord-logo.png";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -36,10 +37,12 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">Dallas Agro</CardTitle>
+          <img 
+            src={jordLogo} 
+            alt="Jord Dominicana" 
+            className="mx-auto h-12 mb-4"
+          />
+          <CardTitle className="text-2xl">Jord Dominicana</CardTitle>
           <CardDescription>Sign in to access the expense tracker</CardDescription>
         </CardHeader>
         <CardContent>

@@ -6,10 +6,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Receipt,
   ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import jordLogo from "@/assets/jord-logo.png";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -35,13 +35,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 flex-col bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Receipt className="h-5 w-5 text-sidebar-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-base font-semibold text-sidebar-foreground">Expense Ledger</h1>
-          <p className="text-xs text-sidebar-foreground/60">Invoice Tracker</p>
-        </div>
+        <img src={jordLogo} alt="Jord Dominicana" className="h-8" />
       </div>
 
       {/* Navigation */}

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { 
@@ -7,9 +9,24 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { mockInvoices, categories } from "@/data/mockInvoices";
-import { formatCurrency } from "@/lib/formatters";
-import { Download, FileText, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { fetchRecentTransactions, Transaction } from "@/lib/api";
+import { formatCurrency, formatDate } from "@/lib/formatters";
+import { Download, FileSpreadsheet, FileText, Calendar } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   BarChart,
   Bar,
@@ -18,40 +35,14 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
-
-// Calculate category totals
-const categoryTotals = categories.map((category) => {
-  const invoices = mockInvoices.filter((i) => i.category === category);
-  const total = invoices.reduce((sum, i) => sum + i.total, 0);
-  return { category, total, count: invoices.length };
-}).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
-
-// Monthly trend data
-const monthlyTrend = [
-  { month: "Sep", expenses: 15200, invoices: 12 },
-  { month: "Oct", expenses: 18500, invoices: 15 },
-  { month: "Nov", expenses: 22300, invoices: 18 },
-  { month: "Dec", expenses: 19800, invoices: 14 },
-  { month: "Jan", expenses: 29402, invoices: 8 },
-];
-
-// Top vendors
-const vendorTotals = mockInvoices.reduce((acc, invoice) => {
-  acc[invoice.vendor] = (acc[invoice.vendor] || 0) + invoice.total;
-  return acc;
-}, {} as Record<string, number>);
-
-const topVendors = Object.entries(vendorTotals)
-  .map(([vendor, total]) => ({ vendor, total }))
-  .sort((a, b) => b.total - a.total)
-  .slice(0, 5);
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 
 const COLORS = [
   "hsl(220, 65%, 30%)",
@@ -63,179 +54,335 @@ const COLORS = [
 ];
 
 export default function Reports() {
-  const totalExpenses = mockInvoices.reduce((sum, i) => sum + i.total, 0);
-  const paidExpenses = mockInvoices
-    .filter((i) => i.status === "paid")
-    .reduce((sum, i) => sum + i.total, 0);
+  const [limit, setLimit] = useState("50");
+
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['reportTransactions', limit],
+    queryFn: () => fetchRecentTransactions(parseInt(limit)),
+  });
+
+  // Calculate totals by currency
+  const totalsByCurrency = transactions.reduce((acc, tx) => {
+    acc[tx.currency] = (acc[tx.currency] || 0) + tx.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Calculate totals by account
+  const totalsByAccount = transactions.reduce((acc, tx) => {
+    acc[tx.master_acct_code] = (acc[tx.master_acct_code] || 0) + tx.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const accountChartData = Object.entries(totalsByAccount)
+    .map(([account, total]) => ({ account, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+
+  // Calculate totals by payment method
+  const totalsByPayMethod = transactions.reduce((acc, tx) => {
+    const method = tx.pay_method || 'Unknown';
+    acc[method] = (acc[method] || 0) + tx.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const payMethodChartData = Object.entries(totalsByPayMethod)
+    .map(([method, total]) => ({ method, total }))
+    .sort((a, b) => b.total - a.total);
+
+  const exportToExcel = () => {
+    if (transactions.length === 0) {
+      toast.error("No transactions to export");
+      return;
+    }
+
+    const exportData = transactions.map(tx => ({
+      "Date": tx.transaction_date,
+      "Account": tx.master_acct_code,
+      "Project": tx.project_code || "",
+      "CBS Code": tx.cbs_code || "",
+      "Description": tx.description,
+      "Currency": tx.currency,
+      "Amount": tx.amount,
+      "ITBIS": tx.itbis || "",
+      "Payment Method": tx.pay_method || "",
+      "Document": tx.document || "",
+      "Name": tx.name || "",
+      "Exchange Rate": tx.exchange_rate || "",
+      "Internal": tx.is_internal ? "Yes" : "No",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    
+    // Auto-size columns
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+      wch: Math.max(key.length, 15)
+    }));
+    ws['!cols'] = colWidths;
+
+    XLSX.writeFile(wb, `transactions_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Excel report exported successfully");
+  };
+
+  const exportToPDF = () => {
+    if (transactions.length === 0) {
+      toast.error("No transactions to export");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text("Transaction Report", 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Total Transactions: ${transactions.length}`, 14, 36);
+
+    // Summary by currency
+    let yPos = 44;
+    Object.entries(totalsByCurrency).forEach(([currency, total]) => {
+      doc.text(`Total ${currency}: ${formatCurrency(total, currency)}`, 14, yPos);
+      yPos += 6;
+    });
+
+    // Table
+    const tableData = transactions.map(tx => [
+      tx.transaction_date,
+      tx.master_acct_code,
+      tx.description?.substring(0, 30) || "",
+      tx.currency,
+      tx.amount.toFixed(2),
+      tx.itbis?.toFixed(2) || "-",
+      tx.pay_method || "-",
+    ]);
+
+    autoTable(doc, {
+      head: [["Date", "Account", "Description", "Currency", "Amount", "ITBIS", "Pay Method"]],
+      body: tableData,
+      startY: yPos + 4,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [30, 58, 138] },
+    });
+
+    doc.save(`transactions_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("PDF report exported successfully");
+  };
 
   return (
     <MainLayout
       title="Reports"
-      subtitle="Expense analytics and insights"
+      subtitle="Transaction analytics and exports"
       actions={
-        <Button>
-          <Download className="mr-2 h-4 w-4" />
-          Export Report
-        </Button>
+        <div className="flex gap-2">
+          <Select value={limit} onValueChange={setLimit}>
+            <SelectTrigger className="w-[140px]">
+              <Calendar className="mr-2 h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover">
+              <SelectItem value="20">Last 20</SelectItem>
+              <SelectItem value="50">Last 50</SelectItem>
+              <SelectItem value="100">Last 100</SelectItem>
+              <SelectItem value="500">Last 500</SelectItem>
+            </SelectContent>
+          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-popover">
+              <DropdownMenuItem onClick={exportToExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export to Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export to PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       }
     >
       <div className="space-y-6 animate-fade-in">
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-sm text-muted-foreground">Total Expenses</p>
-            <p className="text-2xl font-semibold font-mono mt-1">
-              {formatCurrency(totalExpenses)}
-            </p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-sm text-muted-foreground">Paid</p>
-            <p className="text-2xl font-semibold font-mono mt-1 text-success">
-              {formatCurrency(paidExpenses)}
-            </p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-sm text-muted-foreground">Outstanding</p>
-            <p className="text-2xl font-semibold font-mono mt-1 text-warning">
-              {formatCurrency(totalExpenses - paidExpenses)}
-            </p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-sm text-muted-foreground">Avg per Invoice</p>
-            <p className="text-2xl font-semibold font-mono mt-1">
-              {formatCurrency(totalExpenses / mockInvoices.length)}
-            </p>
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground">Total Transactions</p>
+              <p className="text-2xl font-semibold font-mono mt-1">
+                {transactions.length}
+              </p>
+            </CardContent>
+          </Card>
+          {Object.entries(totalsByCurrency).map(([currency, total]) => (
+            <Card key={currency}>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Total {currency}</p>
+                <p className="text-2xl font-semibold font-mono mt-1">
+                  {formatCurrency(total, currency)}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Charts Row */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Expense Trend */}
-          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="font-semibold">Expense Trend</h3>
-                <p className="text-sm text-muted-foreground">Monthly overview</p>
-              </div>
-              <Select defaultValue="6m">
-                <SelectTrigger className="w-[120px]">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3m">3 Months</SelectItem>
-                  <SelectItem value="6m">6 Months</SelectItem>
-                  <SelectItem value="1y">1 Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="month" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickFormatter={(value) => `$${value / 1000}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value: number) => [formatCurrency(value), "Expenses"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="expenses"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {/* By Account */}
+          <Card>
+            <CardHeader>
+              <CardTitle>By Account</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {accountChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={accountChartData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      type="number"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="account"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      width={80}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [value.toFixed(2), "Total"]}
+                    />
+                    <Bar 
+                      dataKey="total" 
+                      fill="hsl(var(--primary))" 
+                      radius={[0, 4, 4, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                  No data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* By Category */}
-          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-            <div className="mb-6">
-              <h3 className="font-semibold">Expenses by Category</h3>
-              <p className="text-sm text-muted-foreground">Distribution breakdown</p>
-            </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={categoryTotals}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="total"
-                  nameKey="category"
-                  label={({ category, percent }) => 
-                    `${category.split(" ")[0]} (${(percent * 100).toFixed(0)}%)`
-                  }
-                  labelLine={false}
-                >
-                  {categoryTotals.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value: number) => [formatCurrency(value), "Total"]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {/* By Payment Method */}
+          <Card>
+            <CardHeader>
+              <CardTitle>By Payment Method</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {payMethodChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={payMethodChartData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="total"
+                      nameKey="method"
+                      label={({ method, percent }) => 
+                        `${method} (${(percent * 100).toFixed(0)}%)`
+                      }
+                      labelLine={false}
+                    >
+                      {payMethodChartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [value.toFixed(2), "Total"]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                  No data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Top Vendors */}
-        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-          <div className="mb-6">
-            <h3 className="font-semibold">Top Vendors</h3>
-            <p className="text-sm text-muted-foreground">Highest expense suppliers</p>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topVendors} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                type="number"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickFormatter={(value) => `$${value / 1000}k`}
-              />
-              <YAxis
-                type="category"
-                dataKey="vendor"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                width={150}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-                formatter={(value: number) => [formatCurrency(value), "Total"]}
-              />
-              <Bar 
-                dataKey="total" 
-                fill="hsl(var(--accent))" 
-                radius={[0, 4, 4, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Transactions Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Transaction Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Currency</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">ITBIS</TableHead>
+                    <TableHead>Pay Method</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Loading transactions...
+                      </TableCell>
+                    </TableRow>
+                  ) : transactions.length > 0 ? (
+                    transactions.map((tx, index) => (
+                      <TableRow key={tx.id || index}>
+                        <TableCell className="font-mono text-sm">
+                          {formatDate(tx.transaction_date)}
+                        </TableCell>
+                        <TableCell className="font-mono">{tx.master_acct_code}</TableCell>
+                        <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {tx.description}
+                        </TableCell>
+                        <TableCell>{tx.currency}</TableCell>
+                        <TableCell className="text-right font-mono font-medium">
+                          {formatCurrency(tx.amount, tx.currency)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
+                        </TableCell>
+                        <TableCell>{tx.pay_method || "-"}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No transactions found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

@@ -47,11 +47,14 @@ export default function Invoices() {
     queryFn: fetchAccounts,
   });
 
-  // Get unique accounts from transactions
-  const usedAccounts = [...new Set(transactions.map((t) => t.master_acct_code).filter(Boolean))];
+  // Get unique accounts from active transactions only
+  const activeForAccounts = transactions.filter((t) => !t.is_void);
+  const usedAccounts = [...new Set(activeForAccounts.map((t) => t.master_acct_code).filter(Boolean))];
 
-  // Filter transactions
-  const filteredTransactions = transactions.filter((tx) => {
+  // Filter transactions (exclude voided)
+  const activeTransactions = transactions.filter((tx) => !tx.is_void);
+
+  const filteredTransactions = activeTransactions.filter((tx) => {
     const matchesSearch =
       tx.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tx.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -56,10 +56,13 @@ const COLORS = [
 export default function Reports() {
   const [limit, setLimit] = useState("50");
 
-  const { data: transactions = [], isLoading } = useQuery({
+  const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['reportTransactions', limit],
     queryFn: () => fetchRecentTransactions(parseInt(limit)),
   });
+
+  // Exclude voided transactions from reports
+  const transactions = allTransactions.filter((tx) => !tx.is_void);
 
   // Calculate totals by currency (parse amount as it comes as string from API)
   const totalsByCurrency = transactions.reduce((acc, tx) => {

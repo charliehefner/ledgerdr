@@ -61,15 +61,18 @@ export default function Reports() {
     queryFn: () => fetchRecentTransactions(parseInt(limit)),
   });
 
-  // Calculate totals by currency
+  // Calculate totals by currency (parse amount as it comes as string from API)
   const totalsByCurrency = transactions.reduce((acc, tx) => {
-    acc[tx.currency] = (acc[tx.currency] || 0) + tx.amount;
+    const amount = parseFloat(String(tx.amount)) || 0;
+    acc[tx.currency] = (acc[tx.currency] || 0) + amount;
     return acc;
   }, {} as Record<string, number>);
 
-  // Calculate totals by account
+  // Calculate totals by account (skip null accounts)
   const totalsByAccount = transactions.reduce((acc, tx) => {
-    acc[tx.master_acct_code] = (acc[tx.master_acct_code] || 0) + tx.amount;
+    if (!tx.master_acct_code) return acc;
+    const amount = parseFloat(String(tx.amount)) || 0;
+    acc[tx.master_acct_code] = (acc[tx.master_acct_code] || 0) + amount;
     return acc;
   }, {} as Record<string, number>);
 
@@ -78,10 +81,11 @@ export default function Reports() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
-  // Calculate totals by payment method
+  // Calculate totals by payment method (skip null/empty methods)
   const totalsByPayMethod = transactions.reduce((acc, tx) => {
-    const method = tx.pay_method || 'Unknown';
-    acc[method] = (acc[method] || 0) + tx.amount;
+    if (!tx.pay_method) return acc;
+    const amount = parseFloat(String(tx.amount)) || 0;
+    acc[tx.pay_method] = (acc[tx.pay_method] || 0) + amount;
     return acc;
   }, {} as Record<string, number>);
 
@@ -99,15 +103,16 @@ export default function Reports() {
 
   const accountCbsTotals = accountCbsPairs.map(pair => {
     const matchingTx = transactions.filter(tx => 
+      tx.master_acct_code && 
       pair.accounts.includes(tx.master_acct_code) && 
       tx.cbs_code?.startsWith(pair.cbs)
     );
     const totalDOP = matchingTx
       .filter(tx => tx.currency === "DOP")
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
     const totalUSD = matchingTx
       .filter(tx => tx.currency === "USD")
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
     return {
       label: pair.label,
       count: matchingTx.length,

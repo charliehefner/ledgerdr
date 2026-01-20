@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -7,12 +8,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchRecentTransactions, fetchAccounts } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
 }
 
 export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
+  const { getDescription } = useLanguage();
+
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['recentTransactions', refreshKey],
+    queryFn: () => fetchRecentTransactions(20),
+  });
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: fetchAccounts,
+  });
+
+  const getAccountDescription = (code: string) => {
+    const account = accounts.find(a => a.code === code);
+    return account ? getDescription(account) : code;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -32,11 +54,49 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No transactions yet. Add your first transaction above.
-                </TableCell>
-              </TableRow>
+              {isLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(6)].map((_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : transactions.length > 0 ? (
+                transactions.map((tx, index) => (
+                  <TableRow key={tx.id || index}>
+                    <TableCell className="font-mono text-sm">
+                      {formatDate(tx.transaction_date)}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
+                        <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                          {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {tx.description || "-"}
+                    </TableCell>
+                    <TableCell>{tx.currency}</TableCell>
+                    <TableCell className="text-right font-mono font-medium">
+                      {formatCurrency(tx.amount, tx.currency)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    No transactions yet. Add your first transaction above.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

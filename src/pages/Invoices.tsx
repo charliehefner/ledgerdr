@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,12 +26,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PlusCircle, Filter, Search, ArrowRightLeft } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 
 export default function Invoices() {
   const { getDescription } = useLanguage();
+  const { canModifySettings } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['invoiceTransactions'],
@@ -155,7 +160,16 @@ export default function Invoices() {
                     ))
                   ) : filteredTransactions.length > 0 ? (
                     filteredTransactions.map((tx, index) => (
-                      <TableRow key={tx.id || index}>
+                      <TableRow 
+                        key={tx.id || index}
+                        className={canModifySettings ? "cursor-pointer hover:bg-muted/50" : ""}
+                        onClick={() => {
+                          if (canModifySettings && tx.id) {
+                            setSelectedTransaction(tx);
+                            setEditDialogOpen(true);
+                          }
+                        }}
+                      >
                         <TableCell className="font-mono text-sm">
                           {formatDate(tx.transaction_date)}
                         </TableCell>
@@ -195,6 +209,12 @@ export default function Invoices() {
           </CardContent>
         </Card>
       </div>
+
+      <EditTransactionDialog
+        transaction={selectedTransaction}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </MainLayout>
   );
 }

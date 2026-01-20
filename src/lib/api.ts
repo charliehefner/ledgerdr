@@ -76,3 +76,21 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
   if (!response.ok) throw new Error('Failed to create transaction');
   return response.json();
 }
+
+export async function updateTransaction(id: string | number, transaction: Partial<Transaction>): Promise<Transaction> {
+  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(transaction),
+  });
+  if (!response.ok) throw new Error('Failed to update transaction');
+  return response.json();
+}
+
+export async function deleteTransaction(id: string | number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to delete transaction');
+}

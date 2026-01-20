@@ -7,11 +7,13 @@ import {
   Settings,
   LogOut,
   Receipt,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Transactions", href: "/transactions", icon: ArrowRightLeft },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "New Invoice", href: "/invoices/new", icon: PlusCircle },
   { name: "Reports", href: "/reports", icon: BarChart3 },

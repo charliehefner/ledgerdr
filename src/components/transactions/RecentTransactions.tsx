@@ -23,12 +23,12 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Currency</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">ITBIS</TableHead>
+                <TableHead className="w-24">Date</TableHead>
+                <TableHead className="w-48">Account</TableHead>
+                <TableHead className="min-w-[200px]">Description</TableHead>
+                <TableHead className="w-20">Currency</TableHead>
+                <TableHead className="w-28 text-right">Amount</TableHead>
+                <TableHead className="w-24 text-right">ITBIS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

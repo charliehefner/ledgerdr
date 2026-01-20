@@ -333,11 +333,22 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Payment Method</Label>
-              <Input
+              <Select
                 value={form.pay_method}
-                onChange={(e) => updateField('pay_method', e.target.value)}
-                placeholder="e.g., Cash, Transfer, Check"
-              />
+                onValueChange={(value) => updateField('pay_method', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="transfer_bdi">Transfer BDI</SelectItem>
+                  <SelectItem value="transfer_bhd">Transfer BHD</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="cc_management">Credit Card Management</SelectItem>
+                  <SelectItem value="cc_agri">Credit Card Agri</SelectItem>
+                  <SelectItem value="cc_industry">Credit Card Industry</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

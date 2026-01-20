@@ -89,6 +89,33 @@ export default function Reports() {
     .map(([method, total]) => ({ method, total }))
     .sort((a, b) => b.total - a.total);
 
+  // Account/CBS pair totals
+  const accountCbsPairs = [
+    { label: "Account 4030 / CBS 13", accounts: ["4030"], cbs: "13" },
+    { label: "Account 4040 / CBS 14", accounts: ["4040"], cbs: "14" },
+    { label: "Accounts 4080, 4082 / CBS 12", accounts: ["4080", "4082"], cbs: "12" },
+    { label: "Accounts 4050, 4060 / CBS 15", accounts: ["4050", "4060"], cbs: "15" },
+  ];
+
+  const accountCbsTotals = accountCbsPairs.map(pair => {
+    const matchingTx = transactions.filter(tx => 
+      pair.accounts.includes(tx.master_acct_code) && 
+      tx.cbs_code?.startsWith(pair.cbs)
+    );
+    const totalDOP = matchingTx
+      .filter(tx => tx.currency === "DOP")
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    const totalUSD = matchingTx
+      .filter(tx => tx.currency === "USD")
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return {
+      label: pair.label,
+      count: matchingTx.length,
+      totalDOP,
+      totalUSD,
+    };
+  });
+
   const exportToExcel = () => {
     if (transactions.length === 0) {
       toast.error("No transactions to export");
@@ -231,6 +258,39 @@ export default function Reports() {
             </Card>
           ))}
         </div>
+
+        {/* Account/CBS Pair Totals */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Purchase Totals by Account & CBS</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Account / CBS Pair</TableHead>
+                  <TableHead className="text-right">Transactions</TableHead>
+                  <TableHead className="text-right">Total DOP</TableHead>
+                  <TableHead className="text-right">Total USD</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {accountCbsTotals.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{row.label}</TableCell>
+                    <TableCell className="text-right font-mono">{row.count}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(row.totalDOP, "DOP")}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(row.totalUSD, "USD")}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
         {/* Charts Row */}
         <div className="grid gap-6 lg:grid-cols-2">

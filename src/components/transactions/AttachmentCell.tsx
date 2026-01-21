@@ -16,6 +16,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -196,6 +201,25 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
     setImageName('');
   };
 
+  // Check if attachment is an image (for preview)
+  const isImageAttachment = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
+
+  const TriggerButton = (
+    <button
+      className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors ${
+        attachmentUrl ? 'text-primary' : 'text-muted-foreground'
+      }`}
+      disabled={isUploading}
+      title={attachmentUrl ? 'View or update attachment' : 'Add attachment'}
+    >
+      {isUploading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Paperclip className="h-4 w-4" />
+      )}
+    </button>
+  );
+
   return (
     <>
       <input
@@ -207,46 +231,74 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
       />
       <canvas ref={canvasRef} className="hidden" />
       
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors ${
-              attachmentUrl ? 'text-primary' : 'text-muted-foreground'
-            }`}
-            disabled={isUploading}
-            title={attachmentUrl ? 'View or update attachment' : 'Add attachment'}
-          >
-            {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Paperclip className="h-4 w-4" />
+      {isImageAttachment ? (
+        <HoverCard openDelay={200} closeDelay={100}>
+          <HoverCardTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {TriggerButton}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem asChild>
+                  <a
+                    href={attachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center"
+                  >
+                    <FileImage className="mr-2 h-4 w-4" />
+                    View Attachment
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleFileClick}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Replace with File
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={startCamera}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Replace with Camera
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </HoverCardTrigger>
+          <HoverCardContent side="left" className="w-64 p-2">
+            <img
+              src={attachmentUrl}
+              alt="Receipt preview"
+              className="w-full h-auto rounded-md object-contain max-h-48"
+            />
+          </HoverCardContent>
+        </HoverCard>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            {TriggerButton}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            {attachmentUrl && (
+              <DropdownMenuItem asChild>
+                <a
+                  href={attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center"
+                >
+                  <FileImage className="mr-2 h-4 w-4" />
+                  View Attachment
+                </a>
+              </DropdownMenuItem>
             )}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="center">
-          {attachmentUrl && (
-            <DropdownMenuItem asChild>
-              <a
-                href={attachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center"
-              >
-                <FileImage className="mr-2 h-4 w-4" />
-                View Attachment
-              </a>
+            <DropdownMenuItem onClick={handleFileClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              {attachmentUrl ? 'Replace with File' : 'Upload File'}
             </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={handleFileClick}>
-            <Upload className="mr-2 h-4 w-4" />
-            {attachmentUrl ? 'Replace with File' : 'Upload File'}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={startCamera}>
-            <Camera className="mr-2 h-4 w-4" />
-            {attachmentUrl ? 'Replace with Camera' : 'Use Camera'}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuItem onClick={startCamera}>
+              <Camera className="mr-2 h-4 w-4" />
+              {attachmentUrl ? 'Replace with Camera' : 'Use Camera'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <Dialog open={showCamera} onOpenChange={(open) => !open && closeCamera()}>
         <DialogContent className="sm:max-w-lg">

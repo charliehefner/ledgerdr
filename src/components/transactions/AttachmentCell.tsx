@@ -204,22 +204,6 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
   // Check if attachment is an image (for preview)
   const isImageAttachment = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
 
-  const TriggerButton = (
-    <button
-      className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors ${
-        attachmentUrl ? 'text-primary' : 'text-muted-foreground'
-      }`}
-      disabled={isUploading}
-      title={attachmentUrl ? 'View or update attachment' : 'Add attachment'}
-    >
-      {isUploading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Paperclip className="h-4 w-4" />
-      )}
-    </button>
-  );
-
   return (
     <>
       <input
@@ -232,36 +216,46 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
       <canvas ref={canvasRef} className="hidden" />
       
       {isImageAttachment ? (
-        <HoverCard openDelay={200} closeDelay={100}>
-          <HoverCardTrigger asChild>
-            <DropdownMenu>
+        <HoverCard openDelay={300} closeDelay={100}>
+          <DropdownMenu>
+            <HoverCardTrigger asChild>
               <DropdownMenuTrigger asChild>
-                {TriggerButton}
+                <button
+                  className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors text-primary`}
+                  disabled={isUploading}
+                  title="View or update attachment"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-4 w-4" />
+                  )}
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center">
-                <DropdownMenuItem asChild>
-                  <a
-                    href={attachmentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center"
-                  >
-                    <FileImage className="mr-2 h-4 w-4" />
-                    View Attachment
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleFileClick}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Replace with File
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={startCamera}>
-                  <Camera className="mr-2 h-4 w-4" />
-                  Replace with Camera
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </HoverCardTrigger>
-          <HoverCardContent side="left" className="w-64 p-2">
+            </HoverCardTrigger>
+            <DropdownMenuContent align="center" className="bg-popover z-50">
+              <DropdownMenuItem asChild>
+                <a
+                  href={attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center"
+                >
+                  <FileImage className="mr-2 h-4 w-4" />
+                  View Attachment
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFileClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                Replace with File
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={startCamera}>
+                <Camera className="mr-2 h-4 w-4" />
+                Replace with Camera
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <HoverCardContent side="left" className="w-64 p-2 z-50">
             <img
               src={attachmentUrl}
               alt="Receipt preview"
@@ -272,9 +266,21 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {TriggerButton}
+            <button
+              className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors ${
+                attachmentUrl ? 'text-primary' : 'text-muted-foreground'
+              }`}
+              disabled={isUploading}
+              title={attachmentUrl ? 'View or update attachment' : 'Add attachment'}
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center">
+          <DropdownMenuContent align="center" className="bg-popover z-50">
             {attachmentUrl && (
               <DropdownMenuItem asChild>
                 <a

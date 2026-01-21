@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { 
@@ -26,7 +26,8 @@ import {
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, Transaction } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { AttachmentCell } from "@/components/transactions/AttachmentCell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,11 +66,16 @@ type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_c
 type SortDirection = "asc" | "desc" | null;
 
 export default function Reports() {
+  const queryClient = useQueryClient();
   const [limit, setLimit] = useState("150");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleAttachmentUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['reportTransactions'] });
+  };
 
   const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['reportTransactions', limit],
@@ -641,16 +647,12 @@ export default function Reports() {
                           {tx.is_internal ? "Yes" : "No"}
                         </TableCell>
                         <TableCell className="text-center">
-                          {tx.attachment_url ? (
-                            <a
-                              href={tx.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center text-primary hover:text-primary/80"
-                              title="View attachment"
-                            >
-                              <Paperclip className="h-4 w-4" />
-                            </a>
+                          {tx.id ? (
+                            <AttachmentCell
+                              transactionId={tx.id}
+                              attachmentUrl={tx.attachment_url}
+                              onUpdate={handleAttachmentUpdate}
+                            />
                           ) : (
                             "-"
                           )}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchRecentTransactions, fetchAccounts } from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Paperclip } from 'lucide-react';
+import { AttachmentCell } from './AttachmentCell';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
@@ -20,6 +20,11 @@ interface RecentTransactionsProps {
 
 export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const { getDescription } = useLanguage();
+  const queryClient = useQueryClient();
+
+  const handleAttachmentUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+  };
 
   const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['recentTransactions', refreshKey],
@@ -93,16 +98,12 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     <TableCell>{tx.pay_method || "-"}</TableCell>
                     <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
                     <TableCell className="text-center">
-                      {tx.attachment_url ? (
-                        <a
-                          href={tx.attachment_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center text-primary hover:text-primary/80"
-                          title="View attachment"
-                        >
-                          <Paperclip className="h-4 w-4" />
-                        </a>
+                      {tx.id ? (
+                        <AttachmentCell
+                          transactionId={tx.id}
+                          attachmentUrl={tx.attachment_url}
+                          onUpdate={handleAttachmentUpdate}
+                        />
                       ) : (
                         "-"
                       )}

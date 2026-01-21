@@ -14,6 +14,7 @@ import {
   Project,
   CbsCode,
 } from '@/lib/api';
+import { AttachmentUpload } from './AttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,6 +57,7 @@ const initialFormState = {
   comments: '',
   exchange_rate: '',
   is_internal: false,
+  attachment_url: null as string | null,
 };
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
@@ -412,15 +414,31 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
           </div>
 
-          {/* Comments */}
-          <div className="space-y-2">
-            <Label>Comments</Label>
-            <Textarea
-              value={form.comments}
-              onChange={(e) => updateField('comments', e.target.value)}
-              placeholder="Additional notes..."
-              rows={3}
-            />
+          {/* Comments and Attachment */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Comments</Label>
+              <Textarea
+                value={form.comments}
+                onChange={(e) => updateField('comments', e.target.value)}
+                placeholder="Additional notes..."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Attachment</Label>
+              <div className="pt-1">
+                <AttachmentUpload
+                  attachmentUrl={form.attachment_url}
+                  onUpload={(url) => updateField('attachment_url', url)}
+                  onClear={() => updateField('attachment_url', null)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload receipt or invoice (JPG, PNG, PDF, max 5MB)
+              </p>
+            </div>
           </div>
 
           {/* Internal Toggle & Submit */}

@@ -23,10 +23,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, Filter, Search, ArrowRightLeft } from "lucide-react";
+import { Filter, Search, ArrowRightLeft } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { ColumnSelector } from "@/components/ui/column-selector";
+
+const INVOICE_COLUMNS: ColumnConfig[] = [
+  { key: "date", label: "Date", defaultVisible: true },
+  { key: "account", label: "Account", defaultVisible: true },
+  { key: "project", label: "Project", defaultVisible: true },
+  { key: "description", label: "Description", defaultVisible: true },
+  { key: "name", label: "Name", defaultVisible: true },
+  { key: "currency", label: "Currency", defaultVisible: true },
+  { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "itbis", label: "ITBIS", defaultVisible: true },
+  { key: "payMethod", label: "Pay Method", defaultVisible: true },
+  { key: "document", label: "Document", defaultVisible: false },
+];
 
 export default function Invoices() {
   const { getDescription } = useLanguage();
@@ -36,6 +51,8 @@ export default function Invoices() {
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const columnVisibility = useColumnVisibility("invoices-table", INVOICE_COLUMNS);
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['invoiceTransactions'],
@@ -71,6 +88,8 @@ export default function Invoices() {
     const account = accounts.find(a => a.code === code);
     return account ? getDescription(account) : code;
   };
+
+  const visibleCount = columnVisibility.visibleColumns.length;
 
   return (
     <MainLayout 
@@ -128,6 +147,14 @@ export default function Invoices() {
                   <SelectItem value="USD">USD</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Column Selector */}
+              <ColumnSelector
+                columns={columnVisibility.allColumns}
+                visibility={columnVisibility.visibility}
+                onToggle={columnVisibility.toggleColumn}
+                onReset={columnVisibility.resetToDefaults}
+              />
             </div>
           </CardContent>
         </Card>
@@ -139,22 +166,23 @@ export default function Invoices() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">ITBIS</TableHead>
-                    <TableHead>Pay Method</TableHead>
+                    {columnVisibility.isVisible("date") && <TableHead>Date</TableHead>}
+                    {columnVisibility.isVisible("account") && <TableHead>Account</TableHead>}
+                    {columnVisibility.isVisible("project") && <TableHead>Project</TableHead>}
+                    {columnVisibility.isVisible("description") && <TableHead>Description</TableHead>}
+                    {columnVisibility.isVisible("name") && <TableHead>Name</TableHead>}
+                    {columnVisibility.isVisible("currency") && <TableHead>Currency</TableHead>}
+                    {columnVisibility.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
+                    {columnVisibility.isVisible("itbis") && <TableHead className="text-right">ITBIS</TableHead>}
+                    {columnVisibility.isVisible("payMethod") && <TableHead>Pay Method</TableHead>}
+                    {columnVisibility.isVisible("document") && <TableHead>Document</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
-                        {[...Array(9)].map((_, j) => (
+                        {[...Array(visibleCount)].map((_, j) => (
                           <TableCell key={j}>
                             <Skeleton className="h-4 w-full" />
                           </TableCell>
@@ -173,35 +201,50 @@ export default function Invoices() {
                           }
                         }}
                       >
-                        <TableCell className="font-mono text-sm">
-                          {formatDate(tx.transaction_date)}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
-                            <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                              {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">
-                          {tx.description || "-"}
-                        </TableCell>
-                        <TableCell>{tx.name || "-"}</TableCell>
-                        <TableCell>{tx.currency}</TableCell>
-                        <TableCell className="text-right font-mono font-medium">
-                          {formatCurrency(tx.amount, tx.currency)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
-                        </TableCell>
-                        <TableCell>{tx.pay_method || "-"}</TableCell>
+                        {columnVisibility.isVisible("date") && (
+                          <TableCell className="font-mono text-sm">
+                            {formatDate(tx.transaction_date)}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("account") && (
+                          <TableCell>
+                            <div>
+                              <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                              </p>
+                            </div>
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("project") && (
+                          <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
+                        )}
+                        {columnVisibility.isVisible("description") && (
+                          <TableCell className="max-w-[200px] truncate">
+                            {tx.description || "-"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("name") && <TableCell>{tx.name || "-"}</TableCell>}
+                        {columnVisibility.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
+                        {columnVisibility.isVisible("amount") && (
+                          <TableCell className="text-right font-mono font-medium">
+                            {formatCurrency(tx.amount, tx.currency)}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("itbis") && (
+                          <TableCell className="text-right font-mono">
+                            {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
+                        {columnVisibility.isVisible("document") && (
+                          <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={visibleCount} className="text-center py-8 text-muted-foreground">
                         No transactions found
                       </TableCell>
                     </TableRow>

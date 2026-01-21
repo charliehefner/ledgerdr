@@ -15,9 +15,34 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { ColumnSelector } from "@/components/ui/column-selector";
+
+const PENDING_NCF_COLUMNS: ColumnConfig[] = [
+  { key: "date", label: "Date", defaultVisible: true },
+  { key: "account", label: "Account", defaultVisible: true },
+  { key: "description", label: "Description", defaultVisible: true },
+  { key: "document", label: "Document", defaultVisible: true },
+  { key: "name", label: "Name", defaultVisible: false },
+  { key: "currency", label: "Currency", defaultVisible: true },
+  { key: "amount", label: "Amount", defaultVisible: true },
+];
+
+const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
+  { key: "date", label: "Date", defaultVisible: true },
+  { key: "account", label: "Account", defaultVisible: true },
+  { key: "description", label: "Description", defaultVisible: true },
+  { key: "document", label: "Document", defaultVisible: true },
+  { key: "name", label: "Name", defaultVisible: false },
+  { key: "currency", label: "Currency", defaultVisible: true },
+  { key: "amount", label: "Amount", defaultVisible: true },
+];
 
 export default function Dashboard() {
   const { getDescription } = useLanguage();
+
+  const pendingNcfColumns = useColumnVisibility("dashboard-pending-ncf", PENDING_NCF_COLUMNS);
+  const withoutAttachmentColumns = useColumnVisibility("dashboard-without-attachment", WITHOUT_ATTACHMENT_COLUMNS);
 
   // Fetch transactions without documents
   const { data: allTransactions = [], isLoading } = useQuery({
@@ -56,6 +81,9 @@ export default function Dashboard() {
     return getDescription(account);
   };
 
+  const visibleNcfCount = pendingNcfColumns.visibleColumns.length;
+  const visibleAttachCount = withoutAttachmentColumns.visibleColumns.length;
+
   return (
     <MainLayout title="Dashboard" subtitle="Overview of your expense invoices">
       <div className="space-y-6 animate-fade-in">
@@ -66,46 +94,56 @@ export default function Dashboard() {
               <h3 className="font-semibold">Transactions Pending NCF Number</h3>
               <p className="text-sm text-muted-foreground">Missing fiscal document number</p>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/transactions">
-                View All
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <ColumnSelector
+                columns={pendingNcfColumns.allColumns}
+                visibility={pendingNcfColumns.visibility}
+                onToggle={pendingNcfColumns.toggleColumn}
+                onReset={pendingNcfColumns.resetToDefaults}
+              />
+              <Button variant="outline" asChild>
+                <Link to="/transactions">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Document</TableHead>
-                <TableHead>Currency</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                {pendingNcfColumns.isVisible("date") && <TableHead>Date</TableHead>}
+                {pendingNcfColumns.isVisible("account") && <TableHead>Account</TableHead>}
+                {pendingNcfColumns.isVisible("description") && <TableHead>Description</TableHead>}
+                {pendingNcfColumns.isVisible("document") && <TableHead>Document</TableHead>}
+                {pendingNcfColumns.isVisible("name") && <TableHead>Name</TableHead>}
+                {pendingNcfColumns.isVisible("currency") && <TableHead>Currency</TableHead>}
+                {pendingNcfColumns.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={visibleNcfCount} className="text-center py-8 text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : transactionsWithoutDocument.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={visibleNcfCount} className="text-center py-8 text-muted-foreground">
                     All transactions have documents attached
                   </TableCell>
                 </TableRow>
               ) : (
                 transactionsWithoutDocument.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell>{formatDate(tx.transaction_date)}</TableCell>
-                    <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
-                    <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
-                    <TableCell>{tx.currency}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>
+                    {pendingNcfColumns.isVisible("date") && <TableCell>{formatDate(tx.transaction_date)}</TableCell>}
+                    {pendingNcfColumns.isVisible("account") && <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>}
+                    {pendingNcfColumns.isVisible("description") && <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>}
+                    {pendingNcfColumns.isVisible("document") && <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>}
+                    {pendingNcfColumns.isVisible("name") && <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>}
+                    {pendingNcfColumns.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
+                    {pendingNcfColumns.isVisible("amount") && <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>}
                   </TableRow>
                 ))
               )}
@@ -120,46 +158,56 @@ export default function Dashboard() {
               <h3 className="font-semibold">Transactions Without Attachment</h3>
               <p className="text-sm text-muted-foreground">Pending receipt/image upload</p>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/transactions">
-                View All
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <ColumnSelector
+                columns={withoutAttachmentColumns.allColumns}
+                visibility={withoutAttachmentColumns.visibility}
+                onToggle={withoutAttachmentColumns.toggleColumn}
+                onReset={withoutAttachmentColumns.resetToDefaults}
+              />
+              <Button variant="outline" asChild>
+                <Link to="/transactions">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Document</TableHead>
-                <TableHead>Currency</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                {withoutAttachmentColumns.isVisible("date") && <TableHead>Date</TableHead>}
+                {withoutAttachmentColumns.isVisible("account") && <TableHead>Account</TableHead>}
+                {withoutAttachmentColumns.isVisible("description") && <TableHead>Description</TableHead>}
+                {withoutAttachmentColumns.isVisible("document") && <TableHead>Document</TableHead>}
+                {withoutAttachmentColumns.isVisible("name") && <TableHead>Name</TableHead>}
+                {withoutAttachmentColumns.isVisible("currency") && <TableHead>Currency</TableHead>}
+                {withoutAttachmentColumns.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={visibleAttachCount} className="text-center py-8 text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : transactionsWithoutAttachment.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={visibleAttachCount} className="text-center py-8 text-muted-foreground">
                     All transactions have attachments uploaded
                   </TableCell>
                 </TableRow>
               ) : (
                 transactionsWithoutAttachment.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell>{formatDate(tx.transaction_date)}</TableCell>
-                    <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
-                    <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
-                    <TableCell>{tx.currency}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>
+                    {withoutAttachmentColumns.isVisible("date") && <TableCell>{formatDate(tx.transaction_date)}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("account") && <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("description") && <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("document") && <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("name") && <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("amount") && <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>}
                   </TableRow>
                 ))
               )}

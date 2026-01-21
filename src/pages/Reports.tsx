@@ -65,7 +65,7 @@ type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_c
 type SortDirection = "asc" | "desc" | null;
 
 export default function Reports() {
-  const [limit, setLimit] = useState("50");
+  const [limit, setLimit] = useState("150");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -312,18 +312,6 @@ export default function Reports() {
       subtitle="Transaction analytics and exports"
       actions={
         <div className="flex gap-2">
-          <Select value={limit} onValueChange={setLimit}>
-            <SelectTrigger className="w-[140px]">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover">
-              <SelectItem value="20">Last 20</SelectItem>
-              <SelectItem value="50">Last 50</SelectItem>
-              <SelectItem value="100">Last 100</SelectItem>
-              <SelectItem value="500">Last 500</SelectItem>
-            </SelectContent>
-          </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button>
@@ -537,11 +525,30 @@ export default function Reports() {
                   Clear Dates
                 </Button>
               )}
-              {(startDate || endDate) && (
-                <span className="text-sm text-muted-foreground ml-auto">
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm text-muted-foreground">Limit:</span>
+                <Select value={limit} onValueChange={setLimit}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="150">150</SelectItem>
+                    <SelectItem value="250">250</SelectItem>
+                    <SelectItem value="350">350</SelectItem>
+                    <SelectItem value="450">450</SelectItem>
+                    <SelectItem value="550">550</SelectItem>
+                    <SelectItem value="650">650</SelectItem>
+                    <SelectItem value="750">750</SelectItem>
+                    <SelectItem value="850">850</SelectItem>
+                    <SelectItem value="950">950</SelectItem>
+                    <SelectItem value="1000">1000</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
                   Showing {sortedTransactions.length} transactions
                 </span>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>

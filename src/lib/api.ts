@@ -42,6 +42,7 @@ export interface Transaction {
   exchange_rate?: number;
   is_internal: boolean;
   is_void?: boolean;
+  attachment_url?: string;
 }
 
 export async function fetchAccounts(): Promise<Account[]> {

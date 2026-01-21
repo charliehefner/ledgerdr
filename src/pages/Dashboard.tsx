@@ -63,8 +63,8 @@ export default function Dashboard() {
         <div className="bg-card rounded-xl border border-border shadow-sm">
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div>
-              <h3 className="font-semibold">Transactions Without Document</h3>
-              <p className="text-sm text-muted-foreground">Pending document attachment</p>
+              <h3 className="font-semibold">Transactions Pending NCF Number</h3>
+              <p className="text-sm text-muted-foreground">Missing fiscal document number</p>
             </div>
             <Button variant="outline" asChild>
               <Link to="/transactions">

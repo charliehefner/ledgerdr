@@ -21,21 +21,35 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 const PENDING_NCF_COLUMNS: ColumnConfig[] = [
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
+  { key: "project", label: "Project", defaultVisible: false },
+  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
+  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
   { key: "description", label: "Description", defaultVisible: true },
-  { key: "document", label: "Document", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: false },
   { key: "currency", label: "Currency", defaultVisible: true },
   { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "itbis", label: "ITBIS", defaultVisible: false },
+  { key: "payMethod", label: "Pay Method", defaultVisible: false },
+  { key: "document", label: "Document", defaultVisible: true },
+  { key: "name", label: "Name", defaultVisible: false },
+  { key: "comments", label: "Comments", defaultVisible: false },
+  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
 ];
 
 const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
+  { key: "project", label: "Project", defaultVisible: false },
+  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
+  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
   { key: "description", label: "Description", defaultVisible: true },
-  { key: "document", label: "Document", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: false },
   { key: "currency", label: "Currency", defaultVisible: true },
   { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "itbis", label: "ITBIS", defaultVisible: false },
+  { key: "payMethod", label: "Pay Method", defaultVisible: false },
+  { key: "document", label: "Document", defaultVisible: true },
+  { key: "name", label: "Name", defaultVisible: false },
+  { key: "comments", label: "Comments", defaultVisible: false },
+  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
 ];
 
 export default function Dashboard() {

@@ -34,13 +34,17 @@ const INVOICE_COLUMNS: ColumnConfig[] = [
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: true },
+  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
+  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
   { key: "description", label: "Description", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: true },
   { key: "currency", label: "Currency", defaultVisible: true },
   { key: "amount", label: "Amount", defaultVisible: true },
   { key: "itbis", label: "ITBIS", defaultVisible: true },
   { key: "payMethod", label: "Pay Method", defaultVisible: true },
   { key: "document", label: "Document", defaultVisible: false },
+  { key: "name", label: "Name", defaultVisible: true },
+  { key: "comments", label: "Comments", defaultVisible: false },
+  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
 ];
 
 export default function Invoices() {

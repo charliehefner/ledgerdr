@@ -25,6 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, Transaction } from "@/lib/api";
+import { getAttachmentUrls } from "@/lib/attachments";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { AttachmentCell } from "@/components/transactions/AttachmentCell";
@@ -75,6 +76,7 @@ export default function Reports() {
 
   const handleAttachmentUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['reportTransactions'] });
+    queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
   };
 
   const { data: allTransactions = [], isLoading } = useQuery({
@@ -107,6 +109,16 @@ export default function Reports() {
     
     return filtered;
   }, [nonVoidedTransactions, startDate, endDate]);
+
+  // Get transaction IDs to fetch attachments
+  const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
+
+  // Fetch attachments from local database
+  const { data: attachments = {} } = useQuery({
+    queryKey: ['reportAttachments', transactionIds],
+    queryFn: () => getAttachmentUrls(transactionIds),
+    enabled: transactionIds.length > 0,
+  });
 
   // Sorted transactions
   const sortedTransactions = useMemo(() => {
@@ -650,7 +662,7 @@ export default function Reports() {
                           {tx.id ? (
                             <AttachmentCell
                               transactionId={tx.id}
-                              attachmentUrl={tx.attachment_url}
+                              attachmentUrl={attachments[String(tx.id)] || null}
                               onUpdate={handleAttachmentUpdate}
                             />
                           ) : (

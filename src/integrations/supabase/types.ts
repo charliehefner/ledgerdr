@@ -14,7 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      transaction_attachments: {
+        Row: {
+          attachment_url: string
+          created_at: string
+          id: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_url: string
+          created_at?: string
+          id?: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_url?: string
+          created_at?: string
+          id?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

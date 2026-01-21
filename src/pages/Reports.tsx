@@ -53,6 +53,8 @@ import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { ColumnSelector } from "@/components/ui/column-selector";
 
 const COLORS = [
   "hsl(220, 65%, 30%)",
@@ -61,6 +63,23 @@ const COLORS = [
   "hsl(200, 95%, 45%)",
   "hsl(280, 60%, 50%)",
   "hsl(15, 85%, 55%)",
+];
+
+const REPORT_COLUMNS: ColumnConfig[] = [
+  { key: "date", label: "Date", defaultVisible: true },
+  { key: "account", label: "Account", defaultVisible: true },
+  { key: "project", label: "Project", defaultVisible: true },
+  { key: "cbs", label: "CBS Code", defaultVisible: true },
+  { key: "description", label: "Description", defaultVisible: true },
+  { key: "currency", label: "Currency", defaultVisible: true },
+  { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "itbis", label: "ITBIS", defaultVisible: true },
+  { key: "payMethod", label: "Pay Method", defaultVisible: true },
+  { key: "document", label: "Document", defaultVisible: true },
+  { key: "name", label: "Name", defaultVisible: true },
+  { key: "exchangeRate", label: "Ex. Rate", defaultVisible: true },
+  { key: "internal", label: "Internal", defaultVisible: true },
+  { key: "attach", label: "Attach", defaultVisible: true },
 ];
 
 type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "description" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "exchange_rate" | "is_internal";
@@ -73,6 +92,8 @@ export default function Reports() {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const columnVisibility = useColumnVisibility("reports-table", REPORT_COLUMNS);
 
   const handleAttachmentUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['reportTransactions'] });
@@ -324,6 +345,8 @@ export default function Reports() {
     toast.success("PDF report exported successfully");
   };
 
+  const visibleCount = columnVisibility.visibleColumns.length;
+
   return (
     <MainLayout
       title="Reports"
@@ -573,107 +596,165 @@ export default function Reports() {
 
         {/* Transactions Table */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle>Transaction Details</CardTitle>
+            <ColumnSelector
+              columns={columnVisibility.allColumns}
+              visibility={columnVisibility.visibility}
+              onToggle={columnVisibility.toggleColumn}
+              onReset={columnVisibility.resetToDefaults}
+            />
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table className="min-w-[1200px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transaction_date")}>
-                      <div className="flex items-center">Date<SortIcon columnKey="transaction_date" /></div>
-                    </TableHead>
-                    <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("master_acct_code")}>
-                      <div className="flex items-center">Account<SortIcon columnKey="master_acct_code" /></div>
-                    </TableHead>
-                    <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("project_code")}>
-                      <div className="flex items-center">Project<SortIcon columnKey="project_code" /></div>
-                    </TableHead>
-                    <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("cbs_code")}>
-                      <div className="flex items-center">CBS Code<SortIcon columnKey="cbs_code" /></div>
-                    </TableHead>
-                    <TableHead className="min-w-[180px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
-                      <div className="flex items-center">Description<SortIcon columnKey="description" /></div>
-                    </TableHead>
-                    <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("currency")}>
-                      <div className="flex items-center">Currency<SortIcon columnKey="currency" /></div>
-                    </TableHead>
-                    <TableHead className="w-28 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
-                      <div className="flex items-center justify-end">Amount<SortIcon columnKey="amount" /></div>
-                    </TableHead>
-                    <TableHead className="w-24 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itbis")}>
-                      <div className="flex items-center justify-end">ITBIS<SortIcon columnKey="itbis" /></div>
-                    </TableHead>
-                    <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("pay_method")}>
-                      <div className="flex items-center">Pay Method<SortIcon columnKey="pay_method" /></div>
-                    </TableHead>
-                    <TableHead className="w-28 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("document")}>
-                      <div className="flex items-center">Document<SortIcon columnKey="document" /></div>
-                    </TableHead>
-                    <TableHead className="min-w-[120px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
-                      <div className="flex items-center">Name<SortIcon columnKey="name" /></div>
-                    </TableHead>
-                    <TableHead className="w-20 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("exchange_rate")}>
-                      <div className="flex items-center justify-end">Ex. Rate<SortIcon columnKey="exchange_rate" /></div>
-                    </TableHead>
-                    <TableHead className="w-16 text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
-                      <div className="flex items-center justify-center">Internal<SortIcon columnKey="is_internal" /></div>
-                    </TableHead>
-                    <TableHead className="w-16 text-center">Attach</TableHead>
+                    {columnVisibility.isVisible("date") && (
+                      <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transaction_date")}>
+                        <div className="flex items-center">Date<SortIcon columnKey="transaction_date" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("account") && (
+                      <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("master_acct_code")}>
+                        <div className="flex items-center">Account<SortIcon columnKey="master_acct_code" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("project") && (
+                      <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("project_code")}>
+                        <div className="flex items-center">Project<SortIcon columnKey="project_code" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("cbs") && (
+                      <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("cbs_code")}>
+                        <div className="flex items-center">CBS Code<SortIcon columnKey="cbs_code" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("description") && (
+                      <TableHead className="min-w-[180px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
+                        <div className="flex items-center">Description<SortIcon columnKey="description" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("currency") && (
+                      <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("currency")}>
+                        <div className="flex items-center">Currency<SortIcon columnKey="currency" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("amount") && (
+                      <TableHead className="w-28 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                        <div className="flex items-center justify-end">Amount<SortIcon columnKey="amount" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("itbis") && (
+                      <TableHead className="w-24 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itbis")}>
+                        <div className="flex items-center justify-end">ITBIS<SortIcon columnKey="itbis" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("payMethod") && (
+                      <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("pay_method")}>
+                        <div className="flex items-center">Pay Method<SortIcon columnKey="pay_method" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("document") && (
+                      <TableHead className="w-28 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("document")}>
+                        <div className="flex items-center">Document<SortIcon columnKey="document" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("name") && (
+                      <TableHead className="min-w-[120px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                        <div className="flex items-center">Name<SortIcon columnKey="name" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("exchangeRate") && (
+                      <TableHead className="w-20 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("exchange_rate")}>
+                        <div className="flex items-center justify-end">Ex. Rate<SortIcon columnKey="exchange_rate" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("internal") && (
+                      <TableHead className="w-16 text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
+                        <div className="flex items-center justify-center">Internal<SortIcon columnKey="is_internal" /></div>
+                      </TableHead>
+                    )}
+                    {columnVisibility.isVisible("attach") && (
+                      <TableHead className="w-16 text-center">Attach</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={visibleCount} className="text-center py-8 text-muted-foreground">
                         Loading transactions...
                       </TableCell>
                     </TableRow>
                   ) : sortedTransactions.length > 0 ? (
                     sortedTransactions.map((tx, index) => (
                       <TableRow key={tx.id || index}>
-                        <TableCell className="font-mono text-sm whitespace-nowrap">
-                          {formatDate(tx.transaction_date)}
-                        </TableCell>
-                        <TableCell className="font-mono">{tx.master_acct_code || "-"}</TableCell>
-                        <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
-                        <TableCell className="font-mono">{tx.cbs_code || "-"}</TableCell>
-                        <TableCell className="max-w-[180px] truncate">
-                          {tx.description || "-"}
-                        </TableCell>
-                        <TableCell>{tx.currency}</TableCell>
-                        <TableCell className="text-right font-mono font-medium">
-                          {formatCurrency(tx.amount, tx.currency)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
-                        </TableCell>
-                        <TableCell>{tx.pay_method || "-"}</TableCell>
-                        <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
-                        <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {tx.exchange_rate || "-"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {tx.is_internal ? "Yes" : "No"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {tx.id ? (
-                            <AttachmentCell
-                              transactionId={tx.id}
-                              attachmentUrl={attachments[String(tx.id)] || null}
-                              onUpdate={handleAttachmentUpdate}
-                            />
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
+                        {columnVisibility.isVisible("date") && (
+                          <TableCell className="font-mono text-sm whitespace-nowrap">
+                            {formatDate(tx.transaction_date)}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("account") && (
+                          <TableCell className="font-mono">{tx.master_acct_code || "-"}</TableCell>
+                        )}
+                        {columnVisibility.isVisible("project") && (
+                          <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
+                        )}
+                        {columnVisibility.isVisible("cbs") && (
+                          <TableCell className="font-mono">{tx.cbs_code || "-"}</TableCell>
+                        )}
+                        {columnVisibility.isVisible("description") && (
+                          <TableCell className="max-w-[180px] truncate">
+                            {tx.description || "-"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
+                        {columnVisibility.isVisible("amount") && (
+                          <TableCell className="text-right font-mono font-medium">
+                            {formatCurrency(tx.amount, tx.currency)}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("itbis") && (
+                          <TableCell className="text-right font-mono">
+                            {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
+                        {columnVisibility.isVisible("document") && (
+                          <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
+                        )}
+                        {columnVisibility.isVisible("name") && (
+                          <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>
+                        )}
+                        {columnVisibility.isVisible("exchangeRate") && (
+                          <TableCell className="text-right font-mono">
+                            {tx.exchange_rate || "-"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("internal") && (
+                          <TableCell className="text-center">
+                            {tx.is_internal ? "Yes" : "No"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.isVisible("attach") && (
+                          <TableCell className="text-center">
+                            {tx.id ? (
+                              <AttachmentCell
+                                transactionId={tx.id}
+                                attachmentUrl={attachments[String(tx.id)] || null}
+                                onUpdate={handleAttachmentUpdate}
+                              />
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={visibleCount} className="text-center py-8 text-muted-foreground">
                         No transactions found
                       </TableCell>
                     </TableRow>

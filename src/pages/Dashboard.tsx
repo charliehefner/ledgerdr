@@ -79,6 +79,7 @@ export default function Dashboard() {
                 <TableHead>Date</TableHead>
                 <TableHead>Account</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Document</TableHead>
                 <TableHead>Currency</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
@@ -86,13 +87,13 @@ export default function Dashboard() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : transactionsWithoutDocument.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     All transactions have documents attached
                   </TableCell>
                 </TableRow>
@@ -102,6 +103,7 @@ export default function Dashboard() {
                     <TableCell>{formatDate(tx.transaction_date)}</TableCell>
                     <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
+                    <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
                     <TableCell>{tx.currency}</TableCell>
                     <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>
                   </TableRow>
@@ -131,6 +133,7 @@ export default function Dashboard() {
                 <TableHead>Date</TableHead>
                 <TableHead>Account</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Document</TableHead>
                 <TableHead>Currency</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
@@ -138,13 +141,13 @@ export default function Dashboard() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : transactionsWithoutAttachment.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     All transactions have attachments uploaded
                   </TableCell>
                 </TableRow>
@@ -154,6 +157,7 @@ export default function Dashboard() {
                     <TableCell>{formatDate(tx.transaction_date)}</TableCell>
                     <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
+                    <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
                     <TableCell>{tx.currency}</TableCell>
                     <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>
                   </TableRow>

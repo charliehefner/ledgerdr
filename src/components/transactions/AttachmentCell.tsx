@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Paperclip, Upload, Loader2, Camera, X, FileImage, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { updateTransaction } from '@/lib/api';
+import { saveAttachment } from '@/lib/attachments';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -73,7 +73,8 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
         .from('transaction-attachments')
         .getPublicUrl(filePath);
 
-      await updateTransaction(transactionId, { attachment_url: publicUrl });
+      const success = await saveAttachment(transactionId, publicUrl);
+      if (!success) throw new Error('Failed to save attachment to database');
       toast.success('Attachment updated successfully');
       onUpdate();
     } catch (error) {
@@ -175,7 +176,8 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
         .from('transaction-attachments')
         .getPublicUrl(filePath);
 
-      await updateTransaction(transactionId, { attachment_url: publicUrl });
+      const success = await saveAttachment(transactionId, publicUrl);
+      if (!success) throw new Error('Failed to save attachment to database');
       toast.success('Photo saved successfully');
       closeCamera();
       onUpdate();

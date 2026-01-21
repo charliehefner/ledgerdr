@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchRecentTransactions, fetchAccounts } from '@/lib/api';
+import { getAttachmentUrls } from '@/lib/attachments';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { AttachmentCell } from './AttachmentCell';
@@ -24,6 +25,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
 
   const handleAttachmentUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+    queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
   };
 
   const { data: allTransactions = [], isLoading } = useQuery({
@@ -33,6 +35,16 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
 
   // Filter out voided transactions
   const transactions = allTransactions.filter(tx => !tx.is_void);
+
+  // Get transaction IDs to fetch attachments
+  const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
+
+  // Fetch attachments from local database
+  const { data: attachments = {} } = useQuery({
+    queryKey: ['transactionAttachments', transactionIds],
+    queryFn: () => getAttachmentUrls(transactionIds),
+    enabled: transactionIds.length > 0,
+  });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -101,7 +113,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                       {tx.id ? (
                         <AttachmentCell
                           transactionId={tx.id}
-                          attachmentUrl={tx.attachment_url}
+                          attachmentUrl={attachments[String(tx.id)] || null}
                           onUpdate={handleAttachmentUpdate}
                         />
                       ) : (

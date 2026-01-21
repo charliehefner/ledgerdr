@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
@@ -14,6 +14,7 @@ import {
   Project,
   CbsCode,
 } from '@/lib/api';
+import { saveAttachment } from '@/lib/attachments';
 import { AttachmentUpload } from './AttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,7 @@ const initialFormState = {
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const { getDescription } = useLanguage();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -138,7 +140,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     setIsSubmitting(true);
 
     try {
-      await createTransaction({
+      const result = await createTransaction({
         transaction_date: form.transaction_date!.toISOString().split('T')[0],
         master_acct_code: form.master_acct_code,
         project_code: form.project_code || undefined,
@@ -155,6 +157,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
         is_internal: form.is_internal,
       });
+
+      // If transaction was created and has an attachment, save it to local database
+      if (result.id && form.attachment_url) {
+        await saveAttachment(result.id, form.attachment_url);
+        // Invalidate attachment queries
+        queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
+        queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
+      }
 
       toast.success('Transaction saved successfully');
       setForm(initialFormState);

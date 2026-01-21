@@ -1,9 +1,9 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { InvoiceTable } from "@/components/invoices/InvoiceTable";
-import { StatusBadge } from "@/components/invoices/StatusBadge";
-import { mockInvoices } from "@/data/mockInvoices";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate } from "@/lib/formatters";
+import { fetchRecentTransactions, fetchAccounts } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   FileText, 
   DollarSign, 
@@ -14,6 +14,14 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   BarChart,
   Bar,
@@ -26,8 +34,9 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { mockInvoices } from "@/data/mockInvoices";
 
-// Calculate stats from mock data
+// Calculate stats from mock data (keeping for now as per deferred update)
 const totalInvoices = mockInvoices.length;
 const totalAmount = mockInvoices.reduce((sum, inv) => sum + inv.total, 0);
 const pendingAmount = mockInvoices
@@ -52,9 +61,30 @@ const statusData = [
   { name: "Draft", value: mockInvoices.filter((i) => i.status === "draft").length, color: "hsl(215, 15%, 60%)" },
 ];
 
-const recentInvoices = mockInvoices.slice(0, 5);
-
 export default function Dashboard() {
+  const { getDescription } = useLanguage();
+
+  // Fetch transactions without documents
+  const { data: allTransactions = [], isLoading } = useQuery({
+    queryKey: ['recentTransactions'],
+    queryFn: () => fetchRecentTransactions(50),
+  });
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: fetchAccounts,
+  });
+
+  // Filter: non-voided transactions without a document
+  const transactionsWithoutDocument = allTransactions
+    .filter(tx => !tx.is_void && (!tx.document || tx.document.trim() === ''));
+
+  const getAccountDescription = (code: string) => {
+    const account = accounts.find(a => a.code === code);
+    if (!account) return code;
+    return getDescription(account);
+  };
+
   return (
     <MainLayout title="Dashboard" subtitle="Overview of your expense invoices">
       <div className="space-y-6 animate-fade-in">
@@ -176,21 +206,56 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Invoices */}
+        {/* Transactions Without Document */}
         <div className="bg-card rounded-xl border border-border shadow-sm">
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div>
-              <h3 className="font-semibold">Recent Invoices</h3>
-              <p className="text-sm text-muted-foreground">Latest invoice entries</p>
+              <h3 className="font-semibold">Transactions Without Document</h3>
+              <p className="text-sm text-muted-foreground">Pending document attachment</p>
             </div>
             <Button variant="outline" asChild>
-              <Link to="/invoices">
+              <Link to="/transactions">
                 View All
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
-          <InvoiceTable invoices={recentInvoices} />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Account</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Currency</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : transactionsWithoutDocument.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    All transactions have documents attached
+                  </TableCell>
+                </TableRow>
+              ) : (
+                transactionsWithoutDocument.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell>{formatDate(tx.transaction_date)}</TableCell>
+                    <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>
+                    <TableCell>{tx.currency}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
     </MainLayout>

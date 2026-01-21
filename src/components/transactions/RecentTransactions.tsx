@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -9,12 +10,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchRecentTransactions, fetchAccounts } from '@/lib/api';
+import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
 import { getAttachmentUrls } from '@/lib/attachments';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { AttachmentCell } from './AttachmentCell';
-
+import { EditTransactionDialog } from '@/components/invoices/EditTransactionDialog';
 interface RecentTransactionsProps {
   refreshKey?: number;
 }
@@ -22,10 +23,17 @@ interface RecentTransactionsProps {
 export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const { getDescription } = useLanguage();
   const queryClient = useQueryClient();
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const handleAttachmentUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
+  };
+
+  const handleRowClick = (tx: Transaction) => {
+    setSelectedTransaction(tx);
+    setEditDialogOpen(true);
   };
 
   const { data: allTransactions = [], isLoading } = useQuery({
@@ -90,7 +98,8 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 transactions.map((tx, index) => (
                   <TableRow 
                     key={tx.id || index}
-                    className={tx.is_void ? "opacity-50 bg-muted/30" : ""}
+                    className={`cursor-pointer hover:bg-muted/50 ${tx.is_void ? "opacity-50 bg-muted/30" : ""}`}
+                    onClick={() => handleRowClick(tx)}
                   >
                     <TableCell className="font-mono text-sm">
                       {formatDate(tx.transaction_date)}
@@ -109,7 +118,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     </TableCell>
                     <TableCell>{tx.pay_method || "-"}</TableCell>
                     <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       {tx.id ? (
                         <AttachmentCell
                           transactionId={tx.id}
@@ -133,6 +142,12 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
           </Table>
         </div>
       </CardContent>
+
+      <EditTransactionDialog
+        transaction={selectedTransaction}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </Card>
   );
 }

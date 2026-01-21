@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, Transaction } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -602,12 +602,13 @@ export default function Reports() {
                     <TableHead className="w-16 text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
                       <div className="flex items-center justify-center">Internal<SortIcon columnKey="is_internal" /></div>
                     </TableHead>
+                    <TableHead className="w-16 text-center">Attach</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                         Loading transactions...
                       </TableCell>
                     </TableRow>
@@ -639,11 +640,26 @@ export default function Reports() {
                         <TableCell className="text-center">
                           {tx.is_internal ? "Yes" : "No"}
                         </TableCell>
+                        <TableCell className="text-center">
+                          {tx.attachment_url ? (
+                            <a
+                              href={tx.attachment_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center text-primary hover:text-primary/80"
+                              title="View attachment"
+                            >
+                              <Paperclip className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                         No transactions found
                       </TableCell>
                     </TableRow>

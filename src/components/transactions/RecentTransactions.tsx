@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchRecentTransactions, fetchAccounts } from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatCurrency, formatDate } from '@/lib/formatters';
+import { Paperclip } from 'lucide-react';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
@@ -54,13 +55,14 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 <TableHead className="w-28 text-right">Amount</TableHead>
                 <TableHead className="w-28">Pay Method</TableHead>
                 <TableHead className="w-32">Document</TableHead>
+                <TableHead className="w-16 text-center">Attach</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    {[...Array(6)].map((_, j) => (
+                    {[...Array(7)].map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -90,11 +92,26 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     </TableCell>
                     <TableCell>{tx.pay_method || "-"}</TableCell>
                     <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
+                    <TableCell className="text-center">
+                      {tx.attachment_url ? (
+                        <a
+                          href={tx.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center text-primary hover:text-primary/80"
+                          title="View attachment"
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     No transactions yet. Add your first transaction above.
                   </TableCell>
                 </TableRow>

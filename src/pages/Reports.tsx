@@ -47,7 +47,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
@@ -267,40 +267,70 @@ export default function Reports() {
     return `${day}/${month}/${year}`;
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (sortedTransactions.length === 0) {
       toast.error("No transactions to export");
       return;
     }
 
-    const exportData = sortedTransactions.map(tx => ({
-      "Date": formatExcelDate(tx.transaction_date),
-      "Account": tx.master_acct_code,
-      "Project": tx.project_code || "",
-      "CBS Code": tx.cbs_code || "",
-      "Description": tx.description,
-      "Currency": tx.currency,
-      "Amount": tx.amount,
-      "ITBIS": tx.itbis || "",
-      "Payment Method": tx.pay_method || "",
-      "Document": tx.document || "",
-      "Name": tx.name || "",
-      "Exchange Rate": tx.exchange_rate || "",
-      "Internal": tx.is_internal ? "Yes" : "No",
-    }));
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Transactions");
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-    
-    // Auto-size columns
-    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
-      wch: Math.max(key.length, 15)
-    }));
-    ws['!cols'] = colWidths;
+      // Define columns with headers and widths
+      worksheet.columns = [
+        { header: "Date", key: "date", width: 15 },
+        { header: "Account", key: "account", width: 15 },
+        { header: "Project", key: "project", width: 15 },
+        { header: "CBS Code", key: "cbsCode", width: 15 },
+        { header: "Description", key: "description", width: 30 },
+        { header: "Currency", key: "currency", width: 10 },
+        { header: "Amount", key: "amount", width: 15 },
+        { header: "ITBIS", key: "itbis", width: 12 },
+        { header: "Payment Method", key: "payMethod", width: 18 },
+        { header: "Document", key: "document", width: 15 },
+        { header: "Name", key: "name", width: 20 },
+        { header: "Exchange Rate", key: "exchangeRate", width: 15 },
+        { header: "Internal", key: "internal", width: 10 },
+      ];
 
-    XLSX.writeFile(wb, `transactions_report_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success("Excel report exported successfully");
+      // Add data rows
+      sortedTransactions.forEach(tx => {
+        worksheet.addRow({
+          date: formatExcelDate(tx.transaction_date),
+          account: tx.master_acct_code,
+          project: tx.project_code || "",
+          cbsCode: tx.cbs_code || "",
+          description: tx.description,
+          currency: tx.currency,
+          amount: tx.amount,
+          itbis: tx.itbis || "",
+          payMethod: tx.pay_method || "",
+          document: tx.document || "",
+          name: tx.name || "",
+          exchangeRate: tx.exchange_rate || "",
+          internal: tx.is_internal ? "Yes" : "No",
+        });
+      });
+
+      // Style header row
+      worksheet.getRow(1).font = { bold: true };
+
+      // Generate file and trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `transactions_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success("Excel report exported successfully");
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error("Failed to export Excel report");
+    }
   };
 
   const exportToPDF = () => {

@@ -41,21 +41,13 @@ export interface Transaction {
 
 // Helper function to call the API proxy edge function
 async function callApiProxy<T>(endpoint: string, method: string = 'GET', body?: unknown): Promise<T> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData?.session?.access_token;
-  
-  if (!accessToken) {
-    throw new Error('Not authenticated');
-  }
-
+  // supabase.functions.invoke automatically includes the auth token
   const response = await supabase.functions.invoke('api-proxy', {
     body: { endpoint, method, body },
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
   });
 
   if (response.error) {
+    console.error('API proxy error:', response.error);
     throw new Error(response.error.message || 'API request failed');
   }
 

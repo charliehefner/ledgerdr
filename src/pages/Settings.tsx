@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserManagement } from "@/components/settings/UserManagement";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -60,6 +61,9 @@ export default function Settings() {
             </div>
           </div>
         )}
+
+        {/* User Management - Admin Only */}
+        {canModifySettings && <UserManagement />}
 
         {/* Database Connection */}
         <div className="bg-card rounded-xl border border-border p-6 shadow-sm">

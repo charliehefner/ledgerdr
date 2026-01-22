@@ -8,6 +8,8 @@ const corsHeaders = {
 const API_BASE_URL = 'https://api.dallasagro.org';
 
 Deno.serve(async (req) => {
+  console.log('API Proxy called - method:', req.method);
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -16,7 +18,10 @@ Deno.serve(async (req) => {
   try {
     // Verify authorization header exists
     const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+    
     if (!authHeader?.startsWith('Bearer ')) {
+      console.log('No valid auth header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized - no token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -24,22 +29,32 @@ Deno.serve(async (req) => {
     }
 
     // Create Supabase client and verify the user is authenticated
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    console.log('Supabase URL present:', !!supabaseUrl);
+    console.log('Supabase Anon Key present:', !!supabaseAnonKey);
+    
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      supabaseUrl!,
+      supabaseAnonKey!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
     // Use getUser to verify the token is valid
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
     
-    if (userError || !user) {
+    console.log('getUser result - user:', !!userData?.user, 'error:', userError?.message);
+    
+    if (userError || !userData?.user) {
       console.error('Auth error:', userError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid token' }),
+        JSON.stringify({ error: 'Unauthorized - invalid token', details: userError?.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('User authenticated:', userData.user.email);
 
     // Get API key from secure secrets
     const apiKey = Deno.env.get('DALLAS_AGRO_API_KEY');
@@ -53,6 +68,7 @@ Deno.serve(async (req) => {
 
     // Parse the request body to get endpoint and options
     const { endpoint, method = 'GET', body } = await req.json();
+    console.log('Proxying to:', endpoint, 'method:', method);
 
     if (!endpoint) {
       return new Response(
@@ -79,6 +95,7 @@ Deno.serve(async (req) => {
 
     // Make the request to the external API
     const externalResponse = await fetch(externalUrl, fetchOptions);
+    console.log('External API response status:', externalResponse.status);
     
     // Handle non-JSON responses
     const contentType = externalResponse.headers.get('content-type');
@@ -104,7 +121,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('API proxy error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

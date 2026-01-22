@@ -1,10 +1,4 @@
-const API_BASE_URL = 'https://api.dallasagro.org';
-const API_KEY = '4660849108298395380';
-
-const headers = {
-  'Content-Type': 'application/json',
-  'x-api-key': API_KEY,
-};
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Account {
   code: string;
@@ -45,63 +39,57 @@ export interface Transaction {
   attachment_url?: string;
 }
 
+// Helper function to call the API proxy edge function
+async function callApiProxy<T>(endpoint: string, method: string = 'GET', body?: unknown): Promise<T> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+  
+  if (!accessToken) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await supabase.functions.invoke('api-proxy', {
+    body: { endpoint, method, body },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message || 'API request failed');
+  }
+
+  return response.data as T;
+}
+
 export async function fetchAccounts(): Promise<Account[]> {
-  const response = await fetch(`${API_BASE_URL}/accounts`, { headers });
-  if (!response.ok) throw new Error('Failed to fetch accounts');
-  return response.json();
+  return callApiProxy<Account[]>('/accounts');
 }
 
 export async function fetchProjects(): Promise<Project[]> {
-  const response = await fetch(`${API_BASE_URL}/projects`, { headers });
-  if (!response.ok) throw new Error('Failed to fetch projects');
-  return response.json();
+  return callApiProxy<Project[]>('/projects');
 }
 
 export async function fetchCbsCodes(): Promise<CbsCode[]> {
-  const response = await fetch(`${API_BASE_URL}/cbs-codes`, { headers });
-  if (!response.ok) throw new Error('Failed to fetch CBS codes');
-  return response.json();
+  return callApiProxy<CbsCode[]>('/cbs-codes');
 }
 
 export async function fetchRecentTransactions(limit: number = 20): Promise<Transaction[]> {
-  const response = await fetch(`${API_BASE_URL}/transactions/recent?limit=${limit}`, { headers });
-  if (!response.ok) throw new Error('Failed to fetch recent transactions');
-  return response.json();
+  return callApiProxy<Transaction[]>(`/transactions/recent?limit=${limit}`);
 }
 
 export async function createTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
-  const response = await fetch(`${API_BASE_URL}/transactions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(transaction),
-  });
-  if (!response.ok) throw new Error('Failed to create transaction');
-  return response.json();
+  return callApiProxy<Transaction>('/transactions', 'POST', transaction);
 }
 
 export async function updateTransaction(id: string | number, transaction: Partial<Transaction>): Promise<Transaction> {
-  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(transaction),
-  });
-  if (!response.ok) throw new Error('Failed to update transaction');
-  return response.json();
+  return callApiProxy<Transaction>(`/transactions/${id}`, 'PUT', transaction);
 }
 
 export async function deleteTransaction(id: string | number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
-    method: 'DELETE',
-    headers,
-  });
-  if (!response.ok) throw new Error('Failed to delete transaction');
+  return callApiProxy<void>(`/transactions/${id}`, 'DELETE');
 }
 
 export async function voidTransaction(id: string | number): Promise<Transaction> {
-  const response = await fetch(`${API_BASE_URL}/transactions/${id}/void`, {
-    method: 'POST',
-    headers,
-  });
-  if (!response.ok) throw new Error('Failed to void transaction');
-  return response.json();
+  return callApiProxy<Transaction>(`/transactions/${id}/void`, 'POST');
 }

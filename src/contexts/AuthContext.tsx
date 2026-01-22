@@ -1,57 +1,128 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
 export type UserRole = "admin" | "accountant";
 
-interface User {
-  username: string;
+interface AuthUser {
+  id: string;
+  email: string;
   role: UserRole;
 }
 
 interface AuthContextType {
-  user: User | null;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
+  user: AuthUser | null;
+  session: Session | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   canModifySettings: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Simple hardcoded credentials (NOT for production use)
-const USERS: Record<string, { password: string; role: UserRole }> = {
-  charles: { password: "1234", role: "admin" },
-  accountant: { password: "1234", role: "accountant" },
-  iramaia: { password: "1234", role: "accountant" },
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = sessionStorage.getItem("auth_user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (username: string, password: string): boolean => {
-    const normalizedUsername = username.toLowerCase().trim();
-    const userConfig = USERS[normalizedUsername];
+  // Fetch user role from user_roles table
+  const fetchUserRole = async (userId: string): Promise<UserRole> => {
+    const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
     
-    if (userConfig && userConfig.password === password) {
-      const newUser = { username: normalizedUsername, role: userConfig.role };
-      setUser(newUser);
-      sessionStorage.setItem("auth_user", JSON.stringify(newUser));
-      return true;
+    if (error) {
+      console.error('Error fetching user role:', error);
+      return 'accountant'; // Default to accountant if role not found
     }
-    return false;
+    
+    return (data as UserRole) || 'accountant';
   };
 
-  const logout = () => {
+  // Set up auth state listener BEFORE checking session
+  useEffect(() => {
+    // First set up the auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        
+        if (currentSession?.user) {
+          // Defer role fetching to avoid blocking the auth state change
+          setTimeout(async () => {
+            const role = await fetchUserRole(currentSession.user.id);
+            setUser({
+              id: currentSession.user.id,
+              email: currentSession.user.email || '',
+              role,
+            });
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      
+      if (existingSession?.user) {
+        const role = await fetchUserRole(existingSession.user.id);
+        setUser({
+          id: existingSession.user.id,
+          email: existingSession.user.email || '',
+          role,
+        });
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        const role = await fetchUserRole(data.user.id);
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+          role,
+        });
+        setSession(data.session);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Login failed' };
+    } catch (err) {
+      console.error('Login error:', err);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    sessionStorage.removeItem("auth_user");
+    setSession(null);
   };
 
   // Accountant cannot modify settings/structural changes
   const canModifySettings = user?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, canModifySettings }}>
+    <AuthContext.Provider value={{ user, session, isLoading, login, logout, canModifySettings }}>
       {children}
     </AuthContext.Provider>
   );

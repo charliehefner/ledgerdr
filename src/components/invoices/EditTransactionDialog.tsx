@@ -21,14 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Transaction, updateTransaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
+import { Transaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
 import { toast } from "sonner";
 import { Ban, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -97,20 +90,6 @@ export function EditTransactionDialog({
     }
   }, [transaction]);
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Partial<Transaction>) =>
-      updateTransaction(transaction!.id!, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
-      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
-      toast.success("Transaction updated successfully");
-      onOpenChange(false);
-    },
-    onError: (error) => {
-      toast.error(`Failed to update: ${error.message}`);
-    },
-  });
 
   const voidMutation = useMutation({
     mutationFn: () => voidTransaction(transaction!.id!),
@@ -127,23 +106,6 @@ export function EditTransactionDialog({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMutation.mutate({
-      transaction_date: formData.transaction_date,
-      master_acct_code: formData.master_acct_code || undefined,
-      project_code: formData.project_code || undefined,
-      cbs_code: formData.cbs_code || undefined,
-      description: formData.description,
-      currency: formData.currency,
-      amount: parseFloat(formData.amount) || 0,
-      itbis: formData.itbis ? parseFloat(formData.itbis) : undefined,
-      pay_method: formData.pay_method || undefined,
-      document: formData.document || undefined,
-      name: formData.name || undefined,
-      comments: formData.comments || undefined,
-    });
-  };
 
   if (!transaction) return null;
 
@@ -152,9 +114,9 @@ export function EditTransactionDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Transaction #{transaction.id}</DialogTitle>
+            <DialogTitle>View Transaction #{transaction.id}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {/* Date */}
               <div className="space-y-2">
@@ -162,132 +124,68 @@ export function EditTransactionDialog({
                 <Input
                   type="date"
                   value={formData.transaction_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, transaction_date: e.target.value })
-                  }
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
 
               {/* Currency */}
               <div className="space-y-2">
                 <Label>Currency</Label>
-                <Select
+                <Input
                   value={formData.currency}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, currency: v as "DOP" | "USD" })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="DOP">DOP</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
+                  readOnly
+                  className="bg-muted"
+                />
               </div>
 
               {/* Account */}
               <div className="space-y-2">
                 <Label>Master Account</Label>
-                <Select
-                  value={formData.master_acct_code}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, master_acct_code: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover max-h-[200px]">
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.code} value={acc.code}>
-                        {acc.code} - {getDescription(acc)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={formData.master_acct_code ? `${formData.master_acct_code} - ${getDescription(accounts.find(a => a.code === formData.master_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
+                  readOnly
+                  className="bg-muted"
+                />
               </div>
 
               {/* Project */}
               <div className="space-y-2">
                 <Label>Project</Label>
-                <Select
-                  value={formData.project_code || "none"}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, project_code: v === "none" ? "" : v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover max-h-[200px]">
-                    <SelectItem value="none">None</SelectItem>
-                    {projects.map((proj) => (
-                      <SelectItem key={proj.code} value={proj.code}>
-                        {proj.code} - {getDescription(proj)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={formData.project_code ? `${formData.project_code} - ${getDescription(projects.find(p => p.code === formData.project_code) || { english_description: '', spanish_description: '' })}` : 'None'}
+                  readOnly
+                  className="bg-muted"
+                />
               </div>
 
               {/* CBS Code */}
               <div className="space-y-2">
                 <Label>CBS Code</Label>
-                <Select
-                  value={formData.cbs_code || "none"}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, cbs_code: v === "none" ? "" : v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select CBS" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover max-h-[200px]">
-                    <SelectItem value="none">None</SelectItem>
-                    {cbsCodes.map((cbs) => (
-                      <SelectItem key={cbs.code} value={cbs.code}>
-                        {cbs.code} - {getDescription(cbs)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={formData.cbs_code ? `${formData.cbs_code} - ${getDescription(cbsCodes.find(c => c.code === formData.cbs_code) || { english_description: '', spanish_description: '' })}` : 'None'}
+                  readOnly
+                  className="bg-muted"
+                />
               </div>
 
               {/* Pay Method */}
               <div className="space-y-2">
                 <Label>Payment Method</Label>
-                <Select
-                  value={formData.pay_method || "none"}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, pay_method: v === "none" ? "" : v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="check">Check</SelectItem>
-                    <SelectItem value="transfer">Transfer</SelectItem>
-                    <SelectItem value="cc_management">CC Management</SelectItem>
-                    <SelectItem value="cc_personal">CC Personal</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={formData.pay_method || 'None'}
+                  readOnly
+                  className="bg-muted"
+                />
               </div>
 
               {/* Amount */}
               <div className="space-y-2">
                 <Label>Amount</Label>
                 <Input
-                  type="number"
-                  step="0.01"
                   value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
 
@@ -295,12 +193,9 @@ export function EditTransactionDialog({
               <div className="space-y-2">
                 <Label>ITBIS</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.itbis}
-                  onChange={(e) =>
-                    setFormData({ ...formData, itbis: e.target.value })
-                  }
+                  value={formData.itbis || '0'}
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
             </div>
@@ -310,9 +205,8 @@ export function EditTransactionDialog({
               <Label>Description</Label>
               <Input
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                readOnly
+                className="bg-muted"
               />
             </div>
 
@@ -320,10 +214,9 @@ export function EditTransactionDialog({
             <div className="space-y-2">
               <Label>Vendor/Name</Label>
               <Input
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                value={formData.name || ''}
+                readOnly
+                className="bg-muted"
               />
             </div>
 
@@ -331,10 +224,9 @@ export function EditTransactionDialog({
             <div className="space-y-2">
               <Label>Document #</Label>
               <Input
-                value={formData.document}
-                onChange={(e) =>
-                  setFormData({ ...formData, document: e.target.value })
-                }
+                value={formData.document || ''}
+                readOnly
+                className="bg-muted"
               />
             </div>
 
@@ -342,10 +234,9 @@ export function EditTransactionDialog({
             <div className="space-y-2">
               <Label>Comments</Label>
               <Textarea
-                value={formData.comments}
-                onChange={(e) =>
-                  setFormData({ ...formData, comments: e.target.value })
-                }
+                value={formData.comments || ''}
+                readOnly
+                className="bg-muted"
                 rows={2}
               />
             </div>
@@ -365,25 +256,18 @@ export function EditTransactionDialog({
               {transaction.is_void && (
                 <span className="text-muted-foreground italic">This transaction is voided</span>
               )}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateMutation.isPending || transaction.is_void}>
-                  {updateMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Save Changes
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Close
+              </Button>
             </DialogFooter>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
+
 
       <AlertDialog open={showVoidConfirm} onOpenChange={setShowVoidConfirm}>
         <AlertDialogContent>

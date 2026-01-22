@@ -19,7 +19,7 @@ import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 
 const PENDING_NCF_COLUMNS: ColumnConfig[] = [
-  { key: "id", label: "ID", defaultVisible: false },
+  { key: "id", label: "ID", defaultVisible: true },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: false },
@@ -37,7 +37,7 @@ const PENDING_NCF_COLUMNS: ColumnConfig[] = [
 ];
 
 const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
-  { key: "id", label: "ID", defaultVisible: false },
+  { key: "id", label: "ID", defaultVisible: true },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: false },

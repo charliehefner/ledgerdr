@@ -99,11 +99,9 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('transaction-attachments')
-        .getPublicUrl(filePath);
-
-      onUpload(publicUrl);
+      // Store the storage path, not a public URL (bucket is private)
+      const storagePath = `transaction-attachments/${filePath}`;
+      onUpload(storagePath);
       toast.success('Attachment uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);
@@ -246,11 +244,9 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('transaction-attachments')
-        .getPublicUrl(filePath);
-
-      onUpload(publicUrl);
+      // Store the storage path, not a public URL (bucket is private)
+      const storagePath = `transaction-attachments/${filePath}`;
+      onUpload(storagePath);
       toast.success('Photo saved successfully');
       closeCamera();
     } catch (error) {

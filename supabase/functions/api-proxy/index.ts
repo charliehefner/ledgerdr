@@ -7,9 +7,48 @@ const corsHeaders = {
 
 const API_BASE_URL = 'https://api.dallasagro.org';
 
-Deno.serve(async (req) => {
-  console.log('API Proxy called - method:', req.method);
+// Allowed endpoints with method restrictions
+// Both roles can access read endpoints; write operations are for admin only where noted
+const ENDPOINT_PATTERNS = {
+  // Read endpoints - all authenticated users with valid roles
+  read: [
+    { pattern: /^\/accounts$/, methods: ['GET'] },
+    { pattern: /^\/projects$/, methods: ['GET'] },
+    { pattern: /^\/cbs-codes$/, methods: ['GET'] },
+    { pattern: /^\/transactions\/recent(\?.*)?$/, methods: ['GET'] },
+    { pattern: /^\/transactions\/\d+$/, methods: ['GET'] },
+  ],
+  // Write endpoints - accessible to users with valid roles
+  write: [
+    { pattern: /^\/transactions$/, methods: ['POST'] },
+    { pattern: /^\/transactions\/\d+$/, methods: ['PUT', 'DELETE'] },
+    { pattern: /^\/transactions\/\d+\/void$/, methods: ['POST'] },
+  ],
+};
+
+function isEndpointAllowed(endpoint: string, method: string, role: string): boolean {
+  // Check read endpoints (both roles allowed)
+  for (const rule of ENDPOINT_PATTERNS.read) {
+    if (rule.pattern.test(endpoint) && rule.methods.includes(method)) {
+      return true;
+    }
+  }
   
+  // Check write endpoints (both roles allowed for now, admin-only restrictions can be added)
+  for (const rule of ENDPOINT_PATTERNS.write) {
+    if (rule.pattern.test(endpoint) && rule.methods.includes(method)) {
+      // For void operations, only admins can void
+      if (endpoint.includes('/void') && role !== 'admin') {
+        return false;
+      }
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,43 +57,46 @@ Deno.serve(async (req) => {
   try {
     // Verify authorization header exists
     const authHeader = req.headers.get('Authorization');
-    console.log('Auth header present:', !!authHeader);
-    
     if (!authHeader?.startsWith('Bearer ')) {
-      console.log('No valid auth header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - no token' }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Create Supabase client and verify the user is authenticated
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    
-    console.log('Supabase URL present:', !!supabaseUrl);
-    console.log('Supabase Anon Key present:', !!supabaseAnonKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     const supabase = createClient(
-      supabaseUrl!,
-      supabaseAnonKey!,
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Use getUser to verify the token is valid
+    // Verify the token is valid
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    
-    console.log('getUser result - user:', !!userData?.user, 'error:', userError?.message);
-    
     if (userError || !userData?.user) {
-      console.error('Auth error:', userError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid token', details: userError?.message }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User authenticated:', userData.user.email);
+    // Get user role for authorization
+    const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', { 
+      _user_id: userData.user.id 
+    });
+    
+    if (roleError || !roleData || !['admin', 'accountant'].includes(roleData)) {
+      console.error('Role check failed:', roleError?.message || 'Invalid role');
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - no valid role' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userRole = roleData as string;
 
     // Get API key from secure secrets
     const apiKey = Deno.env.get('DALLAS_AGRO_API_KEY');
@@ -68,12 +110,19 @@ Deno.serve(async (req) => {
 
     // Parse the request body to get endpoint and options
     const { endpoint, method = 'GET', body } = await req.json();
-    console.log('Proxying to:', endpoint, 'method:', method);
 
-    if (!endpoint) {
+    if (!endpoint || typeof endpoint !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Endpoint is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate endpoint against allowlist
+    if (!isEndpointAllowed(endpoint, method, userRole)) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - endpoint not allowed' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -121,7 +170,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('API proxy error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

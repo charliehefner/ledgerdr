@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Paperclip, Upload, Loader2, Camera, X, FileImage, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { saveAttachment } from '@/lib/attachments';
+import { saveAttachment, getSignedAttachmentUrl } from '@/lib/attachments';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -36,11 +36,28 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageName, setImageName] = useState('');
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Fetch signed URL when attachment URL changes
+  useEffect(() => {
+    async function fetchSignedUrl() {
+      if (attachmentUrl) {
+        setIsLoadingUrl(true);
+        const url = await getSignedAttachmentUrl(attachmentUrl);
+        setSignedUrl(url);
+        setIsLoadingUrl(false);
+      } else {
+        setSignedUrl(null);
+      }
+    }
+    fetchSignedUrl();
+  }, [attachmentUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -203,6 +220,9 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
 
   // Check if attachment is an image (for preview)
   const isImageAttachment = attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachmentUrl);
+  
+  // Use signed URL for viewing, fallback to original if not available
+  const viewUrl = signedUrl || attachmentUrl;
 
   return (
     <>
@@ -222,10 +242,10 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
               <DropdownMenuTrigger asChild>
                 <button
                   className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors text-primary`}
-                  disabled={isUploading}
+                  disabled={isUploading || isLoadingUrl}
                   title="View or update attachment"
                 >
-                  {isUploading ? (
+                  {isUploading || isLoadingUrl ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Paperclip className="h-4 w-4" />
@@ -236,7 +256,7 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
             <DropdownMenuContent align="center" className="bg-popover z-50">
               <DropdownMenuItem asChild>
                 <a
-                  href={attachmentUrl}
+                  href={viewUrl || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center"
@@ -256,11 +276,17 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
             </DropdownMenuContent>
           </DropdownMenu>
           <HoverCardContent side="left" className="w-64 p-2 z-50">
-            <img
-              src={attachmentUrl}
-              alt="Receipt preview"
-              className="w-full h-auto rounded-md object-contain max-h-48"
-            />
+            {viewUrl ? (
+              <img
+                src={viewUrl}
+                alt="Receipt preview"
+                className="w-full h-auto rounded-md object-contain max-h-48"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-24">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </HoverCardContent>
         </HoverCard>
       ) : (
@@ -270,10 +296,10 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
               className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors ${
                 attachmentUrl ? 'text-primary' : 'text-muted-foreground'
               }`}
-              disabled={isUploading}
+              disabled={isUploading || isLoadingUrl}
               title={attachmentUrl ? 'View or update attachment' : 'Add attachment'}
             >
-              {isUploading ? (
+              {isUploading || isLoadingUrl ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Paperclip className="h-4 w-4" />
@@ -281,10 +307,10 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="bg-popover z-50">
-            {attachmentUrl && (
+            {viewUrl && (
               <DropdownMenuItem asChild>
                 <a
-                  href={attachmentUrl}
+                  href={viewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center"

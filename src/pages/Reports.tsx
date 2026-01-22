@@ -66,6 +66,7 @@ const COLORS = [
 ];
 
 const REPORT_COLUMNS: ColumnConfig[] = [
+  { key: "id", label: "ID", defaultVisible: false },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: true },
@@ -612,73 +613,76 @@ export default function Reports() {
               <Table className="min-w-[1200px]">
                 <TableHeader>
                   <TableRow>
+                    {columnVisibility.isVisible("id") && (
+                      <TableHead>ID</TableHead>
+                    )}
                     {columnVisibility.isVisible("date") && (
-                      <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transaction_date")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transaction_date")}>
                         <div className="flex items-center">Date<SortIcon columnKey="transaction_date" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("account") && (
-                      <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("master_acct_code")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("master_acct_code")}>
                         <div className="flex items-center">Account<SortIcon columnKey="master_acct_code" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("project") && (
-                      <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("project_code")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("project_code")}>
                         <div className="flex items-center">Project<SortIcon columnKey="project_code" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("cbs") && (
-                      <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("cbs_code")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("cbs_code")}>
                         <div className="flex items-center">CBS Code<SortIcon columnKey="cbs_code" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("description") && (
-                      <TableHead className="min-w-[180px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("description")}>
                         <div className="flex items-center">Description<SortIcon columnKey="description" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("currency") && (
-                      <TableHead className="w-20 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("currency")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("currency")}>
                         <div className="flex items-center">Currency<SortIcon columnKey="currency" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("amount") && (
-                      <TableHead className="w-28 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
+                      <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("amount")}>
                         <div className="flex items-center justify-end">Amount<SortIcon columnKey="amount" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("itbis") && (
-                      <TableHead className="w-24 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itbis")}>
+                      <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("itbis")}>
                         <div className="flex items-center justify-end">ITBIS<SortIcon columnKey="itbis" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("payMethod") && (
-                      <TableHead className="w-24 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("pay_method")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("pay_method")}>
                         <div className="flex items-center">Pay Method<SortIcon columnKey="pay_method" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("document") && (
-                      <TableHead className="w-28 cursor-pointer hover:bg-muted/50" onClick={() => handleSort("document")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("document")}>
                         <div className="flex items-center">Document<SortIcon columnKey="document" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("name") && (
-                      <TableHead className="min-w-[120px] cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
                         <div className="flex items-center">Name<SortIcon columnKey="name" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("exchangeRate") && (
-                      <TableHead className="w-20 text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("exchange_rate")}>
+                      <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("exchange_rate")}>
                         <div className="flex items-center justify-end">Ex. Rate<SortIcon columnKey="exchange_rate" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("internal") && (
-                      <TableHead className="w-16 text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
+                      <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
                         <div className="flex items-center justify-center">Internal<SortIcon columnKey="is_internal" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("attach") && (
-                      <TableHead className="w-16 text-center">Attach</TableHead>
+                      <TableHead className="text-center">Attach</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
@@ -692,6 +696,11 @@ export default function Reports() {
                   ) : sortedTransactions.length > 0 ? (
                     sortedTransactions.map((tx, index) => (
                       <TableRow key={tx.id || index}>
+                        {columnVisibility.isVisible("id") && (
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {tx.id || "-"}
+                          </TableCell>
+                        )}
                         {columnVisibility.isVisible("date") && (
                           <TableCell className="font-mono text-sm whitespace-nowrap">
                             {formatDate(tx.transaction_date)}

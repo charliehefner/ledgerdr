@@ -31,6 +31,7 @@ import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 
 const INVOICE_COLUMNS: ColumnConfig[] = [
+  { key: "id", label: "ID", defaultVisible: false },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: true },
@@ -170,6 +171,7 @@ export default function Invoices() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {columnVisibility.isVisible("id") && <TableHead>ID</TableHead>}
                     {columnVisibility.isVisible("date") && <TableHead>Date</TableHead>}
                     {columnVisibility.isVisible("account") && <TableHead>Account</TableHead>}
                     {columnVisibility.isVisible("project") && <TableHead>Project</TableHead>}
@@ -205,8 +207,13 @@ export default function Invoices() {
                           }
                         }}
                       >
+                        {columnVisibility.isVisible("id") && (
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {tx.id || "-"}
+                          </TableCell>
+                        )}
                         {columnVisibility.isVisible("date") && (
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm whitespace-nowrap">
                             {formatDate(tx.transaction_date)}
                           </TableCell>
                         )}

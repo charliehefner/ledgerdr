@@ -20,6 +20,7 @@ import { useColumnVisibility, ColumnConfig } from '@/hooks/useColumnVisibility';
 import { ColumnSelector } from '@/components/ui/column-selector';
 
 const RECENT_COLUMNS: ColumnConfig[] = [
+  { key: "id", label: "ID", defaultVisible: true },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: false },
@@ -105,15 +106,16 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                {columnVisibility.isVisible("date") && <TableHead className="w-24">Date</TableHead>}
-                {columnVisibility.isVisible("account") && <TableHead className="w-48">Account</TableHead>}
-                {columnVisibility.isVisible("description") && <TableHead className="w-48">Description</TableHead>}
-                {columnVisibility.isVisible("currency") && <TableHead className="w-20">Currency</TableHead>}
-                {columnVisibility.isVisible("amount") && <TableHead className="w-28 text-right">Amount</TableHead>}
-                {columnVisibility.isVisible("payMethod") && <TableHead className="w-28">Pay Method</TableHead>}
-                {columnVisibility.isVisible("document") && <TableHead className="w-32">Document</TableHead>}
-                {columnVisibility.isVisible("name") && <TableHead className="w-32">Name</TableHead>}
-                {columnVisibility.isVisible("attach") && <TableHead className="w-16 text-center">Attach</TableHead>}
+                {columnVisibility.isVisible("id") && <TableHead>ID</TableHead>}
+                {columnVisibility.isVisible("date") && <TableHead>Date</TableHead>}
+                {columnVisibility.isVisible("account") && <TableHead>Account</TableHead>}
+                {columnVisibility.isVisible("description") && <TableHead>Description</TableHead>}
+                {columnVisibility.isVisible("currency") && <TableHead>Currency</TableHead>}
+                {columnVisibility.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
+                {columnVisibility.isVisible("payMethod") && <TableHead>Pay Method</TableHead>}
+                {columnVisibility.isVisible("document") && <TableHead>Document</TableHead>}
+                {columnVisibility.isVisible("name") && <TableHead>Name</TableHead>}
+                {columnVisibility.isVisible("attach") && <TableHead className="text-center">Attach</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -134,8 +136,13 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     className={`cursor-pointer hover:bg-muted/50 ${tx.is_void ? "opacity-50 bg-muted/30" : ""}`}
                     onClick={() => handleRowClick(tx)}
                   >
+                    {columnVisibility.isVisible("id") && (
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {tx.id || "-"}
+                      </TableCell>
+                    )}
                     {columnVisibility.isVisible("date") && (
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-mono text-sm whitespace-nowrap">
                         {formatDate(tx.transaction_date)}
                       </TableCell>
                     )}

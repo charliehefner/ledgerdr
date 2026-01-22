@@ -19,6 +19,7 @@ import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 
 const PENDING_NCF_COLUMNS: ColumnConfig[] = [
+  { key: "id", label: "ID", defaultVisible: false },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: false },
@@ -36,6 +37,7 @@ const PENDING_NCF_COLUMNS: ColumnConfig[] = [
 ];
 
 const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
+  { key: "id", label: "ID", defaultVisible: false },
   { key: "date", label: "Date", defaultVisible: true },
   { key: "account", label: "Account", defaultVisible: true },
   { key: "project", label: "Project", defaultVisible: false },
@@ -126,6 +128,7 @@ export default function Dashboard() {
           <Table>
             <TableHeader>
               <TableRow>
+                {pendingNcfColumns.isVisible("id") && <TableHead>ID</TableHead>}
                 {pendingNcfColumns.isVisible("date") && <TableHead>Date</TableHead>}
                 {pendingNcfColumns.isVisible("account") && <TableHead>Account</TableHead>}
                 {pendingNcfColumns.isVisible("description") && <TableHead>Description</TableHead>}
@@ -151,7 +154,8 @@ export default function Dashboard() {
               ) : (
                 transactionsWithoutDocument.map((tx) => (
                   <TableRow key={tx.id}>
-                    {pendingNcfColumns.isVisible("date") && <TableCell>{formatDate(tx.transaction_date)}</TableCell>}
+                    {pendingNcfColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
+                    {pendingNcfColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {pendingNcfColumns.isVisible("account") && <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>}
                     {pendingNcfColumns.isVisible("description") && <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>}
                     {pendingNcfColumns.isVisible("document") && <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>}
@@ -190,6 +194,7 @@ export default function Dashboard() {
           <Table>
             <TableHeader>
               <TableRow>
+                {withoutAttachmentColumns.isVisible("id") && <TableHead>ID</TableHead>}
                 {withoutAttachmentColumns.isVisible("date") && <TableHead>Date</TableHead>}
                 {withoutAttachmentColumns.isVisible("account") && <TableHead>Account</TableHead>}
                 {withoutAttachmentColumns.isVisible("description") && <TableHead>Description</TableHead>}
@@ -215,7 +220,8 @@ export default function Dashboard() {
               ) : (
                 transactionsWithoutAttachment.map((tx) => (
                   <TableRow key={tx.id}>
-                    {withoutAttachmentColumns.isVisible("date") && <TableCell>{formatDate(tx.transaction_date)}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {withoutAttachmentColumns.isVisible("account") && <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>}
                     {withoutAttachmentColumns.isVisible("description") && <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>}
                     {withoutAttachmentColumns.isVisible("document") && <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>}

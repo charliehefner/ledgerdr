@@ -6,11 +6,14 @@ export interface ColumnConfig {
   defaultVisible?: boolean;
 }
 
+// Increment this version when column definitions change to reset user preferences
+const STORAGE_VERSION = 2;
+
 export function useColumnVisibility(
   tableId: string,
   columns: ColumnConfig[]
 ) {
-  const storageKey = `column-visibility-${tableId}`;
+  const storageKey = `column-visibility-v${STORAGE_VERSION}-${tableId}`;
   
   // Memoize the column keys to detect when columns change
   const columnKeys = useMemo(() => columns.map(c => c.key).join(','), [columns]);

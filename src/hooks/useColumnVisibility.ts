@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 export interface ColumnConfig {
   key: string;
@@ -12,24 +12,40 @@ export function useColumnVisibility(
 ) {
   const storageKey = `column-visibility-${tableId}`;
   
-  // Initialize from localStorage or defaults
+  // Memoize the column keys to detect when columns change
+  const columnKeys = useMemo(() => columns.map(c => c.key).join(','), [columns]);
+  
+  // Initialize from localStorage, but always merge with current column definitions
   const getInitialVisibility = useCallback(() => {
     const saved = localStorage.getItem(storageKey);
+    let savedVisibility: Record<string, boolean> = {};
+    
     if (saved) {
       try {
-        return JSON.parse(saved) as Record<string, boolean>;
+        savedVisibility = JSON.parse(saved) as Record<string, boolean>;
       } catch {
-        // Invalid JSON, use defaults
+        // Invalid JSON, use empty object
       }
     }
-    // Default visibility based on column config
+    
+    // Merge: use saved values where available, defaults for new columns
     return columns.reduce((acc, col) => {
-      acc[col.key] = col.defaultVisible !== false;
+      if (savedVisibility.hasOwnProperty(col.key)) {
+        acc[col.key] = savedVisibility[col.key];
+      } else {
+        // New column - use default visibility
+        acc[col.key] = col.defaultVisible !== false;
+      }
       return acc;
     }, {} as Record<string, boolean>);
   }, [columns, storageKey]);
 
   const [visibility, setVisibility] = useState<Record<string, boolean>>(getInitialVisibility);
+
+  // Re-sync when columns definition changes (e.g., new columns added)
+  useEffect(() => {
+    setVisibility(getInitialVisibility());
+  }, [columnKeys, getInitialVisibility]);
 
   // Save to localStorage when visibility changes
   useEffect(() => {
@@ -56,7 +72,9 @@ export function useColumnVisibility(
       return acc;
     }, {} as Record<string, boolean>);
     setVisibility(defaults);
-  }, [columns]);
+    // Also clear localStorage to ensure fresh start
+    localStorage.removeItem(storageKey);
+  }, [columns, storageKey]);
 
   const isVisible = useCallback((key: string) => {
     return visibility[key] !== false;

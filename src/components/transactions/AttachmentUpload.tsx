@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Paperclip, X, FileImage, Loader2, Camera, Video, XCircle } from 'lucide-react';
+import { Paperclip, X, FileImage, Loader2, Camera, Video, XCircle, SwitchCamera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -17,6 +17,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AttachmentUploadProps {
   onUpload: (url: string) => void;
@@ -30,6 +37,8 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageName, setImageName] = useState('');
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -93,20 +102,37 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
     fileInputRef.current?.click();
   };
 
-  const startCamera = useCallback(async () => {
-    setShowCamera(true);
-    setCapturedImage(null);
-    setImageName('');
-    
+  const loadCameras = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        } 
-      });
-      
+      // Request permission first to get device labels
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      setAvailableCameras(videoDevices);
+      if (videoDevices.length > 0 && !selectedCameraId) {
+        setSelectedCameraId(videoDevices[0].deviceId);
+      }
+      return videoDevices;
+    } catch (error) {
+      console.error('Error loading cameras:', error);
+      return [];
+    }
+  }, [selectedCameraId]);
+
+  const startCameraWithDevice = useCallback(async (deviceId?: string) => {
+    try {
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints: MediaStreamConstraints = {
+        video: deviceId 
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : { width: { ideal: 1920 }, height: { ideal: 1080 } }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
       if (videoRef.current) {
@@ -117,9 +143,31 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
     } catch (error) {
       console.error('Camera access error:', error);
       toast.error('Could not access camera. Please check permissions.');
-      setShowCamera(false);
     }
   }, []);
+
+  const startCamera = useCallback(async () => {
+    setShowCamera(true);
+    setCapturedImage(null);
+    setImageName('');
+    setIsCameraActive(false);
+    
+    const cameras = await loadCameras();
+    if (cameras.length > 0) {
+      const cameraToUse = selectedCameraId || cameras[0].deviceId;
+      setSelectedCameraId(cameraToUse);
+      await startCameraWithDevice(cameraToUse);
+    } else {
+      toast.error('No cameras found on this device.');
+      setShowCamera(false);
+    }
+  }, [loadCameras, selectedCameraId, startCameraWithDevice]);
+
+  const switchCamera = useCallback(async (deviceId: string) => {
+    setSelectedCameraId(deviceId);
+    setIsCameraActive(false);
+    await startCameraWithDevice(deviceId);
+  }, [startCameraWithDevice]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -275,6 +323,28 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Camera Selector */}
+            {availableCameras.length > 1 && !capturedImage && (
+              <div className="space-y-2">
+                <Label htmlFor="cameraSelect" className="flex items-center gap-2">
+                  <SwitchCamera className="h-4 w-4" />
+                  Select Camera
+                </Label>
+                <Select value={selectedCameraId} onValueChange={switchCamera}>
+                  <SelectTrigger id="cameraSelect">
+                    <SelectValue placeholder="Choose a camera" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCameras.map((camera, index) => (
+                      <SelectItem key={camera.deviceId} value={camera.deviceId}>
+                        {camera.label || `Camera ${index + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {!capturedImage ? (
               <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
                 <video

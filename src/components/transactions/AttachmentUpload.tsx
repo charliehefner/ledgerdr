@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Paperclip, X, FileImage, Loader2, Camera, Video, XCircle, SwitchCamera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { getSignedAttachmentUrl } from '@/lib/attachments';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -39,11 +40,28 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
   const [imageName, setImageName] = useState('');
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Fetch signed URL when attachment URL changes
+  useEffect(() => {
+    async function fetchSignedUrl() {
+      if (attachmentUrl) {
+        setIsLoadingUrl(true);
+        const url = await getSignedAttachmentUrl(attachmentUrl);
+        setSignedUrl(url);
+        setIsLoadingUrl(false);
+      } else {
+        setSignedUrl(null);
+      }
+    }
+    fetchSignedUrl();
+  }, [attachmentUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -263,9 +281,13 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
       
       {attachmentUrl ? (
         <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md text-sm">
-          <FileImage className="h-4 w-4 text-primary" />
+          {isLoadingUrl ? (
+            <Loader2 className="h-4 w-4 text-primary animate-spin" />
+          ) : (
+            <FileImage className="h-4 w-4 text-primary" />
+          )}
           <a
-            href={attachmentUrl}
+            href={signedUrl || attachmentUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline max-w-[150px] truncate"

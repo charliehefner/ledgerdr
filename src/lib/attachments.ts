@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-// Get attachment URL for a transaction from local database
+// Get attachment file path for a transaction from local database
 export async function getAttachmentUrl(transactionId: string | number): Promise<string | null> {
   const { data, error } = await supabase
     .from('transaction_attachments')
@@ -73,4 +73,34 @@ export async function deleteAttachment(transactionId: string | number): Promise<
   }
 
   return true;
+}
+
+// Get a signed URL for viewing an attachment (for private bucket)
+export async function getSignedAttachmentUrl(attachmentUrl: string): Promise<string | null> {
+  if (!attachmentUrl) return null;
+
+  // Extract the file path from the stored URL
+  const match = attachmentUrl.match(/transaction-attachments\/(.+)$/);
+  if (!match) {
+    console.error('Could not extract file path from URL:', attachmentUrl);
+    return null;
+  }
+
+  const filePath = match[1];
+
+  try {
+    const { data, error } = await supabase.functions.invoke('get-signed-url', {
+      body: { filePath },
+    });
+
+    if (error) {
+      console.error('Error getting signed URL:', error);
+      return null;
+    }
+
+    return data?.signedUrl || null;
+  } catch (error) {
+    console.error('Failed to get signed URL:', error);
+    return null;
+  }
 }

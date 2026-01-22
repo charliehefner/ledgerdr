@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,14 +28,17 @@ export function ColumnSelector({
   onToggle,
   onReset,
 }: ColumnSelectorProps) {
+  const [open, setOpen] = useState(false);
+
   const handleReset = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onReset();
+    setOpen(false);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Settings2 className="h-4 w-4" />

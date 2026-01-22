@@ -104,11 +104,15 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
 
   const loadCameras = useCallback(async () => {
     try {
-      // Request permission first to get device labels
-      await navigator.mediaDevices.getUserMedia({ video: true });
+      // Request permission first to get device labels, then immediately stop the stream
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      tempStream.getTracks().forEach(track => track.stop());
+      
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       setAvailableCameras(videoDevices);
+      
+      // Only set default if we don't already have a selection
       if (videoDevices.length > 0 && !selectedCameraId) {
         setSelectedCameraId(videoDevices[0].deviceId);
       }

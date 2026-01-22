@@ -91,11 +91,10 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('transaction-attachments')
-        .getPublicUrl(filePath);
+      // Store just the file path reference (bucket is private, so we use signed URLs for viewing)
+      const storagePath = `transaction-attachments/${filePath}`;
 
-      const success = await saveAttachment(transactionId, publicUrl);
+      const success = await saveAttachment(transactionId, storagePath);
       if (!success) throw new Error('Failed to save attachment to database');
       toast.success('Attachment updated successfully');
       onUpdate();
@@ -194,11 +193,10 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('transaction-attachments')
-        .getPublicUrl(filePath);
+      // Store just the file path reference (bucket is private, so we use signed URLs for viewing)
+      const storagePath = `transaction-attachments/${filePath}`;
 
-      const success = await saveAttachment(transactionId, publicUrl);
+      const success = await saveAttachment(transactionId, storagePath);
       if (!success) throw new Error('Failed to save attachment to database');
       toast.success('Photo saved successfully');
       closeCamera();

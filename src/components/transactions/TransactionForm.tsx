@@ -94,6 +94,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       return false;
     }
     
+    // Skip duplicate check for Nomina (payroll) transactions
+    if (form.description.toLowerCase().includes('nomina')) {
+      return false;
+    }
+    
     const formDate = form.transaction_date.toISOString().split('T')[0];
     const formAmount = parseFloat(form.amount);
     const formName = (form.name || '').trim().toLowerCase();

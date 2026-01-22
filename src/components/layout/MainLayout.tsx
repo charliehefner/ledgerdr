@@ -67,14 +67,14 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2">
                   <User className="h-4 w-4" />
-                  <span className="capitalize">{user?.username}</span>
+                  <span>{user?.email}</span>
                   <span className="text-xs text-muted-foreground capitalize">({user?.role})</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span className="capitalize">{user?.username}</span>
+                    <span>{user?.email}</span>
                     <span className="text-xs font-normal text-muted-foreground capitalize">{user?.role}</span>
                   </div>
                 </DropdownMenuLabel>

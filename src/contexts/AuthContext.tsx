@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const USERS: Record<string, { password: string; role: UserRole }> = {
   charles: { password: "1234", role: "admin" },
   accountant: { password: "1234", role: "accountant" },
+  iramaia: { password: "1234", role: "accountant" },
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {

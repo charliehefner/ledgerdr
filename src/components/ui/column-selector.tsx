@@ -27,6 +27,12 @@ export function ColumnSelector({
   onToggle,
   onReset,
 }: ColumnSelectorProps) {
+  const handleReset = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onReset();
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -62,7 +68,12 @@ export function ColumnSelector({
           </div>
         </ScrollArea>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onReset}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm" 
+            onClick={handleReset}
+          >
             Reset to Defaults
           </Button>
         </DialogFooter>

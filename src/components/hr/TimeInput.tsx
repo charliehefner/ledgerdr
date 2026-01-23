@@ -13,6 +13,7 @@ interface TimeInputProps {
   value: string | null;
   onChange: (value: string | null) => void;
   className?: string;
+  defaultPeriod?: "AM" | "PM";
 }
 
 // Convert 24hr to 12hr format
@@ -45,17 +46,20 @@ function to24Hour(hours: string, minutes: string, period: "AM" | "PM"): string |
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-export function TimeInput({ value, onChange, className }: TimeInputProps) {
+export function TimeInput({ value, onChange, className, defaultPeriod = "AM" }: TimeInputProps) {
   const parsed = to12Hour(value);
   const [hours, setHours] = useState(parsed.hours);
   const [minutes, setMinutes] = useState(parsed.minutes);
-  const [period, setPeriod] = useState<"AM" | "PM">(parsed.period);
+  const [period, setPeriod] = useState<"AM" | "PM">(value ? parsed.period : defaultPeriod);
 
   useEffect(() => {
     const parsed = to12Hour(value);
     setHours(parsed.hours);
     setMinutes(parsed.minutes);
-    setPeriod(parsed.period);
+    // Only set period from value if value exists, otherwise keep default
+    if (value) {
+      setPeriod(parsed.period);
+    }
   }, [value]);
 
   const handleChange = (newHours: string, newMinutes: string, newPeriod: "AM" | "PM") => {

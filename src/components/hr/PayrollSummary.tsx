@@ -398,19 +398,22 @@ export function PayrollSummary({
           <TableHeader>
             <TableRow>
               <TableHead>Employee</TableHead>
+              <TableHead className="text-right font-bold">Net Pay</TableHead>
               <TableHead className="text-right">Reg Hrs</TableHead>
               <TableHead className="text-right text-orange-600">OT Hrs</TableHead>
               <TableHead className="text-right">Base Pay</TableHead>
               <TableHead className="text-right text-orange-600">OT Pay</TableHead>
               <TableHead className="text-right text-green-600">Benefits</TableHead>
               <TableHead className="text-right text-red-600">Deductions</TableHead>
-              <TableHead className="text-right font-bold">Net Pay</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {payrollData.map((p) => (
               <TableRow key={p.employee.id}>
                 <TableCell className="font-medium">{p.employee.name}</TableCell>
+                <TableCell className="text-right font-mono font-bold text-primary">
+                  {formatCurrency(p.netPay)}
+                </TableCell>
                 <TableCell className="text-right font-mono">
                   {p.regularHours.toFixed(1)}
                 </TableCell>
@@ -429,15 +432,15 @@ export function PayrollSummary({
                 <TableCell className="text-right font-mono text-red-600">
                   {formatCurrency(p.totalDeductions)}
                 </TableCell>
-                <TableCell className="text-right font-mono font-bold">
-                  {formatCurrency(p.netPay)}
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/50 font-bold">
               <TableCell>TOTALS</TableCell>
+              <TableCell className="text-right font-mono font-bold text-primary">
+                {formatCurrency(totals.netPay)}
+              </TableCell>
               <TableCell className="text-right font-mono">
                 {totals.regularHours.toFixed(1)}
               </TableCell>
@@ -455,9 +458,6 @@ export function PayrollSummary({
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {formatCurrency(totals.totalDeductions)}
-              </TableCell>
-              <TableCell className="text-right font-mono font-bold text-primary">
-                {formatCurrency(totals.netPay)}
               </TableCell>
             </TableRow>
           </TableFooter>

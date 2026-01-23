@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, isWeekend, isSaturday } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -323,12 +323,13 @@ export function PayrollTimeGrid({
             <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">
               Employee
             </TableHead>
-            {days.map((day) => (
+            {days.map((day, index) => (
               <TableHead
                 key={day.toISOString()}
                 className={cn(
                   "text-center min-w-[100px]",
-                  isWeekend(day) && "bg-muted/50"
+                  isWeekend(day) && "bg-muted/50",
+                  !isWeekend(day) && index % 2 === 1 && "bg-muted/20"
                 )}
               >
                 <div className="text-xs">{format(day, "EEE")}</div>
@@ -362,15 +363,20 @@ export function PayrollTimeGrid({
                     {employee.name}
                   </button>
                 </TableCell>
-                {days.map((day) => {
+                {days.map((day, index) => {
                   const entry = getTimesheetEntry(employee.id, day);
                   const weekend = isWeekend(day);
+                  const saturday = isSaturday(day);
+                  // End time defaults to PM except on Saturdays
+                  const endTimeDefaultPeriod = saturday ? "AM" : "PM";
+                  
                   return (
                     <TableCell
                       key={day.toISOString()}
                       className={cn(
                         "p-1 text-center",
                         weekend && "bg-muted/30",
+                        !weekend && index % 2 === 1 && "bg-muted/10",
                         entry?.is_absent && "bg-destructive/10"
                       )}
                     >
@@ -380,12 +386,14 @@ export function PayrollTimeGrid({
                           onChange={(val) =>
                             handleTimeChange(employee.id, day, "start_time", val)
                           }
+                          defaultPeriod="AM"
                         />
                         <TimeInput
                           value={entry?.end_time || null}
                           onChange={(val) =>
                             handleTimeChange(employee.id, day, "end_time", val)
                           }
+                          defaultPeriod={endTimeDefaultPeriod}
                         />
                       </div>
                     </TableCell>

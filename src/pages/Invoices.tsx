@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
+import { getTransactionEdits } from "@/lib/transactionEdits";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -69,12 +70,34 @@ export default function Invoices() {
     queryFn: fetchAccounts,
   });
 
+  // Get transaction IDs to fetch local edits
+  const transactionIds = transactions
+    .filter(tx => !tx.is_void && tx.id)
+    .map(tx => String(tx.id));
+
+  // Fetch local edits
+  const { data: edits = {} } = useQuery({
+    queryKey: ['transactionEdits', transactionIds],
+    queryFn: () => getTransactionEdits(transactionIds),
+    enabled: transactionIds.length > 0,
+  });
+
+  // Merge API data with local edits
+  const mergeWithEdits = (tx: Transaction): Transaction => {
+    const edit = edits[String(tx.id)];
+    if (!edit) return tx;
+    return {
+      ...tx,
+      document: edit.document ?? tx.document,
+    };
+  };
+
   // Get unique accounts from active transactions only
   const activeForAccounts = transactions.filter((t) => !t.is_void);
   const usedAccounts = [...new Set(activeForAccounts.map((t) => t.master_acct_code).filter(Boolean))];
 
-  // Filter transactions (exclude voided)
-  const activeTransactions = transactions.filter((tx) => !tx.is_void);
+  // Filter transactions (exclude voided) and merge with edits
+  const activeTransactions = transactions.filter((tx) => !tx.is_void).map(mergeWithEdits);
 
   const filteredTransactions = activeTransactions.filter((tx) => {
     const matchesSearch =

@@ -1,7 +1,8 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { fetchRecentTransactions, fetchAccounts } from "@/lib/api";
+import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
 import { getAttachmentUrls } from "@/lib/attachments";
+import { getTransactionEdits } from "@/lib/transactionEdits";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowRight } from "lucide-react";
@@ -83,9 +84,28 @@ export default function Dashboard() {
     enabled: transactionIds.length > 0,
   });
 
-  // Filter: non-voided transactions without a document field
+  // Fetch local edits for all transactions
+  const { data: edits = {} } = useQuery({
+    queryKey: ['transactionEdits', transactionIds],
+    queryFn: () => getTransactionEdits(transactionIds),
+    enabled: transactionIds.length > 0,
+  });
+
+  // Merge API data with local edits
+  const mergeWithEdits = (tx: Transaction): Transaction => {
+    const edit = edits[String(tx.id)];
+    if (!edit) return tx;
+    return {
+      ...tx,
+      document: edit.document ?? tx.document,
+    };
+  };
+
+  // Filter: non-voided transactions without a document field (considering local edits)
   const transactionsWithoutDocument = allTransactions
-    .filter(tx => !tx.is_void && (!tx.document || tx.document.trim() === ''));
+    .filter(tx => !tx.is_void)
+    .map(mergeWithEdits)
+    .filter(tx => !tx.document || tx.document.trim() === '');
 
   // Filter: non-voided transactions without a physical attachment
   const transactionsWithoutAttachment = allTransactions

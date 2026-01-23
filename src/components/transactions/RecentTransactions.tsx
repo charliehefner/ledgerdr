@@ -12,6 +12,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
 import { getAttachmentUrls } from '@/lib/attachments';
+import { getTransactionEdits } from '@/lib/transactionEdits';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { AttachmentCell } from './AttachmentCell';
@@ -53,6 +54,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const handleAttachmentUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
     queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
+    queryClient.invalidateQueries({ queryKey: ['transactionEdits'] });
   };
 
   const handleRowClick = (tx: Transaction) => {
@@ -78,10 +80,30 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     enabled: transactionIds.length > 0,
   });
 
+  // Fetch local edits for transactions
+  const { data: edits = {} } = useQuery({
+    queryKey: ['transactionEdits', transactionIds],
+    queryFn: () => getTransactionEdits(transactionIds),
+    enabled: transactionIds.length > 0,
+  });
+
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
     queryFn: fetchAccounts,
   });
+
+  // Merge API data with local edits
+  const mergeWithEdits = (tx: Transaction): Transaction => {
+    const edit = edits[String(tx.id)];
+    if (!edit) return tx;
+    return {
+      ...tx,
+      document: edit.document ?? tx.document,
+    };
+  };
+
+  // Apply edits to transactions for display
+  const mergedTransactions = transactions.map(mergeWithEdits);
 
   const getAccountDescription = (code: string) => {
     const account = accounts.find(a => a.code === code);
@@ -129,8 +151,8 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     ))}
                   </TableRow>
                 ))
-              ) : transactions.length > 0 ? (
-                transactions.map((tx, index) => (
+              ) : mergedTransactions.length > 0 ? (
+                mergedTransactions.map((tx, index) => (
                   <TableRow 
                     key={tx.id || index}
                     className={`cursor-pointer hover:bg-muted/50 ${tx.is_void ? "opacity-50 bg-muted/30" : ""}`}

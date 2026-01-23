@@ -107,25 +107,26 @@ export function PayrollTimeGrid({
     },
   });
 
-  // Mutation to save timesheet entry
+  // Mutation to save timesheet entry (upsert to avoid duplicate key errors)
   const saveTimesheet = useMutation({
     mutationFn: async (entry: Omit<TimesheetEntry, "id"> & { id?: string }) => {
-      if (entry.id) {
-        const { error } = await supabase
-          .from("employee_timesheets")
-          .update({
+      const { error } = await supabase
+        .from("employee_timesheets")
+        .upsert(
+          {
+            employee_id: entry.employee_id,
+            period_id: entry.period_id,
+            work_date: entry.work_date,
             start_time: entry.start_time,
             end_time: entry.end_time,
             is_absent: entry.is_absent,
-          })
-          .eq("id", entry.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("employee_timesheets")
-          .insert(entry);
-        if (error) throw error;
-      }
+          },
+          {
+            onConflict: "employee_id,work_date",
+            ignoreDuplicates: false,
+          }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });

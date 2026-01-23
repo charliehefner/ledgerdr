@@ -23,8 +23,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Transaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
 import { toast } from "sonner";
-import { Ban, Loader2 } from "lucide-react";
+import { Ban, Loader2, Save } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getTransactionEdit, saveTransactionEdit } from "@/lib/transactionEdits";
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
@@ -40,7 +41,9 @@ export function EditTransactionDialog({
   const queryClient = useQueryClient();
   const { getDescription } = useLanguage();
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
-  
+  const [editedDocument, setEditedDocument] = useState("");
+  const [originalDocument, setOriginalDocument] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     transaction_date: "",
     master_acct_code: "",
@@ -72,7 +75,7 @@ export function EditTransactionDialog({
   });
 
   useEffect(() => {
-    if (transaction) {
+    if (transaction && open) {
       setFormData({
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
@@ -87,8 +90,15 @@ export function EditTransactionDialog({
         name: transaction.name || "",
         comments: transaction.comments || "",
       });
+      
+      // Fetch any local edits for this transaction
+      getTransactionEdit(String(transaction.id)).then((edit) => {
+        const docValue = edit?.document ?? transaction.document ?? "";
+        setEditedDocument(docValue);
+        setOriginalDocument(docValue);
+      });
     }
-  }, [transaction]);
+  }, [transaction, open]);
 
 
   const voidMutation = useMutation({
@@ -106,6 +116,21 @@ export function EditTransactionDialog({
     },
   });
 
+  const handleSaveDocument = async () => {
+    if (!transaction?.id) return;
+    setIsSaving(true);
+    const success = await saveTransactionEdit(String(transaction.id), { document: editedDocument });
+    setIsSaving(false);
+    if (success) {
+      setOriginalDocument(editedDocument);
+      queryClient.invalidateQueries({ queryKey: ["transactionEdits"] });
+      toast.success("Document # saved successfully");
+    } else {
+      toast.error("Failed to save Document #");
+    }
+  };
+
+  const hasDocumentChanges = editedDocument !== originalDocument;
 
   if (!transaction) return null;
 
@@ -220,14 +245,30 @@ export function EditTransactionDialog({
               />
             </div>
 
-            {/* Document */}
+            {/* Document - EDITABLE */}
             <div className="space-y-2">
-              <Label>Document #</Label>
-              <Input
-                value={formData.document || ''}
-                readOnly
-                className="bg-muted"
-              />
+              <Label>Document # (NCF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editedDocument}
+                  onChange={(e) => setEditedDocument(e.target.value)}
+                  placeholder="Enter document/NCF number"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveDocument}
+                  disabled={!hasDocumentChanges || isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">This field can be updated after saving</p>
             </div>
 
             {/* Comments */}

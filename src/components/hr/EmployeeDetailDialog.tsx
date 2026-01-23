@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -39,9 +38,12 @@ import {
   Plus,
   Trash2,
   Upload,
+  History,
+  TrendingUp,
+  Percent,
 } from "lucide-react";
-import { format } from "date-fns";
-import { useState } from "react";
+import { format, differenceInDays, differenceInMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -145,6 +147,75 @@ export function EmployeeDetailDialog({
     },
     enabled: !!employeeId && open,
   });
+
+  const { data: timesheets } = useQuery({
+    queryKey: ["employee-timesheets", employeeId],
+    queryFn: async () => {
+      if (!employeeId) return [];
+      const { data, error } = await supabase
+        .from("employee_timesheets")
+        .select("*, payroll_periods(*)")
+        .eq("employee_id", employeeId)
+        .order("work_date", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employeeId && open,
+  });
+
+  const { data: payrollPeriods } = useQuery({
+    queryKey: ["payroll-periods-for-employee", employeeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_periods")
+        .select("*")
+        .order("start_date", { ascending: false })
+        .limit(24);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employeeId && open,
+  });
+
+  // Calculate attendance statistics
+  const attendanceStats = useMemo(() => {
+    if (!timesheets || timesheets.length === 0) {
+      return { totalDays: 0, absentDays: 0, absentRate: 0, totalHours: 0, avgHoursPerDay: 0 };
+    }
+
+    const totalDays = timesheets.length;
+    const absentDays = timesheets.filter((t) => t.is_absent).length;
+    const totalHours = timesheets.reduce((sum, t) => sum + (Number(t.hours_worked) || 0), 0);
+    const workedDays = totalDays - absentDays;
+
+    return {
+      totalDays,
+      absentDays,
+      absentRate: totalDays > 0 ? ((absentDays / totalDays) * 100) : 0,
+      totalHours,
+      avgHoursPerDay: workedDays > 0 ? totalHours / workedDays : 0,
+    };
+  }, [timesheets]);
+
+  // Calculate vacation summary
+  const vacationSummary = useMemo(() => {
+    if (!vacations || vacations.length === 0) {
+      return { totalVacationDays: 0, upcomingVacations: [] };
+    }
+
+    const today = new Date();
+    const totalVacationDays = vacations.reduce((sum, v) => {
+      const days = differenceInDays(new Date(v.end_date), new Date(v.start_date)) + 1;
+      return sum + days;
+    }, 0);
+
+    const upcomingVacations = vacations.filter(
+      (v) => new Date(v.start_date) > today
+    );
+
+    return { totalVacationDays, upcomingVacations };
+  }, [vacations]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-DO", {
@@ -309,8 +380,9 @@ export function EmployeeDetailDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="info">Info</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="salary">Salary</TabsTrigger>
             <TabsTrigger value="vacations">Vacations</TabsTrigger>
             <TabsTrigger value="incidents">Incidents</TabsTrigger>
@@ -359,6 +431,12 @@ export function EmployeeDetailDialog({
                     <span className="text-muted-foreground">Current Salary</span>
                     <span className="font-semibold">{formatCurrency(employee.salary)}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tenure</span>
+                    <span>
+                      {differenceInMonths(new Date(), new Date(employee.date_of_hire))} months
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -404,6 +482,186 @@ export function EmployeeDetailDialog({
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* History Tab - NEW */}
+          <TabsContent value="history" className="space-y-4">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Current Salary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{formatCurrency(employee.salary)}</p>
+                  {salaryHistory && salaryHistory.length > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {salaryHistory.length} changes recorded
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Total Vacation Days
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{vacationSummary.totalVacationDays}</p>
+                  {vacationSummary.upcomingVacations.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {vacationSummary.upcomingVacations.length} upcoming
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Percent className="h-3 w-3" />
+                    Absence Rate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{attendanceStats.absentRate.toFixed(1)}%</p>
+                  <p className="text-xs text-muted-foreground">
+                    {attendanceStats.absentDays} of {attendanceStats.totalDays} days
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
+                    <History className="h-3 w-3" />
+                    Avg Hours/Day
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{attendanceStats.avgHoursPerDay.toFixed(1)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {attendanceStats.totalHours.toFixed(1)} total hours
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Salary History */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Salary History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {salaryHistory?.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No salary history</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Effective Date</TableHead>
+                        <TableHead className="text-right">Salary</TableHead>
+                        <TableHead className="text-right">Change</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {salaryHistory?.map((record, idx) => {
+                        const prevRecord = salaryHistory[idx + 1];
+                        const change = prevRecord
+                          ? ((record.salary - prevRecord.salary) / prevRecord.salary) * 100
+                          : null;
+                        return (
+                          <TableRow key={record.id}>
+                            <TableCell>
+                              {format(new Date(record.effective_date), "MMM d, yyyy")}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(record.salary)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {change !== null ? (
+                                <span className={change >= 0 ? "text-green-600" : "text-red-600"}>
+                                  {change >= 0 ? "+" : ""}{change.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {record.notes || "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Attendance */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Recent Attendance (Last 20 entries)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {timesheets?.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No timesheet records</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Start</TableHead>
+                        <TableHead>End</TableHead>
+                        <TableHead className="text-right">Hours</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {timesheets?.slice(0, 20).map((ts) => (
+                        <TableRow key={ts.id}>
+                          <TableCell>
+                            {format(new Date(ts.work_date), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {ts.start_time ? format(new Date(`2000-01-01T${ts.start_time}`), "h:mm a") : "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {ts.end_time ? format(new Date(`2000-01-01T${ts.end_time}`), "h:mm a") : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {ts.hours_worked ? Number(ts.hours_worked).toFixed(1) : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {ts.is_absent ? (
+                              <Badge variant="destructive">Absent</Badge>
+                            ) : ts.hours_worked ? (
+                              <Badge variant="default">Worked</Badge>
+                            ) : (
+                              <Badge variant="secondary">No Entry</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Salary History Tab */}
@@ -501,42 +759,47 @@ export function EmployeeDetailDialog({
               </CardHeader>
               <CardContent>
                 {vacations?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No vacations recorded</p>
+                  <p className="text-muted-foreground text-sm">No vacation records</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Start Date</TableHead>
                         <TableHead>End Date</TableHead>
+                        <TableHead className="text-right">Days</TableHead>
                         <TableHead>Notes</TableHead>
-                        {canModifySettings && <TableHead className="w-12"></TableHead>}
+                        {canModifySettings && <TableHead className="w-12" />}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {vacations?.map((vacation) => (
-                        <TableRow key={vacation.id}>
-                          <TableCell>
-                            {format(new Date(vacation.start_date), "MMM d, yyyy")}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(vacation.end_date), "MMM d, yyyy")}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {vacation.notes || "—"}
-                          </TableCell>
-                          {canModifySettings && (
+                      {vacations?.map((vacation) => {
+                        const days = differenceInDays(new Date(vacation.end_date), new Date(vacation.start_date)) + 1;
+                        return (
+                          <TableRow key={vacation.id}>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteVacation(vacation.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              {format(new Date(vacation.start_date), "MMM d, yyyy")}
                             </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
+                            <TableCell>
+                              {format(new Date(vacation.end_date), "MMM d, yyyy")}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{days}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {vacation.notes || "—"}
+                            </TableCell>
+                            {canModifySettings && (
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteVacation(vacation.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -554,8 +817,8 @@ export function EmployeeDetailDialog({
                     Record Incident
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Date</Label>
                       <Input
@@ -571,34 +834,35 @@ export function EmployeeDetailDialog({
                           <SelectValue placeholder="Select severity" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="minor">Minor</SelectItem>
+                          <SelectItem value="moderate">Moderate</SelectItem>
+                          <SelectItem value="major">Major</SelectItem>
+                          <SelectItem value="critical">Critical</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-end">
-                      <Button onClick={handleAddIncident} className="w-full">
+                    <div className="md:col-span-2">
+                      <Label>Description</Label>
+                      <Input
+                        placeholder="Describe the incident"
+                        value={incidentDesc}
+                        onChange={(e) => setIncidentDesc(e.target.value)}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Resolution (Optional)</Label>
+                      <Input
+                        placeholder="How was this resolved?"
+                        value={incidentResolution}
+                        onChange={(e) => setIncidentResolution(e.target.value)}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Button onClick={handleAddIncident}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Record
+                        Record Incident
                       </Button>
                     </div>
-                  </div>
-                  <div>
-                    <Label>Description</Label>
-                    <Textarea
-                      placeholder="Describe the incident..."
-                      value={incidentDesc}
-                      onChange={(e) => setIncidentDesc(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Resolution</Label>
-                    <Textarea
-                      placeholder="How was it resolved? (optional)"
-                      value={incidentResolution}
-                      onChange={(e) => setIncidentResolution(e.target.value)}
-                    />
                   </div>
                 </CardContent>
               </Card>
@@ -608,57 +872,61 @@ export function EmployeeDetailDialog({
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  Incident Record
+                  Incident History
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {incidents?.length === 0 ? (
                   <p className="text-muted-foreground text-sm">No incidents recorded</p>
                 ) : (
-                  <div className="space-y-4">
-                    {incidents?.map((incident) => (
-                      <div
-                        key={incident.id}
-                        className="border rounded-lg p-4 space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
-                              {format(new Date(incident.incident_date), "MMM d, yyyy")}
-                            </span>
-                            {incident.severity && (
-                              <Badge
-                                variant={
-                                  incident.severity === "high"
-                                    ? "destructive"
-                                    : incident.severity === "medium"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                              >
-                                {incident.severity}
-                              </Badge>
-                            )}
-                          </div>
-                          {canModifySettings && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteIncident(incident.id)}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Resolution</TableHead>
+                        {canModifySettings && <TableHead className="w-12" />}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incidents?.map((incident) => (
+                        <TableRow key={incident.id}>
+                          <TableCell>
+                            {format(new Date(incident.incident_date), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                incident.severity === "critical" || incident.severity === "major"
+                                  ? "destructive"
+                                  : incident.severity === "moderate"
+                                  ? "default"
+                                  : "secondary"
+                              }
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                              {incident.severity || "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{incident.description}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {incident.resolution || "—"}
+                          </TableCell>
+                          {canModifySettings && (
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteIncident(incident.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
                           )}
-                        </div>
-                        <p className="text-sm">{incident.description}</p>
-                        {incident.resolution && (
-                          <p className="text-sm text-muted-foreground">
-                            <strong>Resolution:</strong> {incident.resolution}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
@@ -675,14 +943,16 @@ export function EmployeeDetailDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={handleDocumentUpload}
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Accepted formats: PDF, Word documents, Images
-                  </p>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="file"
+                      onChange={handleDocumentUpload}
+                      className="max-w-sm"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Upload medical permits, contracts, etc.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -691,7 +961,7 @@ export function EmployeeDetailDialog({
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Document Repository
+                  Documents
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -701,16 +971,16 @@ export function EmployeeDetailDialog({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Document Name</TableHead>
+                        <TableHead>Name</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Uploaded</TableHead>
-                        {canModifySettings && <TableHead className="w-12"></TableHead>}
+                        {canModifySettings && <TableHead className="w-12" />}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {documents?.map((doc) => (
                         <TableRow key={doc.id}>
-                          <TableCell>{doc.document_name}</TableCell>
+                          <TableCell className="font-medium">{doc.document_name}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {doc.document_type}
                           </TableCell>
@@ -722,9 +992,7 @@ export function EmployeeDetailDialog({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
-                                  handleDeleteDocument(doc.id, doc.storage_path)
-                                }
+                                onClick={() => handleDeleteDocument(doc.id, doc.storage_path)}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>

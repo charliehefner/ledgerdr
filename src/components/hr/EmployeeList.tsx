@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Edit, Eye, Users } from "lucide-react";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 
 interface Employee {
   id: string;
@@ -38,10 +40,35 @@ interface EmployeeListProps {
   onEdit: (employeeId: string) => void;
 }
 
+type SortDirection = "asc" | "desc" | null;
+type SortConfig = { key: string; direction: SortDirection };
+
+const EMPLOYEE_COLUMNS: ColumnConfig[] = [
+  { key: "name", label: "Name", defaultVisible: true },
+  { key: "cedula", label: "Cédula", defaultVisible: true },
+  { key: "date_of_hire", label: "Date of Hire", defaultVisible: true },
+  { key: "salary", label: "Salary", defaultVisible: true },
+  { key: "bank", label: "Bank", defaultVisible: false },
+  { key: "bank_account_number", label: "Account #", defaultVisible: false },
+  { key: "date_of_birth", label: "Date of Birth", defaultVisible: false },
+  { key: "shirt_size", label: "Shirt Size", defaultVisible: false },
+  { key: "pant_size", label: "Pant Size", defaultVisible: false },
+  { key: "boot_size", label: "Boot Size", defaultVisible: false },
+  { key: "is_active", label: "Status", defaultVisible: true },
+];
+
 export function EmployeeList({ onEdit }: EmployeeListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "name", direction: "asc" });
   const { canModifySettings } = useAuth();
+
+  const {
+    visibility,
+    toggleColumn,
+    resetToDefaults,
+    isVisible,
+  } = useColumnVisibility("employee-list", EMPLOYEE_COLUMNS);
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees"],
@@ -56,11 +83,77 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     },
   });
 
-  const filteredEmployees = employees?.filter(
-    (emp) =>
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.cedula.includes(searchTerm)
-  );
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => {
+      if (prev.key !== key) {
+        return { key, direction: "asc" };
+      }
+      if (prev.direction === "asc") {
+        return { key, direction: "desc" };
+      }
+      if (prev.direction === "desc") {
+        return { key: "name", direction: "asc" }; // Reset to default
+      }
+      return { key, direction: "asc" };
+    });
+  };
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    if (sortConfig.direction === "asc") {
+      return <ArrowUp className="h-4 w-4 ml-1" />;
+    }
+    return <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const sortedAndFilteredEmployees = useMemo(() => {
+    if (!employees) return [];
+
+    // Filter
+    let filtered = employees.filter(
+      (emp) =>
+        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.cedula.includes(searchTerm) ||
+        (emp.bank && emp.bank.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (emp.bank_account_number && emp.bank_account_number.includes(searchTerm))
+    );
+
+    // Sort
+    if (sortConfig.key && sortConfig.direction) {
+      filtered = [...filtered].sort((a, b) => {
+        const aVal = a[sortConfig.key as keyof Employee];
+        const bVal = b[sortConfig.key as keyof Employee];
+
+        // Handle nulls
+        if (aVal === null && bVal === null) return 0;
+        if (aVal === null) return 1;
+        if (bVal === null) return -1;
+
+        // Handle booleans
+        if (typeof aVal === "boolean" && typeof bVal === "boolean") {
+          return sortConfig.direction === "asc"
+            ? (aVal === bVal ? 0 : aVal ? -1 : 1)
+            : (aVal === bVal ? 0 : aVal ? 1 : -1);
+        }
+
+        // Handle numbers
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+        }
+
+        // Handle strings (including dates)
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+        return sortConfig.direction === "asc"
+          ? aStr.localeCompare(bStr)
+          : bStr.localeCompare(aStr);
+      });
+    }
+
+    return filtered;
+  }, [employees, searchTerm, sortConfig]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-DO", {
@@ -69,22 +162,72 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     }).format(amount);
   };
 
+  const renderCellValue = (employee: Employee, key: string) => {
+    switch (key) {
+      case "name":
+        return <span className="font-medium">{employee.name}</span>;
+      case "cedula":
+        return <span className="font-mono text-sm">{employee.cedula}</span>;
+      case "date_of_hire":
+        return format(new Date(employee.date_of_hire), "MMM d, yyyy");
+      case "date_of_birth":
+        return employee.date_of_birth
+          ? format(new Date(employee.date_of_birth), "MMM d, yyyy")
+          : "—";
+      case "salary":
+        return formatCurrency(employee.salary);
+      case "bank":
+        return employee.bank || "—";
+      case "bank_account_number":
+        return employee.bank_account_number ? (
+          <span className="font-mono text-sm">{employee.bank_account_number}</span>
+        ) : "—";
+      case "shirt_size":
+        return employee.shirt_size || "—";
+      case "pant_size":
+        return employee.pant_size || "—";
+      case "boot_size":
+        return employee.boot_size || "—";
+      case "is_active":
+        return (
+          <Badge variant={employee.is_active ? "default" : "secondary"}>
+            {employee.is_active ? "Active" : "Inactive"}
+          </Badge>
+        );
+      default:
+        return "—";
+    }
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
               <CardTitle>Employee Directory</CardTitle>
+              {employees && (
+                <Badge variant="secondary" className="ml-2">
+                  {sortedAndFilteredEmployees.length} of {employees.length}
+                </Badge>
+              )}
             </div>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or cédula..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search name, cédula, bank..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <ColumnSelector
+                columns={EMPLOYEE_COLUMNS}
+                visibility={visibility}
+                onToggle={toggleColumn}
+                onReset={resetToDefaults}
               />
             </div>
           </div>
@@ -94,7 +237,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : filteredEmployees?.length === 0 ? (
+          ) : sortedAndFilteredEmployees.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchTerm ? "No employees match your search" : "No employees found. Add your first employee!"}
             </div>
@@ -103,36 +246,41 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Cédula</TableHead>
-                    <TableHead>Date of Hire</TableHead>
-                    <TableHead className="text-right">Salary</TableHead>
-                    <TableHead>Status</TableHead>
+                    {EMPLOYEE_COLUMNS.filter((col) => isVisible(col.key)).map((col) => (
+                      <TableHead
+                        key={col.key}
+                        className={`cursor-pointer select-none hover:bg-muted/50 ${
+                          col.key === "salary" ? "text-right" : ""
+                        }`}
+                        onClick={() => handleSort(col.key)}
+                      >
+                        <div className={`flex items-center ${col.key === "salary" ? "justify-end" : ""}`}>
+                          {col.label}
+                          {getSortIcon(col.key)}
+                        </div>
+                      </TableHead>
+                    ))}
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEmployees?.map((employee) => (
+                  {sortedAndFilteredEmployees.map((employee) => (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{employee.cedula}</TableCell>
-                      <TableCell>
-                        {format(new Date(employee.date_of_hire), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(employee.salary)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={employee.is_active ? "default" : "secondary"}>
-                          {employee.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
+                      {EMPLOYEE_COLUMNS.filter((col) => isVisible(col.key)).map((col) => (
+                        <TableCell
+                          key={col.key}
+                          className={col.key === "salary" ? "text-right" : ""}
+                        >
+                          {renderCellValue(employee, col.key)}
+                        </TableCell>
+                      ))}
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedEmployee(employee.id)}
+                            title="View Details & History"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -141,6 +289,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => onEdit(employee.id)}
+                              title="Edit Employee"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>

@@ -330,7 +330,7 @@ export function PayrollTimeGrid({
                 className={cn(
                   "text-center min-w-[100px]",
                   isWeekend(day) && "bg-muted",
-                  !isWeekend(day) && index % 2 === 1 && "bg-muted/40"
+                  !isWeekend(day) && index % 2 === 1 && "bg-[hsl(210_40%_92%)]"
                 )}
               >
                 <div className="text-xs">{format(day, "EEE")}</div>
@@ -377,7 +377,7 @@ export function PayrollTimeGrid({
                       className={cn(
                         "p-1 text-center",
                         weekend && "bg-muted/60",
-                        !weekend && index % 2 === 1 && "bg-muted/30",
+                        !weekend && index % 2 === 1 && "bg-[hsl(210_40%_95%)]",
                         entry?.is_absent && "bg-destructive/20"
                       )}
                     >

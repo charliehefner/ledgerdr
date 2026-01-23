@@ -14,6 +14,203 @@ export type Database = {
   }
   public: {
     Tables: {
+      employee_documents: {
+        Row: {
+          created_at: string
+          document_name: string
+          document_type: string
+          employee_id: string
+          id: string
+          notes: string | null
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          document_name: string
+          document_type: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_incidents: {
+        Row: {
+          created_at: string
+          description: string
+          employee_id: string
+          id: string
+          incident_date: string
+          resolution: string | null
+          severity: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          employee_id: string
+          id?: string
+          incident_date: string
+          resolution?: string | null
+          severity?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          employee_id?: string
+          id?: string
+          incident_date?: string
+          resolution?: string | null
+          severity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_incidents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_salary_history: {
+        Row: {
+          created_at: string
+          effective_date: string
+          employee_id: string
+          id: string
+          notes: string | null
+          salary: number
+        }
+        Insert: {
+          created_at?: string
+          effective_date: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          salary: number
+        }
+        Update: {
+          created_at?: string
+          effective_date?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          salary?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_salary_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_vacations: {
+        Row: {
+          created_at: string
+          employee_id: string
+          end_date: string
+          id: string
+          notes: string | null
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_vacations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          bank: string | null
+          bank_account_number: string | null
+          boot_size: string | null
+          cedula: string
+          created_at: string
+          date_of_birth: string | null
+          date_of_hire: string
+          id: string
+          is_active: boolean
+          name: string
+          pant_size: string | null
+          salary: number
+          shirt_size: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank?: string | null
+          bank_account_number?: string | null
+          boot_size?: string | null
+          cedula: string
+          created_at?: string
+          date_of_birth?: string | null
+          date_of_hire: string
+          id?: string
+          is_active?: boolean
+          name: string
+          pant_size?: string | null
+          salary?: number
+          shirt_size?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank?: string | null
+          bank_account_number?: string | null
+          boot_size?: string | null
+          cedula?: string
+          created_at?: string
+          date_of_birth?: string | null
+          date_of_hire?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          pant_size?: string | null
+          salary?: number
+          shirt_size?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transaction_attachments: {
         Row: {
           attachment_url: string

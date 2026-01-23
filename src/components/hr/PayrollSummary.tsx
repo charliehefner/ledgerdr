@@ -31,6 +31,7 @@ interface Employee {
   id: string;
   name: string;
   salary: number;
+  position: string;
   bank: string | null;
   bank_account_number: string | null;
 }
@@ -81,7 +82,7 @@ export function PayrollSummary({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, salary, bank, bank_account_number")
+        .select("id, name, salary, position, bank, bank_account_number")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;

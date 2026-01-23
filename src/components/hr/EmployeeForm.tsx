@@ -26,9 +26,12 @@ import {
 } from "@/components/ui/select";
 import { UserPlus, Save } from "lucide-react";
 
+const POSITIONS = ["Obrero", "Supervisor", "Tractorista", "Gerencia", "Administrativa"] as const;
+
 const employeeSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   cedula: z.string().min(1, "Cédula is required").max(20),
+  position: z.enum(POSITIONS).default("Obrero"),
   bank: z.string().optional(),
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
@@ -73,6 +76,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
     defaultValues: {
       name: "",
       cedula: "",
+      position: "Obrero",
       bank: "",
       bank_account_number: "",
       date_of_birth: "",
@@ -106,6 +110,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
       form.reset({
         name: employee.name,
         cedula: employee.cedula,
+        position: (employee.position as typeof POSITIONS[number]) || "Obrero",
         bank: employee.bank || "",
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
@@ -124,6 +129,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
       const payload = {
         name: data.name,
         cedula: data.cedula,
+        position: data.position,
         bank: data.bank || null,
         bank_account_number: data.bank_account_number || null,
         date_of_birth: data.date_of_birth || null,
@@ -255,7 +261,32 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 Employment Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select position" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {POSITIONS.map((pos) => (
+                            <SelectItem key={pos} value={pos}>
+                              {pos}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="date_of_hire"

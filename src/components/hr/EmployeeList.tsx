@@ -24,6 +24,7 @@ interface Employee {
   id: string;
   name: string;
   cedula: string;
+  position: string;
   bank: string | null;
   bank_account_number: string | null;
   date_of_birth: string | null;
@@ -46,6 +47,7 @@ type SortConfig = { key: string; direction: SortDirection };
 const EMPLOYEE_COLUMNS: ColumnConfig[] = [
   { key: "name", label: "Name", defaultVisible: true },
   { key: "cedula", label: "Cédula", defaultVisible: true },
+  { key: "position", label: "Position", defaultVisible: true },
   { key: "date_of_hire", label: "Date of Hire", defaultVisible: true },
   { key: "salary", label: "Salary", defaultVisible: true },
   { key: "bank", label: "Bank", defaultVisible: false },
@@ -176,6 +178,8 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
           : "—";
       case "salary":
         return formatCurrency(employee.salary);
+      case "position":
+        return employee.position || "—";
       case "bank":
         return employee.bank || "—";
       case "bank_account_number":

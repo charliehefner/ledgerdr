@@ -268,6 +268,7 @@ export type Database = {
           is_active: boolean
           name: string
           pant_size: string | null
+          position: string
           salary: number
           shirt_size: string | null
           updated_at: string
@@ -284,6 +285,7 @@ export type Database = {
           is_active?: boolean
           name: string
           pant_size?: string | null
+          position?: string
           salary?: number
           shirt_size?: string | null
           updated_at?: string
@@ -300,6 +302,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           pant_size?: string | null
+          position?: string
           salary?: number
           shirt_size?: string | null
           updated_at?: string

@@ -3,6 +3,7 @@ import { format, eachDayOfInterval, isWeekend, isSaturday } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Wand2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TimeInput } from "./TimeInput";
 
@@ -19,7 +21,11 @@ interface Employee {
   id: string;
   name: string;
   salary: number;
+  position: string;
 }
+
+// Positions that get auto-filled with standard hours
+const SALARIED_POSITIONS = ["Gerencia", "Administrativa", "Supervisor"];
 
 interface TimesheetEntry {
   id?: string;
@@ -72,7 +78,7 @@ export function PayrollTimeGrid({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, salary")
+        .select("id, name, salary, position")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -170,6 +176,53 @@ export function PayrollTimeGrid({
       toast.error("Failed to save benefit: " + error.message);
     },
   });
+
+  // Auto-fill standard hours for salaried positions
+  const autoFillSalariedEmployees = async () => {
+    if (!periodId) return;
+
+    const salariedEmployees = employees.filter((e) =>
+      SALARIED_POSITIONS.includes(e.position)
+    );
+
+    if (salariedEmployees.length === 0) {
+      toast.info("No salaried employees to auto-fill");
+      return;
+    }
+
+    try {
+      const entries: Omit<TimesheetEntry, "id">[] = [];
+
+      for (const employee of salariedEmployees) {
+        for (const day of days) {
+          // Skip weekends
+          if (isWeekend(day)) continue;
+
+          const dateStr = format(day, "yyyy-MM-dd");
+          entries.push({
+            employee_id: employee.id,
+            period_id: periodId,
+            work_date: dateStr,
+            start_time: "07:30",
+            end_time: "16:30",
+            is_absent: false,
+          });
+        }
+      }
+
+      // Upsert all entries
+      const { error } = await supabase
+        .from("employee_timesheets")
+        .upsert(entries, { onConflict: "employee_id,work_date", ignoreDuplicates: false });
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+      toast.success(`Auto-filled ${salariedEmployees.length} salaried employee(s)`);
+    } catch (error: any) {
+      toast.error("Failed to auto-fill: " + error.message);
+    }
+  };
 
   const getTimesheetEntry = (employeeId: string, date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
@@ -316,9 +369,26 @@ export function PayrollTimeGrid({
     );
   }
 
+  const hasSalariedEmployees = employees.some((e) =>
+    SALARIED_POSITIONS.includes(e.position)
+  );
+
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <div className="space-y-3">
+      {hasSalariedEmployees && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={autoFillSalariedEmployees}
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            Auto-fill Salaried Staff
+          </Button>
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">
@@ -437,6 +507,7 @@ export function PayrollTimeGrid({
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

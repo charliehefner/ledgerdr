@@ -328,8 +328,8 @@ export function PayrollTimeGrid({
                 key={day.toISOString()}
                 className={cn(
                   "text-center min-w-[100px]",
-                  isWeekend(day) && "bg-muted/50",
-                  !isWeekend(day) && index % 2 === 1 && "bg-muted/20"
+                  isWeekend(day) && "bg-muted",
+                  !isWeekend(day) && index % 2 === 1 && "bg-muted/40"
                 )}
               >
                 <div className="text-xs">{format(day, "EEE")}</div>
@@ -375,9 +375,9 @@ export function PayrollTimeGrid({
                       key={day.toISOString()}
                       className={cn(
                         "p-1 text-center",
-                        weekend && "bg-muted/30",
-                        !weekend && index % 2 === 1 && "bg-muted/10",
-                        entry?.is_absent && "bg-destructive/10"
+                        weekend && "bg-muted/60",
+                        !weekend && index % 2 === 1 && "bg-muted/30",
+                        entry?.is_absent && "bg-destructive/20"
                       )}
                     >
                       <div className="flex flex-col gap-0.5">

@@ -3,10 +3,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeList } from "@/components/hr/EmployeeList";
 import { EmployeeForm } from "@/components/hr/EmployeeForm";
+import { PayrollView } from "@/components/hr/PayrollView";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function HumanResources() {
-  const [activeTab, setActiveTab] = useState("employees");
+  const [activeTab, setActiveTab] = useState("payroll");
   const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
   const { canModifySettings } = useAuth();
 
@@ -25,11 +26,12 @@ export default function HumanResources() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Human Resources</h1>
-          <p className="text-muted-foreground mt-1">Manage employee information and records</p>
+          <p className="text-muted-foreground mt-1">Manage employee payroll and records</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
+            <TabsTrigger value="payroll">Payroll</TabsTrigger>
             <TabsTrigger value="employees">Employee Directory</TabsTrigger>
             {canModifySettings && (
               <TabsTrigger value="add-employee">
@@ -37,6 +39,10 @@ export default function HumanResources() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          <TabsContent value="payroll" className="space-y-4">
+            <PayrollView />
+          </TabsContent>
 
           <TabsContent value="employees" className="space-y-4">
             <EmployeeList onEdit={handleEditEmployee} />

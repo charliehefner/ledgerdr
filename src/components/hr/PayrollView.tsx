@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { format, startOfMonth, setDate, endOfMonth } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +6,11 @@ import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PayrollPeriodSelector } from "./PayrollPeriodSelector";
 import { PayrollTimeGrid } from "./PayrollTimeGrid";
+import { PayrollSummary } from "./PayrollSummary";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
-
 interface PayrollPeriod {
   id: string;
   start_date: string;
@@ -41,6 +42,7 @@ export function PayrollView() {
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("timesheet");
 
   // Fetch or create period
   const { data: periodData, isLoading: periodLoading } = useQuery({
@@ -127,8 +129,8 @@ export function PayrollView() {
               No period exists for this date range. Click "Create Period" to start.
             </div>
           ) : (
-            <div>
-              <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>Status:</span>
                 <span
                   className={`font-medium ${
@@ -142,12 +144,32 @@ export function PayrollView() {
                   {periodData.status.toUpperCase()}
                 </span>
               </div>
-              <PayrollTimeGrid
-                periodId={periodData.id}
-                startDate={selectedPeriod.startDate}
-                endDate={selectedPeriod.endDate}
-                onEmployeeClick={handleEmployeeClick}
-              />
+
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList>
+                  <TabsTrigger value="timesheet">Time Sheet</TabsTrigger>
+                  <TabsTrigger value="summary">Summary & Close</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="timesheet" className="mt-4">
+                  <PayrollTimeGrid
+                    periodId={periodData.id}
+                    startDate={selectedPeriod.startDate}
+                    endDate={selectedPeriod.endDate}
+                    onEmployeeClick={handleEmployeeClick}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="summary" className="mt-4">
+                  <PayrollSummary
+                    periodId={periodData.id}
+                    periodStatus={periodData.status}
+                    startDate={selectedPeriod.startDate}
+                    endDate={selectedPeriod.endDate}
+                    onPeriodClosed={() => setActiveTab("timesheet")}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </CardContent>

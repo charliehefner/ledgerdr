@@ -1,0 +1,494 @@
+import { useState } from "react";
+import { format } from "date-fns";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Download, Lock, Loader2 } from "lucide-react";
+import ExcelJS from "exceljs";
+import { createTransaction } from "@/lib/api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface Employee {
+  id: string;
+  name: string;
+  salary: number;
+  bank: string | null;
+  bank_account_number: string | null;
+}
+
+interface TimesheetEntry {
+  employee_id: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_absent: boolean;
+}
+
+interface EmployeeBenefit {
+  employee_id: string;
+  benefit_type: string;
+  amount: number;
+}
+
+interface PayrollSummaryProps {
+  periodId: string;
+  periodStatus: string;
+  startDate: Date;
+  endDate: Date;
+  onPeriodClosed: () => void;
+}
+
+const BENEFIT_TYPES = ["Telephone", "Gasoline", "Bonus"];
+const STANDARD_START = 7 * 60 + 30;
+const STANDARD_END = 16 * 60 + 30;
+const STANDARD_HOURS_PER_DAY = 8;
+const TSS_EMPLOYEE_RATE = 0.0304;
+const ISR_EXEMPTION = 34685;
+const OVERTIME_MULTIPLIER = 1.35;
+
+export function PayrollSummary({
+  periodId,
+  periodStatus,
+  startDate,
+  endDate,
+  onPeriodClosed,
+}: PayrollSummaryProps) {
+  const queryClient = useQueryClient();
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Fetch employees with bank info
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees-with-bank"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, name, salary, bank, bank_account_number")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as Employee[];
+    },
+  });
+
+  // Fetch timesheets
+  const { data: timesheets = [] } = useQuery({
+    queryKey: ["timesheets", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_timesheets")
+        .select("employee_id, start_time, end_time, is_absent")
+        .eq("period_id", periodId);
+      if (error) throw error;
+      return data as TimesheetEntry[];
+    },
+    enabled: !!periodId,
+  });
+
+  // Fetch benefits
+  const { data: benefits = [] } = useQuery({
+    queryKey: ["employee-benefits"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_benefits")
+        .select("employee_id, benefit_type, amount");
+      if (error) throw error;
+      return data as EmployeeBenefit[];
+    },
+  });
+
+  const parseTimeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const calculateEmployeePayroll = (employeeId: string) => {
+    const employee = employees.find((e) => e.id === employeeId);
+    if (!employee) return null;
+
+    const entries = timesheets.filter((t) => t.employee_id === employeeId);
+    let regularHours = 0;
+    let overtimeHours = 0;
+
+    entries.forEach((t) => {
+      if (t.start_time && t.end_time) {
+        const start = parseTimeToMinutes(t.start_time);
+        const end = parseTimeToMinutes(t.end_time);
+
+        const regularStart = Math.max(start, STANDARD_START);
+        const regularEnd = Math.min(end, STANDARD_END);
+
+        if (regularEnd > regularStart) {
+          const rawRegular = (regularEnd - regularStart) / 60;
+          regularHours += Math.min(rawRegular, STANDARD_HOURS_PER_DAY);
+        }
+
+        if (start < STANDARD_START) {
+          overtimeHours += (STANDARD_START - start) / 60;
+        }
+        if (end > STANDARD_END) {
+          overtimeHours += (end - STANDARD_END) / 60;
+        }
+      }
+    });
+
+    const absenceDays = entries.filter((e) => e.is_absent).length;
+    const biweeklySalary = employee.salary / 2;
+    const dailyRate = employee.salary / 23.83;
+    const hourlyRate = dailyRate / 8;
+
+    // Earnings
+    const basePay = biweeklySalary;
+    const overtimePay = overtimeHours * hourlyRate * OVERTIME_MULTIPLIER;
+
+    // Benefits
+    const employeeBenefits = benefits.filter((b) => b.employee_id === employeeId);
+    const totalBenefits = employeeBenefits.reduce((sum, b) => sum + b.amount, 0);
+
+    // Deductions
+    const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
+    let isr = 0;
+    if (employee.salary > ISR_EXEMPTION) {
+      isr = ((employee.salary - ISR_EXEMPTION) * 0.15) / 2;
+    }
+    const absenceDeduction = absenceDays * dailyRate;
+
+    const totalDeductions = tss + isr + absenceDeduction;
+    const grossPay = basePay + overtimePay + totalBenefits;
+    const netPay = grossPay - totalDeductions;
+
+    return {
+      employee,
+      regularHours,
+      overtimeHours,
+      basePay,
+      overtimePay,
+      benefits: employeeBenefits,
+      totalBenefits,
+      tss,
+      isr,
+      absenceDeduction,
+      totalDeductions,
+      grossPay,
+      netPay,
+    };
+  };
+
+  const payrollData = employees
+    .map((e) => calculateEmployeePayroll(e.id))
+    .filter(Boolean) as NonNullable<ReturnType<typeof calculateEmployeePayroll>>[];
+
+  const totals = payrollData.reduce(
+    (acc, p) => ({
+      regularHours: acc.regularHours + p.regularHours,
+      overtimeHours: acc.overtimeHours + p.overtimeHours,
+      basePay: acc.basePay + p.basePay,
+      overtimePay: acc.overtimePay + p.overtimePay,
+      totalBenefits: acc.totalBenefits + p.totalBenefits,
+      totalDeductions: acc.totalDeductions + p.totalDeductions,
+      grossPay: acc.grossPay + p.grossPay,
+      netPay: acc.netPay + p.netPay,
+    }),
+    {
+      regularHours: 0,
+      overtimeHours: 0,
+      basePay: 0,
+      overtimePay: 0,
+      totalBenefits: 0,
+      totalDeductions: 0,
+      grossPay: 0,
+      netPay: 0,
+    }
+  );
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("es-DO", {
+      style: "currency",
+      currency: "DOP",
+      minimumFractionDigits: 2,
+    }).format(amount);
+
+  // Export to Excel
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet("Payroll Report");
+
+      // Header
+      sheet.columns = [
+        { header: "Name", key: "name", width: 25 },
+        { header: "Bank", key: "bank", width: 15 },
+        { header: "Account #", key: "account", width: 20 },
+        { header: "Reg Hours", key: "regHours", width: 12 },
+        { header: "OT Hours", key: "otHours", width: 12 },
+        { header: "Base Pay", key: "basePay", width: 15 },
+        { header: "OT Pay", key: "otPay", width: 15 },
+        { header: "Benefits", key: "benefits", width: 15 },
+        { header: "TSS", key: "tss", width: 12 },
+        { header: "ISR", key: "isr", width: 12 },
+        { header: "Absences", key: "absences", width: 12 },
+        { header: "Total Deductions", key: "totalDed", width: 18 },
+        { header: "Net Pay", key: "netPay", width: 15 },
+      ];
+
+      // Style header
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4472C4" },
+      };
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+
+      // Data rows
+      payrollData.forEach((p) => {
+        sheet.addRow({
+          name: p.employee.name,
+          bank: p.employee.bank || "-",
+          account: p.employee.bank_account_number || "-",
+          regHours: p.regularHours.toFixed(1),
+          otHours: p.overtimeHours.toFixed(1),
+          basePay: p.basePay.toFixed(2),
+          otPay: p.overtimePay.toFixed(2),
+          benefits: p.totalBenefits.toFixed(2),
+          tss: p.tss.toFixed(2),
+          isr: p.isr.toFixed(2),
+          absences: p.absenceDeduction.toFixed(2),
+          totalDed: p.totalDeductions.toFixed(2),
+          netPay: p.netPay.toFixed(2),
+        });
+      });
+
+      // Totals row
+      const totalsRow = sheet.addRow({
+        name: "TOTALS",
+        bank: "",
+        account: "",
+        regHours: totals.regularHours.toFixed(1),
+        otHours: totals.overtimeHours.toFixed(1),
+        basePay: totals.basePay.toFixed(2),
+        otPay: totals.overtimePay.toFixed(2),
+        benefits: totals.totalBenefits.toFixed(2),
+        tss: "",
+        isr: "",
+        absences: "",
+        totalDed: totals.totalDeductions.toFixed(2),
+        netPay: totals.netPay.toFixed(2),
+      });
+      totalsRow.font = { bold: true };
+      totalsRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE2EFDA" },
+      };
+
+      // Download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Payroll_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Payroll report exported");
+    } catch (error) {
+      toast.error("Failed to export report");
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Close period mutation
+  const closePeriod = useMutation({
+    mutationFn: async () => {
+      // 1. Create transactions for each employee's net pay
+      const dateStr = format(endDate, "yyyy-MM-dd");
+
+      for (const p of payrollData) {
+        await createTransaction({
+          transaction_date: dateStr,
+          master_acct_code: "6110", // Payroll expense account
+          description: `Nomina - ${p.employee.name}`,
+          currency: "DOP",
+          amount: p.netPay,
+          pay_method: "transfer_bdi",
+          name: p.employee.name,
+          is_internal: true,
+          comments: `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")} | Hours: ${p.regularHours.toFixed(1)} + ${p.overtimeHours.toFixed(1)} OT | Deductions: ${p.totalDeductions.toFixed(2)}`,
+        });
+      }
+
+      // 2. Update period status to 'closed'
+      const { error } = await supabase
+        .from("payroll_periods")
+        .update({ status: "closed" })
+        .eq("id", periodId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
+      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
+      toast.success("Period closed and transactions posted");
+      onPeriodClosed();
+    },
+    onError: (error) => {
+      toast.error("Failed to close period: " + error.message);
+    },
+  });
+
+  const isClosed = periodStatus === "closed";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Payroll Summary</h3>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || payrollData.length === 0}
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Export Excel
+          </Button>
+          {!isClosed && (
+            <Button
+              onClick={() => setShowCloseConfirm(true)}
+              disabled={payrollData.length === 0}
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              Close Period
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead className="text-right">Reg Hrs</TableHead>
+              <TableHead className="text-right text-orange-600">OT Hrs</TableHead>
+              <TableHead className="text-right">Base Pay</TableHead>
+              <TableHead className="text-right text-orange-600">OT Pay</TableHead>
+              <TableHead className="text-right text-green-600">Benefits</TableHead>
+              <TableHead className="text-right text-red-600">Deductions</TableHead>
+              <TableHead className="text-right font-bold">Net Pay</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {payrollData.map((p) => (
+              <TableRow key={p.employee.id}>
+                <TableCell className="font-medium">{p.employee.name}</TableCell>
+                <TableCell className="text-right font-mono">
+                  {p.regularHours.toFixed(1)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-orange-600">
+                  {p.overtimeHours.toFixed(1)}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {formatCurrency(p.basePay)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-orange-600">
+                  {formatCurrency(p.overtimePay)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-green-600">
+                  {formatCurrency(p.totalBenefits)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-600">
+                  {formatCurrency(p.totalDeductions)}
+                </TableCell>
+                <TableCell className="text-right font-mono font-bold">
+                  {formatCurrency(p.netPay)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow className="bg-muted/50 font-bold">
+              <TableCell>TOTALS</TableCell>
+              <TableCell className="text-right font-mono">
+                {totals.regularHours.toFixed(1)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-orange-600">
+                {totals.overtimeHours.toFixed(1)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {formatCurrency(totals.basePay)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-orange-600">
+                {formatCurrency(totals.overtimePay)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-green-600">
+                {formatCurrency(totals.totalBenefits)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-red-600">
+                {formatCurrency(totals.totalDeductions)}
+              </TableCell>
+              <TableCell className="text-right font-mono font-bold text-primary">
+                {formatCurrency(totals.netPay)}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+
+      <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close Payroll Period?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will:
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li>Lock all timesheet entries for this period</li>
+                <li>Create {payrollData.length} payroll transactions in the ledger</li>
+                <li>Total payout: {formatCurrency(totals.netPay)}</li>
+              </ul>
+              <p className="mt-3 font-medium">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => closePeriod.mutate()}
+              disabled={closePeriod.isPending}
+            >
+              {closePeriod.isPending ? "Closing..." : "Close Period"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

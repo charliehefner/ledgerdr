@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      employee_benefits: {
+        Row: {
+          amount: number
+          benefit_type: string
+          created_at: string
+          employee_id: string
+          id: string
+          is_recurring: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          benefit_type: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_recurring?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          benefit_type?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_recurring?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_benefits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_documents: {
         Row: {
           created_at: string
@@ -125,6 +163,63 @@ export type Database = {
           },
         ]
       }
+      employee_timesheets: {
+        Row: {
+          created_at: string
+          employee_id: string
+          end_time: string | null
+          hours_worked: number | null
+          id: string
+          is_absent: boolean
+          notes: string | null
+          period_id: string
+          start_time: string | null
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          end_time?: string | null
+          hours_worked?: number | null
+          id?: string
+          is_absent?: boolean
+          notes?: string | null
+          period_id: string
+          start_time?: string | null
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          end_time?: string | null
+          hours_worked?: number | null
+          id?: string
+          is_absent?: boolean
+          notes?: string | null
+          period_id?: string
+          start_time?: string | null
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_timesheets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_timesheets_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_vacations: {
         Row: {
           created_at: string
@@ -210,6 +305,78 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      payroll_periods: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_current: boolean
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_current?: boolean
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_current?: boolean
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      period_employee_benefits: {
+        Row: {
+          amount: number
+          benefit_type: string
+          created_at: string
+          employee_id: string
+          id: string
+          period_id: string
+        }
+        Insert: {
+          amount?: number
+          benefit_type: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          period_id: string
+        }
+        Update: {
+          amount?: number
+          benefit_type?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_employee_benefits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_employee_benefits_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transaction_attachments: {
         Row: {

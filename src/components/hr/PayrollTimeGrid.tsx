@@ -39,14 +39,6 @@ interface EmployeeBenefit {
   is_recurring: boolean;
 }
 
-interface PeriodBenefit {
-  id: string;
-  period_id: string;
-  employee_id: string;
-  benefit_type: string;
-  amount: number;
-}
-
 interface PayrollTimeGridProps {
   periodId: string | null;
   startDate: Date;
@@ -55,7 +47,11 @@ interface PayrollTimeGridProps {
 }
 
 const BENEFIT_TYPES = ["Telephone", "Gasoline", "Bonus"];
-const STANDARD_HOURS_PER_DAY = 8;
+
+// Standard work hours: 7:30 AM to 4:30 PM (9 hours, minus 1 hour lunch = 8 hours)
+const STANDARD_START = 7 * 60 + 30; // 7:30 AM in minutes
+const STANDARD_END = 16 * 60 + 30;  // 4:30 PM in minutes
+const STANDARD_HOURS_PER_DAY = 8;   // After lunch deduction
 
 // DR Labor Law rates (approximate, user should verify)
 const TSS_EMPLOYEE_RATE = 0.0304; // 3.04% AFP + SFS
@@ -99,7 +95,7 @@ export function PayrollTimeGrid({
     enabled: !!periodId,
   });
 
-  // Fetch recurring employee benefits (defaults)
+  // Fetch recurring employee benefits (these persist across periods)
   const { data: employeeBenefits = [] } = useQuery({
     queryKey: ["employee-benefits"],
     queryFn: async () => {
@@ -109,21 +105,6 @@ export function PayrollTimeGrid({
       if (error) throw error;
       return data as EmployeeBenefit[];
     },
-  });
-
-  // Fetch period-specific benefit overrides
-  const { data: periodBenefits = [] } = useQuery({
-    queryKey: ["period-benefits", periodId],
-    queryFn: async () => {
-      if (!periodId) return [];
-      const { data, error } = await supabase
-        .from("period_employee_benefits")
-        .select("*")
-        .eq("period_id", periodId);
-      if (error) throw error;
-      return data as PeriodBenefit[];
-    },
-    enabled: !!periodId,
   });
 
   // Mutation to save timesheet entry
@@ -154,10 +135,10 @@ export function PayrollTimeGrid({
     },
   });
 
-  // Mutation to save period benefit
-  const savePeriodBenefit = useMutation({
-    mutationFn: async (benefit: Omit<PeriodBenefit, "id"> & { id?: string }) => {
-      const existing = periodBenefits.find(
+  // Mutation to save employee benefit (persists across all periods)
+  const saveEmployeeBenefit = useMutation({
+    mutationFn: async (benefit: { employee_id: string; benefit_type: string; amount: number }) => {
+      const existing = employeeBenefits.find(
         (b) =>
           b.employee_id === benefit.employee_id &&
           b.benefit_type === benefit.benefit_type
@@ -165,24 +146,24 @@ export function PayrollTimeGrid({
 
       if (existing) {
         const { error } = await supabase
-          .from("period_employee_benefits")
+          .from("employee_benefits")
           .update({ amount: benefit.amount })
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("period_employee_benefits")
+          .from("employee_benefits")
           .insert({
-            period_id: benefit.period_id,
             employee_id: benefit.employee_id,
             benefit_type: benefit.benefit_type,
             amount: benefit.amount,
+            is_recurring: true,
           });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["period-benefits", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["employee-benefits"] });
     },
     onError: (error) => {
       toast.error("Failed to save benefit: " + error.message);
@@ -233,6 +214,7 @@ export function PayrollTimeGrid({
     return hours * 60 + minutes;
   };
 
+  // Calculate hours: regular is within 7:30am-4:30pm, overtime is outside
   const calculateHoursForEmployee = (employeeId: string) => {
     const entries = timesheets.filter((t) => t.employee_id === employeeId);
     let regularHours = 0;
@@ -242,13 +224,23 @@ export function PayrollTimeGrid({
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
         const end = parseTimeToMinutes(t.end_time);
-        const hoursWorked = (end - start) / 60;
-
-        if (hoursWorked > STANDARD_HOURS_PER_DAY) {
-          regularHours += STANDARD_HOURS_PER_DAY;
-          overtimeHours += hoursWorked - STANDARD_HOURS_PER_DAY;
-        } else {
-          regularHours += hoursWorked;
+        
+        // Calculate regular hours (within standard window)
+        const regularStart = Math.max(start, STANDARD_START);
+        const regularEnd = Math.min(end, STANDARD_END);
+        
+        if (regularEnd > regularStart) {
+          // Cap at 8 hours (lunch deducted)
+          const rawRegular = (regularEnd - regularStart) / 60;
+          regularHours += Math.min(rawRegular, STANDARD_HOURS_PER_DAY);
+        }
+        
+        // Calculate overtime (before 7:30am or after 4:30pm)
+        if (start < STANDARD_START) {
+          overtimeHours += (STANDARD_START - start) / 60;
+        }
+        if (end > STANDARD_END) {
+          overtimeHours += (end - STANDARD_END) / 60;
         }
       }
     });
@@ -263,17 +255,10 @@ export function PayrollTimeGrid({
   };
 
   const getBenefitAmount = (employeeId: string, benefitType: string): number => {
-    // Check for period override first
-    const periodOverride = periodBenefits.find(
+    const benefit = employeeBenefits.find(
       (b) => b.employee_id === employeeId && b.benefit_type === benefitType
     );
-    if (periodOverride) return periodOverride.amount;
-
-    // Fall back to employee default
-    const defaultBenefit = employeeBenefits.find(
-      (b) => b.employee_id === employeeId && b.benefit_type === benefitType
-    );
-    return defaultBenefit?.amount || 0;
+    return benefit?.amount || 0;
   };
 
   const handleBenefitChange = (
@@ -281,10 +266,8 @@ export function PayrollTimeGrid({
     benefitType: string,
     value: string
   ) => {
-    if (!periodId) return;
     const amount = parseFloat(value) || 0;
-    savePeriodBenefit.mutate({
-      period_id: periodId,
+    saveEmployeeBenefit.mutate({
       employee_id: employeeId,
       benefit_type: benefitType,
       amount,
@@ -314,13 +297,6 @@ export function PayrollTimeGrid({
     const absenceDeduction = absenceDays * dailyRate;
 
     return { tss, isr, absenceDeduction };
-  };
-
-  const calculateTotalBenefits = (employeeId: string) => {
-    return BENEFIT_TYPES.reduce(
-      (sum, type) => sum + getBenefitAmount(employeeId, type),
-      0
-    );
   };
 
   const formatCurrency = (amount: number) => {

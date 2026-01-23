@@ -395,17 +395,17 @@ export function PayrollSummary({
       </div>
 
       <div className="overflow-x-auto border rounded-lg">
-        <Table>
+        <Table className="table-auto">
           <TableHeader>
             <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead className="text-right font-bold">Net Pay</TableHead>
-              <TableHead className="text-right">Reg Hrs</TableHead>
-              <TableHead className="text-right text-orange-600">OT Hrs</TableHead>
-              <TableHead className="text-right">Base Pay</TableHead>
-              <TableHead className="text-right text-orange-600">OT Pay</TableHead>
-              <TableHead className="text-right text-green-600">Benefits</TableHead>
-              <TableHead className="text-right text-red-600">Deductions</TableHead>
+              <TableHead className="whitespace-nowrap">Employee</TableHead>
+              <TableHead className="text-right font-bold whitespace-nowrap">Net Pay</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Reg Hrs</TableHead>
+              <TableHead className="text-right text-orange-600 whitespace-nowrap">OT Hrs</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Base Pay</TableHead>
+              <TableHead className="text-right text-orange-600 whitespace-nowrap">OT Pay</TableHead>
+              <TableHead className="text-right text-green-600 whitespace-nowrap">Benefits</TableHead>
+              <TableHead className="text-right text-red-600 whitespace-nowrap">Deductions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

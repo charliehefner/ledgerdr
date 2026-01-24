@@ -587,8 +587,8 @@ export function PayrollTimeGrid({
                       
                       // Determine cell status for coloring
                       const hasData = entry?.start_time && entry?.end_time;
-                      // Absent = has entry but no times (explicitly marked absent)
-                      const isAbsent = entry?.is_absent || (entry && !entry.start_time && !entry.end_time);
+                      // Absent = has entry but no times AND not a holiday
+                      const isAbsent = !isHoliday && (entry?.is_absent || (entry && !entry.start_time && !entry.end_time));
                       const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
                       
                       return (
@@ -598,15 +598,21 @@ export function PayrollTimeGrid({
                             "p-1 text-center border-r border-border/30 align-middle relative",
                             // Weekend styling
                             weekend && "bg-muted/60",
-                            // Status-based colors (priority order)
-                            !weekend && isAbsent && "bg-red-200 dark:bg-red-950/50",
-                            !weekend && !isAbsent && isHoliday && hasData && "bg-amber-100 dark:bg-amber-950/40",
-                            !weekend && !isAbsent && hasOvertime && "bg-orange-50 dark:bg-orange-950/20",
+                            // Status-based colors (priority order: holiday > absent > overtime > filled)
+                            !weekend && isHoliday && "bg-amber-100 dark:bg-amber-950/40",
+                            !weekend && !isHoliday && isAbsent && "bg-red-200 dark:bg-red-950/50",
+                            !weekend && !isAbsent && !isHoliday && hasOvertime && "bg-orange-50 dark:bg-orange-950/20",
                             !weekend && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-50 dark:bg-green-950/20",
                             // Alternating day stripes for empty cells
-                            !weekend && !hasData && !isAbsent && index % 2 === 1 && "bg-muted/30"
+                            !weekend && !hasData && !isAbsent && !isHoliday && index % 2 === 1 && "bg-muted/30"
                           )}
                         >
+                          {/* Holiday indicator overlay */}
+                          {isHoliday && !weekend && !hasData && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="text-amber-600 font-bold text-xs opacity-60">HOL</span>
+                            </div>
+                          )}
                           {/* Absence indicator overlay */}
                           {isAbsent && !weekend && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

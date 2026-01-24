@@ -348,6 +348,68 @@ export type Database = {
         }
         Relationships: []
       }
+      farms: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fields: {
+        Row: {
+          created_at: string
+          farm_id: string
+          hectares: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          farm_id: string
+          hectares?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          farm_id?: string
+          hectares?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fields_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fuel_equipment: {
         Row: {
           created_at: string
@@ -477,6 +539,33 @@ export type Database = {
           },
         ]
       }
+      implements: {
+        Row: {
+          created_at: string
+          id: string
+          implement_type: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          implement_type: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          implement_type?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           co2_equivalent: number | null
@@ -580,6 +669,140 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operation_inputs: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_item_id: string
+          operation_id: string
+          quantity_used: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_item_id: string
+          operation_id: string
+          quantity_used: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_item_id?: string
+          operation_id?: string
+          quantity_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_inputs_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operation_inputs_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operation_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_mechanical: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_mechanical?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_mechanical?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      operations: {
+        Row: {
+          created_at: string
+          field_id: string
+          hectares_done: number
+          id: string
+          implement_id: string | null
+          notes: string | null
+          operation_date: string
+          operation_type_id: string
+          tractor_id: string | null
+          updated_at: string
+          workers_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          hectares_done: number
+          id?: string
+          implement_id?: string | null
+          notes?: string | null
+          operation_date?: string
+          operation_type_id: string
+          tractor_id?: string | null
+          updated_at?: string
+          workers_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          hectares_done?: number
+          id?: string
+          implement_id?: string | null
+          notes?: string | null
+          operation_date?: string
+          operation_type_id?: string
+          tractor_id?: string | null
+          updated_at?: string
+          workers_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_implement_id_fkey"
+            columns: ["implement_id"]
+            isOneToOne: false
+            referencedRelation: "implements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_operation_type_id_fkey"
+            columns: ["operation_type_id"]
+            isOneToOne: false
+            referencedRelation: "operation_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
           },
         ]

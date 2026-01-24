@@ -348,6 +348,135 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_equipment: {
+        Row: {
+          created_at: string
+          current_hour_meter: number
+          equipment_type: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_hour_meter?: number
+          equipment_type: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_hour_meter?: number
+          equipment_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fuel_tanks: {
+        Row: {
+          capacity_gallons: number
+          created_at: string
+          current_level_gallons: number
+          fuel_type: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          use_type: string
+        }
+        Insert: {
+          capacity_gallons: number
+          created_at?: string
+          current_level_gallons?: number
+          fuel_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          use_type: string
+        }
+        Update: {
+          capacity_gallons?: number
+          created_at?: string
+          current_level_gallons?: number
+          fuel_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          use_type?: string
+        }
+        Relationships: []
+      }
+      fuel_transactions: {
+        Row: {
+          created_at: string
+          equipment_id: string | null
+          gallons: number
+          gallons_per_hour: number | null
+          hour_meter_reading: number | null
+          id: string
+          notes: string | null
+          previous_hour_meter: number | null
+          pump_end_reading: number | null
+          pump_start_reading: number | null
+          tank_id: string
+          transaction_date: string
+          transaction_type: string
+        }
+        Insert: {
+          created_at?: string
+          equipment_id?: string | null
+          gallons: number
+          gallons_per_hour?: number | null
+          hour_meter_reading?: number | null
+          id?: string
+          notes?: string | null
+          previous_hour_meter?: number | null
+          pump_end_reading?: number | null
+          pump_start_reading?: number | null
+          tank_id: string
+          transaction_date?: string
+          transaction_type: string
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string | null
+          gallons?: number
+          gallons_per_hour?: number | null
+          hour_meter_reading?: number | null
+          id?: string
+          notes?: string | null
+          previous_hour_meter?: number | null
+          pump_end_reading?: number | null
+          pump_start_reading?: number | null
+          tank_id?: string
+          transaction_date?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_transactions_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_transactions_tank_id_fkey"
+            columns: ["tank_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_tanks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           co2_equivalent: number | null

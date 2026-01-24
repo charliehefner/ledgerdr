@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeList } from "@/components/hr/EmployeeList";
 import { EmployeeForm } from "@/components/hr/EmployeeForm";
 import { PayrollView } from "@/components/hr/PayrollView";
+import { DayLaborView } from "@/components/hr/DayLaborView";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function HumanResources() {
@@ -32,6 +33,7 @@ export default function HumanResources() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="payroll">Payroll</TabsTrigger>
+            <TabsTrigger value="day-labor">Day Labor</TabsTrigger>
             <TabsTrigger value="employees">Employee Directory</TabsTrigger>
             {canModifySettings && (
               <TabsTrigger value="add-employee">
@@ -42,6 +44,10 @@ export default function HumanResources() {
 
           <TabsContent value="payroll" className="space-y-4">
             <PayrollView />
+          </TabsContent>
+
+          <TabsContent value="day-labor" className="space-y-4">
+            <DayLaborView />
           </TabsContent>
 
           <TabsContent value="employees" className="space-y-4">

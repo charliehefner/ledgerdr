@@ -26,12 +26,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
 
-type SortField = "transaction_date" | "tank" | "tractor" | null;
+type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
 
 interface FuelTank {
@@ -64,6 +74,8 @@ export function AgricultureFuelView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
   const [form, setForm] = useState({
     tank_id: "",
     equipment_id: "",
@@ -106,7 +118,7 @@ export function AgricultureFuelView() {
     },
   });
 
-  // Fetch recent transactions
+  // Fetch all transactions (we'll filter by date client-side for flexibility)
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["fuelTransactions", "agriculture"],
     queryFn: async () => {
@@ -119,12 +131,33 @@ export function AgricultureFuelView() {
         `)
         .eq("fuel_tanks.use_type", "agriculture")
         .eq("transaction_type", "dispense")
-        .order("transaction_date", { ascending: false })
-        .limit(50);
+        .order("transaction_date", { ascending: false });
       if (error) throw error;
       return data as FuelTransaction[];
     },
   });
+
+  // Filter transactions by date range
+  const filteredTransactions = useMemo(() => {
+    if (!startDate && !endDate) return transactions;
+    
+    return transactions.filter((tx) => {
+      const txDate = new Date(tx.transaction_date);
+      if (startDate && endDate) {
+        return isWithinInterval(txDate, { 
+          start: startOfDay(startDate), 
+          end: endOfDay(endDate) 
+        });
+      }
+      if (startDate) {
+        return txDate >= startOfDay(startDate);
+      }
+      if (endDate) {
+        return txDate <= endOfDay(endDate);
+      }
+      return true;
+    });
+  }, [transactions, startDate, endDate]);
 
   const dispenseMutation = useMutation({
     mutationFn: async (data: typeof form) => {
@@ -256,9 +289,9 @@ export function AgricultureFuelView() {
   };
 
   const sortedTransactions = useMemo(() => {
-    if (!sortField) return transactions;
+    if (!sortField) return filteredTransactions;
 
-    return [...transactions].sort((a, b) => {
+    return [...filteredTransactions].sort((a, b) => {
       let comparison = 0;
 
       switch (sortField) {
@@ -271,11 +304,152 @@ export function AgricultureFuelView() {
         case "tractor":
           comparison = a.fuel_equipment.name.localeCompare(b.fuel_equipment.name);
           break;
+        case "hour_meter":
+          comparison = a.hour_meter_reading - b.hour_meter_reading;
+          break;
+        case "pump_start":
+          comparison = a.pump_start_reading - b.pump_start_reading;
+          break;
+        case "pump_end":
+          comparison = a.pump_end_reading - b.pump_end_reading;
+          break;
+        case "gallons":
+          comparison = a.gallons - b.gallons;
+          break;
       }
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [transactions, sortField, sortDirection]);
+  }, [filteredTransactions, sortField, sortDirection]);
+
+  const totalGallons = useMemo(() => {
+    return sortedTransactions.reduce((sum, tx) => sum + tx.gallons, 0);
+  }, [sortedTransactions]);
+
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Fueling Report");
+
+    // Add title
+    worksheet.mergeCells("A1:H1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = "Agriculture Fueling Report";
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: "center" };
+
+    // Add date range
+    worksheet.mergeCells("A2:H2");
+    const dateRangeCell = worksheet.getCell("A2");
+    const dateRangeText = startDate && endDate 
+      ? `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
+      : "All dates";
+    dateRangeCell.value = dateRangeText;
+    dateRangeCell.alignment = { horizontal: "center" };
+
+    // Add headers
+    const headers = ["Date/Time", "Tank", "Tractor", "Hour Meter", "Pump Start", "Pump End", "Gallons", "Notes"];
+    worksheet.addRow([]);
+    const headerRow = worksheet.addRow(headers);
+    headerRow.font = { bold: true };
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+    });
+
+    // Add data
+    sortedTransactions.forEach((tx) => {
+      worksheet.addRow([
+        format(new Date(tx.transaction_date), "dd/MM/yyyy HH:mm"),
+        tx.fuel_tanks.name,
+        tx.fuel_equipment.name,
+        tx.hour_meter_reading,
+        tx.pump_start_reading,
+        tx.pump_end_reading,
+        tx.gallons,
+        tx.notes || "",
+      ]);
+    });
+
+    // Add total row
+    worksheet.addRow([]);
+    const totalRow = worksheet.addRow(["", "", "", "", "", "TOTAL:", totalGallons.toFixed(1), ""]);
+    totalRow.font = { bold: true };
+
+    // Auto-width columns
+    worksheet.columns.forEach((column) => {
+      column.width = 15;
+    });
+
+    // Download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `fueling-report-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: "Excel file has been downloaded.",
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text("Agriculture Fueling Report", 14, 20);
+    
+    // Date range
+    doc.setFontSize(10);
+    const dateRangeText = startDate && endDate 
+      ? `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
+      : "All dates";
+    doc.text(dateRangeText, 14, 28);
+    doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 34);
+
+    // Table data
+    const tableData = sortedTransactions.map((tx) => [
+      format(new Date(tx.transaction_date), "dd/MM/yyyy HH:mm"),
+      tx.fuel_tanks.name,
+      tx.fuel_equipment.name,
+      tx.hour_meter_reading.toString(),
+      tx.pump_start_reading.toString(),
+      tx.pump_end_reading.toString(),
+      tx.gallons.toFixed(1),
+      tx.notes || "-",
+    ]);
+
+    // Add total row
+    tableData.push(["", "", "", "", "", "TOTAL:", totalGallons.toFixed(1), ""]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [["Date/Time", "Tank", "Tractor", "Hour Meter", "Pump Start", "Pump End", "Gallons", "Notes"]],
+      body: tableData,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [80, 80, 80] },
+      didParseCell: (data) => {
+        // Bold the total row
+        if (data.row.index === tableData.length - 1) {
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+
+    doc.save(`fueling-report-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+
+    toast({
+      title: "Export Complete",
+      description: "PDF file has been downloaded.",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -296,142 +470,199 @@ export function AgricultureFuelView() {
         ))}
       </div>
 
-      {/* Record Fueling */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Recent Fueling</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Record Fueling
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Record Tractor Fueling</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Tank *</Label>
-                <Select
-                  value={form.tank_id}
-                  onValueChange={(value) => setForm({ ...form, tank_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select tank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tanks.map((tank) => (
-                      <SelectItem key={tank.id} value={tank.id}>
-                        {tank.name} ({tank.current_level_gallons} gal available)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* Report Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h2 className="text-xl font-semibold">Fueling Report</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Date Filters */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate ? format(startDate, "dd/MM/yyyy") : "Start Date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={setStartDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
 
-              <div>
-                <Label>Tractor *</Label>
-                <Select
-                  value={form.equipment_id}
-                  onValueChange={(value) => setForm({ ...form, equipment_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select tractor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tractors.map((tractor) => (
-                      <SelectItem key={tractor.id} value={tractor.id}>
-                        {tractor.name} ({tractor.current_hour_meter} hrs)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {endDate ? format(endDate, "dd/MM/yyyy") : "End Date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={endDate}
+                onSelect={setEndDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
 
-              {selectedTractor && (
-                <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                  <Tractor className="inline h-4 w-4 mr-1" />
-                  Last hour meter: {selectedTractor.current_hour_meter} hrs
-                </div>
-              )}
+          {/* Export Buttons */}
+          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={sortedTransactions.length === 0}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToPDF} disabled={sortedTransactions.length === 0}>
+            <FileText className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
 
-              <div>
-                <Label>Current Hour Meter Reading *</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={form.hour_meter_reading}
-                  onChange={(e) =>
-                    setForm({ ...form, hour_meter_reading: e.target.value })
-                  }
-                  placeholder="e.g., 1234.5"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+          {/* Record Fueling */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Record Fueling
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Record Tractor Fueling</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label>Pump Start Reading *</Label>
+                  <Label>Tank *</Label>
+                  <Select
+                    value={form.tank_id}
+                    onValueChange={(value) => setForm({ ...form, tank_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select tank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tanks.map((tank) => (
+                        <SelectItem key={tank.id} value={tank.id}>
+                          {tank.name} ({tank.current_level_gallons} gal available)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Tractor *</Label>
+                  <Select
+                    value={form.equipment_id}
+                    onValueChange={(value) => setForm({ ...form, equipment_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select tractor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tractors.map((tractor) => (
+                        <SelectItem key={tractor.id} value={tractor.id}>
+                          {tractor.name} ({tractor.current_hour_meter} hrs)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedTractor && (
+                  <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                    <Tractor className="inline h-4 w-4 mr-1" />
+                    Last hour meter: {selectedTractor.current_hour_meter} hrs
+                  </div>
+                )}
+
+                <div>
+                  <Label>Current Hour Meter Reading *</Label>
                   <Input
                     type="number"
                     step="0.1"
-                    value={form.pump_start_reading}
+                    value={form.hour_meter_reading}
                     onChange={(e) =>
-                      setForm({ ...form, pump_start_reading: e.target.value })
+                      setForm({ ...form, hour_meter_reading: e.target.value })
                     }
-                    placeholder="e.g., 5000"
+                    placeholder="e.g., 1234.5"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Pump Start Reading *</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={form.pump_start_reading}
+                      onChange={(e) =>
+                        setForm({ ...form, pump_start_reading: e.target.value })
+                      }
+                      placeholder="e.g., 5000"
+                    />
+                  </div>
+                  <div>
+                    <Label>Pump End Reading *</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={form.pump_end_reading}
+                      onChange={(e) =>
+                        setForm({ ...form, pump_end_reading: e.target.value })
+                      }
+                      placeholder="e.g., 5045"
+                    />
+                  </div>
+                </div>
+
+                {calculatedGallons > 0 && (
+                  <div className="text-sm font-medium text-primary bg-primary/10 p-2 rounded">
+                    Gallons to dispense: {calculatedGallons.toFixed(1)}
+                  </div>
+                )}
+
                 <div>
-                  <Label>Pump End Reading *</Label>
+                  <Label>Notes</Label>
                   <Input
-                    type="number"
-                    step="0.1"
-                    value={form.pump_end_reading}
-                    onChange={(e) =>
-                      setForm({ ...form, pump_end_reading: e.target.value })
-                    }
-                    placeholder="e.g., 5045"
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    placeholder="Optional notes"
                   />
                 </div>
-              </div>
 
-              {calculatedGallons > 0 && (
-                <div className="text-sm font-medium text-primary bg-primary/10 p-2 rounded">
-                  Gallons to dispense: {calculatedGallons.toFixed(1)}
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={dispenseMutation.isPending}>
+                    {dispenseMutation.isPending ? "Recording..." : "Record"}
+                  </Button>
                 </div>
-              )}
-
-              <div>
-                <Label>Notes</Label>
-                <Input
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder="Optional notes"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={dispenseMutation.isPending}>
-                  {dispenseMutation.isPending ? "Recording..." : "Record"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Summary */}
+      {sortedTransactions.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Showing {sortedTransactions.length} records | Total: <span className="font-semibold text-foreground">{totalGallons.toFixed(1)} gallons</span>
+        </div>
+      )}
 
       {/* Transactions Table */}
       {isLoading ? (
         <div className="text-muted-foreground">Loading transactions...</div>
-      ) : transactions.length === 0 ? (
+      ) : sortedTransactions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Tractor className="mx-auto h-12 w-12 mb-4 opacity-50" />
-          <p>No fueling records yet.</p>
-          <p className="text-sm">Record a tractor fueling to get started.</p>
+          <p>No fueling records found.</p>
+          <p className="text-sm">Adjust the date range or record a new fueling.</p>
         </div>
       ) : (
         <Table>
@@ -470,10 +701,50 @@ export function AgricultureFuelView() {
                   {getSortIcon("tractor")}
                 </Button>
               </TableHead>
-              <TableHead>Hour Meter</TableHead>
-              <TableHead>Pump Start</TableHead>
-              <TableHead>Pump End</TableHead>
-              <TableHead>Gallons</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("hour_meter")}
+                >
+                  Hour Meter
+                  {getSortIcon("hour_meter")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("pump_start")}
+                >
+                  Pump Start
+                  {getSortIcon("pump_start")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("pump_end")}
+                >
+                  Pump End
+                  {getSortIcon("pump_end")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("gallons")}
+                >
+                  Gallons
+                  {getSortIcon("gallons")}
+                </Button>
+              </TableHead>
               <TableHead>Notes</TableHead>
             </TableRow>
           </TableHeader>

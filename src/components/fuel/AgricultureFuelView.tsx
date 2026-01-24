@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Fuel, Tractor } from "lucide-react";
+import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+
+type SortField = "transaction_date" | "tank" | "tractor" | null;
+type SortDirection = "asc" | "desc";
 
 interface FuelTank {
   id: string;
@@ -59,6 +62,8 @@ interface FuelTransaction {
 
 export function AgricultureFuelView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [form, setForm] = useState({
     tank_id: "",
     equipment_id: "",
@@ -226,6 +231,52 @@ export function AgricultureFuelView() {
 
   const selectedTractor = tractors.find((t) => t.id === form.equipment_id);
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === "desc") {
+        setSortDirection("asc");
+      } else {
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-muted-foreground" />;
+    }
+    return sortDirection === "desc" ? (
+      <ArrowDown className="ml-1 h-4 w-4" />
+    ) : (
+      <ArrowUp className="ml-1 h-4 w-4" />
+    );
+  };
+
+  const sortedTransactions = useMemo(() => {
+    if (!sortField) return transactions;
+
+    return [...transactions].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortField) {
+        case "transaction_date":
+          comparison = new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
+          break;
+        case "tank":
+          comparison = a.fuel_tanks.name.localeCompare(b.fuel_tanks.name);
+          break;
+        case "tractor":
+          comparison = a.fuel_equipment.name.localeCompare(b.fuel_equipment.name);
+          break;
+      }
+
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [transactions, sortField, sortDirection]);
+
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
@@ -386,9 +437,39 @@ export function AgricultureFuelView() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date/Time</TableHead>
-              <TableHead>Tank</TableHead>
-              <TableHead>Tractor</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("transaction_date")}
+                >
+                  Date/Time
+                  {getSortIcon("transaction_date")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("tank")}
+                >
+                  Tank
+                  {getSortIcon("tank")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-3 h-8 hover:bg-transparent"
+                  onClick={() => handleSort("tractor")}
+                >
+                  Tractor
+                  {getSortIcon("tractor")}
+                </Button>
+              </TableHead>
               <TableHead>Hour Meter</TableHead>
               <TableHead>Pump Start</TableHead>
               <TableHead>Pump End</TableHead>
@@ -397,7 +478,7 @@ export function AgricultureFuelView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((tx) => (
+            {sortedTransactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>
                   {format(new Date(tx.transaction_date), "MMM d, yyyy HH:mm")}

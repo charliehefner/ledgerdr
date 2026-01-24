@@ -312,6 +312,104 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          co2_equivalent: number | null
+          commercial_name: string
+          created_at: string
+          current_quantity: number
+          function: Database["public"]["Enums"]["inventory_function"]
+          id: string
+          is_active: boolean
+          molecule_name: string | null
+          price_per_purchase_unit: number
+          purchase_unit_quantity: number
+          purchase_unit_type: string
+          sack_weight_kg: number | null
+          supplier: string | null
+          updated_at: string
+          use_unit: string
+        }
+        Insert: {
+          co2_equivalent?: number | null
+          commercial_name: string
+          created_at?: string
+          current_quantity?: number
+          function?: Database["public"]["Enums"]["inventory_function"]
+          id?: string
+          is_active?: boolean
+          molecule_name?: string | null
+          price_per_purchase_unit?: number
+          purchase_unit_quantity?: number
+          purchase_unit_type?: string
+          sack_weight_kg?: number | null
+          supplier?: string | null
+          updated_at?: string
+          use_unit?: string
+        }
+        Update: {
+          co2_equivalent?: number | null
+          commercial_name?: string
+          created_at?: string
+          current_quantity?: number
+          function?: Database["public"]["Enums"]["inventory_function"]
+          id?: string
+          is_active?: boolean
+          molecule_name?: string | null
+          price_per_purchase_unit?: number
+          purchase_unit_quantity?: number
+          purchase_unit_type?: string
+          sack_weight_kg?: number | null
+          supplier?: string | null
+          updated_at?: string
+          use_unit?: string
+        }
+        Relationships: []
+      }
+      inventory_purchases: {
+        Row: {
+          created_at: string
+          document_number: string | null
+          id: string
+          item_id: string
+          notes: string | null
+          purchase_date: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          document_number?: string | null
+          id?: string
+          item_id: string
+          notes?: string | null
+          purchase_date?: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          document_number?: string | null
+          id?: string
+          item_id?: string
+          notes?: string | null
+          purchase_date?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_purchases_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_periods: {
         Row: {
           created_at: string
@@ -472,6 +570,16 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "accountant"
+      inventory_function:
+        | "fertilizer"
+        | "fuel"
+        | "pre_emergent_herbicide"
+        | "post_emergent_herbicide"
+        | "pesticide"
+        | "fungicide"
+        | "insecticide"
+        | "seed"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -600,6 +708,17 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "accountant"],
+      inventory_function: [
+        "fertilizer",
+        "fuel",
+        "pre_emergent_herbicide",
+        "post_emergent_herbicide",
+        "pesticide",
+        "fungicide",
+        "insecticide",
+        "seed",
+        "other",
+      ],
     },
   },
 } as const

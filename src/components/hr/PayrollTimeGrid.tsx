@@ -580,27 +580,36 @@ export function PayrollTimeGrid({
                       const weekend = isWeekend(day);
                       const saturday = isSaturday(day);
                       const endTimeDefaultPeriod = saturday ? "AM" : "PM";
+                      const isHoliday = entry?.is_holiday;
                       
                       // Determine cell status for coloring
                       const hasData = entry?.start_time && entry?.end_time;
-                      const isAbsent = entry?.is_absent;
+                      // Absent = has entry but no times (explicitly marked absent)
+                      const isAbsent = entry?.is_absent || (entry && !entry.start_time && !entry.end_time);
                       const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
                       
                       return (
                         <td
                           key={day.toISOString()}
                           className={cn(
-                            "p-1 text-center border-r border-border/30 align-middle",
+                            "p-1 text-center border-r border-border/30 align-middle relative",
                             // Weekend styling
                             weekend && "bg-muted/60",
                             // Status-based colors (priority order)
-                            !weekend && isAbsent && "bg-red-100 dark:bg-red-950/30",
+                            !weekend && isAbsent && "bg-red-200 dark:bg-red-950/50",
+                            !weekend && !isAbsent && isHoliday && hasData && "bg-amber-100 dark:bg-amber-950/40",
                             !weekend && !isAbsent && hasOvertime && "bg-orange-50 dark:bg-orange-950/20",
-                            !weekend && !isAbsent && hasData && !hasOvertime && "bg-green-50 dark:bg-green-950/20",
+                            !weekend && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-50 dark:bg-green-950/20",
                             // Alternating day stripes for empty cells
                             !weekend && !hasData && !isAbsent && index % 2 === 1 && "bg-muted/30"
                           )}
                         >
+                          {/* Absence indicator overlay */}
+                          {isAbsent && !weekend && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="text-red-600 font-bold text-xs opacity-60">ABS</span>
+                            </div>
+                          )}
                           <div className="flex flex-col gap-0.5">
                             <TimeInput
                               value={entry?.start_time || null}

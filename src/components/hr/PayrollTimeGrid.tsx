@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { format, eachDayOfInterval, isWeekend, isSaturday, isWithinInterval, parseISO } from "date-fns";
+import { format, eachDayOfInterval, isSunday, isSaturday, isWithinInterval, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -253,8 +253,8 @@ export function PayrollTimeGrid({
 
       for (const employee of salariedEmployees) {
         for (const day of days) {
-          // Skip weekends and vacation days
-          if (isWeekend(day)) continue;
+          // Skip Sundays and vacation days (Saturday is a workday)
+          if (isSunday(day)) continue;
           if (isEmployeeOnVacation(employee.id, day)) continue;
 
           const dateStr = format(day, "yyyy-MM-dd");
@@ -563,15 +563,15 @@ export function PayrollTimeGrid({
                   key={day.toISOString()}
                   className={cn(
                     "text-center min-w-[100px] h-16 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap",
-                    isWeekend(day) && "bg-muted",
-                    !isWeekend(day) && isHoliday && "bg-amber-300 dark:bg-amber-800",
-                    !isWeekend(day) && !isHoliday && index % 2 === 1 && "bg-muted/40",
-                    !isWeekend(day) && !isHoliday && index % 2 === 0 && "bg-background"
+                    isSunday(day) && "bg-muted",
+                    !isSunday(day) && isHoliday && "bg-amber-300 dark:bg-amber-800",
+                    !isSunday(day) && !isHoliday && index % 2 === 1 && "bg-muted/40",
+                    !isSunday(day) && !isHoliday && index % 2 === 0 && "bg-background"
                   )}
                 >
                   <div className="text-xs">{format(day, "EEE")}</div>
                   <div className="font-mono">{format(day, "d")}</div>
-                  {!isWeekend(day) && (
+                  {!isSunday(day) && (
                     <div className="flex items-center justify-center gap-1 mt-1">
                       <Checkbox
                         id={`holiday-${day.toISOString()}`}
@@ -642,7 +642,7 @@ export function PayrollTimeGrid({
                     </td>
                     {days.map((day, index) => {
                       const entry = getTimesheetEntry(employee.id, day);
-                      const weekend = isWeekend(day);
+                      const sunday = isSunday(day);
                       const saturday = isSaturday(day);
                       const endTimeDefaultPeriod = saturday ? "AM" : "PM";
                       const isHoliday = entry?.is_holiday;
@@ -659,32 +659,32 @@ export function PayrollTimeGrid({
                           key={day.toISOString()}
                           className={cn(
                             "p-1 text-center border-r border-border/30 align-middle relative",
-                            // Weekend styling
-                            weekend && "bg-muted/60",
+                            // Sunday styling (only Sunday is non-working)
+                            sunday && "bg-muted/60",
                             // Status-based colors (priority order: vacation > holiday > absent > overtime > filled)
-                            !weekend && isVacation && "bg-violet-300 dark:bg-violet-900",
-                            !weekend && !isVacation && isHoliday && "bg-amber-300 dark:bg-amber-800",
-                            !weekend && !isVacation && !isHoliday && isAbsent && "bg-red-300 dark:bg-red-800",
-                            !weekend && !isVacation && !isAbsent && !isHoliday && hasOvertime && "bg-orange-200 dark:bg-orange-900",
-                            !weekend && !isVacation && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-200 dark:bg-green-900",
+                            !sunday && isVacation && "bg-violet-300 dark:bg-violet-900",
+                            !sunday && !isVacation && isHoliday && "bg-amber-300 dark:bg-amber-800",
+                            !sunday && !isVacation && !isHoliday && isAbsent && "bg-red-300 dark:bg-red-800",
+                            !sunday && !isVacation && !isAbsent && !isHoliday && hasOvertime && "bg-orange-200 dark:bg-orange-900",
+                            !sunday && !isVacation && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-200 dark:bg-green-900",
                             // Alternating day stripes for empty cells
-                            !weekend && !hasData && !isAbsent && !isHoliday && !isVacation && index % 2 === 1 && "bg-muted/30"
+                            !sunday && !hasData && !isAbsent && !isHoliday && !isVacation && index % 2 === 1 && "bg-muted/30"
                           )}
                         >
                           {/* Vacation indicator overlay */}
-                          {isVacation && !weekend && (
+                          {isVacation && !sunday && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                               <span className="text-violet-700 dark:text-violet-300 font-bold text-xs opacity-80">VAC</span>
                             </div>
                           )}
                           {/* Holiday indicator overlay */}
-                          {isHoliday && !weekend && !hasData && !isVacation && (
+                          {isHoliday && !sunday && !hasData && !isVacation && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                               <span className="text-amber-700 dark:text-amber-300 font-bold text-xs opacity-80">HOL</span>
                             </div>
                           )}
                           {/* Absence indicator overlay */}
-                          {isAbsent && !weekend && !isVacation && (
+                          {isAbsent && !sunday && !isVacation && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                               <span className="text-red-700 dark:text-red-300 font-bold text-xs opacity-80">ABS</span>
                             </div>

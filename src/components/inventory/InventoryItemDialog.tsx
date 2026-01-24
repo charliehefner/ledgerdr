@@ -51,11 +51,6 @@ const initialFormState = {
   molecule_name: "",
   function: "other" as string,
   use_unit: "kg",
-  sack_weight_kg: "",
-  supplier: "",
-  purchase_unit_quantity: "1",
-  purchase_unit_type: "unit",
-  price_per_purchase_unit: "",
   co2_equivalent: "",
 };
 
@@ -89,12 +84,6 @@ export function InventoryItemDialog({
         molecule_name: existingItem.molecule_name || "",
         function: existingItem.function,
         use_unit: existingItem.use_unit,
-        sack_weight_kg: existingItem.sack_weight_kg?.toString() || "",
-        supplier: existingItem.supplier || "",
-        purchase_unit_quantity: existingItem.purchase_unit_quantity.toString(),
-        purchase_unit_type: existingItem.purchase_unit_type,
-        price_per_purchase_unit:
-          existingItem.price_per_purchase_unit.toString(),
         co2_equivalent: existingItem.co2_equivalent?.toString() || "",
       });
     } else if (!editingItemId) {
@@ -109,14 +98,6 @@ export function InventoryItemDialog({
         molecule_name: data.molecule_name || null,
         function: data.function as any,
         use_unit: data.use_unit,
-        sack_weight_kg: data.sack_weight_kg
-          ? parseFloat(data.sack_weight_kg)
-          : null,
-        supplier: data.supplier || null,
-        purchase_unit_quantity: parseFloat(data.purchase_unit_quantity) || 1,
-        purchase_unit_type: data.purchase_unit_type,
-        price_per_purchase_unit:
-          parseFloat(data.price_per_purchase_unit) || 0,
         co2_equivalent: data.co2_equivalent
           ? parseFloat(data.co2_equivalent)
           : null,
@@ -211,17 +192,7 @@ export function InventoryItemDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier</Label>
-              <Input
-                id="supplier"
-                value={form.supplier}
-                onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-                placeholder="e.g., AgriSupply Co."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="use_unit">Unit for Use</Label>
+              <Label htmlFor="use_unit">Unit for Use *</Label>
               <Select
                 value={form.use_unit}
                 onValueChange={(val) => setForm({ ...form, use_unit: val })}
@@ -239,68 +210,8 @@ export function InventoryItemDialog({
               </Select>
             </div>
 
-            {form.use_unit === "sack" && (
-              <div className="space-y-2">
-                <Label htmlFor="sack_weight_kg">Sack Weight (kg)</Label>
-                <Input
-                  id="sack_weight_kg"
-                  type="number"
-                  step="0.01"
-                  value={form.sack_weight_kg}
-                  onChange={(e) =>
-                    setForm({ ...form, sack_weight_kg: e.target.value })
-                  }
-                  placeholder="e.g., 50"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="purchase_unit_quantity">
-                Purchase Unit Quantity
-              </Label>
-              <Input
-                id="purchase_unit_quantity"
-                type="number"
-                step="0.01"
-                value={form.purchase_unit_quantity}
-                onChange={(e) =>
-                  setForm({ ...form, purchase_unit_quantity: e.target.value })
-                }
-                placeholder="e.g., 20"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="purchase_unit_type">Purchase Unit Type</Label>
-              <Input
-                id="purchase_unit_type"
-                value={form.purchase_unit_type}
-                onChange={(e) =>
-                  setForm({ ...form, purchase_unit_type: e.target.value })
-                }
-                placeholder="e.g., liter, kg, gallon"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price_per_purchase_unit">
-                Price per Purchase Unit ($)
-              </Label>
-              <Input
-                id="price_per_purchase_unit"
-                type="number"
-                step="0.01"
-                value={form.price_per_purchase_unit}
-                onChange={(e) =>
-                  setForm({ ...form, price_per_purchase_unit: e.target.value })
-                }
-                placeholder="e.g., 100"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="co2_equivalent">CO₂ Equivalent (kg)</Label>
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="co2_equivalent">CO₂ Equivalent (kg per use unit)</Label>
               <Input
                 id="co2_equivalent"
                 type="number"

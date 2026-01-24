@@ -412,30 +412,48 @@ export type Database = {
       }
       fuel_equipment: {
         Row: {
+          brand: string | null
           created_at: string
           current_hour_meter: number
           equipment_type: string
+          hp: number | null
           id: string
           is_active: boolean
+          model: string | null
           name: string
+          purchase_date: string | null
+          purchase_price: number | null
+          serial_number: string | null
           updated_at: string
         }
         Insert: {
+          brand?: string | null
           created_at?: string
           current_hour_meter?: number
           equipment_type: string
+          hp?: number | null
           id?: string
           is_active?: boolean
+          model?: string | null
           name: string
+          purchase_date?: string | null
+          purchase_price?: number | null
+          serial_number?: string | null
           updated_at?: string
         }
         Update: {
+          brand?: string | null
           created_at?: string
           current_hour_meter?: number
           equipment_type?: string
+          hp?: number | null
           id?: string
           is_active?: boolean
+          model?: string | null
           name?: string
+          purchase_date?: string | null
+          purchase_price?: number | null
+          serial_number?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -541,27 +559,42 @@ export type Database = {
       }
       implements: {
         Row: {
+          brand: string | null
           created_at: string
           id: string
           implement_type: string
           is_active: boolean
+          model: string | null
           name: string
+          purchase_date: string | null
+          purchase_price: number | null
+          serial_number: string | null
           updated_at: string
         }
         Insert: {
+          brand?: string | null
           created_at?: string
           id?: string
           implement_type: string
           is_active?: boolean
+          model?: string | null
           name: string
+          purchase_date?: string | null
+          purchase_price?: number | null
+          serial_number?: string | null
           updated_at?: string
         }
         Update: {
+          brand?: string | null
           created_at?: string
           id?: string
           implement_type?: string
           is_active?: boolean
+          model?: string | null
           name?: string
+          purchase_date?: string | null
+          purchase_price?: number | null
+          serial_number?: string | null
           updated_at?: string
         }
         Relationships: []

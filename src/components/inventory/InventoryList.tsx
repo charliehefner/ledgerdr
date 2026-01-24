@@ -10,9 +10,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Edit, History, Archive, ArchiveRestore, SlidersHorizontal } from "lucide-react";
+import { Edit, History, Archive, ArchiveRestore, SlidersHorizontal, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { PurchaseHistoryDialog } from "./PurchaseHistoryDialog";
@@ -26,10 +25,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface InventoryListProps {
   onEditItem: (itemId: string) => void;
@@ -175,6 +183,114 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     },
   });
 
+  // Build export data based on visible columns
+  const buildExportRow = (item: NonNullable<typeof items>[0]) => {
+    const itemPurchases = purchasesByItem[item.id];
+    const row: Record<string, string | number> = {};
+
+    if (isVisible("commercial_name")) row["Commercial Name"] = item.commercial_name;
+    if (isVisible("molecule_name")) row["Molecule Name"] = item.molecule_name || "-";
+    if (isVisible("function")) row["Function"] = functionLabels[item.function] || item.function;
+    if (isVisible("stock")) row["Stock"] = `${Number(item.current_quantity).toFixed(2)} ${item.use_unit}`;
+    if (isVisible("amount_purchased")) row["Amount Purchased"] = itemPurchases 
+      ? `${itemPurchases.totalPurchased.toFixed(2)} ${item.use_unit}` 
+      : "-";
+    if (isVisible("amount_used")) row["Amount Used"] = "-";
+    if (isVisible("suppliers")) row["Suppliers"] = itemPurchases && itemPurchases.suppliers.size > 0
+      ? Array.from(itemPurchases.suppliers).join(", ")
+      : "-";
+    if (isVisible("documents")) row["Documents"] = itemPurchases && itemPurchases.documents.size > 0
+      ? Array.from(itemPurchases.documents).join(", ")
+      : "-";
+    if (isVisible("co2_equivalent")) row["CO₂ Equivalent"] = item.co2_equivalent ? `${item.co2_equivalent} kg` : "-";
+
+    return row;
+  };
+
+  const exportToExcel = async () => {
+    if (!items || items.length === 0) {
+      toast.error("No items to export");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Inventory");
+
+      // Get visible columns for headers
+      const visibleCols = inventoryColumns.filter(col => isVisible(col.key));
+      const headerLabels = visibleCols.map(col => col.label);
+      
+      // Define columns
+      worksheet.columns = headerLabels.map(label => ({
+        header: label,
+        key: label,
+        width: 20,
+      }));
+
+      // Add data rows
+      items.forEach(item => {
+        const row = buildExportRow(item);
+        worksheet.addRow(row);
+      });
+
+      // Style header row
+      worksheet.getRow(1).font = { bold: true };
+
+      // Generate file and trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `inventory_${format(startDate, "yyyy-MM-dd")}_to_${format(endDate, "yyyy-MM-dd")}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success("Excel export successful");
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error("Failed to export Excel");
+    }
+  };
+
+  const exportToPDF = () => {
+    if (!items || items.length === 0) {
+      toast.error("No items to export");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text("Inventory Report", 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Date Range: ${format(startDate, "MMM d, yyyy")} - ${format(endDate, "MMM d, yyyy")}`, 14, 30);
+    doc.text(`Total Items: ${items.length}`, 14, 36);
+
+    // Get visible columns
+    const visibleCols = inventoryColumns.filter(col => isVisible(col.key));
+    const headers = visibleCols.map(col => col.label);
+
+    // Build table data
+    const tableData = items.map(item => {
+      const row = buildExportRow(item);
+      return headers.map(header => String(row[header] || "-"));
+    });
+
+    autoTable(doc, {
+      head: [headers],
+      body: tableData,
+      startY: 42,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [30, 58, 138] },
+    });
+
+    doc.save(`inventory_${format(startDate, "yyyy-MM-dd")}_to_${format(endDate, "yyyy-MM-dd")}.pdf`);
+    toast.success("PDF export successful");
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -269,6 +385,26 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
                 Show Archived
               </Label>
             </div>
+
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover">
+                <DropdownMenuItem onClick={exportToExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export to Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Column Selector */}
             <ColumnSelector

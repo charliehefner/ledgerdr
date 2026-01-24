@@ -39,6 +39,9 @@ const initialFormState = {
   item_id: "",
   purchase_date: new Date(),
   document_number: "",
+  supplier: "",
+  packaging_quantity: "",
+  packaging_unit: "",
   quantity: "",
   unit_price: "",
   notes: "",
@@ -60,7 +63,7 @@ export function PurchaseDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
-        .select("id, commercial_name, purchase_unit_quantity, purchase_unit_type, price_per_purchase_unit")
+        .select("id, commercial_name, use_unit")
         .eq("is_active", true)
         .order("commercial_name");
       if (error) throw error;
@@ -74,6 +77,7 @@ export function PurchaseDialog({
     mutationFn: async (data: typeof form) => {
       const quantity = parseFloat(data.quantity);
       const unitPrice = parseFloat(data.unit_price);
+      const packagingQuantity = parseFloat(data.packaging_quantity) || 1;
       const totalPrice = quantity * unitPrice;
 
       // Insert purchase record
@@ -83,6 +87,9 @@ export function PurchaseDialog({
           item_id: data.item_id,
           purchase_date: format(data.purchase_date, "yyyy-MM-dd"),
           document_number: data.document_number || null,
+          supplier: data.supplier || null,
+          packaging_quantity: packagingQuantity,
+          packaging_unit: data.packaging_unit || "unit",
           quantity,
           unit_price: unitPrice,
           total_price: totalPrice,
@@ -92,30 +99,25 @@ export function PurchaseDialog({
       if (purchaseError) throw purchaseError;
 
       // Update current_quantity in inventory_items
-      // Calculate how many use_units we're adding
-      const item = items?.find((i) => i.id === data.item_id);
-      if (item) {
-        const { data: currentItem, error: fetchError } = await supabase
-          .from("inventory_items")
-          .select("current_quantity, purchase_unit_quantity, use_unit, purchase_unit_type")
-          .eq("id", data.item_id)
-          .single();
+      // Calculate how many use_units we're adding based on packaging
+      const { data: currentItem, error: fetchError } = await supabase
+        .from("inventory_items")
+        .select("current_quantity, use_unit")
+        .eq("id", data.item_id)
+        .single();
 
-        if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError;
 
-        // Assuming purchase units convert directly to use_units based on purchase_unit_quantity
-        // e.g., buying 5 purchase units of 20L each = 100L added
-        const purchaseUnitQty = Number(currentItem.purchase_unit_quantity);
-        const addedQuantity = quantity * purchaseUnitQty;
-        const newQuantity = Number(currentItem.current_quantity) + addedQuantity;
+      // e.g., buying 5 packages of 20L each = 100L added
+      const addedQuantity = quantity * packagingQuantity;
+      const newQuantity = Number(currentItem.current_quantity) + addedQuantity;
 
-        const { error: updateError } = await supabase
-          .from("inventory_items")
-          .update({ current_quantity: newQuantity })
-          .eq("id", data.item_id);
+      const { error: updateError } = await supabase
+        .from("inventory_items")
+        .update({ current_quantity: newQuantity })
+        .eq("id", data.item_id);
 
-        if (updateError) throw updateError;
-      }
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
@@ -143,6 +145,10 @@ export function PurchaseDialog({
       toast.error("Please enter a valid unit price");
       return;
     }
+    if (!form.packaging_quantity || parseFloat(form.packaging_quantity) <= 0) {
+      toast.error("Please enter a valid packaging size");
+      return;
+    }
     mutation.mutate(form);
   };
 
@@ -150,6 +156,22 @@ export function PurchaseDialog({
     const qty = parseFloat(form.quantity) || 0;
     const price = parseFloat(form.unit_price) || 0;
     return (qty * price).toFixed(2);
+  };
+
+  const calculateStockAdded = () => {
+    const qty = parseFloat(form.quantity) || 0;
+    const packagingQty = parseFloat(form.packaging_quantity) || 0;
+    return (qty * packagingQty).toFixed(2);
+  };
+
+  // Auto-fill packaging unit from item's use_unit when item is selected
+  const handleItemChange = (itemId: string) => {
+    const item = items?.find((i) => i.id === itemId);
+    setForm((prev) => ({
+      ...prev,
+      item_id: itemId,
+      packaging_unit: item?.use_unit || "",
+    }));
   };
 
   return (
@@ -162,21 +184,7 @@ export function PurchaseDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="item_id">Item *</Label>
-            <Select
-              value={form.item_id}
-              onValueChange={(val) => {
-                setForm({ ...form, item_id: val });
-                // Auto-fill unit price from item's default
-                const item = items?.find((i) => i.id === val);
-                if (item) {
-                  setForm((prev) => ({
-                    ...prev,
-                    item_id: val,
-                    unit_price: item.price_per_purchase_unit.toString(),
-                  }));
-                }
-              }}
-            >
+            <Select value={form.item_id} onValueChange={handleItemChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select an item" />
               </SelectTrigger>
@@ -188,59 +196,93 @@ export function PurchaseDialog({
                 ))}
               </SelectContent>
             </Select>
-            {selectedItem && (
-              <p className="text-xs text-muted-foreground">
-                Purchase unit: {selectedItem.purchase_unit_quantity}{" "}
-                {selectedItem.purchase_unit_type}
-              </p>
-            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Purchase Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.purchase_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.purchase_date
+                      ? format(form.purchase_date, "PPP")
+                      : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={form.purchase_date}
+                    onSelect={(date) =>
+                      date && setForm({ ...form, purchase_date: date })
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="document_number">Document Number</Label>
+              <Input
+                id="document_number"
+                value={form.document_number}
+                onChange={(e) =>
+                  setForm({ ...form, document_number: e.target.value })
+                }
+                placeholder="Invoice or receipt #"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Purchase Date *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !form.purchase_date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {form.purchase_date
-                    ? format(form.purchase_date, "PPP")
-                    : "Select date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={form.purchase_date}
-                  onSelect={(date) =>
-                    date && setForm({ ...form, purchase_date: date })
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="document_number">Document Number</Label>
+            <Label htmlFor="supplier">Supplier</Label>
             <Input
-              id="document_number"
-              value={form.document_number}
-              onChange={(e) =>
-                setForm({ ...form, document_number: e.target.value })
-              }
-              placeholder="Invoice or receipt number"
+              id="supplier"
+              value={form.supplier}
+              onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+              placeholder="e.g., AgriSupply Co."
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity (purchase units) *</Label>
+              <Label htmlFor="packaging_quantity">Packaging Size *</Label>
+              <Input
+                id="packaging_quantity"
+                type="number"
+                step="0.01"
+                value={form.packaging_quantity}
+                onChange={(e) =>
+                  setForm({ ...form, packaging_quantity: e.target.value })
+                }
+                placeholder="e.g., 20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="packaging_unit">Packaging Unit</Label>
+              <Input
+                id="packaging_unit"
+                value={form.packaging_unit}
+                onChange={(e) =>
+                  setForm({ ...form, packaging_unit: e.target.value })
+                }
+                placeholder="e.g., liter, kg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity (packages) *</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -252,7 +294,7 @@ export function PurchaseDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="unit_price">Unit Price ($) *</Label>
+              <Label htmlFor="unit_price">Price per Package ($) *</Label>
               <Input
                 id="unit_price"
                 type="number"
@@ -267,9 +309,19 @@ export function PurchaseDialog({
           </div>
 
           {form.quantity && form.unit_price && (
-            <div className="rounded-lg bg-muted p-3 text-center">
-              <span className="text-sm text-muted-foreground">Total: </span>
-              <span className="font-semibold">${calculateTotal()}</span>
+            <div className="rounded-lg bg-muted p-3 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Cost:</span>
+                <span className="font-semibold">${calculateTotal()}</span>
+              </div>
+              {form.packaging_quantity && selectedItem && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Stock Added:</span>
+                  <span className="font-semibold">
+                    {calculateStockAdded()} {selectedItem.use_unit}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

@@ -373,8 +373,11 @@ export type Database = {
           id: string
           item_id: string
           notes: string | null
+          packaging_quantity: number
+          packaging_unit: string
           purchase_date: string
           quantity: number
+          supplier: string | null
           total_price: number
           unit_price: number
         }
@@ -384,8 +387,11 @@ export type Database = {
           id?: string
           item_id: string
           notes?: string | null
+          packaging_quantity?: number
+          packaging_unit?: string
           purchase_date?: string
           quantity: number
+          supplier?: string | null
           total_price: number
           unit_price: number
         }
@@ -395,8 +401,11 @@ export type Database = {
           id?: string
           item_id?: string
           notes?: string | null
+          packaging_quantity?: number
+          packaging_unit?: string
           purchase_date?: string
           quantity?: number
+          supplier?: string | null
           total_price?: number
           unit_price?: number
         }

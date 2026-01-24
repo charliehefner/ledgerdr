@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Edit, History, Archive, ArchiveRestore, SlidersHorizontal, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Edit, History, Archive, ArchiveRestore, SlidersHorizontal, Download, FileSpreadsheet, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { PurchaseHistoryDialog } from "./PurchaseHistoryDialog";
@@ -79,6 +79,9 @@ const inventoryColumns: ColumnConfig[] = [
   { key: "co2_equivalent", label: "CO₂ Equivalent", defaultVisible: false },
 ];
 
+type SortDirection = "asc" | "desc" | null;
+type SortConfig = { key: string; direction: SortDirection };
+
 export function InventoryList({ onEditItem }: InventoryListProps) {
   const queryClient = useQueryClient();
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
@@ -89,6 +92,7 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     use_unit: string;
   } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "commercial_name", direction: "asc" });
   
   // Date range for filtering purchases/usage
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
@@ -165,6 +169,90 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     }, {} as Record<string, { totalPurchased: number; suppliers: Set<string>; documents: Set<string> }>);
   }, [purchases]);
 
+  // Sort items
+  const sortedItems = useMemo(() => {
+    if (!items || !sortConfig.key || !sortConfig.direction) return items || [];
+
+    return [...items].sort((a, b) => {
+      const key = sortConfig.key;
+      let aVal: string | number | null = null;
+      let bVal: string | number | null = null;
+
+      switch (key) {
+        case "commercial_name":
+        case "molecule_name":
+        case "function":
+          aVal = (a[key as keyof typeof a] as string) || "";
+          bVal = (b[key as keyof typeof b] as string) || "";
+          break;
+        case "stock":
+          aVal = Number(a.current_quantity);
+          bVal = Number(b.current_quantity);
+          break;
+        case "amount_purchased":
+          aVal = purchasesByItem[a.id]?.totalPurchased || 0;
+          bVal = purchasesByItem[b.id]?.totalPurchased || 0;
+          break;
+        case "co2_equivalent":
+          aVal = a.co2_equivalent || 0;
+          bVal = b.co2_equivalent || 0;
+          break;
+        case "suppliers":
+          aVal = purchasesByItem[a.id]?.suppliers?.size || 0;
+          bVal = purchasesByItem[b.id]?.suppliers?.size || 0;
+          break;
+        case "documents":
+          aVal = purchasesByItem[a.id]?.documents?.size || 0;
+          bVal = purchasesByItem[b.id]?.documents?.size || 0;
+          break;
+        default:
+          return 0;
+      }
+
+      // Handle nulls
+      if (aVal === null && bVal === null) return 0;
+      if (aVal === null) return 1;
+      if (bVal === null) return -1;
+
+      // Handle numbers
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      // Handle strings
+      const aStr = String(aVal).toLowerCase();
+      const bStr = String(bVal).toLowerCase();
+      return sortConfig.direction === "asc"
+        ? aStr.localeCompare(bStr)
+        : bStr.localeCompare(aStr);
+    });
+  }, [items, sortConfig, purchasesByItem]);
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => {
+      if (prev.key !== key) {
+        return { key, direction: "asc" };
+      }
+      if (prev.direction === "asc") {
+        return { key, direction: "desc" };
+      }
+      if (prev.direction === "desc") {
+        return { key: "commercial_name", direction: "asc" }; // Reset to default
+      }
+      return { key, direction: "asc" };
+    });
+  };
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    if (sortConfig.direction === "asc") {
+      return <ArrowUp className="h-4 w-4 ml-1" />;
+    }
+    return <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
   // Archive/Unarchive mutation
   const archiveMutation = useMutation({
     mutationFn: async ({ id, archive }: { id: string; archive: boolean }) => {
@@ -208,7 +296,7 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
   };
 
   const exportToExcel = async () => {
-    if (!items || items.length === 0) {
+    if (!sortedItems || sortedItems.length === 0) {
       toast.error("No items to export");
       return;
     }
@@ -229,7 +317,7 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
       }));
 
       // Add data rows
-      items.forEach(item => {
+      sortedItems.forEach(item => {
         const row = buildExportRow(item);
         worksheet.addRow(row);
       });
@@ -255,7 +343,7 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
   };
 
   const exportToPDF = () => {
-    if (!items || items.length === 0) {
+    if (!sortedItems || sortedItems.length === 0) {
       toast.error("No items to export");
       return;
     }
@@ -267,14 +355,14 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     doc.text("Inventory Report", 14, 22);
     doc.setFontSize(10);
     doc.text(`Date Range: ${format(startDate, "MMM d, yyyy")} - ${format(endDate, "MMM d, yyyy")}`, 14, 30);
-    doc.text(`Total Items: ${items.length}`, 14, 36);
+    doc.text(`Total Items: ${sortedItems.length}`, 14, 36);
 
     // Get visible columns
     const visibleCols = inventoryColumns.filter(col => isVisible(col.key));
     const headers = visibleCols.map(col => col.label);
 
     // Build table data
-    const tableData = items.map(item => {
+    const tableData = sortedItems.map(item => {
       const row = buildExportRow(item);
       return headers.map(header => String(row[header] || "-"));
     });
@@ -421,20 +509,100 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
           <Table className="table-auto">
             <TableHeader>
               <TableRow>
-                {isVisible("commercial_name") && <TableHead>Commercial Name</TableHead>}
-                {isVisible("molecule_name") && <TableHead>Molecule</TableHead>}
-                {isVisible("function") && <TableHead>Function</TableHead>}
-                {isVisible("stock") && <TableHead>Stock</TableHead>}
-                {isVisible("amount_purchased") && <TableHead>Purchased</TableHead>}
+                {isVisible("commercial_name") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("commercial_name")}
+                  >
+                    <div className="flex items-center">
+                      Commercial Name
+                      {getSortIcon("commercial_name")}
+                    </div>
+                  </TableHead>
+                )}
+                {isVisible("molecule_name") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("molecule_name")}
+                  >
+                    <div className="flex items-center">
+                      Molecule
+                      {getSortIcon("molecule_name")}
+                    </div>
+                  </TableHead>
+                )}
+                {isVisible("function") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("function")}
+                  >
+                    <div className="flex items-center">
+                      Function
+                      {getSortIcon("function")}
+                    </div>
+                  </TableHead>
+                )}
+                {isVisible("stock") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("stock")}
+                  >
+                    <div className="flex items-center">
+                      Stock
+                      {getSortIcon("stock")}
+                    </div>
+                  </TableHead>
+                )}
+                {isVisible("amount_purchased") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("amount_purchased")}
+                  >
+                    <div className="flex items-center">
+                      Purchased
+                      {getSortIcon("amount_purchased")}
+                    </div>
+                  </TableHead>
+                )}
                 {isVisible("amount_used") && <TableHead>Used</TableHead>}
-                {isVisible("suppliers") && <TableHead>Suppliers</TableHead>}
-                {isVisible("documents") && <TableHead>Documents</TableHead>}
-                {isVisible("co2_equivalent") && <TableHead>CO₂ eq.</TableHead>}
+                {isVisible("suppliers") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("suppliers")}
+                  >
+                    <div className="flex items-center">
+                      Suppliers
+                      {getSortIcon("suppliers")}
+                    </div>
+                  </TableHead>
+                )}
+                {isVisible("documents") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("documents")}
+                  >
+                    <div className="flex items-center">
+                      Documents
+                      {getSortIcon("documents")}
+                    </div>
+                  </TableHead>
+                )}
+                {isVisible("co2_equivalent") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("co2_equivalent")}
+                  >
+                    <div className="flex items-center">
+                      CO₂ eq.
+                      {getSortIcon("co2_equivalent")}
+                    </div>
+                  </TableHead>
+                )}
                 <TableHead className="w-[140px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => {
+              {sortedItems.map((item) => {
                 const itemPurchases = purchasesByItem[item.id];
                 const isArchived = !item.is_active;
 

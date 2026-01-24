@@ -19,6 +19,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,13 +43,14 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import ExcelJS from "exceljs";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -72,6 +83,9 @@ interface FuelTransaction {
 
 export function AgricultureFuelView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<FuelTransaction | null>(null);
+  const [deleteTransaction, setDeleteTransaction] = useState<FuelTransaction | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
@@ -84,9 +98,17 @@ export function AgricultureFuelView() {
     hour_meter_reading: "",
     notes: "",
   });
+  const [editForm, setEditForm] = useState({
+    pump_start_reading: "",
+    pump_end_reading: "",
+    hour_meter_reading: "",
+    notes: "",
+  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   // Fetch agriculture tanks
   const { data: tanks = [] } = useQuery({
@@ -232,6 +254,111 @@ export function AgricultureFuelView() {
     },
   });
 
+  // Edit mutation (admin only)
+  const editMutation = useMutation({
+    mutationFn: async (data: { id: string; originalTx: FuelTransaction } & typeof editForm) => {
+      const pumpStart = parseFloat(data.pump_start_reading);
+      const pumpEnd = parseFloat(data.pump_end_reading);
+      const newGallons = pumpEnd - pumpStart;
+      const hourMeter = parseFloat(data.hour_meter_reading);
+      const gallonsDiff = newGallons - data.originalTx.gallons;
+
+      if (newGallons <= 0) {
+        throw new Error("End reading must be greater than start reading");
+      }
+
+      // Update transaction
+      const { error: txError } = await supabase
+        .from("fuel_transactions")
+        .update({
+          pump_start_reading: pumpStart,
+          pump_end_reading: pumpEnd,
+          hour_meter_reading: hourMeter,
+          gallons: newGallons,
+          notes: data.notes || null,
+        })
+        .eq("id", data.id);
+      if (txError) throw txError;
+
+      // Update tank level based on difference
+      if (gallonsDiff !== 0) {
+        const { data: tank } = await supabase
+          .from("fuel_tanks")
+          .select("current_level_gallons")
+          .eq("id", data.originalTx.tank_id)
+          .single();
+
+        if (tank) {
+          const { error: tankError } = await supabase
+            .from("fuel_tanks")
+            .update({ current_level_gallons: Math.max(0, tank.current_level_gallons - gallonsDiff) })
+            .eq("id", data.originalTx.tank_id);
+          if (tankError) throw tankError;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
+      toast({
+        title: "Transaction updated",
+        description: "The fuel transaction has been updated.",
+      });
+      handleCloseEditDialog();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation (admin only)
+  const deleteMutation = useMutation({
+    mutationFn: async (tx: FuelTransaction) => {
+      // Restore tank level
+      const { data: tank } = await supabase
+        .from("fuel_tanks")
+        .select("current_level_gallons, capacity_gallons")
+        .eq("id", tx.tank_id)
+        .single();
+
+      if (tank) {
+        const newLevel = Math.min(tank.capacity_gallons, tank.current_level_gallons + tx.gallons);
+        const { error: tankError } = await supabase
+          .from("fuel_tanks")
+          .update({ current_level_gallons: newLevel })
+          .eq("id", tx.tank_id);
+        if (tankError) throw tankError;
+      }
+
+      // Delete transaction
+      const { error } = await supabase
+        .from("fuel_transactions")
+        .delete()
+        .eq("id", tx.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
+      toast({
+        title: "Transaction deleted",
+        description: "The fuel transaction has been deleted.",
+      });
+      setDeleteTransaction(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setForm({
@@ -241,6 +368,46 @@ export function AgricultureFuelView() {
       pump_end_reading: "",
       hour_meter_reading: "",
       notes: "",
+    });
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditingTransaction(null);
+    setEditForm({
+      pump_start_reading: "",
+      pump_end_reading: "",
+      hour_meter_reading: "",
+      notes: "",
+    });
+  };
+
+  const handleEdit = (tx: FuelTransaction) => {
+    setEditingTransaction(tx);
+    setEditForm({
+      pump_start_reading: tx.pump_start_reading.toString(),
+      pump_end_reading: tx.pump_end_reading.toString(),
+      hour_meter_reading: tx.hour_meter_reading.toString(),
+      notes: tx.notes || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTransaction) return;
+    if (!editForm.pump_start_reading || !editForm.pump_end_reading || !editForm.hour_meter_reading) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    editMutation.mutate({
+      id: editingTransaction.id,
+      originalTx: editingTransaction,
+      ...editForm,
     });
   };
 
@@ -746,6 +913,7 @@ export function AgricultureFuelView() {
                 </Button>
               </TableHead>
               <TableHead>Notes</TableHead>
+              {isAdmin && <TableHead className="w-[100px]">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -761,11 +929,133 @@ export function AgricultureFuelView() {
                 <TableCell>{tx.pump_end_reading}</TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
                 <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEdit(tx)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteTransaction(tx)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
+
+      {/* Edit Dialog (Admin Only) */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Fuel Transaction</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            {editingTransaction && (
+              <div className="text-sm text-muted-foreground bg-muted p-2 rounded space-y-1">
+                <p><strong>Tank:</strong> {editingTransaction.fuel_tanks.name}</p>
+                <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment.name}</p>
+                <p><strong>Date:</strong> {format(new Date(editingTransaction.transaction_date), "MMM d, yyyy HH:mm")}</p>
+              </div>
+            )}
+
+            <div>
+              <Label>Current Hour Meter Reading *</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={editForm.hour_meter_reading}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, hour_meter_reading: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Pump Start Reading *</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={editForm.pump_start_reading}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, pump_start_reading: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Pump End Reading *</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={editForm.pump_end_reading}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, pump_end_reading: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {editForm.pump_start_reading && editForm.pump_end_reading && (
+              <div className="text-sm font-medium text-primary bg-primary/10 p-2 rounded">
+                Gallons: {Math.max(0, parseFloat(editForm.pump_end_reading) - parseFloat(editForm.pump_start_reading)).toFixed(1)}
+              </div>
+            )}
+
+            <div>
+              <Label>Notes</Label>
+              <Input
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                placeholder="Optional notes"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleCloseEditDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editMutation.isPending}>
+                {editMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation (Admin Only) */}
+      <AlertDialog open={!!deleteTransaction} onOpenChange={(open) => !open && setDeleteTransaction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Fuel Transaction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the fueling record and restore {deleteTransaction?.gallons.toFixed(1)} gallons to the tank. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTransaction && deleteMutation.mutate(deleteTransaction)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

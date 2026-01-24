@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format, eachDayOfInterval, isWeekend, isSaturday } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,17 @@ interface Employee {
 
 // Positions that get auto-filled with standard hours
 const SALARIED_POSITIONS = ["Gerencia", "Administrativa", "Supervisor"];
+
+// Position display order for grouping
+const POSITION_ORDER = [
+  "Gerencia",
+  "Administrativa", 
+  "Supervisor",
+  "Tractorista",
+  "Obrero",
+  "Volteador",
+  "Sereno",
+];
 
 interface TimesheetEntry {
   id?: string;
@@ -361,6 +372,28 @@ export function PayrollTimeGrid({
     }).format(amount);
   };
 
+  // Group employees by position for visual organization
+  const groupedEmployees = useMemo(() => {
+    const groups: { position: string; employees: Employee[] }[] = [];
+    
+    POSITION_ORDER.forEach((position) => {
+      const positionEmployees = employees.filter((e) => e.position === position);
+      if (positionEmployees.length > 0) {
+        groups.push({ position, employees: positionEmployees });
+      }
+    });
+    
+    // Add any employees with positions not in our order list
+    const otherEmployees = employees.filter(
+      (e) => !POSITION_ORDER.includes(e.position)
+    );
+    if (otherEmployees.length > 0) {
+      groups.push({ position: "Other", employees: otherEmployees });
+    }
+    
+    return groups;
+  }, [employees]);
+
   if (!periodId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -400,7 +433,7 @@ export function PayrollTimeGrid({
                 className={cn(
                   "text-center min-w-[100px]",
                   isWeekend(day) && "bg-muted",
-                  !isWeekend(day) && index % 2 === 1 && "bg-[hsl(210_40%_92%)]"
+                  !isWeekend(day) && index % 2 === 1 && "bg-muted/40"
                 )}
               >
                 <div className="text-xs">{format(day, "EEE")}</div>
@@ -420,91 +453,121 @@ export function PayrollTimeGrid({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {employees.map((employee) => {
-            const { regularHours, overtimeHours } = calculateHoursForEmployee(employee.id);
-            const deductions = calculateDeductions(employee.id);
-
-            return (
-              <TableRow key={employee.id}>
-                <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                  <button
-                    onClick={() => onEmployeeClick(employee.id)}
-                    className="text-left hover:text-primary hover:underline focus:outline-none text-sm"
-                  >
-                    {employee.name}
-                  </button>
-                </TableCell>
-                {days.map((day, index) => {
-                  const entry = getTimesheetEntry(employee.id, day);
-                  const weekend = isWeekend(day);
-                  const saturday = isSaturday(day);
-                  // End time defaults to PM except on Saturdays
-                  const endTimeDefaultPeriod = saturday ? "AM" : "PM";
-                  
-                  return (
-                    <TableCell
-                      key={day.toISOString()}
-                      className={cn(
-                        "p-1 text-center",
-                        weekend && "bg-muted/60",
-                        !weekend && index % 2 === 1 && "bg-[hsl(210_40%_95%)]",
-                        entry?.is_absent && "bg-destructive/20"
-                      )}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <TimeInput
-                          value={entry?.start_time || null}
-                          onChange={(val) =>
-                            handleTimeChange(employee.id, day, "start_time", val)
-                          }
-                          defaultPeriod="AM"
-                        />
-                        <TimeInput
-                          value={entry?.end_time || null}
-                          onChange={(val) =>
-                            handleTimeChange(employee.id, day, "end_time", val)
-                          }
-                          defaultPeriod={endTimeDefaultPeriod}
-                        />
-                      </div>
-                    </TableCell>
-                  );
-                })}
-                <TableCell className="text-center font-mono text-sm">
-                  {regularHours.toFixed(1)}
-                </TableCell>
-                <TableCell className="text-center font-mono text-sm text-orange-600">
-                  {overtimeHours.toFixed(1)}
-                </TableCell>
-                {BENEFIT_TYPES.map((type) => (
-                  <TableCell key={type} className="p-1">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={getBenefitAmount(employee.id, type) || ""}
-                      onChange={(e) =>
-                        handleBenefitChange(employee.id, type, e.target.value)
-                      }
-                      className="h-7 text-xs font-mono text-center w-20"
-                      placeholder="0.00"
-                    />
-                  </TableCell>
-                ))}
-                <TableCell className="text-center font-mono text-sm text-red-600">
-                  {formatCurrency(deductions.tss)}
-                </TableCell>
-                <TableCell className="text-center font-mono text-sm text-red-600">
-                  {formatCurrency(deductions.isr)}
-                </TableCell>
-                <TableCell className="text-center font-mono text-sm text-red-600">
-                  {deductions.absenceDeduction > 0 
-                    ? formatCurrency(deductions.absenceDeduction)
-                    : "-"}
+          {groupedEmployees.map((group, groupIndex) => (
+            <>
+              {/* Position Group Header */}
+              <TableRow key={`header-${group.position}`} className="bg-muted/80">
+                <TableCell 
+                  colSpan={days.length + 1 + 2 + BENEFIT_TYPES.length + 3} 
+                  className="sticky left-0 z-10 py-2 font-semibold text-sm text-muted-foreground uppercase tracking-wide border-t-2 border-border"
+                >
+                  {group.position} ({group.employees.length})
                 </TableCell>
               </TableRow>
-            );
-          })}
+              
+              {group.employees.map((employee, empIndex) => {
+                const { regularHours, overtimeHours } = calculateHoursForEmployee(employee.id);
+                const deductions = calculateDeductions(employee.id);
+                const isLastInGroup = empIndex === group.employees.length - 1;
+
+                return (
+                  <TableRow 
+                    key={employee.id}
+                    className={cn(
+                      "transition-colors",
+                      isLastInGroup && "border-b-2 border-border"
+                    )}
+                  >
+                    <TableCell className="sticky left-0 bg-background z-10 font-medium border-r border-border">
+                      <button
+                        onClick={() => onEmployeeClick(employee.id)}
+                        className="text-left hover:text-primary hover:underline focus:outline-none text-sm"
+                      >
+                        {employee.name}
+                      </button>
+                    </TableCell>
+                    {days.map((day, index) => {
+                      const entry = getTimesheetEntry(employee.id, day);
+                      const weekend = isWeekend(day);
+                      const saturday = isSaturday(day);
+                      const endTimeDefaultPeriod = saturday ? "AM" : "PM";
+                      
+                      // Determine cell status for coloring
+                      const hasData = entry?.start_time && entry?.end_time;
+                      const isAbsent = entry?.is_absent;
+                      const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
+                      
+                      return (
+                        <TableCell
+                          key={day.toISOString()}
+                          className={cn(
+                            "p-1 text-center border-r border-border/30",
+                            // Weekend styling
+                            weekend && "bg-muted/60",
+                            // Status-based colors (priority order)
+                            !weekend && isAbsent && "bg-red-100 dark:bg-red-950/30",
+                            !weekend && !isAbsent && hasOvertime && "bg-orange-50 dark:bg-orange-950/20",
+                            !weekend && !isAbsent && hasData && !hasOvertime && "bg-green-50 dark:bg-green-950/20",
+                            // Alternating day stripes for empty cells
+                            !weekend && !hasData && !isAbsent && index % 2 === 1 && "bg-muted/30"
+                          )}
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <TimeInput
+                              value={entry?.start_time || null}
+                              onChange={(val) =>
+                                handleTimeChange(employee.id, day, "start_time", val)
+                              }
+                              defaultPeriod="AM"
+                            />
+                            <TimeInput
+                              value={entry?.end_time || null}
+                              onChange={(val) =>
+                                handleTimeChange(employee.id, day, "end_time", val)
+                              }
+                              defaultPeriod={endTimeDefaultPeriod}
+                            />
+                          </div>
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className="text-center font-mono text-sm border-l border-border">
+                      {regularHours.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="text-center font-mono text-sm text-orange-600">
+                      {overtimeHours.toFixed(1)}
+                    </TableCell>
+                    {BENEFIT_TYPES.map((type) => (
+                      <TableCell key={type} className="p-1">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={getBenefitAmount(employee.id, type) || ""}
+                          onChange={(e) =>
+                            handleBenefitChange(employee.id, type, e.target.value)
+                          }
+                          className="h-7 text-xs font-mono text-center w-20"
+                          placeholder="0.00"
+                        />
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-center font-mono text-sm text-red-600">
+                      {formatCurrency(deductions.tss)}
+                    </TableCell>
+                    <TableCell className="text-center font-mono text-sm text-red-600">
+                      {formatCurrency(deductions.isr)}
+                    </TableCell>
+                    <TableCell className="text-center font-mono text-sm text-red-600">
+                      {deductions.absenceDeduction > 0 
+                        ? formatCurrency(deductions.absenceDeduction)
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </>
+          ))}
         </TableBody>
       </Table>
       </div>

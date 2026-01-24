@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import HumanResources from "./pages/HumanResources";
 import Fuel from "./pages/Fuel";
 import Inventory from "./pages/Inventory";
+import Equipment from "./pages/Equipment";
 import Operations from "./pages/Operations";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/hr" element={<ProtectedRoute><HumanResources /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
               <Route path="/fuel" element={<ProtectedRoute><Fuel /></ProtectedRoute>} />
+              <Route path="/equipment" element={<ProtectedRoute><Equipment /></ProtectedRoute>} />
               <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { format, eachDayOfInterval, isWeekend, isSaturday } from "date-fns";
+import { format, eachDayOfInterval, isWeekend, isSaturday, isWithinInterval, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,6 +48,13 @@ interface EmployeeBenefit {
   benefit_type: string;
   amount: number;
   is_recurring: boolean;
+}
+
+interface EmployeeVacation {
+  id: string;
+  employee_id: string;
+  start_date: string;
+  end_date: string;
 }
 
 interface PayrollTimeGridProps {
@@ -106,6 +113,20 @@ export function PayrollTimeGrid({
     enabled: !!periodId,
   });
 
+  // Fetch employee vacations that overlap with this period
+  const { data: vacations = [] } = useQuery({
+    queryKey: ["employee-vacations", startDate.toISOString(), endDate.toISOString()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_vacations")
+        .select("id, employee_id, start_date, end_date")
+        .lte("start_date", format(endDate, "yyyy-MM-dd"))
+        .gte("end_date", format(startDate, "yyyy-MM-dd"));
+      if (error) throw error;
+      return data as EmployeeVacation[];
+    },
+  });
+
   // Fetch recurring employee benefits (these persist across periods)
   const { data: employeeBenefits = [] } = useQuery({
     queryKey: ["employee-benefits"],
@@ -148,6 +169,24 @@ export function PayrollTimeGrid({
     },
   });
 
+  // Mutation to delete a timesheet entry (for clearing cells)
+  const deleteTimesheet = useMutation({
+    mutationFn: async ({ employeeId, date }: { employeeId: string; date: string }) => {
+      const { error } = await supabase
+        .from("employee_timesheets")
+        .delete()
+        .eq("employee_id", employeeId)
+        .eq("work_date", date);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+    },
+    onError: (error) => {
+      toast.error("Failed to clear entry: " + error.message);
+    },
+  });
+
   // Mutation to save employee benefit (persists across all periods)
   const saveEmployeeBenefit = useMutation({
     mutationFn: async (benefit: { employee_id: string; benefit_type: string; amount: number }) => {
@@ -183,6 +222,19 @@ export function PayrollTimeGrid({
     },
   });
 
+  // Check if employee is on vacation for a specific date
+  const isEmployeeOnVacation = (employeeId: string, date: Date): boolean => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return vacations.some((v) => {
+      const vacStart = parseISO(v.start_date);
+      const vacEnd = parseISO(v.end_date);
+      return (
+        v.employee_id === employeeId &&
+        isWithinInterval(date, { start: vacStart, end: vacEnd })
+      );
+    });
+  };
+
   // Auto-fill standard hours for salaried positions
   const autoFillSalariedEmployees = async () => {
     if (!periodId) return;
@@ -201,8 +253,9 @@ export function PayrollTimeGrid({
 
       for (const employee of salariedEmployees) {
         for (const day of days) {
-          // Skip weekends
+          // Skip weekends and vacation days
           if (isWeekend(day)) continue;
+          if (isEmployeeOnVacation(employee.id, day)) continue;
 
           const dateStr = format(day, "yyyy-MM-dd");
           entries.push({
@@ -249,6 +302,18 @@ export function PayrollTimeGrid({
     const existing = getTimesheetEntry(employeeId, date);
     const dateStr = format(date, "yyyy-MM-dd");
 
+    // If clearing (value is null) and we have an existing entry
+    if (value === null && existing) {
+      const otherField = field === "start_time" ? "end_time" : "start_time";
+      const otherValue = existing[otherField];
+      
+      // If both times would be empty after this change, delete the entry entirely
+      if (!otherValue) {
+        deleteTimesheet.mutate({ employeeId, date: dateStr });
+        return;
+      }
+    }
+
     const entry: TimesheetEntry = existing
       ? { ...existing, [field]: value }
       : {
@@ -261,12 +326,9 @@ export function PayrollTimeGrid({
           is_holiday: false,
         };
 
-    // Check if both times are empty → mark absent
-    if (!entry.start_time && !entry.end_time) {
-      entry.is_absent = true;
-    } else {
-      entry.is_absent = false;
-    }
+    // Only mark as absent if there's an explicit entry with no times
+    // Empty cells (no entry) are neutral, not absent
+    entry.is_absent = false;
 
     saveTimesheet.mutate(entry);
   };
@@ -502,7 +564,7 @@ export function PayrollTimeGrid({
                   className={cn(
                     "text-center min-w-[100px] h-16 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap",
                     isWeekend(day) && "bg-muted",
-                    !isWeekend(day) && isHoliday && "bg-amber-100 dark:bg-amber-950/40",
+                    !isWeekend(day) && isHoliday && "bg-amber-300 dark:bg-amber-800",
                     !isWeekend(day) && !isHoliday && index % 2 === 1 && "bg-muted/40",
                     !isWeekend(day) && !isHoliday && index % 2 === 0 && "bg-background"
                   )}
@@ -584,11 +646,12 @@ export function PayrollTimeGrid({
                       const saturday = isSaturday(day);
                       const endTimeDefaultPeriod = saturday ? "AM" : "PM";
                       const isHoliday = entry?.is_holiday;
+                      const isVacation = isEmployeeOnVacation(employee.id, day);
                       
                       // Determine cell status for coloring
                       const hasData = entry?.start_time && entry?.end_time;
-                      // Absent = has entry but no times AND not a holiday
-                      const isAbsent = !isHoliday && (entry?.is_absent || (entry && !entry.start_time && !entry.end_time));
+                      // Absent = has entry with is_absent flag AND not a holiday AND not vacation
+                      const isAbsent = !isHoliday && !isVacation && entry?.is_absent;
                       const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
                       
                       return (
@@ -598,25 +661,32 @@ export function PayrollTimeGrid({
                             "p-1 text-center border-r border-border/30 align-middle relative",
                             // Weekend styling
                             weekend && "bg-muted/60",
-                            // Status-based colors (priority order: holiday > absent > overtime > filled)
-                            !weekend && isHoliday && "bg-amber-100 dark:bg-amber-950/40",
-                            !weekend && !isHoliday && isAbsent && "bg-red-200 dark:bg-red-950/50",
-                            !weekend && !isAbsent && !isHoliday && hasOvertime && "bg-orange-50 dark:bg-orange-950/20",
-                            !weekend && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-50 dark:bg-green-950/20",
+                            // Status-based colors (priority order: vacation > holiday > absent > overtime > filled)
+                            !weekend && isVacation && "bg-violet-300 dark:bg-violet-900",
+                            !weekend && !isVacation && isHoliday && "bg-amber-300 dark:bg-amber-800",
+                            !weekend && !isVacation && !isHoliday && isAbsent && "bg-red-300 dark:bg-red-800",
+                            !weekend && !isVacation && !isAbsent && !isHoliday && hasOvertime && "bg-orange-200 dark:bg-orange-900",
+                            !weekend && !isVacation && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-200 dark:bg-green-900",
                             // Alternating day stripes for empty cells
-                            !weekend && !hasData && !isAbsent && !isHoliday && index % 2 === 1 && "bg-muted/30"
+                            !weekend && !hasData && !isAbsent && !isHoliday && !isVacation && index % 2 === 1 && "bg-muted/30"
                           )}
                         >
-                          {/* Holiday indicator overlay */}
-                          {isHoliday && !weekend && !hasData && (
+                          {/* Vacation indicator overlay */}
+                          {isVacation && !weekend && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-amber-600 font-bold text-xs opacity-60">HOL</span>
+                              <span className="text-violet-700 dark:text-violet-300 font-bold text-xs opacity-80">VAC</span>
+                            </div>
+                          )}
+                          {/* Holiday indicator overlay */}
+                          {isHoliday && !weekend && !hasData && !isVacation && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="text-amber-700 dark:text-amber-300 font-bold text-xs opacity-80">HOL</span>
                             </div>
                           )}
                           {/* Absence indicator overlay */}
-                          {isAbsent && !weekend && (
+                          {isAbsent && !weekend && !isVacation && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-red-600 font-bold text-xs opacity-60">ABS</span>
+                              <span className="text-red-700 dark:text-red-300 font-bold text-xs opacity-80">ABS</span>
                             </div>
                           )}
                           <div className="flex flex-col gap-0.5">
@@ -626,6 +696,7 @@ export function PayrollTimeGrid({
                                 handleTimeChange(employee.id, day, "start_time", val)
                               }
                               defaultPeriod="AM"
+                              disabled={isVacation}
                             />
                             <TimeInput
                               value={entry?.end_time || null}
@@ -633,6 +704,7 @@ export function PayrollTimeGrid({
                                 handleTimeChange(employee.id, day, "end_time", val)
                               }
                               defaultPeriod={endTimeDefaultPeriod}
+                              disabled={isVacation}
                             />
                           </div>
                         </td>

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { UserPlus, Save } from "lucide-react";
 
-const POSITIONS = ["Obrero", "Supervisor", "Tractorista", "Gerencia", "Administrativa"] as const;
+const POSITIONS = ["Obrero", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
 const employeeSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),

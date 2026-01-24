@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      day_labor_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          is_closed: boolean
+          operation_description: string
+          updated_at: string
+          week_ending_date: string
+          work_date: string
+          worker_name: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          is_closed?: boolean
+          operation_description: string
+          updated_at?: string
+          week_ending_date: string
+          work_date: string
+          worker_name: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          is_closed?: boolean
+          operation_description?: string
+          updated_at?: string
+          week_ending_date?: string
+          work_date?: string
+          worker_name?: string
+        }
+        Relationships: []
+      }
       employee_benefits: {
         Row: {
           amount: number

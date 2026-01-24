@@ -14,6 +14,7 @@ interface TimeInputProps {
   onChange: (value: string | null) => void;
   className?: string;
   defaultPeriod?: "AM" | "PM";
+  disabled?: boolean;
 }
 
 // Convert 24hr to 12hr format
@@ -46,7 +47,7 @@ function to24Hour(hours: string, minutes: string, period: "AM" | "PM"): string |
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-export function TimeInput({ value, onChange, className, defaultPeriod = "AM" }: TimeInputProps) {
+export function TimeInput({ value, onChange, className, defaultPeriod = "AM", disabled = false }: TimeInputProps) {
   const parsed = to12Hour(value);
   const [hours, setHours] = useState(parsed.hours);
   const [minutes, setMinutes] = useState(parsed.minutes);
@@ -89,7 +90,7 @@ export function TimeInput({ value, onChange, className, defaultPeriod = "AM" }: 
   };
 
   return (
-    <div className={cn("flex items-center gap-0.5", className)}>
+    <div className={cn("flex items-center gap-0.5", disabled && "opacity-50 pointer-events-none", className)}>
       <Input
         type="text"
         inputMode="numeric"
@@ -98,6 +99,7 @@ export function TimeInput({ value, onChange, className, defaultPeriod = "AM" }: 
         value={hours}
         onChange={(e) => handleChange(e.target.value.replace(/\D/g, ""), minutes, period)}
         className="h-6 w-7 text-xs px-1 font-mono text-center"
+        disabled={disabled}
       />
       <span className="text-xs text-muted-foreground">:</span>
       <Input
@@ -108,8 +110,9 @@ export function TimeInput({ value, onChange, className, defaultPeriod = "AM" }: 
         value={minutes}
         onChange={(e) => handleChange(hours, e.target.value.replace(/\D/g, ""), period)}
         className="h-6 w-7 text-xs px-1 font-mono text-center"
+        disabled={disabled}
       />
-      <Select value={period} onValueChange={(v) => handleChange(hours, minutes, v as "AM" | "PM")}>
+      <Select value={period} onValueChange={(v) => handleChange(hours, minutes, v as "AM" | "PM")} disabled={disabled}>
         <SelectTrigger className="h-6 w-12 text-xs px-1">
           <SelectValue />
         </SelectTrigger>

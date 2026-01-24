@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, eachDayOfInterval, isWithinInterval, parseISO, isWeekend } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ interface Employee {
 
 interface TimesheetEntry {
   employee_id: string;
+  work_date: string;
   start_time: string | null;
   end_time: string | null;
   is_absent: boolean;
@@ -48,6 +49,13 @@ interface EmployeeBenefit {
   employee_id: string;
   benefit_type: string;
   amount: number;
+}
+
+interface EmployeeVacation {
+  id: string;
+  employee_id: string;
+  start_date: string;
+  end_date: string;
 }
 
 interface PayrollSummaryProps {
@@ -100,12 +108,26 @@ export function PayrollSummary({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employee_timesheets")
-        .select("employee_id, start_time, end_time, is_absent, is_holiday")
+        .select("employee_id, work_date, start_time, end_time, is_absent, is_holiday")
         .eq("period_id", periodId);
       if (error) throw error;
       return data as TimesheetEntry[];
     },
     enabled: !!periodId,
+  });
+
+  // Fetch employee vacations that overlap with this period
+  const { data: vacations = [] } = useQuery({
+    queryKey: ["employee-vacations-summary", startDate.toISOString(), endDate.toISOString()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_vacations")
+        .select("id, employee_id, start_date, end_date")
+        .lte("start_date", format(endDate, "yyyy-MM-dd"))
+        .gte("end_date", format(startDate, "yyyy-MM-dd"));
+      if (error) throw error;
+      return data as EmployeeVacation[];
+    },
   });
 
   // Fetch benefits
@@ -119,6 +141,24 @@ export function PayrollSummary({
       return data as EmployeeBenefit[];
     },
   });
+
+  // Check if employee is on vacation for a specific date
+  const isEmployeeOnVacation = (employeeId: string, date: Date): boolean => {
+    return vacations.some((v) => {
+      const vacStart = parseISO(v.start_date);
+      const vacEnd = parseISO(v.end_date);
+      return (
+        v.employee_id === employeeId &&
+        isWithinInterval(date, { start: vacStart, end: vacEnd })
+      );
+    });
+  };
+
+  // Count vacation days for an employee in this period
+  const getVacationDays = (employeeId: string): number => {
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
+    return days.filter((day) => !isWeekend(day) && isEmployeeOnVacation(employeeId, day)).length;
+  };
 
   const parseTimeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
@@ -135,6 +175,14 @@ export function PayrollSummary({
     let holidayHours = 0;
 
     entries.forEach((t) => {
+      // Skip vacation days - they are paid separately
+      if (t.work_date) {
+        const workDate = parseISO(t.work_date);
+        if (isEmployeeOnVacation(employeeId, workDate)) {
+          return; // Skip this entry
+        }
+      }
+
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
         const end = parseTimeToMinutes(t.end_time);
@@ -164,7 +212,18 @@ export function PayrollSummary({
       }
     });
 
-    const absenceDays = entries.filter((e) => e.is_absent).length;
+    // Count absences (excluding vacation days)
+    const absenceDays = entries.filter((e) => {
+      if (e.work_date) {
+        const workDate = parseISO(e.work_date);
+        if (isEmployeeOnVacation(employeeId, workDate)) {
+          return false; // Vacation days are not absences
+        }
+      }
+      return e.is_absent;
+    }).length;
+
+    const vacationDays = getVacationDays(employeeId);
     const biweeklySalary = employee.salary / 2;
     const dailyRate = employee.salary / 23.83;
     const hourlyRate = dailyRate / 8;
@@ -186,8 +245,10 @@ export function PayrollSummary({
       isr = ((employee.salary - ISR_EXEMPTION) * 0.15) / 2;
     }
     const absenceDeduction = absenceDays * dailyRate;
+    // Vacation days are paid separately, so we deduct them from base pay
+    const vacationDeduction = vacationDays * dailyRate;
 
-    const totalDeductions = tss + isr + absenceDeduction;
+    const totalDeductions = tss + isr + absenceDeduction + vacationDeduction;
     const grossPay = basePay + overtimePay + holidayPay + totalBenefits;
     const netPay = grossPay - totalDeductions;
 
@@ -196,6 +257,7 @@ export function PayrollSummary({
       regularHours,
       overtimeHours,
       holidayHours,
+      vacationDays,
       basePay,
       overtimePay,
       holidayPay,
@@ -204,6 +266,7 @@ export function PayrollSummary({
       tss,
       isr,
       absenceDeduction,
+      vacationDeduction,
       totalDeductions,
       grossPay,
       netPay,
@@ -220,6 +283,7 @@ export function PayrollSummary({
       regularHours: acc.regularHours + p.regularHours,
       overtimeHours: acc.overtimeHours + p.overtimeHours,
       holidayHours: acc.holidayHours + p.holidayHours,
+      vacationDays: acc.vacationDays + p.vacationDays,
       basePay: acc.basePay + p.basePay,
       overtimePay: acc.overtimePay + p.overtimePay,
       holidayPay: acc.holidayPay + p.holidayPay,
@@ -232,6 +296,7 @@ export function PayrollSummary({
       regularHours: 0,
       overtimeHours: 0,
       holidayHours: 0,
+      vacationDays: 0,
       basePay: 0,
       overtimePay: 0,
       holidayPay: 0,

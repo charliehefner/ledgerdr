@@ -63,6 +63,14 @@ export function TimeInput({ value, onChange, className, defaultPeriod = "AM" }: 
   }, [value]);
 
   const handleChange = (newHours: string, newMinutes: string, newPeriod: "AM" | "PM") => {
+    // Treat "0" as clearing the field (mark as absent)
+    if (newHours === "0") {
+      setHours("");
+      setMinutes("");
+      onChange(null);
+      return;
+    }
+    
     // Validate hours (1-12)
     if (newHours && (parseInt(newHours) < 1 || parseInt(newHours) > 12)) return;
     // Validate minutes (0-59)

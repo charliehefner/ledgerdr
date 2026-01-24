@@ -294,26 +294,29 @@ export function PayrollTimeGrid({
         if (error) throw error;
       }
       
-      // Also create entries for employees who don't have one yet
-      const employeesWithEntries = new Set(entriesForDay.map((e) => e.employee_id));
-      const employeesWithoutEntries = employees.filter((e) => !employeesWithEntries.has(e.id));
-      
-      if (employeesWithoutEntries.length > 0) {
-        const newEntries = employeesWithoutEntries.map((employee) => ({
-          employee_id: employee.id,
-          period_id: periodId,
-          work_date: dateStr,
-          start_time: null,
-          end_time: null,
-          is_absent: true,
-          is_holiday: newHolidayStatus,
-        }));
+      // For employees without entries, only create if marking AS holiday
+      // Don't create empty entries just to mark holiday status
+      if (newHolidayStatus) {
+        const employeesWithEntries = new Set(entriesForDay.map((e) => e.employee_id));
+        const employeesWithoutEntries = employees.filter((e) => !employeesWithEntries.has(e.id));
         
-        const { error } = await supabase
-          .from("employee_timesheets")
-          .upsert(newEntries, { onConflict: "employee_id,work_date", ignoreDuplicates: false });
-        
-        if (error) throw error;
+        if (employeesWithoutEntries.length > 0) {
+          const newEntries = employeesWithoutEntries.map((employee) => ({
+            employee_id: employee.id,
+            period_id: periodId,
+            work_date: dateStr,
+            start_time: null,
+            end_time: null,
+            is_absent: false, // Holiday without times is NOT an absence
+            is_holiday: true,
+          }));
+          
+          const { error } = await supabase
+            .from("employee_timesheets")
+            .upsert(newEntries, { onConflict: "employee_id,work_date", ignoreDuplicates: false });
+          
+          if (error) throw error;
+        }
       }
       
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });

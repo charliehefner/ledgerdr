@@ -27,15 +27,15 @@ interface Employee {
 // Positions that get auto-filled with standard hours
 const SALARIED_POSITIONS = ["Gerencia", "Administrativa", "Supervisor"];
 
-// Position display order for grouping
+// Position display order for grouping (field workers first, management last)
 const POSITION_ORDER = [
-  "Gerencia",
-  "Administrativa", 
-  "Supervisor",
-  "Tractorista",
   "Obrero",
   "Volteador",
   "Sereno",
+  "Tractorista",
+  "Supervisor",
+  "Administrativa", 
+  "Gerencia",
 ];
 
 interface TimesheetEntry {
@@ -420,18 +420,18 @@ export function PayrollTimeGrid({
           </Button>
         </div>
       )}
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh]">
         <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-20 bg-background shadow-sm">
           <TableRow>
-            <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">
+            <TableHead className="sticky left-0 bg-background z-30 min-w-[140px]">
               Employee
             </TableHead>
             {days.map((day, index) => (
               <TableHead
                 key={day.toISOString()}
                 className={cn(
-                  "text-center min-w-[100px]",
+                  "text-center min-w-[100px] bg-background",
                   isWeekend(day) && "bg-muted",
                   !isWeekend(day) && index % 2 === 1 && "bg-muted/40"
                 )}
@@ -440,16 +440,16 @@ export function PayrollTimeGrid({
                 <div className="font-mono">{format(day, "d")}</div>
               </TableHead>
             ))}
-            <TableHead className="text-center min-w-[60px]">Hrs</TableHead>
-            <TableHead className="text-center min-w-[60px] text-orange-600">OT</TableHead>
+            <TableHead className="text-center min-w-[60px] bg-background">Hrs</TableHead>
+            <TableHead className="text-center min-w-[60px] text-orange-600 bg-background">OT</TableHead>
             {BENEFIT_TYPES.map((type) => (
-              <TableHead key={type} className="text-center min-w-[80px] text-green-600">
+              <TableHead key={type} className="text-center min-w-[80px] text-green-600 bg-background">
                 {type}
               </TableHead>
             ))}
-            <TableHead className="text-center min-w-[80px] text-red-600">TSS</TableHead>
-            <TableHead className="text-center min-w-[80px] text-red-600">ISR</TableHead>
-            <TableHead className="text-center min-w-[80px] text-red-600">Absences</TableHead>
+            <TableHead className="text-center min-w-[80px] text-red-600 bg-background">TSS</TableHead>
+            <TableHead className="text-center min-w-[80px] text-red-600 bg-background">ISR</TableHead>
+            <TableHead className="text-center min-w-[80px] text-red-600 bg-background">Absences</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

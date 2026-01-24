@@ -55,6 +55,7 @@ interface PayrollSummaryProps {
   periodStatus: string;
   startDate: Date;
   endDate: Date;
+  nominaNumber: number;
   onPeriodClosed: () => void;
 }
 
@@ -72,6 +73,7 @@ export function PayrollSummary({
   periodStatus,
   startDate,
   endDate,
+  nominaNumber,
   onPeriodClosed,
 }: PayrollSummaryProps) {
   const queryClient = useQueryClient();
@@ -359,11 +361,11 @@ export function PayrollSummary({
       for (const p of payrollData) {
         await createTransaction({
           transaction_date: dateStr,
-          master_acct_code: "6110", // Payroll expense account
-          description: `Nomina - ${p.employee.name}`,
+          master_acct_code: "7010",
+          description: `Nomina ${nominaNumber}`,
           currency: "DOP",
           amount: p.netPay,
-          pay_method: "transfer_bdi",
+          pay_method: "Transfer BHD",
           name: p.employee.name,
           is_internal: true,
           comments: `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")} | Hours: ${p.regularHours.toFixed(1)} + ${p.overtimeHours.toFixed(1)} OT | Deductions: ${p.totalDeductions.toFixed(2)}`,

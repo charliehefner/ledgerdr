@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, startOfMonth, setDate, endOfMonth } from "date-fns";
+import { format, startOfMonth, setDate, endOfMonth, differenceInMonths } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -11,12 +11,34 @@ import { PayrollPeriodSelector } from "./PayrollPeriodSelector";
 import { PayrollTimeGrid } from "./PayrollTimeGrid";
 import { PayrollSummary } from "./PayrollSummary";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
+
 interface PayrollPeriod {
   id: string;
   start_date: string;
   end_date: string;
   status: string;
   is_current: boolean;
+}
+
+// Calculate Nomina number: Jan 16-31, 2026 = Nomina 90
+// Each month has 2 nominas (1-15 and 16-31)
+function calculateNominaNumber(startDate: Date): number {
+  const referenceDate = new Date(2026, 0, 16); // Jan 16, 2026
+  const referenceNomina = 90;
+  
+  // Calculate months difference from reference
+  const monthsDiff = differenceInMonths(startOfMonth(startDate), startOfMonth(referenceDate));
+  
+  // Each month has 2 nominas
+  const nominasFromMonths = monthsDiff * 2;
+  
+  // Adjust for which half of month (1-15 = first, 16+ = second)
+  const isSecondHalf = startDate.getDate() >= 16;
+  const referenceIsSecondHalf = true; // Jan 16 is second half
+  
+  const halfAdjustment = (isSecondHalf ? 1 : 0) - (referenceIsSecondHalf ? 1 : 0);
+  
+  return referenceNomina + nominasFromMonths + halfAdjustment;
 }
 
 function getCurrentPeriod(): { startDate: Date; endDate: Date } {
@@ -101,11 +123,13 @@ export function PayrollView() {
     setDetailDialogOpen(true);
   };
 
+  const nominaNumber = calculateNominaNumber(selectedPeriod.startDate);
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Payroll Time Sheet</CardTitle>
+          <CardTitle>Payroll Time Sheet Nomina {nominaNumber}</CardTitle>
           <div className="flex items-center gap-4">
             <PayrollPeriodSelector
               selectedPeriod={selectedPeriod}
@@ -166,6 +190,7 @@ export function PayrollView() {
                     periodStatus={periodData.status}
                     startDate={selectedPeriod.startDate}
                     endDate={selectedPeriod.endDate}
+                    nominaNumber={nominaNumber}
                     onPeriodClosed={() => setActiveTab("timesheet")}
                   />
                 </TabsContent>

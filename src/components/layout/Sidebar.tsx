@@ -8,6 +8,7 @@ import {
   LogOut,
   ArrowRightLeft,
   Users,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/jord-logo.png";
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Human Resources", href: "/hr", icon: Users },
+  { name: "Inventory", href: "/inventory", icon: Package },
 ];
 
 const secondaryNav = [

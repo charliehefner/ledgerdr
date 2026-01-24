@@ -1,17 +1,9 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { format, eachDayOfInterval, isWeekend, isSaturday } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Wand2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -420,50 +412,51 @@ export function PayrollTimeGrid({
           </Button>
         </div>
       )}
-      <div className="overflow-auto max-h-[70vh]">
-        <Table>
-        <TableHeader className="sticky top-0 z-20 bg-background shadow-sm">
-          <TableRow>
-            <TableHead className="sticky left-0 bg-background z-30 min-w-[140px]">
+      <div className="overflow-auto max-h-[70vh] border rounded-lg">
+        <table className="w-full caption-bottom text-sm table-auto">
+        <thead className="sticky top-0 z-20 bg-background shadow-sm border-b">
+          <tr>
+            <th className="sticky left-0 bg-background z-30 min-w-[140px] h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
               Employee
-            </TableHead>
+            </th>
             {days.map((day, index) => (
-              <TableHead
+              <th
                 key={day.toISOString()}
                 className={cn(
-                  "text-center min-w-[100px] bg-background",
+                  "text-center min-w-[100px] h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap",
                   isWeekend(day) && "bg-muted",
-                  !isWeekend(day) && index % 2 === 1 && "bg-muted/40"
+                  !isWeekend(day) && index % 2 === 1 && "bg-muted/40",
+                  !isWeekend(day) && index % 2 === 0 && "bg-background"
                 )}
               >
                 <div className="text-xs">{format(day, "EEE")}</div>
                 <div className="font-mono">{format(day, "d")}</div>
-              </TableHead>
+              </th>
             ))}
-            <TableHead className="text-center min-w-[60px] bg-background">Hrs</TableHead>
-            <TableHead className="text-center min-w-[60px] text-orange-600 bg-background">OT</TableHead>
+            <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">Hrs</th>
+            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">OT</th>
             {BENEFIT_TYPES.map((type) => (
-              <TableHead key={type} className="text-center min-w-[80px] text-green-600 bg-background">
+              <th key={type} className="text-center min-w-[80px] text-green-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">
                 {type}
-              </TableHead>
+              </th>
             ))}
-            <TableHead className="text-center min-w-[80px] text-red-600 bg-background">TSS</TableHead>
-            <TableHead className="text-center min-w-[80px] text-red-600 bg-background">ISR</TableHead>
-            <TableHead className="text-center min-w-[80px] text-red-600 bg-background">Absences</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">TSS</th>
+            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">ISR</th>
+            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Absences</th>
+          </tr>
+        </thead>
+        <tbody className="[&_tr:last-child]:border-0">
           {groupedEmployees.map((group, groupIndex) => (
-            <>
+            <React.Fragment key={`group-${group.position}`}>
               {/* Position Group Header */}
-              <TableRow key={`header-${group.position}`} className="bg-muted/80">
-                <TableCell 
+              <tr className="bg-muted/80 border-b">
+                <td 
                   colSpan={days.length + 1 + 2 + BENEFIT_TYPES.length + 3} 
-                  className="sticky left-0 z-10 py-2 font-semibold text-sm text-muted-foreground uppercase tracking-wide border-t-2 border-border"
+                  className="sticky left-0 z-10 py-2 px-4 font-semibold text-sm text-muted-foreground uppercase tracking-wide border-t-2 border-border"
                 >
                   {group.position} ({group.employees.length})
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
               
               {group.employees.map((employee, empIndex) => {
                 const { regularHours, overtimeHours } = calculateHoursForEmployee(employee.id);
@@ -471,21 +464,21 @@ export function PayrollTimeGrid({
                 const isLastInGroup = empIndex === group.employees.length - 1;
 
                 return (
-                  <TableRow 
+                  <tr 
                     key={employee.id}
                     className={cn(
-                      "transition-colors",
+                      "transition-colors border-b hover:bg-muted/50",
                       isLastInGroup && "border-b-2 border-border"
                     )}
                   >
-                    <TableCell className="sticky left-0 bg-background z-10 font-medium border-r border-border">
+                    <td className="sticky left-0 bg-background z-10 font-medium border-r border-border p-4 align-middle">
                       <button
                         onClick={() => onEmployeeClick(employee.id)}
                         className="text-left hover:text-primary hover:underline focus:outline-none text-sm"
                       >
                         {employee.name}
                       </button>
-                    </TableCell>
+                    </td>
                     {days.map((day, index) => {
                       const entry = getTimesheetEntry(employee.id, day);
                       const weekend = isWeekend(day);
@@ -498,10 +491,10 @@ export function PayrollTimeGrid({
                       const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
                       
                       return (
-                        <TableCell
+                        <td
                           key={day.toISOString()}
                           className={cn(
-                            "p-1 text-center border-r border-border/30",
+                            "p-1 text-center border-r border-border/30 align-middle",
                             // Weekend styling
                             weekend && "bg-muted/60",
                             // Status-based colors (priority order)
@@ -528,17 +521,17 @@ export function PayrollTimeGrid({
                               defaultPeriod={endTimeDefaultPeriod}
                             />
                           </div>
-                        </TableCell>
+                        </td>
                       );
                     })}
-                    <TableCell className="text-center font-mono text-sm border-l border-border">
+                    <td className="text-center font-mono text-sm border-l border-border p-4 align-middle">
                       {regularHours.toFixed(1)}
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-sm text-orange-600">
+                    </td>
+                    <td className="text-center font-mono text-sm text-orange-600 p-4 align-middle">
                       {overtimeHours.toFixed(1)}
-                    </TableCell>
+                    </td>
                     {BENEFIT_TYPES.map((type) => (
-                      <TableCell key={type} className="p-1">
+                      <td key={type} className="p-1 align-middle">
                         <Input
                           type="number"
                           step="0.01"
@@ -550,26 +543,26 @@ export function PayrollTimeGrid({
                           className="h-7 text-xs font-mono text-center w-20"
                           placeholder="0.00"
                         />
-                      </TableCell>
+                      </td>
                     ))}
-                    <TableCell className="text-center font-mono text-sm text-red-600">
+                    <td className="text-center font-mono text-sm text-red-600 p-4 align-middle">
                       {formatCurrency(deductions.tss)}
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-sm text-red-600">
+                    </td>
+                    <td className="text-center font-mono text-sm text-red-600 p-4 align-middle">
                       {formatCurrency(deductions.isr)}
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-sm text-red-600">
+                    </td>
+                    <td className="text-center font-mono text-sm text-red-600 p-4 align-middle">
                       {deductions.absenceDeduction > 0 
                         ? formatCurrency(deductions.absenceDeduction)
                         : "-"}
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 );
               })}
-            </>
+            </React.Fragment>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
       </div>
     </div>
   );

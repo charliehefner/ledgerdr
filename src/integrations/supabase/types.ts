@@ -171,6 +171,7 @@ export type Database = {
           hours_worked: number | null
           id: string
           is_absent: boolean
+          is_holiday: boolean
           notes: string | null
           period_id: string
           start_time: string | null
@@ -184,6 +185,7 @@ export type Database = {
           hours_worked?: number | null
           id?: string
           is_absent?: boolean
+          is_holiday?: boolean
           notes?: string | null
           period_id: string
           start_time?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           hours_worked?: number | null
           id?: string
           is_absent?: boolean
+          is_holiday?: boolean
           notes?: string | null
           period_id?: string
           start_time?: string | null

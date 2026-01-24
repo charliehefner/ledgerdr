@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { TimeInput } from "./TimeInput";
 
@@ -38,6 +39,7 @@ interface TimesheetEntry {
   start_time: string | null;
   end_time: string | null;
   is_absent: boolean;
+  is_holiday: boolean;
 }
 
 interface EmployeeBenefit {
@@ -126,10 +128,11 @@ export function PayrollTimeGrid({
             employee_id: entry.employee_id,
             period_id: entry.period_id,
             work_date: entry.work_date,
-            start_time: entry.start_time,
-            end_time: entry.end_time,
-            is_absent: entry.is_absent,
-          },
+          start_time: entry.start_time,
+          end_time: entry.end_time,
+          is_absent: entry.is_absent,
+          is_holiday: entry.is_holiday ?? false,
+        },
           {
             onConflict: "employee_id,work_date",
             ignoreDuplicates: false,
@@ -209,6 +212,7 @@ export function PayrollTimeGrid({
             start_time: "07:30",
             end_time: "16:30",
             is_absent: false,
+            is_holiday: false,
           });
         }
       }
@@ -254,6 +258,7 @@ export function PayrollTimeGrid({
           start_time: field === "start_time" ? value : null,
           end_time: field === "end_time" ? value : null,
           is_absent: false,
+          is_holiday: false,
         };
 
     // Check if both times are empty → mark absent
@@ -266,21 +271,88 @@ export function PayrollTimeGrid({
     saveTimesheet.mutate(entry);
   };
 
+  // Toggle holiday status for a specific day (affects all employees on that day)
+  const toggleHolidayForDay = async (date: Date) => {
+    if (!periodId) return;
+    
+    const dateStr = format(date, "yyyy-MM-dd");
+    const entriesForDay = timesheets.filter((t) => t.work_date === dateStr);
+    
+    // Check if any entry already has is_holiday = true
+    const isCurrentlyHoliday = entriesForDay.some((t) => t.is_holiday);
+    const newHolidayStatus = !isCurrentlyHoliday;
+    
+    try {
+      // Update all existing entries for this day
+      if (entriesForDay.length > 0) {
+        const { error } = await supabase
+          .from("employee_timesheets")
+          .update({ is_holiday: newHolidayStatus })
+          .eq("period_id", periodId)
+          .eq("work_date", dateStr);
+        
+        if (error) throw error;
+      }
+      
+      // Also create entries for employees who don't have one yet
+      const employeesWithEntries = new Set(entriesForDay.map((e) => e.employee_id));
+      const employeesWithoutEntries = employees.filter((e) => !employeesWithEntries.has(e.id));
+      
+      if (employeesWithoutEntries.length > 0) {
+        const newEntries = employeesWithoutEntries.map((employee) => ({
+          employee_id: employee.id,
+          period_id: periodId,
+          work_date: dateStr,
+          start_time: null,
+          end_time: null,
+          is_absent: true,
+          is_holiday: newHolidayStatus,
+        }));
+        
+        const { error } = await supabase
+          .from("employee_timesheets")
+          .upsert(newEntries, { onConflict: "employee_id,work_date", ignoreDuplicates: false });
+        
+        if (error) throw error;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+      toast.success(newHolidayStatus ? "Day marked as holiday (100% bonus)" : "Holiday status removed");
+    } catch (error: any) {
+      toast.error("Failed to toggle holiday: " + error.message);
+    }
+  };
+
+  // Check if a day is marked as holiday
+  const isDayHoliday = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return timesheets.some((t) => t.work_date === dateStr && t.is_holiday);
+  };
+
   const parseTimeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
     return hours * 60 + minutes;
   };
 
-  // Calculate hours: regular is within 7:30am-4:30pm, overtime is outside
+  // Calculate hours: regular is within 7:30am-4:30pm, overtime is outside, holiday hours tracked separately
   const calculateHoursForEmployee = (employeeId: string) => {
     const entries = timesheets.filter((t) => t.employee_id === employeeId);
     let regularHours = 0;
     let overtimeHours = 0;
+    let holidayHours = 0;
 
     entries.forEach((t) => {
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
         const end = parseTimeToMinutes(t.end_time);
+        
+        // Total hours worked this day (minus 1 hour lunch if full day)
+        const totalDayHours = Math.min((end - start) / 60, STANDARD_HOURS_PER_DAY);
+        
+        // If this is a holiday, all hours get holiday pay bonus
+        if (t.is_holiday) {
+          holidayHours += totalDayHours;
+        }
         
         // Calculate regular hours (within standard window)
         const regularStart = Math.max(start, STANDARD_START);
@@ -302,7 +374,7 @@ export function PayrollTimeGrid({
       }
     });
 
-    return { regularHours, overtimeHours, totalHours: regularHours + overtimeHours };
+    return { regularHours, overtimeHours, holidayHours, totalHours: regularHours + overtimeHours };
   };
 
   const getAbsenceDays = (employeeId: string) => {
@@ -419,22 +491,46 @@ export function PayrollTimeGrid({
             <th className="sticky left-0 bg-background z-30 min-w-[140px] h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
               Employee
             </th>
-            {days.map((day, index) => (
-              <th
-                key={day.toISOString()}
-                className={cn(
-                  "text-center min-w-[100px] h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap",
-                  isWeekend(day) && "bg-muted",
-                  !isWeekend(day) && index % 2 === 1 && "bg-muted/40",
-                  !isWeekend(day) && index % 2 === 0 && "bg-background"
-                )}
-              >
-                <div className="text-xs">{format(day, "EEE")}</div>
-                <div className="font-mono">{format(day, "d")}</div>
-              </th>
-            ))}
+            {days.map((day, index) => {
+              const isHoliday = isDayHoliday(day);
+              return (
+                <th
+                  key={day.toISOString()}
+                  className={cn(
+                    "text-center min-w-[100px] h-16 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap",
+                    isWeekend(day) && "bg-muted",
+                    !isWeekend(day) && isHoliday && "bg-amber-100 dark:bg-amber-950/40",
+                    !isWeekend(day) && !isHoliday && index % 2 === 1 && "bg-muted/40",
+                    !isWeekend(day) && !isHoliday && index % 2 === 0 && "bg-background"
+                  )}
+                >
+                  <div className="text-xs">{format(day, "EEE")}</div>
+                  <div className="font-mono">{format(day, "d")}</div>
+                  {!isWeekend(day) && (
+                    <div className="flex items-center justify-center gap-1 mt-1">
+                      <Checkbox
+                        id={`holiday-${day.toISOString()}`}
+                        checked={isHoliday}
+                        onCheckedChange={() => toggleHolidayForDay(day)}
+                        className="h-3 w-3"
+                      />
+                      <label 
+                        htmlFor={`holiday-${day.toISOString()}`}
+                        className={cn(
+                          "text-[10px] cursor-pointer",
+                          isHoliday && "text-amber-600 font-medium"
+                        )}
+                      >
+                        Holiday
+                      </label>
+                    </div>
+                  )}
+                </th>
+              );
+            })}
             <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">Hrs</th>
             <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">OT</th>
+            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Hol</th>
             {BENEFIT_TYPES.map((type) => (
               <th key={type} className="text-center min-w-[80px] text-green-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">
                 {type}
@@ -451,7 +547,7 @@ export function PayrollTimeGrid({
               {/* Position Group Header */}
               <tr className="bg-muted/80 border-b">
                 <td 
-                  colSpan={days.length + 1 + 2 + BENEFIT_TYPES.length + 3} 
+                  colSpan={days.length + 1 + 3 + BENEFIT_TYPES.length + 3} 
                   className="sticky left-0 z-10 py-2 px-4 font-semibold text-sm text-muted-foreground uppercase tracking-wide border-t-2 border-border"
                 >
                   {group.position} ({group.employees.length})
@@ -459,7 +555,7 @@ export function PayrollTimeGrid({
               </tr>
               
               {group.employees.map((employee, empIndex) => {
-                const { regularHours, overtimeHours } = calculateHoursForEmployee(employee.id);
+                const { regularHours, overtimeHours, holidayHours } = calculateHoursForEmployee(employee.id);
                 const deductions = calculateDeductions(employee.id);
                 const isLastInGroup = empIndex === group.employees.length - 1;
 
@@ -529,6 +625,9 @@ export function PayrollTimeGrid({
                     </td>
                     <td className="text-center font-mono text-sm text-orange-600 p-4 align-middle">
                       {overtimeHours.toFixed(1)}
+                    </td>
+                    <td className="text-center font-mono text-sm text-amber-600 p-4 align-middle">
+                      {holidayHours > 0 ? holidayHours.toFixed(1) : "-"}
                     </td>
                     {BENEFIT_TYPES.map((type) => (
                       <td key={type} className="p-1 align-middle">

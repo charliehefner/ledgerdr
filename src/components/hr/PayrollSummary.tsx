@@ -41,6 +41,7 @@ interface TimesheetEntry {
   start_time: string | null;
   end_time: string | null;
   is_absent: boolean;
+  is_holiday: boolean;
 }
 
 interface EmployeeBenefit {
@@ -64,6 +65,7 @@ const STANDARD_HOURS_PER_DAY = 8;
 const TSS_EMPLOYEE_RATE = 0.0304;
 const ISR_EXEMPTION = 34685;
 const OVERTIME_MULTIPLIER = 1.35;
+const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
 
 export function PayrollSummary({
   periodId,
@@ -96,7 +98,7 @@ export function PayrollSummary({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employee_timesheets")
-        .select("employee_id, start_time, end_time, is_absent")
+        .select("employee_id, start_time, end_time, is_absent, is_holiday")
         .eq("period_id", periodId);
       if (error) throw error;
       return data as TimesheetEntry[];
@@ -128,11 +130,20 @@ export function PayrollSummary({
     const entries = timesheets.filter((t) => t.employee_id === employeeId);
     let regularHours = 0;
     let overtimeHours = 0;
+    let holidayHours = 0;
 
     entries.forEach((t) => {
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
         const end = parseTimeToMinutes(t.end_time);
+
+        // Total hours worked this day (capped at standard)
+        const totalDayHours = Math.min((end - start) / 60, STANDARD_HOURS_PER_DAY);
+        
+        // If this is a holiday, track those hours for bonus pay
+        if (t.is_holiday) {
+          holidayHours += totalDayHours;
+        }
 
         const regularStart = Math.max(start, STANDARD_START);
         const regularEnd = Math.min(end, STANDARD_END);
@@ -159,6 +170,8 @@ export function PayrollSummary({
     // Earnings
     const basePay = biweeklySalary;
     const overtimePay = overtimeHours * hourlyRate * OVERTIME_MULTIPLIER;
+    // Holiday bonus: 100% extra on top of regular pay for hours worked on holidays
+    const holidayPay = holidayHours * hourlyRate * (HOLIDAY_MULTIPLIER - 1); // -1 because base is already in basePay
 
     // Benefits
     const employeeBenefits = benefits.filter((b) => b.employee_id === employeeId);
@@ -173,15 +186,17 @@ export function PayrollSummary({
     const absenceDeduction = absenceDays * dailyRate;
 
     const totalDeductions = tss + isr + absenceDeduction;
-    const grossPay = basePay + overtimePay + totalBenefits;
+    const grossPay = basePay + overtimePay + holidayPay + totalBenefits;
     const netPay = grossPay - totalDeductions;
 
     return {
       employee,
       regularHours,
       overtimeHours,
+      holidayHours,
       basePay,
       overtimePay,
+      holidayPay,
       benefits: employeeBenefits,
       totalBenefits,
       tss,
@@ -193,6 +208,7 @@ export function PayrollSummary({
     };
   };
 
+
   const payrollData = employees
     .map((e) => calculateEmployeePayroll(e.id))
     .filter(Boolean) as NonNullable<ReturnType<typeof calculateEmployeePayroll>>[];
@@ -201,8 +217,10 @@ export function PayrollSummary({
     (acc, p) => ({
       regularHours: acc.regularHours + p.regularHours,
       overtimeHours: acc.overtimeHours + p.overtimeHours,
+      holidayHours: acc.holidayHours + p.holidayHours,
       basePay: acc.basePay + p.basePay,
       overtimePay: acc.overtimePay + p.overtimePay,
+      holidayPay: acc.holidayPay + p.holidayPay,
       totalBenefits: acc.totalBenefits + p.totalBenefits,
       totalDeductions: acc.totalDeductions + p.totalDeductions,
       grossPay: acc.grossPay + p.grossPay,
@@ -211,8 +229,10 @@ export function PayrollSummary({
     {
       regularHours: 0,
       overtimeHours: 0,
+      holidayHours: 0,
       basePay: 0,
       overtimePay: 0,
+      holidayPay: 0,
       totalBenefits: 0,
       totalDeductions: 0,
       grossPay: 0,
@@ -241,8 +261,10 @@ export function PayrollSummary({
         { header: "Account #", key: "account", width: 20 },
         { header: "Reg Hours", key: "regHours", width: 12 },
         { header: "OT Hours", key: "otHours", width: 12 },
+        { header: "Hol Hours", key: "holHours", width: 12 },
         { header: "Base Pay", key: "basePay", width: 15 },
         { header: "OT Pay", key: "otPay", width: 15 },
+        { header: "Holiday Pay", key: "holPay", width: 15 },
         { header: "Benefits", key: "benefits", width: 15 },
         { header: "TSS", key: "tss", width: 12 },
         { header: "ISR", key: "isr", width: 12 },
@@ -269,8 +291,10 @@ export function PayrollSummary({
           account: p.employee.bank_account_number || "-",
           regHours: p.regularHours.toFixed(1),
           otHours: p.overtimeHours.toFixed(1),
+          holHours: p.holidayHours.toFixed(1),
           basePay: p.basePay.toFixed(2),
           otPay: p.overtimePay.toFixed(2),
+          holPay: p.holidayPay.toFixed(2),
           benefits: p.totalBenefits.toFixed(2),
           tss: p.tss.toFixed(2),
           isr: p.isr.toFixed(2),
@@ -287,8 +311,10 @@ export function PayrollSummary({
         account: "",
         regHours: totals.regularHours.toFixed(1),
         otHours: totals.overtimeHours.toFixed(1),
+        holHours: totals.holidayHours.toFixed(1),
         basePay: totals.basePay.toFixed(2),
         otPay: totals.overtimePay.toFixed(2),
+        holPay: totals.holidayPay.toFixed(2),
         benefits: totals.totalBenefits.toFixed(2),
         tss: "",
         isr: "",
@@ -402,8 +428,10 @@ export function PayrollSummary({
               <TableHead className="text-right font-bold whitespace-nowrap">Net Pay</TableHead>
               <TableHead className="text-right whitespace-nowrap">Reg Hrs</TableHead>
               <TableHead className="text-right text-orange-600 whitespace-nowrap">OT Hrs</TableHead>
+              <TableHead className="text-right text-amber-600 whitespace-nowrap">Hol Hrs</TableHead>
               <TableHead className="text-right whitespace-nowrap">Base Pay</TableHead>
               <TableHead className="text-right text-orange-600 whitespace-nowrap">OT Pay</TableHead>
+              <TableHead className="text-right text-amber-600 whitespace-nowrap">Hol Pay</TableHead>
               <TableHead className="text-right text-green-600 whitespace-nowrap">Benefits</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">Deductions</TableHead>
             </TableRow>
@@ -421,11 +449,17 @@ export function PayrollSummary({
                 <TableCell className="text-right font-mono text-orange-600">
                   {p.overtimeHours.toFixed(1)}
                 </TableCell>
+                <TableCell className="text-right font-mono text-amber-600">
+                  {p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-"}
+                </TableCell>
                 <TableCell className="text-right font-mono">
                   {formatCurrency(p.basePay)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-orange-600">
                   {formatCurrency(p.overtimePay)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-amber-600">
+                  {p.holidayPay > 0 ? formatCurrency(p.holidayPay) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-green-600">
                   {formatCurrency(p.totalBenefits)}
@@ -448,11 +482,17 @@ export function PayrollSummary({
               <TableCell className="text-right font-mono text-orange-600">
                 {totals.overtimeHours.toFixed(1)}
               </TableCell>
+              <TableCell className="text-right font-mono text-amber-600">
+                {totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-"}
+              </TableCell>
               <TableCell className="text-right font-mono">
                 {formatCurrency(totals.basePay)}
               </TableCell>
               <TableCell className="text-right font-mono text-orange-600">
                 {formatCurrency(totals.overtimePay)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-amber-600">
+                {totals.holidayPay > 0 ? formatCurrency(totals.holidayPay) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-green-600">
                 {formatCurrency(totals.totalBenefits)}

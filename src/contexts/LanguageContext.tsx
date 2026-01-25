@@ -22,7 +22,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return 'es';
   };
 
-  const [language, setLanguage] = useState<Language>(getDefaultLanguage);
+  const [language, setLanguage] = useState<Language>('es');
 
   // Update language when user changes (login/logout)
   useEffect(() => {

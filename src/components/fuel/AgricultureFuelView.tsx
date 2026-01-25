@@ -43,7 +43,8 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText, Pencil, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText, Pencil, Trash2, History, Gauge } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import ExcelJS from "exceljs";
 import { useAuth } from "@/contexts/AuthContext";
+import { TankHistoryView } from "./TankHistoryView";
+import { TractorHistoryView } from "./TractorHistoryView";
 
 type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -82,6 +85,7 @@ interface FuelTransaction {
 }
 
 export function AgricultureFuelView() {
+  const [activeTab, setActiveTab] = useState("report");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FuelTransaction | null>(null);
@@ -199,6 +203,13 @@ export function AgricultureFuelView() {
         .eq("id", data.equipment_id)
         .single();
 
+      // Get tank's fuel type to match with inventory
+      const { data: tankData } = await supabase
+        .from("fuel_tanks")
+        .select("fuel_type")
+        .eq("id", data.tank_id)
+        .single();
+
       // Insert transaction
       const { error: txError } = await supabase.from("fuel_transactions").insert({
         tank_id: data.tank_id,
@@ -234,14 +245,35 @@ export function AgricultureFuelView() {
         .update({ current_hour_meter: hourMeter })
         .eq("id", data.equipment_id);
       if (equipError) throw equipError;
+
+      // Deduct from inventory if matching fuel inventory item exists
+      const fuelType = tankData?.fuel_type || 'diesel';
+      const { data: fuelInventory } = await supabase
+        .from("inventory_items")
+        .select("id, current_quantity, commercial_name")
+        .eq("function", "fuel")
+        .ilike("commercial_name", `%${fuelType}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (fuelInventory && fuelInventory.current_quantity >= gallons) {
+        const { error: inventoryError } = await supabase
+          .from("inventory_items")
+          .update({ current_quantity: fuelInventory.current_quantity - gallons })
+          .eq("id", fuelInventory.id);
+        if (inventoryError) {
+          console.error("Failed to deduct from inventory:", inventoryError);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
       queryClient.invalidateQueries({ queryKey: ["fuelEquipment"] });
+      queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
       toast({
         title: "Fueling recorded",
-        description: "The fuel dispensing has been recorded.",
+        description: "The fuel dispensing has been recorded and deducted from inventory.",
       });
       handleCloseDialog();
     },
@@ -637,7 +669,21 @@ export function AgricultureFuelView() {
         ))}
       </div>
 
-      {/* Report Header */}
+      {/* Tabs for different views */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="report">Fueling Report</TabsTrigger>
+          <TabsTrigger value="tank-history">
+            <History className="mr-2 h-4 w-4" />
+            Tank History
+          </TabsTrigger>
+          <TabsTrigger value="tractor-history">
+            <Gauge className="mr-2 h-4 w-4" />
+            Tractor History
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="report" className="mt-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h2 className="text-xl font-semibold">Fueling Report</h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -956,6 +1002,16 @@ export function AgricultureFuelView() {
           </TableBody>
         </Table>
       )}
+        </TabsContent>
+
+        <TabsContent value="tank-history" className="mt-6">
+          <TankHistoryView />
+        </TabsContent>
+
+        <TabsContent value="tractor-history" className="mt-6">
+          <TractorHistoryView />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Dialog (Admin Only) */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

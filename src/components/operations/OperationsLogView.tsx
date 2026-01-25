@@ -34,7 +34,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity } from "lucide-react";
+import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,19 @@ interface Implement {
   implement_type: string;
 }
 
+interface InventoryItem {
+  id: string;
+  commercial_name: string;
+  use_unit: string;
+  current_quantity: number;
+  function: string;
+}
+
+interface OperationInput {
+  inventory_item_id: string;
+  quantity_used: number;
+}
+
 interface Operation {
   id: string;
   operation_date: string;
@@ -78,6 +91,11 @@ interface Operation {
   operation_types: { name: string; is_mechanical: boolean };
   fuel_equipment: { name: string } | null;
   implements: { name: string } | null;
+  operation_inputs: { 
+    id: string;
+    quantity_used: number; 
+    inventory_items: { commercial_name: string; use_unit: string } 
+  }[];
 }
 
 export function OperationsLogView() {
@@ -94,6 +112,8 @@ export function OperationsLogView() {
     hectares_done: "",
     notes: "",
   });
+  const [inputs, setInputs] = useState<OperationInput[]>([]);
+  const [newInput, setNewInput] = useState({ inventory_item_id: "", quantity_used: "" });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -155,7 +175,21 @@ export function OperationsLogView() {
     },
   });
 
-  // Fetch operations
+  // Fetch inventory items
+  const { data: inventoryItems } = useQuery({
+    queryKey: ["inventoryItems"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_items")
+        .select("id, commercial_name, use_unit, current_quantity, function")
+        .eq("is_active", true)
+        .order("commercial_name");
+      if (error) throw error;
+      return data as InventoryItem[];
+    },
+  });
+
+  // Fetch operations with inputs
   const { data: operations, isLoading } = useQuery({
     queryKey: ["operations"],
     queryFn: async () => {
@@ -166,7 +200,8 @@ export function OperationsLogView() {
           fields(name, farms(name)),
           operation_types(name, is_mechanical),
           fuel_equipment(name),
-          implements(name)
+          implements(name),
+          operation_inputs(id, quantity_used, inventory_items(commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;
@@ -197,6 +232,49 @@ export function OperationsLogView() {
   const mechanicalCount = filteredOperations.filter(op => op.operation_types.is_mechanical).length;
   const manualCount = filteredOperations.filter(op => !op.operation_types.is_mechanical).length;
 
+  const addInput = () => {
+    if (!newInput.inventory_item_id || !newInput.quantity_used) {
+      toast({
+        title: "Validation Error",
+        description: "Please select an item and enter quantity.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if item already added
+    if (inputs.some(i => i.inventory_item_id === newInput.inventory_item_id)) {
+      toast({
+        title: "Duplicate Item",
+        description: "This item is already added. Update quantity instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const item = inventoryItems?.find(i => i.id === newInput.inventory_item_id);
+    const qty = parseFloat(newInput.quantity_used);
+    
+    if (item && qty > item.current_quantity) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${item.current_quantity} ${item.use_unit} available.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setInputs([...inputs, { 
+      inventory_item_id: newInput.inventory_item_id, 
+      quantity_used: qty 
+    }]);
+    setNewInput({ inventory_item_id: "", quantity_used: "" });
+  };
+
+  const removeInput = (itemId: string) => {
+    setInputs(inputs.filter(i => i.inventory_item_id !== itemId));
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
       const record = {
@@ -210,14 +288,50 @@ export function OperationsLogView() {
         notes: data.notes || null,
       };
 
-      const { error } = await supabase.from("operations").insert(record);
-      if (error) throw error;
+      // Insert operation
+      const { data: operation, error: opError } = await supabase
+        .from("operations")
+        .insert(record)
+        .select("id")
+        .single();
+      
+      if (opError) throw opError;
+
+      // Insert inputs and deduct from inventory
+      if (inputs.length > 0) {
+        const inputRecords = inputs.map(input => ({
+          operation_id: operation.id,
+          inventory_item_id: input.inventory_item_id,
+          quantity_used: input.quantity_used,
+        }));
+
+        const { error: inputError } = await supabase
+          .from("operation_inputs")
+          .insert(inputRecords);
+        
+        if (inputError) throw inputError;
+
+        // Deduct from inventory
+        for (const input of inputs) {
+          const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
+          if (item) {
+            const newQuantity = item.current_quantity - input.quantity_used;
+            const { error: updateError } = await supabase
+              .from("inventory_items")
+              .update({ current_quantity: newQuantity })
+              .eq("id", input.inventory_item_id);
+            
+            if (updateError) throw updateError;
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
+      queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
       toast({
         title: "Operation recorded",
-        description: "The field operation has been logged successfully.",
+        description: "The field operation has been logged and inventory updated.",
       });
       handleCloseDialog();
     },
@@ -242,6 +356,8 @@ export function OperationsLogView() {
       hectares_done: "",
       notes: "",
     });
+    setInputs([]);
+    setNewInput({ inventory_item_id: "", quantity_used: "" });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -271,6 +387,11 @@ export function OperationsLogView() {
       return;
     }
     mutation.mutate(form);
+  };
+
+  const getItemName = (itemId: string) => {
+    const item = inventoryItems?.find(i => i.id === itemId);
+    return item ? `${item.commercial_name} (${item.use_unit})` : itemId;
   };
 
   return (
@@ -361,7 +482,7 @@ export function OperationsLogView() {
                 Record Operation
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Record Field Operation</DialogTitle>
               </DialogHeader>
@@ -495,6 +616,67 @@ export function OperationsLogView() {
                   />
                 </div>
 
+                {/* Inputs Section */}
+                <div className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base font-semibold">Inputs Used (Optional)</Label>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Select
+                      value={newInput.inventory_item_id}
+                      onValueChange={(value) => setNewInput({ ...newInput, inventory_item_id: value })}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select inventory item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inventoryItems?.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.commercial_name} ({item.current_quantity} {item.use_unit} available)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Qty"
+                      className="w-24"
+                      value={newInput.quantity_used}
+                      onChange={(e) => setNewInput({ ...newInput, quantity_used: e.target.value })}
+                    />
+                    <Button type="button" variant="secondary" onClick={addInput}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {inputs.length > 0 && (
+                    <div className="space-y-2">
+                      {inputs.map((input) => {
+                        const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
+                        return (
+                          <div key={input.inventory_item_id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
+                            <span className="text-sm">
+                              {item?.commercial_name} - {input.quantity_used} {item?.use_unit}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeInput(input.inventory_item_id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <Label>Notes</Label>
                   <Input
@@ -536,6 +718,7 @@ export function OperationsLogView() {
               <TableHead>Tractor/Workers</TableHead>
               <TableHead>Implement</TableHead>
               <TableHead>Hectares</TableHead>
+              <TableHead>Inputs</TableHead>
               <TableHead>Notes</TableHead>
             </TableRow>
           </TableHeader>
@@ -557,6 +740,19 @@ export function OperationsLogView() {
                 </TableCell>
                 <TableCell>{op.implements?.name || "-"}</TableCell>
                 <TableCell className="font-medium">{op.hectares_done} ha</TableCell>
+                <TableCell>
+                  {op.operation_inputs && op.operation_inputs.length > 0 ? (
+                    <div className="space-y-1">
+                      {op.operation_inputs.map((input) => (
+                        <div key={input.id} className="text-xs">
+                          {input.inventory_items.commercial_name}: {input.quantity_used} {input.inventory_items.use_unit}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>
               </TableRow>
             ))}

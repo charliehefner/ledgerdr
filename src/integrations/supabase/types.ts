@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          code: string
+          created_at: string
+          english_description: string
+          id: string
+          spanish_description: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          english_description: string
+          id?: string
+          spanish_description: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          english_description?: string
+          id?: string
+          spanish_description?: string
+        }
+        Relationships: []
+      }
+      cbs_codes: {
+        Row: {
+          code: string
+          created_at: string
+          english_description: string
+          id: string
+          spanish_description: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          english_description: string
+          id?: string
+          spanish_description: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          english_description?: string
+          id?: string
+          spanish_description?: string
+        }
+        Relationships: []
+      }
       day_labor_entries: {
         Row: {
           amount: number
@@ -912,6 +960,30 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          code: string
+          created_at: string
+          english_description: string
+          id: string
+          spanish_description: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          english_description: string
+          id?: string
+          spanish_description: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          english_description?: string
+          id?: string
+          spanish_description?: string
+        }
+        Relationships: []
+      }
       transaction_attachments: {
         Row: {
           attachment_url: string
@@ -957,6 +1029,72 @@ export type Database = {
           id?: string
           transaction_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          cbs_code: string | null
+          comments: string | null
+          created_at: string
+          currency: string
+          description: string
+          document: string | null
+          id: string
+          is_void: boolean
+          itbis: number | null
+          legacy_id: number | null
+          master_acct_code: string | null
+          name: string | null
+          pay_method: string | null
+          project_code: string | null
+          transaction_date: string
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Insert: {
+          amount?: number
+          cbs_code?: string | null
+          comments?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          document?: string | null
+          id?: string
+          is_void?: boolean
+          itbis?: number | null
+          legacy_id?: number | null
+          master_acct_code?: string | null
+          name?: string | null
+          pay_method?: string | null
+          project_code?: string | null
+          transaction_date: string
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Update: {
+          amount?: number
+          cbs_code?: string | null
+          comments?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          document?: string | null
+          id?: string
+          is_void?: boolean
+          itbis?: number | null
+          legacy_id?: number | null
+          master_acct_code?: string | null
+          name?: string | null
+          pay_method?: string | null
+          project_code?: string | null
+          transaction_date?: string
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
         }
         Relationships: []
       }

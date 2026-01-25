@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserManagement } from "@/components/settings/UserManagement";
+import { DatabaseBackup } from "@/components/settings/DatabaseBackup";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -64,6 +65,9 @@ export default function Settings() {
 
         {/* User Management - Admin Only */}
         {canModifySettings && <UserManagement />}
+
+        {/* Database Backup - Admin Only */}
+        {canModifySettings && <DatabaseBackup />}
 
         {/* Database Connection */}
         <div className="bg-card rounded-xl border border-border p-6 shadow-sm">

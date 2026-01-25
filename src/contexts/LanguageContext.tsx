@@ -12,20 +12,26 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
   const [language, setLanguage] = useState<Language>('es');
 
   // Update language when user changes (login/logout)
   // Charles gets English, everyone else gets Spanish
   useEffect(() => {
+    // Wait for auth to finish loading before setting language
+    if (isLoading) return;
+    
+    console.log('LanguageContext: user email =', user?.email, 'setting language...');
+    
     if (user?.email === 'charliehefner@gmail.com') {
+      console.log('LanguageContext: Setting English for Charles');
       setLanguage('en');
-    } else if (user?.email) {
-      // Only set to Spanish once we have a confirmed user that isn't Charles
+    } else {
+      console.log('LanguageContext: Setting Spanish for non-Charles user');
       setLanguage('es');
     }
-  }, [user?.email]);
+  }, [user?.email, isLoading]);
 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'es' : 'en');

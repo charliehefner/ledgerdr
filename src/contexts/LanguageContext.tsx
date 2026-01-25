@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
 type Language = 'en' | 'es';
@@ -13,36 +13,35 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
+  const [manualOverride, setManualOverride] = useState<Language | null>(null);
   
-  // Default to Spanish, only Charles gets English
-  const [language, setLanguage] = useState<Language>(() => {
-    // Initial state - default to Spanish
-    return 'es';
-  });
-
-  // Update language when user changes (login/logout)
-  // Charles gets English, everyone else gets Spanish
-  useEffect(() => {
-    // Wait for auth to finish loading before setting language
+  // Derive language directly from user - no useEffect timing issues
+  const language = useMemo<Language>(() => {
+    // If user manually toggled, respect that
+    if (manualOverride !== null) {
+      return manualOverride;
+    }
+    
+    // While loading, default to Spanish
     if (isLoading) {
-      console.log('LanguageContext: Still loading auth...');
-      return;
+      return 'es';
     }
     
+    // Charles gets English, everyone else gets Spanish
     const email = user?.email?.toLowerCase();
-    console.log('LanguageContext: Auth loaded. User email =', email);
+    const result = email === 'charliehefner@gmail.com' ? 'en' : 'es';
     
-    if (email === 'charliehefner@gmail.com') {
-      console.log('LanguageContext: Setting English for Charles');
-      setLanguage('en');
-    } else {
-      console.log('LanguageContext: Setting Spanish (user:', email || 'not logged in', ')');
-      setLanguage('es');
-    }
-  }, [user, isLoading]);
+    console.log('LanguageContext: Computed language =', result, 'for user:', email || 'not logged in');
+    
+    return result;
+  }, [user?.email, isLoading, manualOverride]);
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'es' : 'en');
+    setManualOverride(prev => {
+      const newLang = (prev ?? language) === 'en' ? 'es' : 'en';
+      console.log('LanguageContext: Manual toggle to', newLang);
+      return newLang;
+    });
   };
 
   const getDescription = (item: { english_description: string; spanish_description: string }) => {

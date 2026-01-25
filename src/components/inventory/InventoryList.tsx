@@ -140,6 +140,37 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     },
   });
 
+  // Fetch usage from operation_inputs within date range
+  const { data: operationInputs } = useQuery({
+    queryKey: ["operationInputs", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operation_inputs")
+        .select("inventory_item_id, quantity_used, operations!inner(operation_date)")
+        .gte("operations.operation_date", format(startDate, "yyyy-MM-dd"))
+        .lte("operations.operation_date", format(endDate, "yyyy-MM-dd"));
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch fuel dispensing transactions within date range (for fuel inventory items)
+  const { data: fuelTransactions } = useQuery({
+    queryKey: ["fuelTransactionsForInventory", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fuel_transactions")
+        .select("gallons, transaction_date, fuel_tanks!inner(fuel_type)")
+        .eq("transaction_type", "dispense")
+        .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
+        .lte("transaction_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Aggregate purchase data by item
   const purchasesByItem = useMemo(() => {
     if (!purchases) return {};
@@ -169,6 +200,40 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     }, {} as Record<string, { totalPurchased: number; suppliers: Set<string>; documents: Set<string> }>);
   }, [purchases]);
 
+  // Aggregate usage data by item (from operations + fuel transactions)
+  const usageByItem = useMemo(() => {
+    const usage: Record<string, number> = {};
+    
+    // Add usage from operation_inputs
+    if (operationInputs) {
+      operationInputs.forEach((input) => {
+        const itemId = input.inventory_item_id;
+        usage[itemId] = (usage[itemId] || 0) + Number(input.quantity_used);
+      });
+    }
+    
+    // Add fuel dispensing usage - match by fuel type to inventory items
+    if (fuelTransactions && items) {
+      // Find fuel inventory items
+      const fuelItems = items.filter(item => item.function === 'fuel');
+      
+      fuelTransactions.forEach((tx) => {
+        const fuelType = tx.fuel_tanks?.fuel_type?.toLowerCase() || '';
+        // Match fuel type to inventory item by commercial_name
+        const matchingItem = fuelItems.find(item => 
+          item.commercial_name.toLowerCase().includes(fuelType) ||
+          fuelType.includes(item.commercial_name.toLowerCase())
+        );
+        
+        if (matchingItem) {
+          usage[matchingItem.id] = (usage[matchingItem.id] || 0) + Number(tx.gallons);
+        }
+      });
+    }
+    
+    return usage;
+  }, [operationInputs, fuelTransactions, items]);
+
   // Sort items
   const sortedItems = useMemo(() => {
     if (!items || !sortConfig.key || !sortConfig.direction) return items || [];
@@ -192,6 +257,10 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
         case "amount_purchased":
           aVal = purchasesByItem[a.id]?.totalPurchased || 0;
           bVal = purchasesByItem[b.id]?.totalPurchased || 0;
+          break;
+        case "amount_used":
+          aVal = usageByItem[a.id] || 0;
+          bVal = usageByItem[b.id] || 0;
           break;
         case "co2_equivalent":
           aVal = a.co2_equivalent || 0;
@@ -226,7 +295,7 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
         ? aStr.localeCompare(bStr)
         : bStr.localeCompare(aStr);
     });
-  }, [items, sortConfig, purchasesByItem]);
+  }, [items, sortConfig, purchasesByItem, usageByItem]);
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => {
@@ -283,7 +352,9 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
     if (isVisible("amount_purchased")) row["Amount Purchased"] = itemPurchases 
       ? `${itemPurchases.totalPurchased.toFixed(2)} ${item.use_unit}` 
       : "-";
-    if (isVisible("amount_used")) row["Amount Used"] = "-";
+    if (isVisible("amount_used")) row["Amount Used"] = usageByItem[item.id] 
+      ? `${usageByItem[item.id].toFixed(2)} ${item.use_unit}` 
+      : "-";
     if (isVisible("suppliers")) row["Suppliers"] = itemPurchases && itemPurchases.suppliers.size > 0
       ? Array.from(itemPurchases.suppliers).join(", ")
       : "-";
@@ -564,7 +635,17 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
                     </div>
                   </TableHead>
                 )}
-                {isVisible("amount_used") && <TableHead>Used</TableHead>}
+                {isVisible("amount_used") && (
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("amount_used")}
+                  >
+                    <div className="flex items-center">
+                      Used
+                      {getSortIcon("amount_used")}
+                    </div>
+                  </TableHead>
+                )}
                 {isVisible("suppliers") && (
                   <TableHead 
                     className="cursor-pointer select-none hover:bg-muted/50"
@@ -665,8 +746,10 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
                       </TableCell>
                     )}
                     {isVisible("amount_used") && (
-                      <TableCell className="text-muted-foreground">
-                        —
+                      <TableCell>
+                        {usageByItem[item.id] 
+                          ? `${usageByItem[item.id].toFixed(2)} ${item.use_unit}`
+                          : "-"}
                       </TableCell>
                     )}
                     {isVisible("suppliers") && (

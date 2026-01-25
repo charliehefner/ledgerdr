@@ -20,6 +20,7 @@ export interface CbsCode {
 
 export interface Transaction {
   id?: string;
+  legacy_id?: number;
   transaction_date: string;
   master_acct_code: string;
   project_code?: string;
@@ -36,52 +37,186 @@ export interface Transaction {
   exchange_rate?: number;
   is_internal: boolean;
   is_void?: boolean;
+  void_reason?: string;
+  voided_at?: string;
   attachment_url?: string;
 }
 
-// Helper function to call the API proxy edge function
-async function callApiProxy<T>(endpoint: string, method: string = 'GET', body?: unknown): Promise<T> {
-  // supabase.functions.invoke automatically includes the auth token
-  const response = await supabase.functions.invoke('api-proxy', {
-    body: { endpoint, method, body },
-  });
-
-  if (response.error) {
-    console.error('API proxy error:', response.error);
-    throw new Error(response.error.message || 'API request failed');
-  }
-
-  return response.data as T;
-}
+// ============================================
+// LOCAL SUPABASE QUERIES (Migrated from DigitalOcean)
+// ============================================
 
 export async function fetchAccounts(): Promise<Account[]> {
-  return callApiProxy<Account[]>('/accounts');
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('code, english_description, spanish_description')
+    .order('code');
+  
+  if (error) {
+    console.error('Error fetching accounts:', error);
+    throw new Error(error.message);
+  }
+  
+  return data || [];
 }
 
 export async function fetchProjects(): Promise<Project[]> {
-  return callApiProxy<Project[]>('/projects');
+  const { data, error } = await supabase
+    .from('projects')
+    .select('code, english_description, spanish_description')
+    .order('code');
+  
+  if (error) {
+    console.error('Error fetching projects:', error);
+    throw new Error(error.message);
+  }
+  
+  return data || [];
 }
 
 export async function fetchCbsCodes(): Promise<CbsCode[]> {
-  return callApiProxy<CbsCode[]>('/cbs-codes');
+  const { data, error } = await supabase
+    .from('cbs_codes')
+    .select('code, english_description, spanish_description')
+    .order('code');
+  
+  if (error) {
+    console.error('Error fetching CBS codes:', error);
+    throw new Error(error.message);
+  }
+  
+  return data || [];
 }
 
-export async function fetchRecentTransactions(limit: number = 20): Promise<Transaction[]> {
-  return callApiProxy<Transaction[]>(`/transactions/recent?limit=${limit}`);
+export async function fetchRecentTransactions(limit: number = 500): Promise<Transaction[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .order('transaction_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  
+  if (error) {
+    console.error('Error fetching transactions:', error);
+    throw new Error(error.message);
+  }
+  
+  // Map to expected format, using legacy_id as id for attachment compatibility
+  return (data || []).map(t => ({
+    ...t,
+    id: t.legacy_id?.toString() || t.id,
+    currency: t.currency as 'DOP' | 'USD',
+    is_internal: false, // Default value for compatibility
+  }));
 }
 
 export async function createTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
-  return callApiProxy<Transaction>('/transactions', 'POST', transaction);
+  // Get the next legacy_id for new transactions
+  const { data: maxData } = await supabase
+    .from('transactions')
+    .select('legacy_id')
+    .order('legacy_id', { ascending: false })
+    .limit(1);
+  
+  const nextLegacyId = ((maxData?.[0]?.legacy_id || 0) as number) + 1;
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      legacy_id: nextLegacyId,
+      transaction_date: transaction.transaction_date,
+      master_acct_code: transaction.master_acct_code,
+      project_code: transaction.project_code || null,
+      cbs_code: transaction.cbs_code || null,
+      description: transaction.description,
+      currency: transaction.currency,
+      amount: transaction.amount,
+      itbis: transaction.itbis || null,
+      pay_method: transaction.pay_method || null,
+      document: transaction.document || null,
+      name: transaction.name || null,
+      comments: transaction.comments || null,
+      is_void: false,
+    })
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error creating transaction:', error);
+    throw new Error(error.message);
+  }
+  
+  return {
+    ...data,
+    id: data.legacy_id?.toString() || data.id,
+    currency: data.currency as 'DOP' | 'USD',
+    is_internal: false,
+  };
 }
 
 export async function updateTransaction(id: string | number, transaction: Partial<Transaction>): Promise<Transaction> {
-  return callApiProxy<Transaction>(`/transactions/${id}`, 'PUT', transaction);
+  // Find by legacy_id if numeric, otherwise by uuid
+  const legacyId = typeof id === 'number' ? id : parseInt(id, 10);
+  
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      document: transaction.document,
+      // Add other updatable fields as needed
+    })
+    .eq('legacy_id', legacyId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error updating transaction:', error);
+    throw new Error(error.message);
+  }
+  
+  return {
+    ...data,
+    id: data.legacy_id?.toString() || data.id,
+    currency: data.currency as 'DOP' | 'USD',
+    is_internal: false,
+  };
 }
 
 export async function deleteTransaction(id: string | number): Promise<void> {
-  return callApiProxy<void>(`/transactions/${id}`, 'DELETE');
+  const legacyId = typeof id === 'number' ? id : parseInt(id, 10);
+  
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('legacy_id', legacyId);
+  
+  if (error) {
+    console.error('Error deleting transaction:', error);
+    throw new Error(error.message);
+  }
 }
 
 export async function voidTransaction(id: string | number): Promise<Transaction> {
-  return callApiProxy<Transaction>(`/transactions/${id}/void`, 'POST');
+  const legacyId = typeof id === 'number' ? id : parseInt(id, 10);
+  
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      is_void: true,
+      voided_at: new Date().toISOString(),
+    })
+    .eq('legacy_id', legacyId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error voiding transaction:', error);
+    throw new Error(error.message);
+  }
+  
+  return {
+    ...data,
+    id: data.legacy_id?.toString() || data.id,
+    currency: data.currency as 'DOP' | 'USD',
+    is_internal: false,
+  };
 }

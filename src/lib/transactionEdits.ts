@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { updateTransaction } from './api';
 
 export interface TransactionEdit {
   transaction_id: string;
@@ -7,63 +8,34 @@ export interface TransactionEdit {
 
 /**
  * Get local edits for a specific transaction
+ * @deprecated - Transaction edits are now stored directly in transactions table
  */
 export async function getTransactionEdit(transactionId: string): Promise<TransactionEdit | null> {
-  const { data, error } = await supabase
-    .from('transaction_edits')
-    .select('transaction_id, document')
-    .eq('transaction_id', transactionId)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error fetching transaction edit:', error);
-    return null;
-  }
-
-  return data;
+  // Now we just return null since edits are in the main transactions table
+  return null;
 }
 
 /**
  * Get local edits for multiple transactions
+ * @deprecated - Transaction edits are now stored directly in transactions table
  */
 export async function getTransactionEdits(transactionIds: string[]): Promise<Record<string, TransactionEdit>> {
-  if (transactionIds.length === 0) return {};
-
-  const { data, error } = await supabase
-    .from('transaction_edits')
-    .select('transaction_id, document')
-    .in('transaction_id', transactionIds);
-
-  if (error) {
-    console.error('Error fetching transaction edits:', error);
-    return {};
-  }
-
-  const editsMap: Record<string, TransactionEdit> = {};
-  data?.forEach(edit => {
-    editsMap[edit.transaction_id] = edit;
-  });
-
-  return editsMap;
+  // Return empty since edits are now in the main transactions table
+  return {};
 }
 
 /**
  * Save or update a local edit for a transaction
+ * Now updates the transactions table directly
  */
 export async function saveTransactionEdit(transactionId: string, edit: Partial<Omit<TransactionEdit, 'transaction_id'>>): Promise<boolean> {
-  const { error } = await supabase
-    .from('transaction_edits')
-    .upsert({
-      transaction_id: transactionId,
-      ...edit,
-    }, {
-      onConflict: 'transaction_id',
+  try {
+    await updateTransaction(transactionId, {
+      document: edit.document,
     });
-
-  if (error) {
+    return true;
+  } catch (error) {
     console.error('Error saving transaction edit:', error);
     return false;
   }
-
-  return true;
 }

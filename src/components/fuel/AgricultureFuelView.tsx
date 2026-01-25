@@ -662,7 +662,7 @@ export function AgricultureFuelView() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {tank.current_level_gallons.toLocaleString()} gal
+                {(tank.current_level_gallons ?? 0).toLocaleString()} gal
               </div>
             </CardContent>
           </Card>

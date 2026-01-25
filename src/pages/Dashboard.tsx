@@ -61,10 +61,10 @@ export default function Dashboard() {
   const pendingNcfColumns = useColumnVisibility("dashboard-pending-ncf", PENDING_NCF_COLUMNS);
   const withoutAttachmentColumns = useColumnVisibility("dashboard-without-attachment", WITHOUT_ATTACHMENT_COLUMNS);
 
-  // Fetch transactions without documents
+  // Fetch ALL transactions for pending document/attachment checks
   const { data: allTransactions = [], isLoading } = useQuery({
-    queryKey: ['recentTransactions'],
-    queryFn: () => fetchRecentTransactions(50),
+    queryKey: ['allTransactions'],
+    queryFn: () => fetchRecentTransactions(1000), // Fetch all to ensure no pending items are missed
   });
 
   const { data: accounts = [] } = useQuery({

@@ -14,24 +14,32 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   
-  const [language, setLanguage] = useState<Language>('es');
+  // Default to Spanish, only Charles gets English
+  const [language, setLanguage] = useState<Language>(() => {
+    // Initial state - default to Spanish
+    return 'es';
+  });
 
   // Update language when user changes (login/logout)
   // Charles gets English, everyone else gets Spanish
   useEffect(() => {
     // Wait for auth to finish loading before setting language
-    if (isLoading) return;
+    if (isLoading) {
+      console.log('LanguageContext: Still loading auth...');
+      return;
+    }
     
-    console.log('LanguageContext: user email =', user?.email, 'setting language...');
+    const email = user?.email?.toLowerCase();
+    console.log('LanguageContext: Auth loaded. User email =', email);
     
-    if (user?.email === 'charliehefner@gmail.com') {
+    if (email === 'charliehefner@gmail.com') {
       console.log('LanguageContext: Setting English for Charles');
       setLanguage('en');
     } else {
-      console.log('LanguageContext: Setting Spanish for non-Charles user');
+      console.log('LanguageContext: Setting Spanish (user:', email || 'not logged in', ')');
       setLanguage('es');
     }
-  }, [user?.email, isLoading]);
+  }, [user, isLoading]);
 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'es' : 'en');

@@ -42,6 +42,7 @@ const useUnits = [
   { value: "gram", label: "Gram (g)" },
   { value: "liter", label: "Liter (L)" },
   { value: "ml", label: "Milliliter (mL)" },
+  { value: "gallon", label: "Gallon (gal)" },
   { value: "sack", label: "Sack" },
   { value: "unit", label: "Unit" },
 ];

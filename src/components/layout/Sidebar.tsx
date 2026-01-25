@@ -102,7 +102,7 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.email?.split("@")[0] || "User"}</p>
-            <p className="text-xs text-sidebar-foreground/60">Administrator</p>
+            <p className="text-xs text-sidebar-foreground/60 capitalize">{user?.role || 'User'}</p>
           </div>
           <button 
             onClick={handleLogout}

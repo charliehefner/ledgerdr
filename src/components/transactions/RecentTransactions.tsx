@@ -22,21 +22,21 @@ import { ColumnSelector } from '@/components/ui/column-selector';
 
 const RECENT_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "Date", defaultVisible: true },
-  { key: "account", label: "Account", defaultVisible: true },
-  { key: "project", label: "Project", defaultVisible: false },
-  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
-  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
-  { key: "description", label: "Description", defaultVisible: false },
-  { key: "currency", label: "Currency", defaultVisible: true },
-  { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "date", label: "Fecha", defaultVisible: true },
+  { key: "account", label: "Cuenta", defaultVisible: true },
+  { key: "project", label: "Proyecto", defaultVisible: false },
+  { key: "cbsCode", label: "Código CBS", defaultVisible: false },
+  { key: "purchaseDate", label: "Fecha Compra", defaultVisible: false },
+  { key: "description", label: "Descripción", defaultVisible: false },
+  { key: "currency", label: "Moneda", defaultVisible: true },
+  { key: "amount", label: "Monto", defaultVisible: true },
   { key: "itbis", label: "ITBIS", defaultVisible: false },
-  { key: "payMethod", label: "Pay Method", defaultVisible: true },
-  { key: "document", label: "Document", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: false },
-  { key: "comments", label: "Comments", defaultVisible: false },
-  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
-  { key: "attach", label: "Attach", defaultVisible: true },
+  { key: "payMethod", label: "Método Pago", defaultVisible: true },
+  { key: "document", label: "Documento", defaultVisible: true },
+  { key: "name", label: "Nombre", defaultVisible: false },
+  { key: "comments", label: "Comentarios", defaultVisible: false },
+  { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
+  { key: "attach", label: "Adjunto", defaultVisible: true },
 ];
 
 interface RecentTransactionsProps {
@@ -115,7 +115,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>Recent Transactions</CardTitle>
+        <CardTitle>Transacciones Recientes</CardTitle>
         <ColumnSelector
           columns={columnVisibility.allColumns}
           visibility={columnVisibility.visibility}
@@ -129,15 +129,15 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
             <TableHeader>
               <TableRow>
                 {columnVisibility.isVisible("id") && <TableHead>ID</TableHead>}
-                {columnVisibility.isVisible("date") && <TableHead>Date</TableHead>}
-                {columnVisibility.isVisible("account") && <TableHead>Account</TableHead>}
-                {columnVisibility.isVisible("description") && <TableHead>Description</TableHead>}
-                {columnVisibility.isVisible("currency") && <TableHead>Currency</TableHead>}
-                {columnVisibility.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
-                {columnVisibility.isVisible("payMethod") && <TableHead>Pay Method</TableHead>}
-                {columnVisibility.isVisible("document") && <TableHead>Document</TableHead>}
-                {columnVisibility.isVisible("name") && <TableHead>Name</TableHead>}
-                {columnVisibility.isVisible("attach") && <TableHead className="text-center">Attach</TableHead>}
+                {columnVisibility.isVisible("date") && <TableHead>Fecha</TableHead>}
+                {columnVisibility.isVisible("account") && <TableHead>Cuenta</TableHead>}
+                {columnVisibility.isVisible("description") && <TableHead>Descripción</TableHead>}
+                {columnVisibility.isVisible("currency") && <TableHead>Moneda</TableHead>}
+                {columnVisibility.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
+                {columnVisibility.isVisible("payMethod") && <TableHead>Método Pago</TableHead>}
+                {columnVisibility.isVisible("document") && <TableHead>Documento</TableHead>}
+                {columnVisibility.isVisible("name") && <TableHead>Nombre</TableHead>}
+                {columnVisibility.isVisible("attach") && <TableHead className="text-center">Adjunto</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,7 +212,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
               ) : (
                 <TableRow>
                   <TableCell colSpan={visibleCount} className="text-center text-muted-foreground py-8">
-                    No transactions yet. Add your first transaction above.
+                    No hay transacciones aún. Agregue su primera transacción arriba.
                   </TableCell>
                 </TableRow>
               )}

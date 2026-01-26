@@ -33,20 +33,20 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 
 const INVOICE_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: false },
-  { key: "date", label: "Date", defaultVisible: true },
-  { key: "account", label: "Account", defaultVisible: true },
-  { key: "project", label: "Project", defaultVisible: true },
-  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
-  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
-  { key: "description", label: "Description", defaultVisible: true },
-  { key: "currency", label: "Currency", defaultVisible: true },
-  { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "date", label: "Fecha", defaultVisible: true },
+  { key: "account", label: "Cuenta", defaultVisible: true },
+  { key: "project", label: "Proyecto", defaultVisible: true },
+  { key: "cbsCode", label: "Código CBS", defaultVisible: false },
+  { key: "purchaseDate", label: "Fecha Compra", defaultVisible: false },
+  { key: "description", label: "Descripción", defaultVisible: true },
+  { key: "currency", label: "Moneda", defaultVisible: true },
+  { key: "amount", label: "Monto", defaultVisible: true },
   { key: "itbis", label: "ITBIS", defaultVisible: true },
-  { key: "payMethod", label: "Pay Method", defaultVisible: true },
-  { key: "document", label: "Document", defaultVisible: false },
-  { key: "name", label: "Name", defaultVisible: true },
-  { key: "comments", label: "Comments", defaultVisible: false },
-  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
+  { key: "payMethod", label: "Método Pago", defaultVisible: true },
+  { key: "document", label: "Documento", defaultVisible: false },
+  { key: "name", label: "Nombre", defaultVisible: true },
+  { key: "comments", label: "Comentarios", defaultVisible: false },
+  { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
 ];
 
 export default function Invoices() {
@@ -121,13 +121,13 @@ export default function Invoices() {
 
   return (
     <MainLayout 
-      title="Invoices" 
-      subtitle={`${filteredTransactions.length} transactions found`}
+      title="Facturas" 
+      subtitle={`${filteredTransactions.length} transacciones encontradas`}
       actions={
         <Button asChild>
           <Link to="/transactions">
             <ArrowRightLeft className="mr-2 h-4 w-4" />
-            New Transaction
+            Nueva Transacción
           </Link>
         </Button>
       }
@@ -141,7 +141,7 @@ export default function Invoices() {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by description, name, account, or document..."
+                  placeholder="Buscar por descripción, nombre, cuenta o documento..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -152,10 +152,10 @@ export default function Invoices() {
               <Select value={accountFilter} onValueChange={setAccountFilter}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Account" />
+                  <SelectValue placeholder="Cuenta" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover max-h-[300px]">
-                  <SelectItem value="all">All Accounts</SelectItem>
+                  <SelectItem value="all">Todas las Cuentas</SelectItem>
                   {usedAccounts.map((code) => (
                     <SelectItem key={code} value={code}>
                       {code}
@@ -167,10 +167,10 @@ export default function Invoices() {
               {/* Currency Filter */}
               <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Currency" />
+                  <SelectValue placeholder="Moneda" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
-                  <SelectItem value="all">All Currencies</SelectItem>
+                  <SelectItem value="all">Todas las Monedas</SelectItem>
                   <SelectItem value="DOP">DOP</SelectItem>
                   <SelectItem value="USD">USD</SelectItem>
                 </SelectContent>
@@ -195,16 +195,16 @@ export default function Invoices() {
                 <TableHeader>
                   <TableRow>
                     {columnVisibility.isVisible("id") && <TableHead>ID</TableHead>}
-                    {columnVisibility.isVisible("date") && <TableHead>Date</TableHead>}
-                    {columnVisibility.isVisible("account") && <TableHead>Account</TableHead>}
-                    {columnVisibility.isVisible("project") && <TableHead>Project</TableHead>}
-                    {columnVisibility.isVisible("description") && <TableHead>Description</TableHead>}
-                    {columnVisibility.isVisible("name") && <TableHead>Name</TableHead>}
-                    {columnVisibility.isVisible("currency") && <TableHead>Currency</TableHead>}
-                    {columnVisibility.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
+                    {columnVisibility.isVisible("date") && <TableHead>Fecha</TableHead>}
+                    {columnVisibility.isVisible("account") && <TableHead>Cuenta</TableHead>}
+                    {columnVisibility.isVisible("project") && <TableHead>Proyecto</TableHead>}
+                    {columnVisibility.isVisible("description") && <TableHead>Descripción</TableHead>}
+                    {columnVisibility.isVisible("name") && <TableHead>Nombre</TableHead>}
+                    {columnVisibility.isVisible("currency") && <TableHead>Moneda</TableHead>}
+                    {columnVisibility.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
                     {columnVisibility.isVisible("itbis") && <TableHead className="text-right">ITBIS</TableHead>}
-                    {columnVisibility.isVisible("payMethod") && <TableHead>Pay Method</TableHead>}
-                    {columnVisibility.isVisible("document") && <TableHead>Document</TableHead>}
+                    {columnVisibility.isVisible("payMethod") && <TableHead>Método Pago</TableHead>}
+                    {columnVisibility.isVisible("document") && <TableHead>Documento</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -279,7 +279,7 @@ export default function Invoices() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={visibleCount} className="text-center py-8 text-muted-foreground">
-                        No transactions found
+                        No se encontraron transacciones
                       </TableCell>
                     </TableRow>
                   )}

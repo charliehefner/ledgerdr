@@ -36,7 +36,6 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { LanguageToggle } from './LanguageToggle';
 
 interface TransactionFormProps {
   onSuccess: () => void;
@@ -130,15 +129,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
     if (!isValid()) {
       if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
-        toast.error('Project and CBS codes are required for account 1180');
+        toast.error('Proyecto y código CBS son requeridos para la cuenta 1180');
       } else {
-        toast.error('Please fill in all required fields');
+        toast.error('Por favor complete todos los campos requeridos');
       }
       return;
     }
 
     if (checkForDuplicate()) {
-      toast.error('Duplicate transaction detected. A transaction with the same date, account, amount, and name already exists.');
+      toast.error('Transacción duplicada detectada. Ya existe una transacción con la misma fecha, cuenta, monto y nombre.');
       return;
     }
 
@@ -171,11 +170,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
       }
 
-      toast.success('Transaction saved successfully');
+      toast.success('Transacción guardada exitosamente');
       setForm(initialFormState);
       onSuccess();
     } catch (error) {
-      toast.error('Failed to save transaction');
+      toast.error('Error al guardar la transacción');
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -188,16 +187,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>New Transaction</CardTitle>
-        <LanguageToggle />
+      <CardHeader>
+        <CardTitle>Nueva Transacción</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Dates Row */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Transaction Date *</Label>
+              <Label>Fecha de Transacción *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -208,7 +206,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.transaction_date ? format(form.transaction_date, 'PPP') : 'Select date'}
+                    {form.transaction_date ? format(form.transaction_date, 'PPP') : 'Seleccionar fecha'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-popover" align="start">
@@ -223,7 +221,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Purchase Date</Label>
+              <Label>Fecha de Compra</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -234,7 +232,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.purchase_date ? format(form.purchase_date, 'PPP') : 'Select date'}
+                    {form.purchase_date ? format(form.purchase_date, 'PPP') : 'Seleccionar fecha'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-popover" align="start">
@@ -252,13 +250,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Account Dropdowns */}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Master Account *</Label>
+              <Label>Cuenta Principal *</Label>
               <Select
                 value={form.master_acct_code}
                 onValueChange={(value) => updateField('master_acct_code', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingAccounts ? 'Loading...' : 'Select account'} />
+                  <SelectValue placeholder={loadingAccounts ? 'Cargando...' : 'Seleccionar cuenta'} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover max-h-[300px]">
                   {accounts.map((account: Account) => (
@@ -272,14 +270,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
             <div className="space-y-2">
               <Label>
-                Project {requires1180Fields && '*'}
+                Proyecto {requires1180Fields && '*'}
               </Label>
               <Select
                 value={form.project_code}
                 onValueChange={(value) => updateField('project_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.project_code && 'border-destructive')}>
-                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select project'}>
+                  <SelectValue placeholder={loadingProjects ? 'Cargando...' : 'Seleccionar proyecto'}>
                     {form.project_code && (() => {
                       const selected = projects.find(p => p.code === form.project_code);
                       return selected ? `${selected.code} - ${getDescription(selected)}` : form.project_code;
@@ -298,14 +296,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
             <div className="space-y-2">
               <Label>
-                CBS Code {requires1180Fields && '*'}
+                Código CBS {requires1180Fields && '*'}
               </Label>
               <Select
                 value={form.cbs_code}
                 onValueChange={(value) => updateField('cbs_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.cbs_code && 'border-destructive')}>
-                  <SelectValue placeholder={loadingCbsCodes ? 'Loading...' : 'Select CBS code'}>
+                  <SelectValue placeholder={loadingCbsCodes ? 'Cargando...' : 'Seleccionar código CBS'}>
                     {form.cbs_code && (() => {
                       const selected = cbsCodes.find(c => String(c.code) === form.cbs_code);
                       return selected ? `${selected.code} - ${getDescription(selected)}` : form.cbs_code;
@@ -325,18 +323,18 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Description *</Label>
+            <Label>Descripción *</Label>
             <Input
               value={form.description}
               onChange={(e) => updateField('description', e.target.value)}
-              placeholder="Transaction description"
+              placeholder="Descripción de la transacción"
             />
           </div>
 
           {/* Amount Fields */}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Currency</Label>
+              <Label>Moneda</Label>
               <Select
                 value={form.currency}
                 onValueChange={(value: 'DOP' | 'USD') => updateField('currency', value)}
@@ -352,7 +350,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Amount *</Label>
+              <Label>Monto *</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -376,7 +374,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Exchange Rate</Label>
+              <Label>Tasa de Cambio</Label>
               <Input
                 type="number"
                 step="0.0001"
@@ -391,40 +389,40 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Additional Fields */}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Payment Method</Label>
+              <Label>Método de Pago</Label>
               <Select
                 value={form.pay_method}
                 onValueChange={(value) => updateField('pay_method', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select method" />
+                  <SelectValue placeholder="Seleccionar método" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
-                  <SelectItem value="transfer_bdi">Transfer BDI</SelectItem>
-                  <SelectItem value="transfer_bhd">Transfer BHD</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="cc_management">Credit Card Management</SelectItem>
-                  <SelectItem value="cc_agri">Credit Card Agri</SelectItem>
-                  <SelectItem value="cc_industry">Credit Card Industry</SelectItem>
+                  <SelectItem value="transfer_bdi">Transferencia BDI</SelectItem>
+                  <SelectItem value="transfer_bhd">Transferencia BHD</SelectItem>
+                  <SelectItem value="cash">Efectivo</SelectItem>
+                  <SelectItem value="cc_management">Tarjeta Crédito Management</SelectItem>
+                  <SelectItem value="cc_agri">Tarjeta Crédito Agri</SelectItem>
+                  <SelectItem value="cc_industry">Tarjeta Crédito Industry</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Document</Label>
+              <Label>Documento</Label>
               <Input
                 value={form.document}
                 onChange={(e) => updateField('document', e.target.value)}
-                placeholder="Document reference"
+                placeholder="Referencia de documento"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>Nombre</Label>
               <Input
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Vendor/Payee name"
+                placeholder="Nombre del proveedor/beneficiario"
               />
             </div>
           </div>
@@ -432,17 +430,17 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Comments and Attachment */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Comments</Label>
+              <Label>Comentarios</Label>
               <Textarea
                 value={form.comments}
                 onChange={(e) => updateField('comments', e.target.value)}
-                placeholder="Additional notes..."
+                placeholder="Notas adicionales..."
                 rows={3}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Attachment</Label>
+              <Label>Adjunto</Label>
               <div className="pt-1">
                 <AttachmentUpload
                   attachmentUrl={form.attachment_url}
@@ -451,7 +449,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Upload receipt or invoice (JPG, PNG, PDF, max 5MB)
+                Subir recibo o factura (JPG, PNG, PDF, máx 5MB)
               </p>
             </div>
           </div>
@@ -464,11 +462,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 checked={form.is_internal}
                 onCheckedChange={(checked) => updateField('is_internal', checked)}
               />
-              <Label htmlFor="is_internal">Internal Transaction</Label>
+              <Label htmlFor="is_internal">Transacción Interna</Label>
             </div>
 
             <Button type="submit" disabled={isSubmitting || !isValid()}>
-              {isSubmitting ? 'Saving...' : 'Save Transaction'}
+              {isSubmitting ? 'Guardando...' : 'Guardar Transacción'}
             </Button>
           </div>
         </form>

@@ -11,7 +11,7 @@ export default function Transactions() {
   };
 
   return (
-    <MainLayout title="Transactions">
+    <MainLayout title="Transacciones">
       <div className="space-y-6">
         <TransactionForm onSuccess={handleTransactionSuccess} />
         <RecentTransactions refreshKey={refreshKey} />

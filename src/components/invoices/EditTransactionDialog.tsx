@@ -21,11 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Transaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
+import { Transaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCodes, updateTransaction } from "@/lib/api";
 import { toast } from "sonner";
 import { Ban, Loader2, Save } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { getTransactionEdit, saveTransactionEdit } from "@/lib/transactionEdits";
+import { getDescription } from "@/lib/getDescription";
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
@@ -39,7 +38,6 @@ export function EditTransactionDialog({
   onOpenChange,
 }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
-  const { getDescription } = useLanguage();
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   const [editedDocument, setEditedDocument] = useState("");
   const [originalDocument, setOriginalDocument] = useState("");
@@ -76,6 +74,7 @@ export function EditTransactionDialog({
 
   useEffect(() => {
     if (transaction && open) {
+      const docValue = transaction.document ?? "";
       setFormData({
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
@@ -86,17 +85,12 @@ export function EditTransactionDialog({
         amount: String(transaction.amount || ""),
         itbis: String(transaction.itbis || ""),
         pay_method: transaction.pay_method || "",
-        document: transaction.document || "",
+        document: docValue,
         name: transaction.name || "",
         comments: transaction.comments || "",
       });
-      
-      // Fetch any local edits for this transaction
-      getTransactionEdit(String(transaction.id)).then((edit) => {
-        const docValue = edit?.document ?? transaction.document ?? "";
-        setEditedDocument(docValue);
-        setOriginalDocument(docValue);
-      });
+      setEditedDocument(docValue);
+      setOriginalDocument(docValue);
     }
   }, [transaction, open]);
 
@@ -119,14 +113,16 @@ export function EditTransactionDialog({
   const handleSaveDocument = async () => {
     if (!transaction?.id) return;
     setIsSaving(true);
-    const success = await saveTransactionEdit(String(transaction.id), { document: editedDocument });
-    setIsSaving(false);
-    if (success) {
+    try {
+      await updateTransaction(String(transaction.id), { document: editedDocument });
       setOriginalDocument(editedDocument);
-      queryClient.invalidateQueries({ queryKey: ["transactionEdits"] });
+      queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       toast.success("Documento # guardado exitosamente");
-    } else {
+    } catch (error) {
       toast.error("Error al guardar Documento #");
+    } finally {
+      setIsSaving(false);
     }
   };
 

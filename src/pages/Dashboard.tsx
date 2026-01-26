@@ -2,9 +2,8 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
 import { getAttachmentUrls } from "@/lib/attachments";
-import { getTransactionEdits } from "@/lib/transactionEdits";
+import { getDescription } from "@/lib/getDescription";
 import { useQuery } from "@tanstack/react-query";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -56,8 +55,6 @@ const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
 ];
 
 export default function Dashboard() {
-  const { getDescription } = useLanguage();
-
   const pendingNcfColumns = useColumnVisibility("dashboard-pending-ncf", PENDING_NCF_COLUMNS);
   const withoutAttachmentColumns = useColumnVisibility("dashboard-without-attachment", WITHOUT_ATTACHMENT_COLUMNS);
 
@@ -84,27 +81,9 @@ export default function Dashboard() {
     enabled: transactionIds.length > 0,
   });
 
-  // Fetch local edits for all transactions
-  const { data: edits = {} } = useQuery({
-    queryKey: ['transactionEdits', transactionIds],
-    queryFn: () => getTransactionEdits(transactionIds),
-    enabled: transactionIds.length > 0,
-  });
-
-  // Merge API data with local edits
-  const mergeWithEdits = (tx: Transaction): Transaction => {
-    const edit = edits[String(tx.id)];
-    if (!edit) return tx;
-    return {
-      ...tx,
-      document: edit.document ?? tx.document,
-    };
-  };
-
-  // Filter: non-voided transactions without a document field (considering local edits)
+  // Filter: non-voided transactions without a document field
   const transactionsWithoutDocument = allTransactions
     .filter(tx => !tx.is_void)
-    .map(mergeWithEdits)
     .filter(tx => !tx.document || tx.document.trim() === '');
 
   // Filter: non-voided transactions without a physical attachment

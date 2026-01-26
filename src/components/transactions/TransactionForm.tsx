@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { getDescription } from '@/lib/getDescription';
 import {
   fetchAccounts,
   fetchProjects,
@@ -61,7 +61,6 @@ const initialFormState = {
 };
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
-  const { getDescription } = useLanguage();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);

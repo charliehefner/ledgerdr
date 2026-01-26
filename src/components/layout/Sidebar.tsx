@@ -21,19 +21,19 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Transactions", href: "/transactions", icon: ArrowRightLeft },
-  { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Human Resources", href: "/hr", icon: Users },
-  { name: "Inventory", href: "/inventory", icon: Package },
-  { name: "Fuel", href: "/fuel", icon: Fuel },
-  { name: "Equipment", href: "/equipment", icon: Tractor },
-  { name: "Operations", href: "/operations", icon: Activity },
+  { name: "Panel", href: "/", icon: LayoutDashboard },
+  { name: "Transacciones", href: "/transactions", icon: ArrowRightLeft },
+  { name: "Facturas", href: "/invoices", icon: FileText },
+  { name: "Reportes", href: "/reports", icon: BarChart3 },
+  { name: "Recursos Humanos", href: "/hr", icon: Users },
+  { name: "Inventario", href: "/inventory", icon: Package },
+  { name: "Combustible", href: "/fuel", icon: Fuel },
+  { name: "Equipos", href: "/equipment", icon: Tractor },
+  { name: "Operaciones", href: "/operations", icon: Activity },
 ];
 
 const secondaryNav = [
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Configuración", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -107,7 +107,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {!collapsed && (
           <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            Menu
+            Menú
           </div>
         )}
         {navigation.map((item) => (
@@ -118,7 +118,7 @@ export function Sidebar() {
 
         {!collapsed && (
           <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            System
+            Sistema
           </div>
         )}
         {secondaryNav.map((item) => (

@@ -26,10 +26,10 @@ export default function Login() {
     const result = await login(email, password);
     
     if (result.success) {
-      toast.success("Login successful");
+      toast.success("Inicio de sesión exitoso");
       navigate("/");
     } else {
-      toast.error(result.error || "Invalid email or password");
+      toast.error(result.error || "Correo o contraseña inválidos");
     }
     setIsLoading(false);
   };
@@ -37,7 +37,7 @@ export default function Login() {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Please enter your email address");
+      toast.error("Por favor ingrese su correo electrónico");
       return;
     }
     
@@ -50,7 +50,7 @@ export default function Login() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Password reset email sent! Check your inbox.");
+      toast.success("¡Correo de recuperación enviado! Revise su bandeja de entrada.");
       setShowForgotPassword(false);
     }
     
@@ -67,19 +67,19 @@ export default function Login() {
               alt="Jord Dominicana" 
               className="mx-auto h-12 mb-4"
             />
-            <CardTitle className="text-2xl">Reset Password</CardTitle>
-            <CardDescription>Enter your email to receive a reset link</CardDescription>
+            <CardTitle className="text-2xl">Restablecer Contraseña</CardTitle>
+            <CardDescription>Ingrese su correo para recibir un enlace de recuperación</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="reset-email">Email</Label>
+                <Label htmlFor="reset-email">Correo Electrónico</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="reset-email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="Ingrese su correo"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
@@ -91,10 +91,10 @@ export default function Login() {
                 {isResetting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
+                    Enviando...
                   </>
                 ) : (
-                  "Send Reset Link"
+                  "Enviar Enlace de Recuperación"
                 )}
               </Button>
               <Button 
@@ -103,7 +103,7 @@ export default function Login() {
                 className="w-full"
                 onClick={() => setShowForgotPassword(false)}
               >
-                Back to Login
+                Volver al Inicio de Sesión
               </Button>
             </form>
           </CardContent>
@@ -122,18 +122,18 @@ export default function Login() {
             className="mx-auto h-12 mb-4"
           />
           <CardTitle className="text-2xl">Jord Dominicana</CardTitle>
-          <CardDescription>Sign in to access the expense tracker</CardDescription>
+          <CardDescription>Inicie sesión para acceder al sistema de gastos</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Correo Electrónico</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter email"
+                  placeholder="Ingrese su correo"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-9"
@@ -143,14 +143,14 @@ export default function Login() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <Button 
                   type="button" 
                   variant="link" 
                   className="px-0 h-auto font-normal text-sm"
                   onClick={() => setShowForgotPassword(true)}
                 >
-                  Forgot password?
+                  ¿Olvidó su contraseña?
                 </Button>
               </div>
               <div className="relative">
@@ -158,7 +158,7 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter password"
+                  placeholder="Ingrese su contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-9"
@@ -170,10 +170,10 @@ export default function Login() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  Iniciando sesión...
                 </>
               ) : (
-                "Sign In"
+                "Iniciar Sesión"
               )}
             </Button>
           </form>

@@ -51,7 +51,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search invoices..."
+                placeholder="Buscar facturas..."
                 className="pl-9 bg-background"
               />
             </div>
@@ -81,7 +81,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
+                  Cerrar sesión
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

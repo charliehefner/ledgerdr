@@ -21,38 +21,38 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 
 const PENDING_NCF_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "Date", defaultVisible: true },
-  { key: "account", label: "Account", defaultVisible: true },
-  { key: "project", label: "Project", defaultVisible: false },
-  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
-  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
-  { key: "description", label: "Description", defaultVisible: true },
-  { key: "currency", label: "Currency", defaultVisible: true },
-  { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "date", label: "Fecha", defaultVisible: true },
+  { key: "account", label: "Cuenta", defaultVisible: true },
+  { key: "project", label: "Proyecto", defaultVisible: false },
+  { key: "cbsCode", label: "Código CBS", defaultVisible: false },
+  { key: "purchaseDate", label: "Fecha Compra", defaultVisible: false },
+  { key: "description", label: "Descripción", defaultVisible: true },
+  { key: "currency", label: "Moneda", defaultVisible: true },
+  { key: "amount", label: "Monto", defaultVisible: true },
   { key: "itbis", label: "ITBIS", defaultVisible: false },
-  { key: "payMethod", label: "Pay Method", defaultVisible: false },
-  { key: "document", label: "Document", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: false },
-  { key: "comments", label: "Comments", defaultVisible: false },
-  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
+  { key: "payMethod", label: "Método Pago", defaultVisible: false },
+  { key: "document", label: "Documento", defaultVisible: true },
+  { key: "name", label: "Nombre", defaultVisible: false },
+  { key: "comments", label: "Comentarios", defaultVisible: false },
+  { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
 ];
 
 const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "Date", defaultVisible: true },
-  { key: "account", label: "Account", defaultVisible: true },
-  { key: "project", label: "Project", defaultVisible: false },
-  { key: "cbsCode", label: "CBS Code", defaultVisible: false },
-  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
-  { key: "description", label: "Description", defaultVisible: true },
-  { key: "currency", label: "Currency", defaultVisible: true },
-  { key: "amount", label: "Amount", defaultVisible: true },
+  { key: "date", label: "Fecha", defaultVisible: true },
+  { key: "account", label: "Cuenta", defaultVisible: true },
+  { key: "project", label: "Proyecto", defaultVisible: false },
+  { key: "cbsCode", label: "Código CBS", defaultVisible: false },
+  { key: "purchaseDate", label: "Fecha Compra", defaultVisible: false },
+  { key: "description", label: "Descripción", defaultVisible: true },
+  { key: "currency", label: "Moneda", defaultVisible: true },
+  { key: "amount", label: "Monto", defaultVisible: true },
   { key: "itbis", label: "ITBIS", defaultVisible: false },
-  { key: "payMethod", label: "Pay Method", defaultVisible: false },
-  { key: "document", label: "Document", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: false },
-  { key: "comments", label: "Comments", defaultVisible: false },
-  { key: "exchangeRate", label: "Exchange Rate", defaultVisible: false },
+  { key: "payMethod", label: "Método Pago", defaultVisible: false },
+  { key: "document", label: "Documento", defaultVisible: true },
+  { key: "name", label: "Nombre", defaultVisible: false },
+  { key: "comments", label: "Comentarios", defaultVisible: false },
+  { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
 ];
 
 export default function Dashboard() {
@@ -121,14 +121,14 @@ export default function Dashboard() {
   const visibleAttachCount = withoutAttachmentColumns.visibleColumns.length;
 
   return (
-    <MainLayout title="Dashboard" subtitle="Overview of your expense invoices">
+    <MainLayout title="Panel" subtitle="Resumen de sus facturas de gastos">
       <div className="space-y-6 animate-fade-in">
         {/* Transactions Without Document */}
         <div className="bg-card rounded-xl border border-border shadow-sm">
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div>
-              <h3 className="font-semibold">Transactions Pending NCF Number</h3>
-              <p className="text-sm text-muted-foreground">Missing fiscal document number</p>
+              <h3 className="font-semibold">Transacciones Pendientes de NCF</h3>
+              <p className="text-sm text-muted-foreground">Falta número de comprobante fiscal</p>
             </div>
             <div className="flex items-center gap-2">
               <ColumnSelector
@@ -139,7 +139,7 @@ export default function Dashboard() {
               />
               <Button variant="outline" asChild>
                 <Link to="/transactions">
-                  View All
+                  Ver Todo
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -149,26 +149,26 @@ export default function Dashboard() {
             <TableHeader>
               <TableRow>
                 {pendingNcfColumns.isVisible("id") && <TableHead>ID</TableHead>}
-                {pendingNcfColumns.isVisible("date") && <TableHead>Date</TableHead>}
-                {pendingNcfColumns.isVisible("account") && <TableHead>Account</TableHead>}
-                {pendingNcfColumns.isVisible("description") && <TableHead>Description</TableHead>}
-                {pendingNcfColumns.isVisible("document") && <TableHead>Document</TableHead>}
-                {pendingNcfColumns.isVisible("name") && <TableHead>Name</TableHead>}
-                {pendingNcfColumns.isVisible("currency") && <TableHead>Currency</TableHead>}
-                {pendingNcfColumns.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
+                {pendingNcfColumns.isVisible("date") && <TableHead>Fecha</TableHead>}
+                {pendingNcfColumns.isVisible("account") && <TableHead>Cuenta</TableHead>}
+                {pendingNcfColumns.isVisible("description") && <TableHead>Descripción</TableHead>}
+                {pendingNcfColumns.isVisible("document") && <TableHead>Documento</TableHead>}
+                {pendingNcfColumns.isVisible("name") && <TableHead>Nombre</TableHead>}
+                {pendingNcfColumns.isVisible("currency") && <TableHead>Moneda</TableHead>}
+                {pendingNcfColumns.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={visibleNcfCount} className="text-center py-8 text-muted-foreground">
-                    Loading...
+                    Cargando...
                   </TableCell>
                 </TableRow>
               ) : transactionsWithoutDocument.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={visibleNcfCount} className="text-center py-8 text-muted-foreground">
-                    All transactions have documents attached
+                    Todas las transacciones tienen documentos adjuntos
                   </TableCell>
                 </TableRow>
               ) : (
@@ -193,8 +193,8 @@ export default function Dashboard() {
         <div className="bg-card rounded-xl border border-border shadow-sm">
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div>
-              <h3 className="font-semibold">Transactions Without Attachment</h3>
-              <p className="text-sm text-muted-foreground">Pending receipt/image upload</p>
+              <h3 className="font-semibold">Transacciones Sin Adjunto</h3>
+              <p className="text-sm text-muted-foreground">Pendiente de subir recibo/imagen</p>
             </div>
             <div className="flex items-center gap-2">
               <ColumnSelector
@@ -205,7 +205,7 @@ export default function Dashboard() {
               />
               <Button variant="outline" asChild>
                 <Link to="/transactions">
-                  View All
+                  Ver Todo
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -215,26 +215,26 @@ export default function Dashboard() {
             <TableHeader>
               <TableRow>
                 {withoutAttachmentColumns.isVisible("id") && <TableHead>ID</TableHead>}
-                {withoutAttachmentColumns.isVisible("date") && <TableHead>Date</TableHead>}
-                {withoutAttachmentColumns.isVisible("account") && <TableHead>Account</TableHead>}
-                {withoutAttachmentColumns.isVisible("description") && <TableHead>Description</TableHead>}
-                {withoutAttachmentColumns.isVisible("document") && <TableHead>Document</TableHead>}
-                {withoutAttachmentColumns.isVisible("name") && <TableHead>Name</TableHead>}
-                {withoutAttachmentColumns.isVisible("currency") && <TableHead>Currency</TableHead>}
-                {withoutAttachmentColumns.isVisible("amount") && <TableHead className="text-right">Amount</TableHead>}
+                {withoutAttachmentColumns.isVisible("date") && <TableHead>Fecha</TableHead>}
+                {withoutAttachmentColumns.isVisible("account") && <TableHead>Cuenta</TableHead>}
+                {withoutAttachmentColumns.isVisible("description") && <TableHead>Descripción</TableHead>}
+                {withoutAttachmentColumns.isVisible("document") && <TableHead>Documento</TableHead>}
+                {withoutAttachmentColumns.isVisible("name") && <TableHead>Nombre</TableHead>}
+                {withoutAttachmentColumns.isVisible("currency") && <TableHead>Moneda</TableHead>}
+                {withoutAttachmentColumns.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={visibleAttachCount} className="text-center py-8 text-muted-foreground">
-                    Loading...
+                    Cargando...
                   </TableCell>
                 </TableRow>
               ) : transactionsWithoutAttachment.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={visibleAttachCount} className="text-center py-8 text-muted-foreground">
-                    All transactions have attachments uploaded
+                    Todas las transacciones tienen adjuntos subidos
                   </TableCell>
                 </TableRow>
               ) : (

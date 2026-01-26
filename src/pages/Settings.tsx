@@ -30,34 +30,34 @@ export default function Settings() {
 
   const handleTestConnection = () => {
     if (!canModifySettings) {
-      toast.error("You don't have permission to modify settings");
+      toast.error("No tiene permiso para modificar la configuración");
       return;
     }
-    toast.info("Testing database connection...");
+    toast.info("Probando conexión a base de datos...");
     setTimeout(() => {
-      toast.success("Database connection successful!");
+      toast.success("¡Conexión a base de datos exitosa!");
     }, 1500);
   };
 
   const handleSave = () => {
     if (!canModifySettings) {
-      toast.error("You don't have permission to modify settings");
+      toast.error("No tiene permiso para modificar la configuración");
       return;
     }
-    toast.success("Settings saved successfully!");
+    toast.success("¡Configuración guardada exitosamente!");
   };
 
   return (
-    <MainLayout title="Settings" subtitle="Configure your application">
+    <MainLayout title="Configuración" subtitle="Configure su aplicación">
       <div className="max-w-3xl space-y-8 animate-fade-in">
         {/* Access Restriction Banner */}
         {!canModifySettings && (
           <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-center gap-3">
             <Lock className="h-5 w-5 text-destructive" />
             <div>
-              <p className="font-medium text-destructive">View Only Access</p>
+              <p className="font-medium text-destructive">Acceso Solo Lectura</p>
               <p className="text-sm text-muted-foreground">
-                You can view settings but cannot make structural changes. Contact an admin for modifications.
+                Puede ver la configuración pero no puede hacer cambios estructurales. Contacte a un administrador para modificaciones.
               </p>
             </div>
           </div>
@@ -76,9 +76,9 @@ export default function Settings() {
               <Database className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Database Connection</h3>
+              <h3 className="font-semibold">Conexión de Base de Datos</h3>
               <p className="text-sm text-muted-foreground">
-                Connect to your PostgreSQL database
+                Conectar a su base de datos PostgreSQL
               </p>
             </div>
           </div>
@@ -90,19 +90,19 @@ export default function Settings() {
                 <Input id="host" placeholder="db.example.com" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="port">Port</Label>
+                <Label htmlFor="port">Puerto</Label>
                 <Input id="port" placeholder="5432" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="database">Database Name</Label>
+                <Label htmlFor="database">Nombre de Base de Datos</Label>
                 <Input id="database" placeholder="expense_ledger" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user">Username</Label>
+                <Label htmlFor="user">Usuario</Label>
                 <Input id="user" placeholder="db_user" disabled={!canModifySettings} />
               </div>
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <Input id="password" type="password" placeholder="••••••••" disabled={!canModifySettings} />
               </div>
             </div>
@@ -110,10 +110,10 @@ export default function Settings() {
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={!canModifySettings}>
                 <TestTube className="mr-2 h-4 w-4" />
-                Test Connection
+                Probar Conexión
               </Button>
               <span className="text-sm text-muted-foreground">
-                Test before saving to ensure connectivity
+                Pruebe antes de guardar para asegurar conectividad
               </span>
             </div>
           </div>
@@ -126,9 +126,9 @@ export default function Settings() {
               <Palette className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Preferences</h3>
+              <h3 className="font-semibold">Preferencias</h3>
               <p className="text-sm text-muted-foreground">
-                Customize your experience
+                Personalice su experiencia
               </p>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="currency">Default Currency</Label>
+                <Label htmlFor="currency">Moneda Predeterminada</Label>
                 <Select defaultValue="usd" disabled={!canModifySettings}>
                   <SelectTrigger>
                     <SelectValue />
@@ -150,22 +150,22 @@ export default function Settings() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dateFormat">Date Format</Label>
+                <Label htmlFor="dateFormat">Formato de Fecha</Label>
                 <Select defaultValue="mdy" disabled={!canModifySettings}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mdy">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="dmy">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="ymd">YYYY-MM-DD</SelectItem>
+                    <SelectItem value="mdy">MM/DD/AAAA</SelectItem>
+                    <SelectItem value="dmy">DD/MM/AAAA</SelectItem>
+                    <SelectItem value="ymd">AAAA-MM-DD</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="taxRate">Default Tax Rate (%)</Label>
+              <Label htmlFor="taxRate">Tasa de Impuesto Predeterminada (%)</Label>
               <Input 
                 id="taxRate" 
                 type="number" 
@@ -184,9 +184,9 @@ export default function Settings() {
               <Bell className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Notifications</h3>
+              <h3 className="font-semibold">Notificaciones</h3>
               <p className="text-sm text-muted-foreground">
-                Manage your notification preferences
+                Administre sus preferencias de notificación
               </p>
             </div>
           </div>
@@ -194,9 +194,9 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Overdue Alerts</p>
+                <p className="font-medium">Alertas de Vencimiento</p>
                 <p className="text-sm text-muted-foreground">
-                  Get notified when invoices become overdue
+                  Reciba notificaciones cuando las facturas se venzan
                 </p>
               </div>
               <Switch defaultChecked disabled={!canModifySettings} />
@@ -204,9 +204,9 @@ export default function Settings() {
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Payment Reminders</p>
+                <p className="font-medium">Recordatorios de Pago</p>
                 <p className="text-sm text-muted-foreground">
-                  Remind about upcoming due dates
+                  Recordar sobre fechas de vencimiento próximas
                 </p>
               </div>
               <Switch defaultChecked disabled={!canModifySettings} />
@@ -214,9 +214,9 @@ export default function Settings() {
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Weekly Summary</p>
+                <p className="font-medium">Resumen Semanal</p>
                 <p className="text-sm text-muted-foreground">
-                  Receive a weekly expense summary email
+                  Recibir un resumen semanal de gastos por correo
                 </p>
               </div>
               <Switch disabled={!canModifySettings} />
@@ -229,11 +229,11 @@ export default function Settings() {
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
-              <p className="font-medium">Security Note</p>
+              <p className="font-medium">Nota de Seguridad</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Database credentials are stored securely and encrypted. 
-                For production use, we recommend using environment variables 
-                and secure secret management.
+                Las credenciales de la base de datos se almacenan de forma segura y encriptada. 
+                Para uso en producción, recomendamos usar variables de entorno 
+                y gestión segura de secretos.
               </p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function Settings() {
           <div className="flex justify-end">
             <Button size="lg" onClick={handleSave}>
               <Save className="mr-2 h-4 w-4" />
-              Save Settings
+              Guardar Configuración
             </Button>
           </div>
         )}

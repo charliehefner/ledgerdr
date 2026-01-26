@@ -1,10 +1,11 @@
 /**
  * Format a number as currency (USD by default)
+ * Uses es-DO locale for Spanish formatting
  */
 export function formatCurrency(
   amount: number,
   currency: string = "USD",
-  locale: string = "en-US"
+  locale: string = "es-DO"
 ): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -16,6 +17,7 @@ export function formatCurrency(
 
 /**
  * Format a date string to a readable format
+ * Uses es-DO locale for Spanish formatting
  */
 export function formatDate(
   dateString: string,
@@ -26,18 +28,18 @@ export function formatDate(
   }
 ): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", options);
+  return date.toLocaleDateString("es-DO", options);
 }
 
 /**
  * Format a number with thousand separators
  */
-export function formatNumber(num: number, locale: string = "en-US"): string {
+export function formatNumber(num: number, locale: string = "es-DO"): string {
   return new Intl.NumberFormat(locale).format(num);
 }
 
 /**
- * Get relative time string (e.g., "2 days ago")
+ * Get relative time string in Spanish (e.g., "Hace 2 días")
  */
 export function getRelativeTime(dateString: string): string {
   const date = new Date(dateString);
@@ -45,10 +47,10 @@ export function getRelativeTime(dateString: string): string {
   const diffInMs = now.getTime() - date.getTime();
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-  if (diffInDays === 0) return "Today";
-  if (diffInDays === 1) return "Yesterday";
-  if (diffInDays < 7) return `${diffInDays} days ago`;
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
-  return `${Math.floor(diffInDays / 365)} years ago`;
+  if (diffInDays === 0) return "Hoy";
+  if (diffInDays === 1) return "Ayer";
+  if (diffInDays < 7) return `Hace ${diffInDays} días`;
+  if (diffInDays < 30) return `Hace ${Math.floor(diffInDays / 7)} semanas`;
+  if (diffInDays < 365) return `Hace ${Math.floor(diffInDays / 30)} meses`;
+  return `Hace ${Math.floor(diffInDays / 365)} años`;
 }

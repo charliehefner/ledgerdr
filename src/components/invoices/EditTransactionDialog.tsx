@@ -107,12 +107,12 @@ export function EditTransactionDialog({
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
-      toast.success("Transaction voided successfully");
+      toast.success("Transacción anulada exitosamente");
       onOpenChange(false);
       setShowVoidConfirm(false);
     },
     onError: (error) => {
-      toast.error(`Failed to void: ${error.message}`);
+      toast.error(`Error al anular: ${error.message}`);
     },
   });
 
@@ -124,9 +124,9 @@ export function EditTransactionDialog({
     if (success) {
       setOriginalDocument(editedDocument);
       queryClient.invalidateQueries({ queryKey: ["transactionEdits"] });
-      toast.success("Document # saved successfully");
+      toast.success("Documento # guardado exitosamente");
     } else {
-      toast.error("Failed to save Document #");
+      toast.error("Error al guardar Documento #");
     }
   };
 
@@ -139,13 +139,13 @@ export function EditTransactionDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>View Transaction #{transaction.id}</DialogTitle>
+            <DialogTitle>Ver Transacción #{transaction.id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {/* Date */}
               <div className="space-y-2">
-                <Label>Transaction Date</Label>
+                <Label>Fecha de Transacción</Label>
                 <Input
                   type="date"
                   value={formData.transaction_date}
@@ -156,7 +156,7 @@ export function EditTransactionDialog({
 
               {/* Currency */}
               <div className="space-y-2">
-                <Label>Currency</Label>
+                <Label>Moneda</Label>
                 <Input
                   value={formData.currency}
                   readOnly
@@ -166,7 +166,7 @@ export function EditTransactionDialog({
 
               {/* Account */}
               <div className="space-y-2">
-                <Label>Master Account</Label>
+                <Label>Cuenta Principal</Label>
                 <Input
                   value={formData.master_acct_code ? `${formData.master_acct_code} - ${getDescription(accounts.find(a => a.code === formData.master_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
                   readOnly
@@ -176,9 +176,9 @@ export function EditTransactionDialog({
 
               {/* Project */}
               <div className="space-y-2">
-                <Label>Project</Label>
+                <Label>Proyecto</Label>
                 <Input
-                  value={formData.project_code ? `${formData.project_code} - ${getDescription(projects.find(p => p.code === formData.project_code) || { english_description: '', spanish_description: '' })}` : 'None'}
+                  value={formData.project_code ? `${formData.project_code} - ${getDescription(projects.find(p => p.code === formData.project_code) || { english_description: '', spanish_description: '' })}` : 'Ninguno'}
                   readOnly
                   className="bg-muted"
                 />
@@ -186,9 +186,9 @@ export function EditTransactionDialog({
 
               {/* CBS Code */}
               <div className="space-y-2">
-                <Label>CBS Code</Label>
+                <Label>Código CBS</Label>
                 <Input
-                  value={formData.cbs_code ? `${formData.cbs_code} - ${getDescription(cbsCodes.find(c => c.code === formData.cbs_code) || { english_description: '', spanish_description: '' })}` : 'None'}
+                  value={formData.cbs_code ? `${formData.cbs_code} - ${getDescription(cbsCodes.find(c => c.code === formData.cbs_code) || { english_description: '', spanish_description: '' })}` : 'Ninguno'}
                   readOnly
                   className="bg-muted"
                 />
@@ -196,9 +196,9 @@ export function EditTransactionDialog({
 
               {/* Pay Method */}
               <div className="space-y-2">
-                <Label>Payment Method</Label>
+                <Label>Método de Pago</Label>
                 <Input
-                  value={formData.pay_method || 'None'}
+                  value={formData.pay_method || 'Ninguno'}
                   readOnly
                   className="bg-muted"
                 />
@@ -206,7 +206,7 @@ export function EditTransactionDialog({
 
               {/* Amount */}
               <div className="space-y-2">
-                <Label>Amount</Label>
+                <Label>Monto</Label>
                 <Input
                   value={formData.amount}
                   readOnly
@@ -227,7 +227,7 @@ export function EditTransactionDialog({
 
             {/* Description */}
             <div className="space-y-2">
-              <Label>Description</Label>
+              <Label>Descripción</Label>
               <Input
                 value={formData.description}
                 readOnly
@@ -237,7 +237,7 @@ export function EditTransactionDialog({
 
             {/* Name */}
             <div className="space-y-2">
-              <Label>Vendor/Name</Label>
+              <Label>Proveedor/Nombre</Label>
               <Input
                 value={formData.name || ''}
                 readOnly
@@ -247,12 +247,12 @@ export function EditTransactionDialog({
 
             {/* Document - EDITABLE */}
             <div className="space-y-2">
-              <Label>Document # (NCF)</Label>
+              <Label>Documento # (NCF)</Label>
               <div className="flex gap-2">
                 <Input
                   value={editedDocument}
                   onChange={(e) => setEditedDocument(e.target.value)}
-                  placeholder="Enter document/NCF number"
+                  placeholder="Ingrese número de documento/NCF"
                   className="flex-1"
                 />
                 <Button
@@ -268,12 +268,12 @@ export function EditTransactionDialog({
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">This field can be updated after saving</p>
+              <p className="text-xs text-muted-foreground">Este campo puede actualizarse después de guardar</p>
             </div>
 
             {/* Comments */}
             <div className="space-y-2">
-              <Label>Comments</Label>
+              <Label>Comentarios</Label>
               <Textarea
                 value={formData.comments || ''}
                 readOnly
@@ -291,18 +291,18 @@ export function EditTransactionDialog({
                   disabled={voidMutation.isPending}
                 >
                   <Ban className="mr-2 h-4 w-4" />
-                  Void
+                  Anular
                 </Button>
               )}
               {transaction.is_void && (
-                <span className="text-muted-foreground italic">This transaction is voided</span>
+                <span className="text-muted-foreground italic">Esta transacción está anulada</span>
               )}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                Close
+                Cerrar
               </Button>
             </DialogFooter>
           </div>
@@ -313,13 +313,13 @@ export function EditTransactionDialog({
       <AlertDialog open={showVoidConfirm} onOpenChange={setShowVoidConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Void Transaction?</AlertDialogTitle>
+            <AlertDialogTitle>¿Anular Transacción?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will mark transaction #{transaction.id} as voided. The transaction will remain in records but be marked as void.
+              Esto marcará la transacción #{transaction.id} como anulada. La transacción permanecerá en los registros pero se marcará como anulada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => voidMutation.mutate()}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -329,7 +329,7 @@ export function EditTransactionDialog({
               ) : (
                 <Ban className="mr-2 h-4 w-4" />
               )}
-              Void
+              Anular
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

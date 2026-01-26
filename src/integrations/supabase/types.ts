@@ -820,6 +820,7 @@ export type Database = {
       operations: {
         Row: {
           created_at: string
+          end_hours: number | null
           field_id: string
           hectares_done: number
           id: string
@@ -827,12 +828,14 @@ export type Database = {
           notes: string | null
           operation_date: string
           operation_type_id: string
+          start_hours: number | null
           tractor_id: string | null
           updated_at: string
           workers_count: number | null
         }
         Insert: {
           created_at?: string
+          end_hours?: number | null
           field_id: string
           hectares_done: number
           id?: string
@@ -840,12 +843,14 @@ export type Database = {
           notes?: string | null
           operation_date?: string
           operation_type_id: string
+          start_hours?: number | null
           tractor_id?: string | null
           updated_at?: string
           workers_count?: number | null
         }
         Update: {
           created_at?: string
+          end_hours?: number | null
           field_id?: string
           hectares_done?: number
           id?: string
@@ -853,6 +858,7 @@ export type Database = {
           notes?: string | null
           operation_date?: string
           operation_type_id?: string
+          start_hours?: number | null
           tractor_id?: string | null
           updated_at?: string
           workers_count?: number | null

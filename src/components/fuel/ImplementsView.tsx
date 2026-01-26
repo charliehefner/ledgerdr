@@ -30,6 +30,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 
 interface Implement {
   id: string;
@@ -57,6 +59,17 @@ const implementTypes = [
   "Other",
 ];
 
+const implementColumns: ColumnConfig[] = [
+  { key: "name", label: "Nombre", defaultVisible: true },
+  { key: "type", label: "Tipo", defaultVisible: true },
+  { key: "brand_model", label: "Marca / Modelo", defaultVisible: true },
+  { key: "serial", label: "# Serie", defaultVisible: true },
+  { key: "purchase_date", label: "Fecha Compra", defaultVisible: false },
+  { key: "price", label: "Precio", defaultVisible: false },
+  { key: "status", label: "Estado", defaultVisible: true },
+  { key: "actions", label: "Acciones", defaultVisible: true },
+];
+
 export function ImplementsView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingImplement, setEditingImplement] = useState<Implement | null>(null);
@@ -72,6 +85,14 @@ export function ImplementsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const {
+    visibility,
+    toggleColumn,
+    resetToDefaults,
+    isVisible,
+    allColumns,
+  } = useColumnVisibility("implements", implementColumns);
 
   const { data: implements_, isLoading } = useQuery({
     queryKey: ["implements"],
@@ -111,8 +132,8 @@ export function ImplementsView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["implements"] });
       toast({
-        title: editingImplement ? "Implement updated" : "Implement added",
-        description: `${form.name} has been ${editingImplement ? "updated" : "added"} successfully.`,
+        title: editingImplement ? "Implemento actualizado" : "Implemento agregado",
+        description: `${form.name} ha sido ${editingImplement ? "actualizado" : "agregado"} exitosamente.`,
       });
       handleCloseDialog();
     },
@@ -157,8 +178,8 @@ export function ImplementsView() {
     e.preventDefault();
     if (!form.name || !form.implement_type) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
+        title: "Error de Validación",
+        description: "Complete todos los campos requeridos.",
         variant: "destructive",
       });
       return;
@@ -167,7 +188,7 @@ export function ImplementsView() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading implements...</div>;
+    return <div className="text-center py-8">Cargando implementos...</div>;
   }
 
   return (
@@ -175,168 +196,188 @@ export function ImplementsView() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Wrench className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Implements</h3>
+          <h3 className="text-lg font-semibold">Implementos</h3>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Implement
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingImplement ? "Edit Implement" : "Add New Implement"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label>Implement Name *</Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g., 20ft Disk Harrow"
-                  />
+        <div className="flex items-center gap-2">
+          <ColumnSelector
+            columns={allColumns}
+            visibility={visibility}
+            onToggle={toggleColumn}
+            onReset={resetToDefaults}
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Implemento
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingImplement ? "Editar Implemento" : "Agregar Nuevo Implemento"}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label>Nombre del Implemento *</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="ej. Rastra de Discos 20ft"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label>Tipo *</Label>
+                    <Select
+                      value={form.implement_type}
+                      onValueChange={(value) => setForm({ ...form, implement_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {implementTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Marca</Label>
+                    <Input
+                      value={form.brand}
+                      onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                      placeholder="ej. Case IH"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Modelo</Label>
+                    <Input
+                      value={form.model}
+                      onChange={(e) => setForm({ ...form, model: e.target.value })}
+                      placeholder="ej. RMX340"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label>Número de Serie</Label>
+                    <Input
+                      value={form.serial_number}
+                      onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                      placeholder="ej. ABCD1234567"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Fecha de Compra</Label>
+                    <Input
+                      type="date"
+                      value={form.purchase_date}
+                      onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Precio de Compra ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.purchase_price}
+                      onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                      placeholder="ej. 25000"
+                    />
+                  </div>
                 </div>
 
-                <div className="col-span-2">
-                  <Label>Type *</Label>
-                  <Select
-                    value={form.implement_type}
-                    onValueChange={(value) => setForm({ ...form, implement_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {implementTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={mutation.isPending}>
+                    {mutation.isPending ? "Guardando..." : editingImplement ? "Actualizar" : "Agregar Implemento"}
+                  </Button>
                 </div>
-
-                <div>
-                  <Label>Brand</Label>
-                  <Input
-                    value={form.brand}
-                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                    placeholder="e.g., Case IH"
-                  />
-                </div>
-
-                <div>
-                  <Label>Model</Label>
-                  <Input
-                    value={form.model}
-                    onChange={(e) => setForm({ ...form, model: e.target.value })}
-                    placeholder="e.g., RMX340"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Serial Number</Label>
-                  <Input
-                    value={form.serial_number}
-                    onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
-                    placeholder="e.g., ABCD1234567"
-                  />
-                </div>
-
-                <div>
-                  <Label>Purchase Date</Label>
-                  <Input
-                    type="date"
-                    value={form.purchase_date}
-                    onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Purchase Price ($)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.purchase_price}
-                    onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
-                    placeholder="e.g., 25000"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? "Saving..." : editingImplement ? "Update" : "Add Implement"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {!implements_ || implements_.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No implements added yet. Click "Add Implement" to get started.
+          No hay implementos agregados. Haga clic en "Agregar Implemento" para comenzar.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Brand / Model</TableHead>
-                <TableHead>Serial #</TableHead>
-                <TableHead>Purchase Date</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[80px]">Actions</TableHead>
+                {isVisible("name") && <TableHead>Nombre</TableHead>}
+                {isVisible("type") && <TableHead>Tipo</TableHead>}
+                {isVisible("brand_model") && <TableHead>Marca / Modelo</TableHead>}
+                {isVisible("serial") && <TableHead># Serie</TableHead>}
+                {isVisible("purchase_date") && <TableHead>Fecha Compra</TableHead>}
+                {isVisible("price") && <TableHead>Precio</TableHead>}
+                {isVisible("status") && <TableHead>Estado</TableHead>}
+                {isVisible("actions") && <TableHead className="w-[80px]">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {implements_.map((implement) => (
                 <TableRow key={implement.id}>
-                  <TableCell className="font-medium">{implement.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{implement.implement_type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {implement.brand || implement.model
-                      ? `${implement.brand || ""} ${implement.model || ""}`.trim()
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{implement.serial_number || "-"}</TableCell>
-                  <TableCell>
-                    {implement.purchase_date
-                      ? format(new Date(implement.purchase_date), "MMM d, yyyy")
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {implement.purchase_price
-                      ? `$${implement.purchase_price.toLocaleString()}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={implement.is_active ? "default" : "secondary"}>
-                      {implement.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(implement)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  {isVisible("name") && <TableCell className="font-medium">{implement.name}</TableCell>}
+                  {isVisible("type") && (
+                    <TableCell>
+                      <Badge variant="outline">{implement.implement_type}</Badge>
+                    </TableCell>
+                  )}
+                  {isVisible("brand_model") && (
+                    <TableCell>
+                      {implement.brand || implement.model
+                        ? `${implement.brand || ""} ${implement.model || ""}`.trim()
+                        : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("serial") && <TableCell>{implement.serial_number || "-"}</TableCell>}
+                  {isVisible("purchase_date") && (
+                    <TableCell>
+                      {implement.purchase_date
+                        ? format(new Date(implement.purchase_date), "MMM d, yyyy")
+                        : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("price") && (
+                    <TableCell>
+                      {implement.purchase_price
+                        ? `$${implement.purchase_price.toLocaleString()}`
+                        : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("status") && (
+                    <TableCell>
+                      <Badge variant={implement.is_active ? "default" : "secondary"}>
+                        {implement.is_active ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {isVisible("actions") && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(implement)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

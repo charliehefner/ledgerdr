@@ -23,6 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Tractor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 
 interface TractorEquipment {
   id: string;
@@ -37,6 +39,18 @@ interface TractorEquipment {
   purchase_date: string | null;
   purchase_price: number | null;
 }
+
+const tractorColumns: ColumnConfig[] = [
+  { key: "name", label: "Nombre", defaultVisible: true },
+  { key: "brand_model", label: "Marca / Modelo", defaultVisible: true },
+  { key: "serial", label: "# Serie", defaultVisible: true },
+  { key: "hp", label: "HP", defaultVisible: true },
+  { key: "hour_meter", label: "Horómetro", defaultVisible: true },
+  { key: "purchase_date", label: "Fecha Compra", defaultVisible: false },
+  { key: "price", label: "Precio", defaultVisible: false },
+  { key: "status", label: "Estado", defaultVisible: true },
+  { key: "actions", label: "Acciones", defaultVisible: true },
+];
 
 export function TractorsView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -54,6 +68,14 @@ export function TractorsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const {
+    visibility,
+    toggleColumn,
+    resetToDefaults,
+    isVisible,
+    allColumns,
+  } = useColumnVisibility("tractors", tractorColumns);
 
   const { data: tractors, isLoading } = useQuery({
     queryKey: ["tractors"],
@@ -97,8 +119,8 @@ export function TractorsView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["fuelEquipment"] });
       toast({
-        title: editingTractor ? "Tractor updated" : "Tractor added",
-        description: `${form.name} has been ${editingTractor ? "updated" : "added"} successfully.`,
+        title: editingTractor ? "Tractor actualizado" : "Tractor agregado",
+        description: `${form.name} ha sido ${editingTractor ? "actualizado" : "agregado"} exitosamente.`,
       });
       handleCloseDialog();
     },
@@ -145,8 +167,8 @@ export function TractorsView() {
     e.preventDefault();
     if (!form.name) {
       toast({
-        title: "Validation Error",
-        description: "Please enter a tractor name.",
+        title: "Error de Validación",
+        description: "Ingrese el nombre del tractor.",
         variant: "destructive",
       });
       return;
@@ -155,7 +177,7 @@ export function TractorsView() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading tractors...</div>;
+    return <div className="text-center py-8">Cargando tractores...</div>;
   }
 
   return (
@@ -163,171 +185,189 @@ export function TractorsView() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Tractor className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Tractors</h3>
+          <h3 className="text-lg font-semibold">Tractores</h3>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Tractor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTractor ? "Edit Tractor" : "Add New Tractor"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label>Tractor Name *</Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g., John Deere 6215R"
-                  />
+        <div className="flex items-center gap-2">
+          <ColumnSelector
+            columns={allColumns}
+            visibility={visibility}
+            onToggle={toggleColumn}
+            onReset={resetToDefaults}
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Tractor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTractor ? "Editar Tractor" : "Agregar Nuevo Tractor"}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label>Nombre del Tractor *</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="ej. John Deere 6215R"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Marca</Label>
+                    <Input
+                      value={form.brand}
+                      onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                      placeholder="ej. John Deere"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Modelo</Label>
+                    <Input
+                      value={form.model}
+                      onChange={(e) => setForm({ ...form, model: e.target.value })}
+                      placeholder="ej. 6215R"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Número de Serie</Label>
+                    <Input
+                      value={form.serial_number}
+                      onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                      placeholder="ej. 1RW6215RJKD012345"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Caballos de Fuerza (HP)</Label>
+                    <Input
+                      type="number"
+                      value={form.hp}
+                      onChange={(e) => setForm({ ...form, hp: e.target.value })}
+                      placeholder="ej. 215"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Horómetro Actual</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={form.current_hour_meter}
+                      onChange={(e) =>
+                        setForm({ ...form, current_hour_meter: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Fecha de Compra</Label>
+                    <Input
+                      type="date"
+                      value={form.purchase_date}
+                      onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label>Precio de Compra ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.purchase_price}
+                      onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                      placeholder="ej. 150000"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label>Brand</Label>
-                  <Input
-                    value={form.brand}
-                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                    placeholder="e.g., John Deere"
-                  />
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={mutation.isPending}>
+                    {mutation.isPending ? "Guardando..." : editingTractor ? "Actualizar" : "Agregar Tractor"}
+                  </Button>
                 </div>
-
-                <div>
-                  <Label>Model</Label>
-                  <Input
-                    value={form.model}
-                    onChange={(e) => setForm({ ...form, model: e.target.value })}
-                    placeholder="e.g., 6215R"
-                  />
-                </div>
-
-                <div>
-                  <Label>Serial Number</Label>
-                  <Input
-                    value={form.serial_number}
-                    onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
-                    placeholder="e.g., 1RW6215RJKD012345"
-                  />
-                </div>
-
-                <div>
-                  <Label>Horsepower (HP)</Label>
-                  <Input
-                    type="number"
-                    value={form.hp}
-                    onChange={(e) => setForm({ ...form, hp: e.target.value })}
-                    placeholder="e.g., 215"
-                  />
-                </div>
-
-                <div>
-                  <Label>Current Hour Meter</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={form.current_hour_meter}
-                    onChange={(e) =>
-                      setForm({ ...form, current_hour_meter: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label>Purchase Date</Label>
-                  <Input
-                    type="date"
-                    value={form.purchase_date}
-                    onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Purchase Price ($)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.purchase_price}
-                    onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
-                    placeholder="e.g., 150000"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? "Saving..." : editingTractor ? "Update" : "Add Tractor"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {!tractors || tractors.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No tractors added yet. Click "Add Tractor" to get started.
+          No hay tractores agregados. Haga clic en "Agregar Tractor" para comenzar.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Brand / Model</TableHead>
-                <TableHead>Serial #</TableHead>
-                <TableHead>HP</TableHead>
-                <TableHead>Hour Meter</TableHead>
-                <TableHead>Purchase Date</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[80px]">Actions</TableHead>
+                {isVisible("name") && <TableHead>Nombre</TableHead>}
+                {isVisible("brand_model") && <TableHead>Marca / Modelo</TableHead>}
+                {isVisible("serial") && <TableHead># Serie</TableHead>}
+                {isVisible("hp") && <TableHead>HP</TableHead>}
+                {isVisible("hour_meter") && <TableHead>Horómetro</TableHead>}
+                {isVisible("purchase_date") && <TableHead>Fecha Compra</TableHead>}
+                {isVisible("price") && <TableHead>Precio</TableHead>}
+                {isVisible("status") && <TableHead>Estado</TableHead>}
+                {isVisible("actions") && <TableHead className="w-[80px]">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {tractors.map((tractor) => (
                 <TableRow key={tractor.id}>
-                  <TableCell className="font-medium">{tractor.name}</TableCell>
-                  <TableCell>
-                    {tractor.brand || tractor.model
-                      ? `${tractor.brand || ""} ${tractor.model || ""}`.trim()
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{tractor.serial_number || "-"}</TableCell>
-                  <TableCell>{tractor.hp ? `${tractor.hp} HP` : "-"}</TableCell>
-                  <TableCell>{tractor.current_hour_meter} hrs</TableCell>
-                  <TableCell>
-                    {tractor.purchase_date
-                      ? format(new Date(tractor.purchase_date), "MMM d, yyyy")
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {tractor.purchase_price
-                      ? `$${tractor.purchase_price.toLocaleString()}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={tractor.is_active ? "default" : "secondary"}>
-                      {tractor.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(tractor)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  {isVisible("name") && <TableCell className="font-medium">{tractor.name}</TableCell>}
+                  {isVisible("brand_model") && (
+                    <TableCell>
+                      {tractor.brand || tractor.model
+                        ? `${tractor.brand || ""} ${tractor.model || ""}`.trim()
+                        : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("serial") && <TableCell>{tractor.serial_number || "-"}</TableCell>}
+                  {isVisible("hp") && <TableCell>{tractor.hp ? `${tractor.hp} HP` : "-"}</TableCell>}
+                  {isVisible("hour_meter") && <TableCell>{tractor.current_hour_meter} hrs</TableCell>}
+                  {isVisible("purchase_date") && (
+                    <TableCell>
+                      {tractor.purchase_date
+                        ? format(new Date(tractor.purchase_date), "MMM d, yyyy")
+                        : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("price") && (
+                    <TableCell>
+                      {tractor.purchase_price
+                        ? `$${tractor.purchase_price.toLocaleString()}`
+                        : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("status") && (
+                    <TableCell>
+                      <Badge variant={tractor.is_active ? "default" : "secondary"}>
+                        {tractor.is_active ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {isVisible("actions") && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(tractor)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

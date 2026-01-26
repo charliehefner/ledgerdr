@@ -34,10 +34,12 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package } from "lucide-react";
+import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 
 interface Field {
   id: string;
@@ -86,6 +88,8 @@ interface Operation {
   implement_id: string | null;
   workers_count: number | null;
   hectares_done: number;
+  start_hours: number | null;
+  end_hours: number | null;
   notes: string | null;
   fields: { name: string; farms: { name: string } };
   operation_types: { name: string; is_mechanical: boolean };
@@ -98,6 +102,19 @@ interface Operation {
   }[];
 }
 
+const operationsColumns: ColumnConfig[] = [
+  { key: "date", label: "Fecha", defaultVisible: true },
+  { key: "field", label: "Campo", defaultVisible: true },
+  { key: "farm", label: "Finca", defaultVisible: true },
+  { key: "operation", label: "Operación", defaultVisible: true },
+  { key: "tractor", label: "Tractor/Obreros", defaultVisible: true },
+  { key: "implement", label: "Implemento", defaultVisible: true },
+  { key: "hours", label: "Horas", defaultVisible: true },
+  { key: "hectares", label: "Hectáreas", defaultVisible: true },
+  { key: "inputs", label: "Insumos", defaultVisible: true },
+  { key: "notes", label: "Notas", defaultVisible: false },
+];
+
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
@@ -108,6 +125,8 @@ export function OperationsLogView() {
     operation_type_id: "",
     tractor_id: "",
     implement_id: "",
+    start_hours: "",
+    end_hours: "",
     workers_count: "",
     hectares_done: "",
     notes: "",
@@ -117,6 +136,14 @@ export function OperationsLogView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const {
+    visibility,
+    toggleColumn,
+    resetToDefaults,
+    isVisible,
+    allColumns,
+  } = useColumnVisibility("operations-log", operationsColumns);
 
   // Fetch fields with farm names
   const { data: fields } = useQuery({
@@ -229,14 +256,20 @@ export function OperationsLogView() {
 
   // Stats
   const totalHectares = filteredOperations.reduce((sum, op) => sum + op.hectares_done, 0);
+  const totalHours = filteredOperations.reduce((sum, op) => {
+    if (op.start_hours != null && op.end_hours != null) {
+      return sum + (op.end_hours - op.start_hours);
+    }
+    return sum;
+  }, 0);
   const mechanicalCount = filteredOperations.filter(op => op.operation_types.is_mechanical).length;
   const manualCount = filteredOperations.filter(op => !op.operation_types.is_mechanical).length;
 
   const addInput = () => {
     if (!newInput.inventory_item_id || !newInput.quantity_used) {
       toast({
-        title: "Validation Error",
-        description: "Please select an item and enter quantity.",
+        title: "Error de Validación",
+        description: "Seleccione un artículo e ingrese la cantidad.",
         variant: "destructive",
       });
       return;
@@ -245,8 +278,8 @@ export function OperationsLogView() {
     // Check if item already added
     if (inputs.some(i => i.inventory_item_id === newInput.inventory_item_id)) {
       toast({
-        title: "Duplicate Item",
-        description: "This item is already added. Update quantity instead.",
+        title: "Artículo Duplicado",
+        description: "Este artículo ya está agregado. Actualice la cantidad.",
         variant: "destructive",
       });
       return;
@@ -257,8 +290,8 @@ export function OperationsLogView() {
     
     if (item && qty > item.current_quantity) {
       toast({
-        title: "Insufficient Stock",
-        description: `Only ${item.current_quantity} ${item.use_unit} available.`,
+        title: "Stock Insuficiente",
+        description: `Solo ${item.current_quantity} ${item.use_unit} disponibles.`,
         variant: "destructive",
       });
       return;
@@ -283,6 +316,8 @@ export function OperationsLogView() {
         operation_type_id: data.operation_type_id,
         tractor_id: isMechanical && data.tractor_id ? data.tractor_id : null,
         implement_id: isMechanical && data.implement_id ? data.implement_id : null,
+        start_hours: isMechanical && data.start_hours ? parseFloat(data.start_hours) : null,
+        end_hours: isMechanical && data.end_hours ? parseFloat(data.end_hours) : null,
         workers_count: !isMechanical && data.workers_count ? parseInt(data.workers_count) : null,
         hectares_done: parseFloat(data.hectares_done),
         notes: data.notes || null,
@@ -330,8 +365,8 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
       toast({
-        title: "Operation recorded",
-        description: "The field operation has been logged and inventory updated.",
+        title: "Operación registrada",
+        description: "La operación de campo ha sido registrada y el inventario actualizado.",
       });
       handleCloseDialog();
     },
@@ -352,6 +387,8 @@ export function OperationsLogView() {
       operation_type_id: "",
       tractor_id: "",
       implement_id: "",
+      start_hours: "",
+      end_hours: "",
       workers_count: "",
       hectares_done: "",
       notes: "",
@@ -364,24 +401,24 @@ export function OperationsLogView() {
     e.preventDefault();
     if (!form.field_id || !form.operation_type_id || !form.hectares_done) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
+        title: "Error de Validación",
+        description: "Complete todos los campos requeridos.",
         variant: "destructive",
       });
       return;
     }
     if (isMechanical && (!form.tractor_id || !form.implement_id)) {
       toast({
-        title: "Validation Error",
-        description: "Mechanical operations require tractor and implement.",
+        title: "Error de Validación",
+        description: "Las operaciones mecánicas requieren tractor e implemento.",
         variant: "destructive",
       });
       return;
     }
     if (!isMechanical && !form.workers_count) {
       toast({
-        title: "Validation Error",
-        description: "Manual operations require worker count.",
+        title: "Error de Validación",
+        description: "Las operaciones manuales requieren cantidad de obreros.",
         variant: "destructive",
       });
       return;
@@ -394,13 +431,20 @@ export function OperationsLogView() {
     return item ? `${item.commercial_name} (${item.use_unit})` : itemId;
   };
 
+  const calculateHours = (op: Operation) => {
+    if (op.start_hours != null && op.end_hours != null) {
+      return (op.end_hours - op.start_hours).toFixed(1);
+    }
+    return "-";
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hectares</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Hectáreas</CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -409,7 +453,16 @@ export function OperationsLogView() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operations</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Horas</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalHours.toFixed(1)} hrs</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Operaciones</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -418,7 +471,7 @@ export function OperationsLogView() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mechanical</CardTitle>
+            <CardTitle className="text-sm font-medium">Mecánicas</CardTitle>
             <Tractor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -427,7 +480,7 @@ export function OperationsLogView() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Manual</CardTitle>
+            <CardTitle className="text-sm font-medium">Manuales</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -443,7 +496,7 @@ export function OperationsLogView() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "MMM d, yyyy") : "Start date"}
+                {startDate ? format(startDate, "MMM d, yyyy") : "Fecha inicio"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -455,12 +508,12 @@ export function OperationsLogView() {
               />
             </PopoverContent>
           </Popover>
-          <span className="text-muted-foreground">to</span>
+          <span className="text-muted-foreground">a</span>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "MMM d, yyyy") : "End date"}
+                {endDate ? format(endDate, "MMM d, yyyy") : "Fecha fin"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -474,22 +527,28 @@ export function OperationsLogView() {
           </Popover>
         </div>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <ColumnSelector
+            columns={allColumns}
+            visibility={visibility}
+            onToggle={toggleColumn}
+            onReset={resetToDefaults}
+          />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Record Operation
+                Registrar Operación
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Record Field Operation</DialogTitle>
+                <DialogTitle>Registrar Operación de Campo</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Date *</Label>
+                    <Label>Fecha *</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -500,7 +559,7 @@ export function OperationsLogView() {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.operation_date ? format(form.operation_date, "MMM d, yyyy") : "Pick a date"}
+                          {form.operation_date ? format(form.operation_date, "MMM d, yyyy") : "Seleccionar fecha"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -515,13 +574,13 @@ export function OperationsLogView() {
                   </div>
 
                   <div>
-                    <Label>Field *</Label>
+                    <Label>Campo *</Label>
                     <Select
                       value={form.field_id}
                       onValueChange={(value) => setForm({ ...form, field_id: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select field" />
+                        <SelectValue placeholder="Seleccionar campo" />
                       </SelectTrigger>
                       <SelectContent>
                         {fields?.map((field) => (
@@ -535,18 +594,18 @@ export function OperationsLogView() {
                 </div>
 
                 <div>
-                  <Label>Operation Type *</Label>
+                  <Label>Tipo de Operación *</Label>
                   <Select
                     value={form.operation_type_id}
                     onValueChange={(value) => setForm({ ...form, operation_type_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select operation" />
+                      <SelectValue placeholder="Seleccionar operación" />
                     </SelectTrigger>
                     <SelectContent>
                       {operationTypes?.map((type) => (
                         <SelectItem key={type.id} value={type.id}>
-                          {type.name} {type.is_mechanical ? "(Mechanical)" : "(Manual)"}
+                          {type.name} {type.is_mechanical ? "(Mecánica)" : "(Manual)"}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -554,65 +613,104 @@ export function OperationsLogView() {
                 </div>
 
                 {isMechanical ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Tractor *</Label>
-                      <Select
-                        value={form.tractor_id}
-                        onValueChange={(value) => setForm({ ...form, tractor_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select tractor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tractors?.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Tractor *</Label>
+                        <Select
+                          value={form.tractor_id}
+                          onValueChange={(value) => setForm({ ...form, tractor_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar tractor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tractors?.map((t) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Implemento *</Label>
+                        <Select
+                          value={form.implement_id}
+                          onValueChange={(value) => setForm({ ...form, implement_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar implemento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {implements_?.map((i) => (
+                              <SelectItem key={i.id} value={i.id}>
+                                {i.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
-                      <Label>Implement *</Label>
-                      <Select
-                        value={form.implement_id}
-                        onValueChange={(value) => setForm({ ...form, implement_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select implement" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {implements_?.map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    
+                    {/* Tractor Hours - positioned directly below tractor/implement */}
+                    <div className="grid grid-cols-2 gap-4 bg-muted/30 rounded-lg p-3">
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Horómetro Inicio
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={form.start_hours}
+                          onChange={(e) => setForm({ ...form, start_hours: e.target.value })}
+                          placeholder="ej. 1250.5"
+                        />
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Horómetro Fin
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={form.end_hours}
+                          onChange={(e) => setForm({ ...form, end_hours: e.target.value })}
+                          placeholder="ej. 1258.0"
+                        />
+                      </div>
+                      {form.start_hours && form.end_hours && (
+                        <div className="col-span-2 text-sm text-muted-foreground">
+                          Horas trabajadas: <span className="font-semibold text-foreground">
+                            {(parseFloat(form.end_hours) - parseFloat(form.start_hours)).toFixed(1)} hrs
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </>
                 ) : (
                   <div>
-                    <Label>Number of Workers *</Label>
+                    <Label>Número de Obreros *</Label>
                     <Input
                       type="number"
                       min="1"
                       value={form.workers_count}
                       onChange={(e) => setForm({ ...form, workers_count: e.target.value })}
-                      placeholder="Enter worker count"
+                      placeholder="Ingrese cantidad de obreros"
                     />
                   </div>
                 )}
 
                 <div>
-                  <Label>Hectares Done *</Label>
+                  <Label>Hectáreas Realizadas *</Label>
                   <Input
                     type="number"
                     step="0.1"
                     value={form.hectares_done}
                     onChange={(e) => setForm({ ...form, hectares_done: e.target.value })}
-                    placeholder="Enter hectares"
+                    placeholder="Ingrese hectáreas"
                   />
                 </div>
 
@@ -620,7 +718,7 @@ export function OperationsLogView() {
                 <div className="border rounded-lg p-4 space-y-4">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-base font-semibold">Inputs Used (Optional)</Label>
+                    <Label className="text-base font-semibold">Insumos Utilizados (Opcional)</Label>
                   </div>
                   
                   <div className="flex gap-2">
@@ -629,12 +727,12 @@ export function OperationsLogView() {
                       onValueChange={(value) => setNewInput({ ...newInput, inventory_item_id: value })}
                     >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select inventory item" />
+                        <SelectValue placeholder="Seleccionar insumo" />
                       </SelectTrigger>
                       <SelectContent>
                         {inventoryItems?.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
-                            {item.commercial_name} ({item.current_quantity} {item.use_unit} available)
+                            {item.commercial_name} ({item.current_quantity} {item.use_unit} disponibles)
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -643,7 +741,7 @@ export function OperationsLogView() {
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="Qty"
+                      placeholder="Cant."
                       className="w-24"
                       value={newInput.quantity_used}
                       onChange={(e) => setNewInput({ ...newInput, quantity_used: e.target.value })}
@@ -678,20 +776,20 @@ export function OperationsLogView() {
                 </div>
 
                 <div>
-                  <Label>Notes</Label>
+                  <Label>Notas</Label>
                   <Input
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    placeholder="Optional notes"
+                    placeholder="Notas opcionales"
                   />
                 </div>
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
+                    Cancelar
                   </Button>
                   <Button type="submit" disabled={mutation.isPending}>
-                    {mutation.isPending ? "Saving..." : "Record Operation"}
+                    {mutation.isPending ? "Guardando..." : "Registrar Operación"}
                   </Button>
                 </div>
               </form>
@@ -702,58 +800,70 @@ export function OperationsLogView() {
 
       {/* Operations Table */}
       {isLoading ? (
-        <div className="text-center py-8">Loading operations...</div>
+        <div className="text-center py-8">Cargando operaciones...</div>
       ) : filteredOperations.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No operations found for the selected period.
+          No se encontraron operaciones para el período seleccionado.
         </div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Field</TableHead>
-              <TableHead>Farm</TableHead>
-              <TableHead>Operation</TableHead>
-              <TableHead>Tractor/Workers</TableHead>
-              <TableHead>Implement</TableHead>
-              <TableHead>Hectares</TableHead>
-              <TableHead>Inputs</TableHead>
-              <TableHead>Notes</TableHead>
+              {isVisible("date") && <TableHead>Fecha</TableHead>}
+              {isVisible("field") && <TableHead>Campo</TableHead>}
+              {isVisible("farm") && <TableHead>Finca</TableHead>}
+              {isVisible("operation") && <TableHead>Operación</TableHead>}
+              {isVisible("tractor") && <TableHead>Tractor/Obreros</TableHead>}
+              {isVisible("implement") && <TableHead>Implemento</TableHead>}
+              {isVisible("hours") && <TableHead>Horas</TableHead>}
+              {isVisible("hectares") && <TableHead>Hectáreas</TableHead>}
+              {isVisible("inputs") && <TableHead>Insumos</TableHead>}
+              {isVisible("notes") && <TableHead>Notas</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredOperations.map((op) => (
               <TableRow key={op.id}>
-                <TableCell>{format(new Date(op.operation_date), "MMM d, yyyy")}</TableCell>
-                <TableCell className="font-medium">{op.fields.name}</TableCell>
-                <TableCell>{op.fields.farms.name}</TableCell>
-                <TableCell>
-                  <Badge variant={op.operation_types.is_mechanical ? "default" : "secondary"}>
-                    {op.operation_types.name}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {op.operation_types.is_mechanical
-                    ? op.fuel_equipment?.name || "-"
-                    : `${op.workers_count} workers`}
-                </TableCell>
-                <TableCell>{op.implements?.name || "-"}</TableCell>
-                <TableCell className="font-medium">{op.hectares_done} ha</TableCell>
-                <TableCell>
-                  {op.operation_inputs && op.operation_inputs.length > 0 ? (
-                    <div className="space-y-1">
-                      {op.operation_inputs.map((input) => (
-                        <div key={input.id} className="text-xs">
-                          {input.inventory_items.commercial_name}: {input.quantity_used} {input.inventory_items.use_unit}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>
+                {isVisible("date") && <TableCell>{format(new Date(op.operation_date), "MMM d, yyyy")}</TableCell>}
+                {isVisible("field") && <TableCell className="font-medium">{op.fields.name}</TableCell>}
+                {isVisible("farm") && <TableCell>{op.fields.farms.name}</TableCell>}
+                {isVisible("operation") && (
+                  <TableCell>
+                    <Badge variant={op.operation_types.is_mechanical ? "default" : "secondary"}>
+                      {op.operation_types.name}
+                    </Badge>
+                  </TableCell>
+                )}
+                {isVisible("tractor") && (
+                  <TableCell>
+                    {op.operation_types.is_mechanical
+                      ? op.fuel_equipment?.name || "-"
+                      : `${op.workers_count} obreros`}
+                  </TableCell>
+                )}
+                {isVisible("implement") && <TableCell>{op.implements?.name || "-"}</TableCell>}
+                {isVisible("hours") && (
+                  <TableCell className="font-mono">
+                    {calculateHours(op)} {calculateHours(op) !== "-" && "hrs"}
+                  </TableCell>
+                )}
+                {isVisible("hectares") && <TableCell className="font-medium">{op.hectares_done} ha</TableCell>}
+                {isVisible("inputs") && (
+                  <TableCell>
+                    {op.operation_inputs && op.operation_inputs.length > 0 ? (
+                      <div className="space-y-1">
+                        {op.operation_inputs.map((input) => (
+                          <div key={input.id} className="text-xs">
+                            {input.inventory_items.commercial_name}: {input.quantity_used} {input.inventory_items.use_unit}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                )}
+                {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
               </TableRow>
             ))}
           </TableBody>

@@ -66,6 +66,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          field_name: string | null
           id: string
           is_closed: boolean
           operation_description: string
@@ -73,10 +74,12 @@ export type Database = {
           week_ending_date: string
           work_date: string
           worker_name: string
+          workers_count: number
         }
         Insert: {
           amount?: number
           created_at?: string
+          field_name?: string | null
           id?: string
           is_closed?: boolean
           operation_description: string
@@ -84,10 +87,12 @@ export type Database = {
           week_ending_date: string
           work_date: string
           worker_name: string
+          workers_count?: number
         }
         Update: {
           amount?: number
           created_at?: string
+          field_name?: string | null
           id?: string
           is_closed?: boolean
           operation_description?: string
@@ -95,6 +100,7 @@ export type Database = {
           week_ending_date?: string
           work_date?: string
           worker_name?: string
+          workers_count?: number
         }
         Relationships: []
       }

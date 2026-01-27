@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Select, 
   SelectContent, 
@@ -24,10 +25,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { fetchRecentTransactions, Transaction } from "@/lib/api";
+import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
 import { getAttachmentUrls } from "@/lib/attachments";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter } from "lucide-react";
 import { AttachmentCell } from "@/components/transactions/AttachmentCell";
 import {
   DropdownMenu,
@@ -55,6 +56,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { getDescription } from "@/lib/getDescription";
 
 const COLORS = [
   "hsl(220, 65%, 30%)",
@@ -95,6 +97,9 @@ export default function Reports() {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [accountFilter, setAccountFilter] = useState<string>("all");
+  const [currencyFilter, setCurrencyFilter] = useState<string>("all");
 
   const columnVisibility = useColumnVisibility("reports-table", REPORT_COLUMNS);
 
@@ -108,13 +113,27 @@ export default function Reports() {
     queryFn: () => fetchRecentTransactions(parseInt(limit)),
   });
 
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: fetchAccounts,
+  });
+
   // Exclude voided transactions from reports
   const nonVoidedTransactions = allTransactions.filter((tx) => !tx.is_void);
 
-  // Filter by date range
+  // Get unique accounts for filter dropdown
+  const usedAccounts = [...new Set(nonVoidedTransactions.map((t) => t.master_acct_code).filter(Boolean))];
+
+  const getAccountDescription = (code: string) => {
+    const account = accounts.find(a => a.code === code);
+    return account ? getDescription(account) : code;
+  };
+
+  // Filter by date range, search, account, and currency
   const transactions = useMemo(() => {
     let filtered = nonVoidedTransactions;
     
+    // Date range filters
     if (startDate) {
       filtered = filtered.filter(tx => {
         const txDate = new Date(tx.transaction_date);
@@ -130,9 +149,30 @@ export default function Reports() {
         return txDate <= endOfDay;
       });
     }
+
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(tx =>
+        tx.description?.toLowerCase().includes(term) ||
+        tx.name?.toLowerCase().includes(term) ||
+        tx.master_acct_code?.toLowerCase().includes(term) ||
+        tx.document?.toLowerCase().includes(term)
+      );
+    }
+
+    // Account filter
+    if (accountFilter !== "all") {
+      filtered = filtered.filter(tx => tx.master_acct_code === accountFilter);
+    }
+
+    // Currency filter
+    if (currencyFilter !== "all") {
+      filtered = filtered.filter(tx => tx.currency === currencyFilter);
+    }
     
     return filtered;
-  }, [nonVoidedTransactions, startDate, endDate]);
+  }, [nonVoidedTransactions, startDate, endDate, searchTerm, accountFilter, currencyFilter]);
 
   // Get transaction IDs to fetch attachments
   const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
@@ -554,16 +594,55 @@ export default function Reports() {
           </Card>
         </div>
 
-        {/* Date Range Filter Bar */}
+        {/* Filters Bar */}
         <Card>
           <CardContent className="py-4">
             <div className="flex flex-wrap items-center gap-4">
-              <span className="text-sm font-medium text-muted-foreground">Filter by Date:</span>
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por descripción, nombre, cuenta o documento..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {/* Account Filter */}
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Cuenta" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  <SelectItem value="all">Todas las Cuentas</SelectItem>
+                  {usedAccounts.map((code) => (
+                    <SelectItem key={code} value={code!}>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Currency Filter */}
+              <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Moneda" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="DOP">DOP</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Date Range */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yyyy") : "Start Date"}
+                    {startDate ? format(startDate, "dd/MM/yyyy") : "Desde"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -576,12 +655,11 @@ export default function Reports() {
                   />
                 </PopoverContent>
               </Popover>
-              <span className="text-muted-foreground">to</span>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yyyy") : "End Date"}
+                    {endDate ? format(endDate, "dd/MM/yyyy") : "Hasta"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -596,13 +674,15 @@ export default function Reports() {
               </Popover>
               {(startDate || endDate) && (
                 <Button variant="ghost" size="sm" onClick={() => { setStartDate(undefined); setEndDate(undefined); }}>
-                  Clear Dates
+                  Limpiar Fechas
                 </Button>
               )}
+
+              {/* Limit & Count */}
               <div className="flex items-center gap-2 ml-auto">
-                <span className="text-sm text-muted-foreground">Limit:</span>
+                <span className="text-sm text-muted-foreground">Límite:</span>
                 <Select value={limit} onValueChange={setLimit}>
-                  <SelectTrigger className="w-[120px]">
+                  <SelectTrigger className="w-[100px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
@@ -620,7 +700,7 @@ export default function Reports() {
                   </SelectContent>
                 </Select>
                 <span className="text-sm text-muted-foreground">
-                  Showing {sortedTransactions.length} transactions
+                  {sortedTransactions.length} transacciones
                 </span>
               </div>
             </div>

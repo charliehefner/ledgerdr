@@ -154,6 +154,7 @@ export default function Reports() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(tx =>
+        tx.id?.toLowerCase().includes(term) ||
         tx.description?.toLowerCase().includes(term) ||
         tx.name?.toLowerCase().includes(term) ||
         tx.master_acct_code?.toLowerCase().includes(term) ||

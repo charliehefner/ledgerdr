@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -301,7 +302,7 @@ export function OperationsLogView() {
   const filteredOperations = useMemo(() => {
     if (!operations) return [];
     let result = operations.filter((op) => {
-      const opDate = new Date(op.operation_date);
+      const opDate = parseDateLocal(op.operation_date);
       if (startDate && endDate) {
         return isWithinInterval(opDate, {
           start: startOfDay(startDate),
@@ -317,7 +318,7 @@ export function OperationsLogView() {
         let comparison = 0;
         switch (sortColumn) {
           case "date":
-            comparison = new Date(a.operation_date).getTime() - new Date(b.operation_date).getTime();
+            comparison = parseDateLocal(a.operation_date).getTime() - parseDateLocal(b.operation_date).getTime();
             break;
           case "field":
             comparison = a.fields.name.localeCompare(b.fields.name);
@@ -413,7 +414,7 @@ export function OperationsLogView() {
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
       const record = {
-        operation_date: format(data.operation_date, "yyyy-MM-dd"),
+        operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
         operation_type_id: data.operation_type_id,
         tractor_id: isMechanical && data.tractor_id ? data.tractor_id : null,
@@ -485,7 +486,7 @@ export function OperationsLogView() {
   const updateMutation = useMutation({
     mutationFn: async ({ operationId, data }: { operationId: string; data: typeof form }) => {
       const record = {
-        operation_date: format(data.operation_date, "yyyy-MM-dd"),
+        operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
         operation_type_id: data.operation_type_id,
         tractor_id: isMechanical && data.tractor_id ? data.tractor_id : null,

@@ -18,6 +18,9 @@ export function formatCurrency(
 /**
  * Format a date string to a readable format
  * Uses es-DO locale for Spanish formatting
+ * 
+ * IMPORTANT: Parses YYYY-MM-DD strings as local dates to prevent
+ * timezone-related off-by-one-day errors.
  */
 export function formatDate(
   dateString: string,
@@ -27,7 +30,14 @@ export function formatDate(
     day: "numeric",
   }
 ): string {
-  const date = new Date(dateString);
+  // Parse date as local to avoid UTC timezone shift
+  // "2024-01-03" should display as Jan 3, not Jan 2
+  const parts = dateString.split('T')[0].split('-');
+  const date = new Date(
+    parseInt(parts[0], 10),
+    parseInt(parts[1], 10) - 1,
+    parseInt(parts[2], 10)
+  );
   return date.toLocaleDateString("es-DO", options);
 }
 

@@ -155,7 +155,16 @@ export default function Dashboard() {
                   <TableRow key={tx.id}>
                     {pendingNcfColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
                     {pendingNcfColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
-                    {pendingNcfColumns.isVisible("account") && <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>}
+                    {pendingNcfColumns.isVisible("account") && (
+                      <TableCell>
+                        <div>
+                          <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                            {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                          </p>
+                        </div>
+                      </TableCell>
+                    )}
                     {pendingNcfColumns.isVisible("description") && <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>}
                     {pendingNcfColumns.isVisible("document") && <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>}
                     {pendingNcfColumns.isVisible("name") && <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>}
@@ -221,7 +230,16 @@ export default function Dashboard() {
                   <TableRow key={tx.id}>
                     {withoutAttachmentColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
                     {withoutAttachmentColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
-                    {withoutAttachmentColumns.isVisible("account") && <TableCell>{getAccountDescription(tx.master_acct_code)}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("account") && (
+                      <TableCell>
+                        <div>
+                          <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                            {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                          </p>
+                        </div>
+                      </TableCell>
+                    )}
                     {withoutAttachmentColumns.isVisible("description") && <TableCell className="max-w-[200px] truncate">{tx.description}</TableCell>}
                     {withoutAttachmentColumns.isVisible("document") && <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>}
                     {withoutAttachmentColumns.isVisible("name") && <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>}

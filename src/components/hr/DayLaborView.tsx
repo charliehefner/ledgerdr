@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isFriday, isAfter, startOfDay, eachDayOfInterval, getDay } from "date-fns";
+import { format, addWeeks, subWeeks, isAfter, startOfDay, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { createTransaction } from "@/lib/api";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
 
 interface DayLaborEntry {
   id: string;
@@ -48,7 +49,7 @@ export function DayLaborView() {
   const queryClient = useQueryClient();
   const [selectedFriday, setSelectedFriday] = useState(() => getFridayOfWeek(new Date()));
   const [newEntry, setNewEntry] = useState({
-    work_date: format(new Date(), "yyyy-MM-dd"),
+    work_date: formatDateLocal(new Date()),
     operation_description: "",
     worker_name: "",
     workers_count: "1",
@@ -68,12 +69,12 @@ export function DayLaborView() {
 
   // Fetch entries for the selected week
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["day-labor", format(selectedFriday, "yyyy-MM-dd")],
+    queryKey: ["day-labor", formatDateLocal(selectedFriday)],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("day_labor_entries")
         .select("*")
-        .eq("week_ending_date", format(selectedFriday, "yyyy-MM-dd"))
+        .eq("week_ending_date", formatDateLocal(selectedFriday))
         .order("work_date", { ascending: true })
         .order("created_at", { ascending: true });
 
@@ -94,7 +95,7 @@ export function DayLaborView() {
     mutationFn: async (entry: typeof newEntry) => {
       const { error } = await supabase.from("day_labor_entries").insert({
         work_date: entry.work_date,
-        week_ending_date: format(selectedFriday, "yyyy-MM-dd"),
+        week_ending_date: formatDateLocal(selectedFriday),
         operation_description: entry.operation_description,
         worker_name: entry.worker_name || "",
         workers_count: parseInt(entry.workers_count) || 1,
@@ -106,7 +107,7 @@ export function DayLaborView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
       setNewEntry({
-        work_date: format(new Date(), "yyyy-MM-dd"),
+        work_date: formatDateLocal(new Date()),
         operation_description: "",
         worker_name: "",
         workers_count: "1",
@@ -148,7 +149,7 @@ export function DayLaborView() {
     doc.text(`Total Entradas: ${entries.length}`, 14, 37);
     
     const tableData = entries.map(entry => [
-      format(new Date(entry.work_date), "dd/MM/yyyy"),
+      format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
       entry.operation_description,
       entry.workers_count.toString(),
       entry.worker_name || "-",
@@ -185,14 +186,14 @@ export function DayLaborView() {
       const { error: updateError } = await supabase
         .from("day_labor_entries")
         .update({ is_closed: true })
-        .eq("week_ending_date", format(selectedFriday, "yyyy-MM-dd"));
+        .eq("week_ending_date", formatDateLocal(selectedFriday));
 
       if (updateError) throw updateError;
 
       // Create transaction
       const fridayStr = format(selectedFriday, "dd/MM/yyyy");
       await createTransaction({
-        transaction_date: format(selectedFriday, "yyyy-MM-dd"),
+        transaction_date: formatDateLocal(selectedFriday),
         master_acct_code: "7010",
         description: `Jornales Semana ${fridayStr}`,
         currency: "DOP",
@@ -414,7 +415,7 @@ export function DayLaborView() {
                   {entries.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="font-medium">
-                        {format(new Date(entry.work_date), "EEE dd/MM", { locale: es })}
+                        {format(parseDateLocal(entry.work_date), "EEE dd/MM", { locale: es })}
                       </TableCell>
                       <TableCell>{entry.operation_description}</TableCell>
                       <TableCell className="text-center">{entry.workers_count}</TableCell>

@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
 import { getAttachmentUrls } from "@/lib/attachments";
 import { getDescription } from "@/lib/getDescription";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ import {
 } from "@/components/ui/table";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
+import { AttachmentCell } from "@/components/transactions/AttachmentCell";
 
 const PENDING_NCF_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
@@ -34,6 +37,7 @@ const PENDING_NCF_COLUMNS: ColumnConfig[] = [
   { key: "name", label: "Nombre", defaultVisible: false },
   { key: "comments", label: "Comentarios", defaultVisible: false },
   { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
+  { key: "attach", label: "Adjunto", defaultVisible: true },
 ];
 
 const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
@@ -52,9 +56,14 @@ const WITHOUT_ATTACHMENT_COLUMNS: ColumnConfig[] = [
   { key: "name", label: "Nombre", defaultVisible: false },
   { key: "comments", label: "Comentarios", defaultVisible: false },
   { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
+  { key: "attach", label: "Adjunto", defaultVisible: true },
 ];
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
   const pendingNcfColumns = useColumnVisibility("dashboard-pending-ncf", PENDING_NCF_COLUMNS);
   const withoutAttachmentColumns = useColumnVisibility("dashboard-without-attachment", WITHOUT_ATTACHMENT_COLUMNS);
 
@@ -99,6 +108,16 @@ export default function Dashboard() {
   const visibleNcfCount = pendingNcfColumns.visibleColumns.length;
   const visibleAttachCount = withoutAttachmentColumns.visibleColumns.length;
 
+  const handleRowClick = (tx: Transaction) => {
+    setSelectedTransaction(tx);
+    setEditDialogOpen(true);
+  };
+
+  const handleAttachmentUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['allTransactions'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboardAttachments'] });
+  };
+
   return (
     <MainLayout title="Panel" subtitle="Resumen de sus facturas de gastos">
       <div className="space-y-6 animate-fade-in">
@@ -135,6 +154,7 @@ export default function Dashboard() {
                 {pendingNcfColumns.isVisible("name") && <TableHead>Nombre</TableHead>}
                 {pendingNcfColumns.isVisible("currency") && <TableHead>Moneda</TableHead>}
                 {pendingNcfColumns.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
+                {pendingNcfColumns.isVisible("attach") && <TableHead className="text-center">Adjunto</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -152,7 +172,11 @@ export default function Dashboard() {
                 </TableRow>
               ) : (
                 transactionsWithoutDocument.map((tx) => (
-                  <TableRow key={tx.id}>
+                  <TableRow 
+                    key={tx.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(tx)}
+                  >
                     {pendingNcfColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
                     {pendingNcfColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {pendingNcfColumns.isVisible("account") && (
@@ -170,6 +194,19 @@ export default function Dashboard() {
                     {pendingNcfColumns.isVisible("name") && <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>}
                     {pendingNcfColumns.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
                     {pendingNcfColumns.isVisible("amount") && <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>}
+                    {pendingNcfColumns.isVisible("attach") && (
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        {tx.id ? (
+                          <AttachmentCell
+                            transactionId={tx.id}
+                            attachmentUrl={attachments[String(tx.id)] || null}
+                            onUpdate={handleAttachmentUpdate}
+                          />
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -210,6 +247,7 @@ export default function Dashboard() {
                 {withoutAttachmentColumns.isVisible("name") && <TableHead>Nombre</TableHead>}
                 {withoutAttachmentColumns.isVisible("currency") && <TableHead>Moneda</TableHead>}
                 {withoutAttachmentColumns.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
+                {withoutAttachmentColumns.isVisible("attach") && <TableHead className="text-center">Adjunto</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -227,7 +265,11 @@ export default function Dashboard() {
                 </TableRow>
               ) : (
                 transactionsWithoutAttachment.map((tx) => (
-                  <TableRow key={tx.id}>
+                  <TableRow 
+                    key={tx.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(tx)}
+                  >
                     {withoutAttachmentColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
                     {withoutAttachmentColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {withoutAttachmentColumns.isVisible("account") && (
@@ -245,6 +287,19 @@ export default function Dashboard() {
                     {withoutAttachmentColumns.isVisible("name") && <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>}
                     {withoutAttachmentColumns.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
                     {withoutAttachmentColumns.isVisible("amount") && <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>}
+                    {withoutAttachmentColumns.isVisible("attach") && (
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        {tx.id ? (
+                          <AttachmentCell
+                            transactionId={tx.id}
+                            attachmentUrl={attachments[String(tx.id)] || null}
+                            onUpdate={handleAttachmentUpdate}
+                          />
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -252,6 +307,12 @@ export default function Dashboard() {
           </Table>
         </div>
       </div>
+
+      <EditTransactionDialog
+        transaction={selectedTransaction}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </MainLayout>
   );
 }

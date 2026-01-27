@@ -143,6 +143,11 @@ export function OperationsLogView() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "management" || user?.role === "supervisor";
+  
+  // Debug logging
+  console.log("OperationsLogView - user:", user);
+  console.log("OperationsLogView - user.role:", user?.role);
+  console.log("OperationsLogView - canEdit:", canEdit);
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
   const [form, setForm] = useState({

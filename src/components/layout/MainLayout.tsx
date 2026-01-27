@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, MobileSidebar } from "./Sidebar";
 import { Bell, Search, LogOut, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ interface MainLayoutProps {
 export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const handleLogout = () => {
     logout();
@@ -36,25 +38,30 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
       
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
+          <div className="flex items-center gap-3">
+            {/* Mobile menu button */}
+            <MobileSidebar />
+            
             {title && (
               <div>
                 <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-                {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+                {subtitle && <p className="text-sm text-muted-foreground hidden sm:block">{subtitle}</p>}
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar facturas..."
-                className="pl-9 bg-background"
-              />
-            </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Search - hide on mobile */}
+            {!isMobile && (
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar facturas..."
+                  className="pl-9 bg-background"
+                />
+              </div>
+            )}
             
             {/* Notifications */}
             <button className="relative p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
@@ -67,8 +74,8 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2">
                   <User className="h-4 w-4" />
-                  <span>{user?.email}</span>
-                  <span className="text-xs text-muted-foreground capitalize">({user?.role})</span>
+                  <span className="hidden sm:inline">{user?.email}</span>
+                  <span className="hidden md:inline text-xs text-muted-foreground capitalize">({user?.role})</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -91,7 +98,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </div>

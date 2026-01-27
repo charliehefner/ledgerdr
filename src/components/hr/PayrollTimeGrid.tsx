@@ -308,9 +308,15 @@ export function PayrollTimeGrid({
       const otherField = field === "start_time" ? "end_time" : "start_time";
       const otherValue = existing[otherField];
       
-      // If both times would be empty after this change, delete the entry entirely
+      // If both times would be empty after this change, mark as absent instead of deleting
       if (!otherValue) {
-        deleteTimesheet.mutate({ employeeId, date: dateStr });
+        const absentEntry: TimesheetEntry = {
+          ...existing,
+          start_time: null,
+          end_time: null,
+          is_absent: true,
+        };
+        saveTimesheet.mutate(absentEntry);
         return;
       }
     }
@@ -327,11 +333,48 @@ export function PayrollTimeGrid({
           is_holiday: false,
         };
 
-    // Only mark as absent if there's an explicit entry with no times
-    // Empty cells (no entry) are neutral, not absent
-    entry.is_absent = false;
+    // If we have valid times, clear the absent flag
+    if (entry.start_time && entry.end_time) {
+      entry.is_absent = false;
+    }
 
     saveTimesheet.mutate(entry);
+  };
+
+  // Toggle absent status for a specific day and employee
+  const toggleAbsentForDay = (employeeId: string, date: Date) => {
+    if (!periodId) return;
+    
+    const dateStr = format(date, "yyyy-MM-dd");
+    const existing = getTimesheetEntry(employeeId, date);
+    
+    if (existing) {
+      // If already absent, delete the entry to clear it
+      if (existing.is_absent && !existing.start_time && !existing.end_time) {
+        deleteTimesheet.mutate({ employeeId, date: dateStr });
+      } else {
+        // Mark as absent by clearing times and setting flag
+        const absentEntry: TimesheetEntry = {
+          ...existing,
+          start_time: null,
+          end_time: null,
+          is_absent: true,
+        };
+        saveTimesheet.mutate(absentEntry);
+      }
+    } else {
+      // Create new absent entry
+      const absentEntry = {
+        employee_id: employeeId,
+        period_id: periodId,
+        work_date: dateStr,
+        start_time: null,
+        end_time: null,
+        is_absent: true,
+        is_holiday: false,
+      };
+      saveTimesheet.mutate(absentEntry);
+    }
   };
 
   // Toggle holiday status for a specific day (affects all employees on that day)
@@ -692,22 +735,44 @@ export function PayrollTimeGrid({
                             </div>
                           )}
                           <div className="flex flex-col gap-0.5">
-                            <TimeInput
-                              value={entry?.start_time || null}
-                              onChange={(val) =>
-                                handleTimeChange(employee.id, day, "start_time", val)
-                              }
-                              defaultPeriod="AM"
-                              disabled={isVacation}
-                            />
-                            <TimeInput
-                              value={entry?.end_time || null}
-                              onChange={(val) =>
-                                handleTimeChange(employee.id, day, "end_time", val)
-                              }
-                              defaultPeriod={endTimeDefaultPeriod}
-                              disabled={isVacation}
-                            />
+                            {!isAbsent ? (
+                              <>
+                                <TimeInput
+                                  value={entry?.start_time || null}
+                                  onChange={(val) =>
+                                    handleTimeChange(employee.id, day, "start_time", val)
+                                  }
+                                  defaultPeriod="AM"
+                                  disabled={isVacation}
+                                />
+                                <TimeInput
+                                  value={entry?.end_time || null}
+                                  onChange={(val) =>
+                                    handleTimeChange(employee.id, day, "end_time", val)
+                                  }
+                                  defaultPeriod={endTimeDefaultPeriod}
+                                  disabled={isVacation}
+                                />
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => toggleAbsentForDay(employee.id, day)}
+                                className="text-red-600 dark:text-red-400 font-bold text-sm py-2 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-colors"
+                                title="Click para quitar ausencia"
+                              >
+                                AUSENTE
+                              </button>
+                            )}
+                            {/* Toggle absent button - only show when not vacation and not already absent */}
+                            {!isVacation && !isAbsent && !hasData && !sunday && (
+                              <button
+                                onClick={() => toggleAbsentForDay(employee.id, day)}
+                                className="text-[10px] text-muted-foreground hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded px-1 py-0.5 transition-colors"
+                                title="Marcar como ausente"
+                              >
+                                AUS
+                              </button>
+                            )}
                           </div>
                         </td>
                       );

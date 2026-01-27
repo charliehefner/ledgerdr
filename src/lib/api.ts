@@ -93,7 +93,6 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     .from('transactions')
     .select('*')
     .eq('is_void', false)
-    .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
   

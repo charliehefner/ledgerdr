@@ -254,16 +254,22 @@ export function OperationsLogView() {
     });
   }, [operations, startDate, endDate]);
 
-  // Stats
-  const totalHectares = filteredOperations.reduce((sum, op) => sum + op.hectares_done, 0);
-  const totalHours = filteredOperations.reduce((sum, op) => {
-    if (op.start_hours != null && op.end_hours != null) {
-      return sum + (op.end_hours - op.start_hours);
-    }
-    return sum;
-  }, 0);
-  const mechanicalCount = filteredOperations.filter(op => op.operation_types.is_mechanical).length;
-  const manualCount = filteredOperations.filter(op => !op.operation_types.is_mechanical).length;
+  // Top 5 operations by hectares
+  const top5Operations = useMemo(() => {
+    const operationHectares: Record<string, { name: string; hectares: number }> = {};
+    
+    filteredOperations.forEach((op) => {
+      const opName = op.operation_types.name;
+      if (!operationHectares[opName]) {
+        operationHectares[opName] = { name: opName, hectares: 0 };
+      }
+      operationHectares[opName].hectares += op.hectares_done;
+    });
+    
+    return Object.values(operationHectares)
+      .sort((a, b) => b.hectares - a.hectares)
+      .slice(0, 5);
+  }, [filteredOperations]);
 
   const addInput = () => {
     if (!newInput.inventory_item_id || !newInput.quantity_used) {
@@ -440,54 +446,35 @@ export function OperationsLogView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hectáreas</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalHectares.toFixed(1)} ha</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Horas</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalHours.toFixed(1)} hrs</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operaciones</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredOperations.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mecánicas</CardTitle>
-            <Tractor className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{mechanicalCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Manuales</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{manualCount}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Top 5 Operations by Hectares */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Top 5 Operaciones por Hectáreas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {top5Operations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay operaciones en este período</p>
+          ) : (
+            <Table>
+              <TableBody>
+                {top5Operations.map((op, index) => (
+                  <TableRow key={op.name}>
+                    <TableCell className="font-medium py-2">
+                      Hectáreas {op.name}:
+                    </TableCell>
+                    <TableCell className="text-right font-mono py-2">
+                      {op.hectares.toFixed(1)} ha
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Filters and Add Button */}
       <div className="flex flex-wrap items-center gap-4">

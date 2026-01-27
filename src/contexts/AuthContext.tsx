@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
+import { UserRole, canAccessSection, canWriteSection, Section, getDefaultRouteForRole } from "@/lib/permissions";
 
-export type UserRole = "admin" | "accountant";
+export type { UserRole };
 
 interface AuthUser {
   id: string;
@@ -17,6 +18,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   canModifySettings: boolean;
+  canAccessSection: (section: Section) => boolean;
+  canWriteSection: (section: Section) => boolean;
+  getDefaultRoute: () => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,10 +123,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Accountant cannot modify settings/structural changes
-  const canModifySettings = user?.role === "admin";
+  const canModifySettingsValue = user?.role === "admin";
+
+  // Permission helper functions
+  const checkAccessSection = (section: Section) => canAccessSection(user?.role, section);
+  const checkWriteSection = (section: Section) => canWriteSection(user?.role, section);
+  const getDefaultRoute = () => getDefaultRouteForRole(user?.role || "viewer");
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, login, logout, canModifySettings }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      isLoading, 
+      login, 
+      logout, 
+      canModifySettings: canModifySettingsValue,
+      canAccessSection: checkAccessSection,
+      canWriteSection: checkWriteSection,
+      getDefaultRoute,
+    }}>
       {children}
     </AuthContext.Provider>
   );

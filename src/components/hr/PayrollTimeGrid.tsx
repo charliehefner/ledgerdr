@@ -652,7 +652,8 @@ export function PayrollTimeGrid({
                       // Determine cell status for coloring
                       const hasData = entry?.start_time && entry?.end_time;
                       // Absent = has entry with is_absent flag AND not a holiday AND not vacation
-                      const isAbsent = !isHoliday && !isVacation && entry?.is_absent;
+                      // OR has entry with no times and is_absent is true
+                      const isAbsent = !sunday && !isHoliday && !isVacation && entry?.is_absent && !hasData;
                       const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
                       
                       return (
@@ -665,7 +666,7 @@ export function PayrollTimeGrid({
                             // Status-based colors (priority order: vacation > holiday > absent > overtime > filled)
                             !sunday && isVacation && "bg-violet-300 dark:bg-violet-900",
                             !sunday && !isVacation && isHoliday && "bg-amber-300 dark:bg-amber-800",
-                            !sunday && !isVacation && !isHoliday && isAbsent && "bg-red-300 dark:bg-red-800",
+                            !sunday && !isVacation && !isHoliday && isAbsent && "bg-red-100 dark:bg-red-900/50",
                             !sunday && !isVacation && !isAbsent && !isHoliday && hasOvertime && "bg-orange-200 dark:bg-orange-900",
                             !sunday && !isVacation && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-200 dark:bg-green-900",
                             // Alternating day stripes for empty cells

@@ -804,75 +804,87 @@ export default function Reports() {
                       </TableCell>
                     </TableRow>
                   ) : sortedTransactions.length > 0 ? (
-                    sortedTransactions.map((tx, index) => (
-                      <TableRow key={tx.id || index}>
-                        {columnVisibility.isVisible("id") && (
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {tx.id || "-"}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("date") && (
-                          <TableCell className="font-mono text-sm whitespace-nowrap">
-                            {formatDate(tx.transaction_date)}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("account") && (
-                          <TableCell className="font-mono">{tx.master_acct_code || "-"}</TableCell>
-                        )}
-                        {columnVisibility.isVisible("project") && (
-                          <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
-                        )}
-                        {columnVisibility.isVisible("cbs") && (
-                          <TableCell className="font-mono">{tx.cbs_code || "-"}</TableCell>
-                        )}
-                        {columnVisibility.isVisible("description") && (
-                          <TableCell className="max-w-[180px] truncate">
-                            {tx.description || "-"}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
-                        {columnVisibility.isVisible("amount") && (
-                          <TableCell className="text-right font-mono font-medium">
-                            {formatCurrency(tx.amount, tx.currency)}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("itbis") && (
-                          <TableCell className="text-right font-mono">
-                            {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
-                        {columnVisibility.isVisible("document") && (
-                          <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
-                        )}
-                        {columnVisibility.isVisible("name") && (
-                          <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>
-                        )}
-                        {columnVisibility.isVisible("exchangeRate") && (
-                          <TableCell className="text-right font-mono">
-                            {tx.exchange_rate || "-"}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("internal") && (
-                          <TableCell className="text-center">
-                            {tx.is_internal ? "Yes" : "No"}
-                          </TableCell>
-                        )}
-                        {columnVisibility.isVisible("attach") && (
-                          <TableCell className="text-center">
-                            {tx.id ? (
-                              <AttachmentCell
-                                transactionId={tx.id}
-                                attachmentUrl={attachments[String(tx.id)] || null}
-                                onUpdate={handleAttachmentUpdate}
-                              />
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
+                    sortedTransactions.map((tx, index) => {
+                      const missingDocument = !tx.document || tx.document.trim() === '';
+                      const missingAttachment = tx.id && !attachments[String(tx.id)];
+                      
+                      // Amber for missing NCF, Rose for missing attachment (amber takes priority if both)
+                      const rowClass = missingDocument 
+                        ? "bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50"
+                        : missingAttachment 
+                          ? "bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50"
+                          : "";
+
+                      return (
+                        <TableRow key={tx.id || index} className={rowClass}>
+                          {columnVisibility.isVisible("id") && (
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {tx.id || "-"}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("date") && (
+                            <TableCell className="font-mono text-sm whitespace-nowrap">
+                              {formatDate(tx.transaction_date)}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("account") && (
+                            <TableCell className="font-mono">{tx.master_acct_code || "-"}</TableCell>
+                          )}
+                          {columnVisibility.isVisible("project") && (
+                            <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
+                          )}
+                          {columnVisibility.isVisible("cbs") && (
+                            <TableCell className="font-mono">{tx.cbs_code || "-"}</TableCell>
+                          )}
+                          {columnVisibility.isVisible("description") && (
+                            <TableCell className="max-w-[180px] truncate">
+                              {tx.description || "-"}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("currency") && <TableCell>{tx.currency}</TableCell>}
+                          {columnVisibility.isVisible("amount") && (
+                            <TableCell className="text-right font-mono font-medium">
+                              {formatCurrency(tx.amount, tx.currency)}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("itbis") && (
+                            <TableCell className="text-right font-mono">
+                              {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
+                          {columnVisibility.isVisible("document") && (
+                            <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
+                          )}
+                          {columnVisibility.isVisible("name") && (
+                            <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>
+                          )}
+                          {columnVisibility.isVisible("exchangeRate") && (
+                            <TableCell className="text-right font-mono">
+                              {tx.exchange_rate || "-"}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("internal") && (
+                            <TableCell className="text-center">
+                              {tx.is_internal ? "Yes" : "No"}
+                            </TableCell>
+                          )}
+                          {columnVisibility.isVisible("attach") && (
+                            <TableCell className="text-center">
+                              {tx.id ? (
+                                <AttachmentCell
+                                  transactionId={tx.id}
+                                  attachmentUrl={attachments[String(tx.id)] || null}
+                                  onUpdate={handleAttachmentUpdate}
+                                />
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={visibleCount} className="text-center py-8 text-muted-foreground">

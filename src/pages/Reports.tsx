@@ -87,7 +87,7 @@ const REPORT_COLUMNS: ColumnConfig[] = [
   { key: "attach", label: "Attach", defaultVisible: true },
 ];
 
-type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "description" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "exchange_rate" | "is_internal";
+type SortKey = "id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "description" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "exchange_rate" | "is_internal";
 type SortDirection = "asc" | "desc" | null;
 
 export default function Reports() {
@@ -725,7 +725,9 @@ export default function Reports() {
                 <TableHeader>
                   <TableRow>
                     {columnVisibility.isVisible("id") && (
-                      <TableHead>ID</TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("id")}>
+                        <div className="flex items-center">ID<SortIcon columnKey="id" /></div>
+                      </TableHead>
                     )}
                     {columnVisibility.isVisible("date") && (
                       <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("transaction_date")}>

@@ -1102,7 +1102,7 @@ export function OperationsLogView() {
           <TableBody>
             {filteredOperations.map((op) => (
               <TableRow key={op.id}>
-                {isVisible("date") && <TableCell>{format(new Date(op.operation_date), "MMM d, yyyy")}</TableCell>}
+                {isVisible("date") && <TableCell>{format(parseDateLocal(op.operation_date), "MMM d, yyyy")}</TableCell>}
                 {isVisible("field") && <TableCell className="font-medium">{op.fields.name}</TableCell>}
                 {isVisible("farm") && <TableCell>{op.fields.farms.name}</TableCell>}
                 {isVisible("operation") && (

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { parseDateLocal } from "@/lib/dateUtils";
 import {
   Dialog,
   DialogContent,
@@ -89,7 +90,7 @@ export function PurchaseHistoryDialog({
                 {purchases.map((purchase) => (
                   <TableRow key={purchase.id}>
                     <TableCell>
-                      {format(new Date(purchase.purchase_date), "MMM d, yyyy")}
+                      {format(parseDateLocal(purchase.purchase_date), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell>{purchase.document_number || "-"}</TableCell>
                     <TableCell className="text-right">

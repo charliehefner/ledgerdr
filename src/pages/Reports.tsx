@@ -42,6 +42,7 @@ import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { getDescription } from "@/lib/getDescription";
@@ -115,7 +116,7 @@ export default function Reports() {
     // Date range filters
     if (startDate) {
       filtered = filtered.filter(tx => {
-        const txDate = new Date(tx.transaction_date);
+        const txDate = parseDateLocal(tx.transaction_date);
         return txDate >= startDate;
       });
     }
@@ -124,7 +125,7 @@ export default function Reports() {
       const endOfDay = new Date(endDate);
       endOfDay.setHours(23, 59, 59, 999);
       filtered = filtered.filter(tx => {
-        const txDate = new Date(tx.transaction_date);
+        const txDate = parseDateLocal(tx.transaction_date);
         return txDate <= endOfDay;
       });
     }

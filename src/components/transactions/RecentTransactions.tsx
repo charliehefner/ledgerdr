@@ -64,8 +64,8 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     queryFn: () => fetchRecentTransactions(20),
   });
 
-  // Filter out voided transactions
-  const transactions = allTransactions.filter(tx => !tx.is_void);
+  // Transactions already filtered at database level
+  const transactions = allTransactions;
 
   // Get transaction IDs to fetch attachments
   const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];

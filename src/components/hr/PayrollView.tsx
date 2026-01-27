@@ -111,10 +111,10 @@ export function PayrollView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
-      toast.success("Payroll period created");
+      toast.success("Período de nómina creado");
     },
     onError: (error) => {
-      toast.error("Failed to create period: " + error.message);
+      toast.error("Error al crear período: " + error.message);
     },
   });
 
@@ -129,7 +129,7 @@ export function PayrollView() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Payroll Time Sheet Nomina {nominaNumber}</CardTitle>
+          <CardTitle>Hoja de Tiempo Nómina {nominaNumber}</CardTitle>
           <div className="flex items-center gap-4">
             <PayrollPeriodSelector
               selectedPeriod={selectedPeriod}
@@ -138,7 +138,7 @@ export function PayrollView() {
             {!periodData && !periodLoading && (
               <Button onClick={() => createPeriod.mutate()} disabled={createPeriod.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Period
+                Crear Período
               </Button>
             )}
           </div>
@@ -146,16 +146,16 @@ export function PayrollView() {
         <CardContent>
           {periodLoading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Loading period...
+              Cargando período...
             </div>
           ) : !periodData ? (
             <div className="text-center py-8 text-muted-foreground">
-              No period exists for this date range. Click "Create Period" to start.
+              No existe un período para este rango de fechas. Haga clic en "Crear Período" para comenzar.
             </div>
           ) : (
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Status:</span>
+                <span>Estado:</span>
                 <span
                   className={`font-medium ${
                     periodData.status === "open"
@@ -165,14 +165,14 @@ export function PayrollView() {
                       : "text-blue-600"
                   }`}
                 >
-                  {periodData.status.toUpperCase()}
+                  {periodData.status === "open" ? "ABIERTO" : periodData.status === "closed" ? "CERRADO" : periodData.status.toUpperCase()}
                 </span>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
-                  <TabsTrigger value="timesheet">Time Sheet</TabsTrigger>
-                  <TabsTrigger value="summary">Summary & Close</TabsTrigger>
+                  <TabsTrigger value="timesheet">Hoja de Tiempo</TabsTrigger>
+                  <TabsTrigger value="summary">Resumen y Cierre</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="timesheet" className="mt-4">

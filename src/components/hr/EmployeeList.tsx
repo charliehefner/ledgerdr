@@ -16,6 +16,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
@@ -45,18 +46,18 @@ type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
 
 const EMPLOYEE_COLUMNS: ColumnConfig[] = [
-  { key: "name", label: "Name", defaultVisible: true },
+  { key: "name", label: "Nombre", defaultVisible: true },
   { key: "cedula", label: "Cédula", defaultVisible: true },
-  { key: "position", label: "Position", defaultVisible: true },
-  { key: "date_of_hire", label: "Date of Hire", defaultVisible: true },
-  { key: "salary", label: "Salary", defaultVisible: true },
-  { key: "bank", label: "Bank", defaultVisible: false },
-  { key: "bank_account_number", label: "Account #", defaultVisible: false },
-  { key: "date_of_birth", label: "Date of Birth", defaultVisible: false },
-  { key: "shirt_size", label: "Shirt Size", defaultVisible: false },
-  { key: "pant_size", label: "Pant Size", defaultVisible: false },
-  { key: "boot_size", label: "Boot Size", defaultVisible: false },
-  { key: "is_active", label: "Status", defaultVisible: true },
+  { key: "position", label: "Posición", defaultVisible: true },
+  { key: "date_of_hire", label: "Fecha de Ingreso", defaultVisible: true },
+  { key: "salary", label: "Salario", defaultVisible: true },
+  { key: "bank", label: "Banco", defaultVisible: false },
+  { key: "bank_account_number", label: "Núm. Cuenta", defaultVisible: false },
+  { key: "date_of_birth", label: "Fecha de Nacimiento", defaultVisible: false },
+  { key: "shirt_size", label: "Talla Camisa", defaultVisible: false },
+  { key: "pant_size", label: "Talla Pantalón", defaultVisible: false },
+  { key: "boot_size", label: "Talla Botas", defaultVisible: false },
+  { key: "is_active", label: "Estado", defaultVisible: true },
 ];
 
 export function EmployeeList({ onEdit }: EmployeeListProps) {
@@ -171,10 +172,10 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "cedula":
         return <span className="font-mono text-sm">{employee.cedula}</span>;
       case "date_of_hire":
-        return format(new Date(employee.date_of_hire), "MMM d, yyyy");
+        return format(new Date(employee.date_of_hire), "d MMM yyyy", { locale: es });
       case "date_of_birth":
         return employee.date_of_birth
-          ? format(new Date(employee.date_of_birth), "MMM d, yyyy")
+          ? format(new Date(employee.date_of_birth), "d MMM yyyy", { locale: es })
           : "—";
       case "salary":
         return formatCurrency(employee.salary);
@@ -195,7 +196,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "is_active":
         return (
           <Badge variant={employee.is_active ? "default" : "secondary"}>
-            {employee.is_active ? "Active" : "Inactive"}
+            {employee.is_active ? "Activo" : "Inactivo"}
           </Badge>
         );
       default:
@@ -210,10 +211,10 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              <CardTitle>Employee Directory</CardTitle>
+              <CardTitle>Directorio de Empleados</CardTitle>
               {employees && (
                 <Badge variant="secondary" className="ml-2">
-                  {sortedAndFilteredEmployees.length} of {employees.length}
+                  {sortedAndFilteredEmployees.length} de {employees.length}
                 </Badge>
               )}
             </div>
@@ -221,7 +222,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search name, cédula, bank..."
+                  placeholder="Buscar nombre, cédula, banco..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -243,7 +244,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
             </div>
           ) : sortedAndFilteredEmployees.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? "No employees match your search" : "No employees found. Add your first employee!"}
+              {searchTerm ? "No hay empleados que coincidan con la búsqueda" : "No se encontraron empleados. ¡Agregue el primer empleado!"}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -264,7 +265,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                         </div>
                       </TableHead>
                     ))}
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -284,7 +285,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedEmployee(employee.id)}
-                            title="View Details & History"
+                            title="Ver Detalles e Historial"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -293,7 +294,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => onEdit(employee.id)}
-                              title="Edit Employee"
+                              title="Editar Empleado"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>

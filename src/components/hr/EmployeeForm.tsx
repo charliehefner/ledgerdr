@@ -29,14 +29,14 @@ import { UserPlus, Save } from "lucide-react";
 const POSITIONS = ["Obrero", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
 const employeeSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200),
-  cedula: z.string().min(1, "Cédula is required").max(20),
+  name: z.string().min(1, "El nombre es requerido").max(200),
+  cedula: z.string().min(1, "La cédula es requerida").max(20),
   position: z.enum(POSITIONS).default("Obrero"),
   bank: z.string().optional(),
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
-  date_of_hire: z.string().min(1, "Date of hire is required"),
-  salary: z.coerce.number().min(0, "Salary must be positive"),
+  date_of_hire: z.string().min(1, "La fecha de ingreso es requerida"),
+  salary: z.coerce.number().min(0, "El salario debe ser positivo"),
   boot_size: z.string().optional(),
   pant_size: z.string().optional(),
   shirt_size: z.string().optional(),
@@ -155,11 +155,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             employee_id: employeeId,
             salary: data.salary,
             effective_date: new Date().toISOString().split("T")[0],
-            notes: `Salary updated from ${employee.salary} to ${data.salary}`,
+            notes: `Salario actualizado de ${employee.salary} a ${data.salary}`,
           });
         }
 
-        toast.success("Employee updated successfully");
+        toast.success("Empleado actualizado exitosamente");
       } else {
         const { data: newEmployee, error } = await supabase
           .from("employees")
@@ -169,7 +169,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
 
         if (error) {
           if (error.code === "23505") {
-            toast.error("An employee with this cédula already exists");
+            toast.error("Ya existe un empleado con esta cédula");
             return;
           }
           throw error;
@@ -180,10 +180,10 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
           employee_id: newEmployee.id,
           salary: data.salary,
           effective_date: data.date_of_hire,
-          notes: "Initial salary",
+          notes: "Salario inicial",
         });
 
-        toast.success("Employee created successfully");
+        toast.success("Empleado creado exitosamente");
       }
 
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -191,7 +191,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
       onComplete();
     } catch (error) {
       console.error("Error saving employee:", error);
-      toast.error("Failed to save employee");
+      toast.error("Error al guardar empleado");
     }
   };
 
@@ -200,7 +200,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-primary" />
-          <CardTitle>{isEditing ? "Edit Employee" : "Add New Employee"}</CardTitle>
+          <CardTitle>{isEditing ? "Editar Empleado" : "Agregar Nuevo Empleado"}</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -209,7 +209,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Personal Information
+                Información Personal
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
@@ -217,7 +217,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name *</FormLabel>
+                      <FormLabel>Nombre Completo *</FormLabel>
                       <FormControl>
                         <Input placeholder="Juan Pérez" {...field} />
                       </FormControl>
@@ -245,7 +245,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="date_of_birth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
+                      <FormLabel>Fecha de Nacimiento</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -259,7 +259,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             {/* Employment Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Employment Information
+                Información Laboral
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField
@@ -267,11 +267,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="position"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Position *</FormLabel>
+                      <FormLabel>Posición *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select position" />
+                            <SelectValue placeholder="Seleccionar posición" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -292,7 +292,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="date_of_hire"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date of Hire *</FormLabel>
+                      <FormLabel>Fecha de Ingreso *</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -306,7 +306,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="salary"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Monthly Salary (DOP) *</FormLabel>
+                      <FormLabel>Salario Mensual (DOP) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -331,7 +331,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>
-                      <FormLabel className="font-normal">Active Employee</FormLabel>
+                      <FormLabel className="font-normal">Empleado Activo</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -341,7 +341,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             {/* Banking Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Banking Information
+                Información Bancaria
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -349,11 +349,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="bank"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bank</FormLabel>
+                      <FormLabel>Banco</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a bank" />
+                            <SelectValue placeholder="Seleccionar banco" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -374,9 +374,9 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="bank_account_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Account Number</FormLabel>
+                      <FormLabel>Número de Cuenta</FormLabel>
                       <FormControl>
-                        <Input placeholder="Account number" {...field} />
+                        <Input placeholder="Número de cuenta" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -388,7 +388,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             {/* Uniform Sizes */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Uniform Sizes
+                Tallas de Uniforme
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
@@ -396,11 +396,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="shirt_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Shirt Size</FormLabel>
+                      <FormLabel>Talla de Camisa</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select size" />
+                            <SelectValue placeholder="Seleccionar talla" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -421,11 +421,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="pant_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pant Size</FormLabel>
+                      <FormLabel>Talla de Pantalón</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select size" />
+                            <SelectValue placeholder="Seleccionar talla" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -446,11 +446,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
                   name="boot_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Boot Size</FormLabel>
+                      <FormLabel>Talla de Botas</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select size" />
+                            <SelectValue placeholder="Seleccionar talla" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -470,11 +470,11 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
 
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={onComplete}>
-                Cancel
+                Cancelar
               </Button>
               <Button type="submit">
                 <Save className="h-4 w-4 mr-2" />
-                {isEditing ? "Update Employee" : "Save Employee"}
+                {isEditing ? "Actualizar Empleado" : "Guardar Empleado"}
               </Button>
             </div>
           </form>

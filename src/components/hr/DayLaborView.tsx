@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isFriday, isAfter, startOfDay, eachDayOfInterval, getDay } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,10 +105,10 @@ export function DayLaborView() {
         worker_name: "",
         amount: "",
       });
-      toast({ title: "Entry added" });
+      toast({ title: "Entrada agregada" });
     },
     onError: (error) => {
-      toast({ title: "Error adding entry", description: error.message, variant: "destructive" });
+      toast({ title: "Error al agregar entrada", description: error.message, variant: "destructive" });
     },
   });
 
@@ -119,10 +120,10 @@ export function DayLaborView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
-      toast({ title: "Entry deleted" });
+      toast({ title: "Entrada eliminada" });
     },
     onError: (error) => {
-      toast({ title: "Error deleting entry", description: error.message, variant: "destructive" });
+      toast({ title: "Error al eliminar entrada", description: error.message, variant: "destructive" });
     },
   });
 
@@ -142,7 +143,7 @@ export function DayLaborView() {
       format(new Date(entry.work_date), "dd/MM/yyyy"),
       entry.operation_description,
       entry.worker_name,
-      `RD$ ${Number(entry.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+      `RD$ ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
     ]);
     
     // Add total row
@@ -150,7 +151,7 @@ export function DayLaborView() {
       "",
       "",
       "TOTAL:",
-      `RD$ ${weeklyTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+      `RD$ ${weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
     ]);
 
     autoTable(doc, {
@@ -185,10 +186,10 @@ export function DayLaborView() {
         currency: "DOP",
         amount: weeklyTotal,
         pay_method: "Transfer BHD",
-        document: "Receipts",
-        name: "Transfer",
+        document: "Recibos",
+        name: "Transferencia",
         is_internal: true,
-        comments: `Day labor for week ending ${fridayStr}. ${entries.length} entries.`,
+        comments: `Jornales de la semana terminando ${fridayStr}. ${entries.length} entradas.`,
       });
 
       // Generate PDF
@@ -197,17 +198,17 @@ export function DayLaborView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      toast({ title: "Week closed successfully", description: "Transaction created and PDF downloaded." });
+      toast({ title: "Semana cerrada exitosamente", description: "Transacción creada y PDF descargado." });
     },
     onError: (error) => {
-      toast({ title: "Error closing week", description: error.message, variant: "destructive" });
+      toast({ title: "Error al cerrar semana", description: error.message, variant: "destructive" });
     },
   });
 
   const handleAddEntry = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEntry.operation_description || !newEntry.worker_name || !newEntry.amount) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
+      toast({ title: "Por favor complete todos los campos", variant: "destructive" });
       return;
     }
     addEntry.mutate(newEntry);
@@ -237,7 +238,7 @@ export function DayLaborView() {
                   Jornales - Semana {format(selectedFriday, "dd/MM/yyyy")}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {format(weekStart, "MMM dd")} - {format(weekEnd, "MMM dd, yyyy")}
+                  {format(weekStart, "d MMM", { locale: es })} - {format(weekEnd, "d MMM, yyyy", { locale: es })}
                 </p>
               </div>
               <Button variant="outline" size="icon" onClick={() => navigateWeek("next")}>
@@ -248,12 +249,12 @@ export function DayLaborView() {
               {isWeekClosed && (
                 <span className="flex items-center gap-1 text-sm text-warning bg-warning/10 px-3 py-1 rounded-full">
                   <Lock className="h-3 w-3" />
-                  Closed
+                  Cerrada
                 </span>
               )}
               <Button variant="outline" onClick={generatePDF} disabled={entries.length === 0}>
                 <FileDown className="h-4 w-4 mr-2" />
-                Export PDF
+                Exportar PDF
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -262,28 +263,28 @@ export function DayLaborView() {
                     variant="default"
                   >
                     <Lock className="h-4 w-4 mr-2" />
-                    Close Week
+                    Cerrar Semana
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Close Week?</AlertDialogTitle>
+                    <AlertDialogTitle>¿Cerrar Semana?</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                       <div>
-                        <p>This will:</p>
+                        <p>Esto hará lo siguiente:</p>
                         <ul className="list-disc list-inside mt-2 space-y-1">
-                          <li>Lock all entries for this week</li>
-                          <li>Create a transaction for RD$ {weeklyTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</li>
-                          <li>Download a PDF summary</li>
+                          <li>Bloquear todas las entradas de esta semana</li>
+                          <li>Crear una transacción por RD$ {weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</li>
+                          <li>Descargar un resumen en PDF</li>
                         </ul>
-                        <p className="mt-3 font-medium">This action cannot be undone.</p>
+                        <p className="mt-3 font-medium">Esta acción no se puede deshacer.</p>
                       </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={() => closeWeek.mutate()}>
-                      Close Week
+                      Cerrar Semana
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -297,12 +298,12 @@ export function DayLaborView() {
       {!isWeekClosed && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Add Entry</CardTitle>
+            <CardTitle className="text-base">Agregar Entrada</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddEntry} className="flex gap-3 items-end flex-wrap">
               <div className="space-y-1">
-                <label className="text-sm font-medium">Date</label>
+                <label className="text-sm font-medium">Fecha</label>
                 <Input
                   type="date"
                   value={newEntry.work_date}
@@ -313,23 +314,23 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1 flex-1 min-w-[200px]">
-                <label className="text-sm font-medium">Operation</label>
+                <label className="text-sm font-medium">Operación</label>
                 <Input
                   value={newEntry.operation_description}
                   onChange={(e) => setNewEntry({ ...newEntry, operation_description: e.target.value })}
-                  placeholder="Description of work..."
+                  placeholder="Descripción del trabajo..."
                 />
               </div>
               <div className="space-y-1 min-w-[150px]">
-                <label className="text-sm font-medium">Worker Name</label>
+                <label className="text-sm font-medium">Nombre del Trabajador</label>
                 <Input
                   value={newEntry.worker_name}
                   onChange={(e) => setNewEntry({ ...newEntry, worker_name: e.target.value })}
-                  placeholder="Worker name..."
+                  placeholder="Nombre del trabajador..."
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Amount (RD$)</label>
+                <label className="text-sm font-medium">Monto (RD$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -341,7 +342,7 @@ export function DayLaborView() {
               </div>
               <Button type="submit" disabled={addEntry.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add
+                Agregar
               </Button>
             </form>
           </CardContent>
@@ -354,10 +355,10 @@ export function DayLaborView() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Operation</TableHead>
-                <TableHead>Worker</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Operación</TableHead>
+                <TableHead>Trabajador</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
                 {!isWeekClosed && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -365,14 +366,14 @@ export function DayLaborView() {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Loading...
+                    Cargando...
                   </TableCell>
                 </TableRow>
               ) : entries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    No entries for this week
+                    No hay entradas para esta semana
                   </TableCell>
                 </TableRow>
               ) : (
@@ -380,12 +381,12 @@ export function DayLaborView() {
                   {entries.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="font-medium">
-                        {format(new Date(entry.work_date), "EEE dd/MM")}
+                        {format(new Date(entry.work_date), "EEE dd/MM", { locale: es })}
                       </TableCell>
                       <TableCell>{entry.operation_description}</TableCell>
                       <TableCell>{entry.worker_name}</TableCell>
                       <TableCell className="text-right font-mono">
-                        RD$ {Number(entry.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       {!isWeekClosed && (
                         <TableCell>
@@ -405,10 +406,10 @@ export function DayLaborView() {
                   {/* Total Row */}
                   <TableRow className="bg-muted/50 font-bold">
                     <TableCell colSpan={3} className="text-right">
-                      Weekly Total:
+                      Total Semanal:
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      RD$ {weeklyTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      RD$ {weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                     </TableCell>
                     {!isWeekClosed && <TableCell></TableCell>}
                   </TableRow>
@@ -422,7 +423,7 @@ export function DayLaborView() {
       {/* Info about closing */}
       {!isWeekClosed && !canClose && (
         <p className="text-sm text-muted-foreground text-center">
-          The Close button will be available on Friday ({format(selectedFriday, "MMM dd")})
+          El botón de cerrar estará disponible el viernes ({format(selectedFriday, "d MMM", { locale: es })})
         </p>
       )}
     </div>

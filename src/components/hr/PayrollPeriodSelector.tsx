@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, setDate, addMonths, subMonths } from "date-fns";
+import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,13 +29,13 @@ export function PayrollPeriodSelector({
 
     return [
       {
-        label: `1 - 15 ${format(month, "MMM yyyy")}`,
+        label: `1 - 15 ${format(month, "MMM yyyy", { locale: es })}`,
         startDate: setDate(monthStart, 1),
         endDate: setDate(monthStart, 15),
         value: "first",
       },
       {
-        label: `16 - ${lastDay} ${format(month, "MMM yyyy")}`,
+        label: `16 - ${lastDay} ${format(month, "MMM yyyy", { locale: es })}`,
         startDate: setDate(monthStart, 16),
         endDate: monthEnd,
         value: "second",
@@ -104,7 +105,7 @@ export function PayrollPeriodSelector({
       </Button>
 
       <span className="text-sm text-muted-foreground ml-2">
-        Payment: {format(selectedPeriod.endDate, "MMM d, yyyy")}
+        Pago: {format(selectedPeriod.endDate, "d MMM yyyy", { locale: es })}
       </span>
     </div>
   );

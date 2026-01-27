@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { format, eachDayOfInterval, isSunday, isSaturday, isWithinInterval, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ interface PayrollTimeGridProps {
   onEmployeeClick: (employeeId: string) => void;
 }
 
-const BENEFIT_TYPES = ["Telephone", "Gasoline", "Bonus"];
+const BENEFIT_TYPES = ["Teléfono", "Gasolina", "Bono"];
 
 // Standard work hours: 7:30 AM to 4:30 PM (9 hours, minus 1 hour lunch = 8 hours)
 const STANDARD_START = 7 * 60 + 30; // 7:30 AM in minutes
@@ -165,7 +166,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
     },
     onError: (error) => {
-      toast.error("Failed to save time entry: " + error.message);
+      toast.error("Error al guardar entrada: " + error.message);
     },
   });
 
@@ -183,7 +184,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
     },
     onError: (error) => {
-      toast.error("Failed to clear entry: " + error.message);
+      toast.error("Error al limpiar entrada: " + error.message);
     },
   });
 
@@ -218,7 +219,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["employee-benefits"] });
     },
     onError: (error) => {
-      toast.error("Failed to save benefit: " + error.message);
+      toast.error("Error al guardar beneficio: " + error.message);
     },
   });
 
@@ -244,7 +245,7 @@ export function PayrollTimeGrid({
     );
 
     if (salariedEmployees.length === 0) {
-      toast.info("No salaried employees to auto-fill");
+      toast.info("No hay empleados asalariados para auto-llenar");
       return;
     }
 
@@ -278,9 +279,9 @@ export function PayrollTimeGrid({
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
-      toast.success(`Auto-filled ${salariedEmployees.length} salaried employee(s)`);
+      toast.success(`Auto-llenado para ${salariedEmployees.length} empleado(s) asalariado(s)`);
     } catch (error: any) {
-      toast.error("Failed to auto-fill: " + error.message);
+      toast.error("Error al auto-llenar: " + error.message);
     }
   };
 
@@ -382,9 +383,9 @@ export function PayrollTimeGrid({
       }
       
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
-      toast.success(newHolidayStatus ? "Day marked as holiday (100% bonus)" : "Holiday status removed");
+      toast.success(newHolidayStatus ? "Día marcado como feriado (100% bono)" : "Estado de feriado removido");
     } catch (error: any) {
-      toast.error("Failed to toggle holiday: " + error.message);
+      toast.error("Error al cambiar feriado: " + error.message);
     }
   };
 
@@ -517,7 +518,7 @@ export function PayrollTimeGrid({
       (e) => !POSITION_ORDER.includes(e.position)
     );
     if (otherEmployees.length > 0) {
-      groups.push({ position: "Other", employees: otherEmployees });
+      groups.push({ position: "Otros", employees: otherEmployees });
     }
     
     return groups;
@@ -526,7 +527,7 @@ export function PayrollTimeGrid({
   if (!periodId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Select or create a payroll period to begin
+        Seleccione o cree un período de nómina para comenzar
       </div>
     );
   }
@@ -545,7 +546,7 @@ export function PayrollTimeGrid({
             onClick={autoFillSalariedEmployees}
           >
             <Wand2 className="h-4 w-4 mr-2" />
-            Auto-fill Salaried Staff
+            Auto-llenar Asalariados
           </Button>
         </div>
       )}
@@ -554,7 +555,7 @@ export function PayrollTimeGrid({
         <thead className="sticky top-0 z-20 bg-background shadow-sm border-b">
           <tr>
             <th className="sticky left-0 bg-background z-30 min-w-[140px] h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
-              Employee
+              Empleado
             </th>
             {days.map((day, index) => {
               const isHoliday = isDayHoliday(day);
@@ -569,7 +570,7 @@ export function PayrollTimeGrid({
                     !isSunday(day) && !isHoliday && index % 2 === 0 && "bg-background"
                   )}
                 >
-                  <div className="text-xs">{format(day, "EEE")}</div>
+                  <div className="text-xs">{format(day, "EEE", { locale: es })}</div>
                   <div className="font-mono">{format(day, "d")}</div>
                   {!isSunday(day) && (
                     <div className="flex items-center justify-center gap-1 mt-1">
@@ -586,7 +587,7 @@ export function PayrollTimeGrid({
                           isHoliday && "text-amber-600 font-medium"
                         )}
                       >
-                        Holiday
+                        Feriado
                       </label>
                     </div>
                   )}
@@ -594,8 +595,8 @@ export function PayrollTimeGrid({
               );
             })}
             <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">Hrs</th>
-            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">OT</th>
-            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Hol</th>
+            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Extra</th>
+            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Fer</th>
             {BENEFIT_TYPES.map((type) => (
               <th key={type} className="text-center min-w-[80px] text-green-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">
                 {type}
@@ -603,7 +604,7 @@ export function PayrollTimeGrid({
             ))}
             <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">TSS</th>
             <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">ISR</th>
-            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Absences</th>
+            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Ausencias</th>
           </tr>
         </thead>
         <tbody className="[&_tr:last-child]:border-0">
@@ -680,13 +681,13 @@ export function PayrollTimeGrid({
                           {/* Holiday indicator overlay */}
                           {isHoliday && !sunday && !hasData && !isVacation && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-amber-700 dark:text-amber-300 font-bold text-xs opacity-80">HOL</span>
+                              <span className="text-amber-700 dark:text-amber-300 font-bold text-xs opacity-80">FER</span>
                             </div>
                           )}
                           {/* Absence indicator overlay */}
                           {isAbsent && !sunday && !isVacation && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-red-700 dark:text-red-300 font-bold text-xs opacity-80">ABS</span>
+                              <span className="text-red-700 dark:text-red-300 font-bold text-xs opacity-80">AUS</span>
                             </div>
                           )}
                           <div className="flex flex-col gap-0.5">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format, eachDayOfInterval, isWithinInterval, parseISO, isWeekend } from "date-fns";
+import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -67,7 +68,7 @@ interface PayrollSummaryProps {
   onPeriodClosed: () => void;
 }
 
-const BENEFIT_TYPES = ["Telephone", "Gasoline", "Bonus"];
+const BENEFIT_TYPES = ["Teléfono", "Gasolina", "Bono"];
 const STANDARD_START = 7 * 60 + 30;
 const STANDARD_END = 16 * 60 + 30;
 const STANDARD_HOURS_PER_DAY = 8;
@@ -319,25 +320,25 @@ export function PayrollSummary({
     setIsExporting(true);
     try {
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet("Payroll Report");
+      const sheet = workbook.addWorksheet("Reporte de Nómina");
 
       // Header
       sheet.columns = [
-        { header: "Name", key: "name", width: 25 },
-        { header: "Bank", key: "bank", width: 15 },
-        { header: "Account #", key: "account", width: 20 },
-        { header: "Reg Hours", key: "regHours", width: 12 },
-        { header: "OT Hours", key: "otHours", width: 12 },
-        { header: "Hol Hours", key: "holHours", width: 12 },
-        { header: "Base Pay", key: "basePay", width: 15 },
-        { header: "OT Pay", key: "otPay", width: 15 },
-        { header: "Holiday Pay", key: "holPay", width: 15 },
-        { header: "Benefits", key: "benefits", width: 15 },
+        { header: "Nombre", key: "name", width: 25 },
+        { header: "Banco", key: "bank", width: 15 },
+        { header: "Núm. Cuenta", key: "account", width: 20 },
+        { header: "Hrs Reg", key: "regHours", width: 12 },
+        { header: "Hrs Extra", key: "otHours", width: 12 },
+        { header: "Hrs Fer", key: "holHours", width: 12 },
+        { header: "Salario Base", key: "basePay", width: 15 },
+        { header: "Pago Extra", key: "otPay", width: 15 },
+        { header: "Pago Feriado", key: "holPay", width: 15 },
+        { header: "Beneficios", key: "benefits", width: 15 },
         { header: "TSS", key: "tss", width: 12 },
         { header: "ISR", key: "isr", width: 12 },
-        { header: "Absences", key: "absences", width: 12 },
-        { header: "Total Deductions", key: "totalDed", width: 18 },
-        { header: "Net Pay", key: "netPay", width: 15 },
+        { header: "Ausencias", key: "absences", width: 12 },
+        { header: "Total Deducciones", key: "totalDed", width: 18 },
+        { header: "Pago Neto", key: "netPay", width: 15 },
       ];
 
       // Style header
@@ -373,7 +374,7 @@ export function PayrollSummary({
 
       // Totals row
       const totalsRow = sheet.addRow({
-        name: "TOTALS",
+        name: "TOTALES",
         bank: "",
         account: "",
         regHours: totals.regularHours.toFixed(1),
@@ -404,13 +405,13 @@ export function PayrollSummary({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Payroll_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`;
+      a.download = `Nomina_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
 
-      toast.success("Payroll report exported");
+      toast.success("Reporte de nómina exportado");
     } catch (error) {
-      toast.error("Failed to export report");
+      toast.error("Error al exportar reporte");
       console.error(error);
     } finally {
       setIsExporting(false);
@@ -433,7 +434,7 @@ export function PayrollSummary({
           pay_method: "Transfer BHD",
           name: p.employee.name,
           is_internal: true,
-          comments: `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")} | Hours: ${p.regularHours.toFixed(1)} + ${p.overtimeHours.toFixed(1)} OT | Deductions: ${p.totalDeductions.toFixed(2)}`,
+          comments: `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")} | Horas: ${p.regularHours.toFixed(1)} + ${p.overtimeHours.toFixed(1)} Extra | Deducciones: ${p.totalDeductions.toFixed(2)}`,
         });
       }
 
@@ -448,11 +449,11 @@ export function PayrollSummary({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      toast.success("Period closed and transactions posted");
+      toast.success("Período cerrado y transacciones registradas");
       onPeriodClosed();
     },
     onError: (error) => {
-      toast.error("Failed to close period: " + error.message);
+      toast.error("Error al cerrar período: " + error.message);
     },
   });
 
@@ -461,7 +462,7 @@ export function PayrollSummary({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Payroll Summary</h3>
+        <h3 className="text-lg font-semibold">Resumen de Nómina</h3>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -473,7 +474,7 @@ export function PayrollSummary({
             ) : (
               <Download className="h-4 w-4 mr-2" />
             )}
-            Export Excel
+            Exportar Excel
           </Button>
           {!isClosed && (
             <Button
@@ -481,7 +482,7 @@ export function PayrollSummary({
               disabled={payrollData.length === 0}
             >
               <Lock className="h-4 w-4 mr-2" />
-              Close Period
+              Cerrar Período
             </Button>
           )}
         </div>
@@ -491,16 +492,16 @@ export function PayrollSummary({
         <Table className="table-auto">
           <TableHeader>
             <TableRow>
-              <TableHead className="whitespace-nowrap">Employee</TableHead>
-              <TableHead className="text-right font-bold whitespace-nowrap">Net Pay</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Reg Hrs</TableHead>
-              <TableHead className="text-right text-orange-600 whitespace-nowrap">OT Hrs</TableHead>
-              <TableHead className="text-right text-amber-600 whitespace-nowrap">Hol Hrs</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Base Pay</TableHead>
-              <TableHead className="text-right text-orange-600 whitespace-nowrap">OT Pay</TableHead>
-              <TableHead className="text-right text-amber-600 whitespace-nowrap">Hol Pay</TableHead>
-              <TableHead className="text-right text-green-600 whitespace-nowrap">Benefits</TableHead>
-              <TableHead className="text-right text-red-600 whitespace-nowrap">Deductions</TableHead>
+              <TableHead className="whitespace-nowrap">Empleado</TableHead>
+              <TableHead className="text-right font-bold whitespace-nowrap">Pago Neto</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Hrs Reg</TableHead>
+              <TableHead className="text-right text-orange-600 whitespace-nowrap">Hrs Extra</TableHead>
+              <TableHead className="text-right text-amber-600 whitespace-nowrap">Hrs Fer</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Salario Base</TableHead>
+              <TableHead className="text-right text-orange-600 whitespace-nowrap">Pago Extra</TableHead>
+              <TableHead className="text-right text-amber-600 whitespace-nowrap">Pago Fer</TableHead>
+              <TableHead className="text-right text-green-600 whitespace-nowrap">Beneficios</TableHead>
+              <TableHead className="text-right text-red-600 whitespace-nowrap">Deducciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -539,7 +540,7 @@ export function PayrollSummary({
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/50 font-bold">
-              <TableCell>TOTALS</TableCell>
+              <TableCell>TOTALES</TableCell>
               <TableCell className="text-right font-mono font-bold text-primary">
                 {formatCurrency(totals.netPay)}
               </TableCell>
@@ -575,24 +576,24 @@ export function PayrollSummary({
       <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Close Payroll Period?</AlertDialogTitle>
+            <AlertDialogTitle>¿Cerrar Período de Nómina?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will:
+              Esto hará lo siguiente:
               <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>Lock all timesheet entries for this period</li>
-                <li>Create {payrollData.length} payroll transactions in the ledger</li>
-                <li>Total payout: {formatCurrency(totals.netPay)}</li>
+                <li>Bloquear todas las entradas de hoja de tiempo para este período</li>
+                <li>Crear {payrollData.length} transacciones de nómina en el libro mayor</li>
+                <li>Pago total: {formatCurrency(totals.netPay)}</li>
               </ul>
-              <p className="mt-3 font-medium">This action cannot be undone.</p>
+              <p className="mt-3 font-medium">Esta acción no se puede deshacer.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => closePeriod.mutate()}
               disabled={closePeriod.isPending}
             >
-              {closePeriod.isPending ? "Closing..." : "Close Period"}
+              {closePeriod.isPending ? "Cerrando..." : "Cerrar Período"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

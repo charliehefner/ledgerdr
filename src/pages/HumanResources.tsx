@@ -26,18 +26,18 @@ export default function HumanResources() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Human Resources</h1>
-          <p className="text-muted-foreground mt-1">Manage employee payroll and records</p>
+          <h1 className="text-3xl font-bold text-foreground">Recursos Humanos</h1>
+          <p className="text-muted-foreground mt-1">Gestionar nómina y registros de empleados</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="payroll">Payroll</TabsTrigger>
-            <TabsTrigger value="day-labor">Day Labor</TabsTrigger>
-            <TabsTrigger value="employees">Employee Directory</TabsTrigger>
+            <TabsTrigger value="payroll">Nómina</TabsTrigger>
+            <TabsTrigger value="day-labor">Jornales</TabsTrigger>
+            <TabsTrigger value="employees">Directorio de Empleados</TabsTrigger>
             {canModifySettings && (
               <TabsTrigger value="add-employee">
-                {editingEmployee ? "Edit Employee" : "Add Employee"}
+                {editingEmployee ? "Editar Empleado" : "Agregar Empleado"}
               </TabsTrigger>
             )}
           </TabsList>

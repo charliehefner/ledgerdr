@@ -43,6 +43,7 @@ import {
   Percent,
 } from "lucide-react";
 import { format, differenceInDays, differenceInMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
+import { es } from "date-fns/locale";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -226,7 +227,7 @@ export function EmployeeDetailDialog({
 
   const handleAddVacation = async () => {
     if (!employeeId || !vacationStart || !vacationEnd) {
-      toast.error("Please fill in start and end dates");
+      toast.error("Por favor complete las fechas de inicio y fin");
       return;
     }
 
@@ -240,14 +241,14 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Vacation period added");
+      toast.success("Período de vacaciones agregado");
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
       setVacationStart("");
       setVacationEnd("");
       setVacationNotes("");
     } catch (error) {
       console.error("Error adding vacation:", error);
-      toast.error("Failed to add vacation");
+      toast.error("Error al agregar vacaciones");
     }
   };
 
@@ -260,17 +261,17 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Vacation deleted");
+      toast.success("Vacaciones eliminadas");
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
     } catch (error) {
       console.error("Error deleting vacation:", error);
-      toast.error("Failed to delete vacation");
+      toast.error("Error al eliminar vacaciones");
     }
   };
 
   const handleAddIncident = async () => {
     if (!employeeId || !incidentDate || !incidentDesc) {
-      toast.error("Please fill in date and description");
+      toast.error("Por favor complete la fecha y descripción");
       return;
     }
 
@@ -285,7 +286,7 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Incident recorded");
+      toast.success("Incidente registrado");
       queryClient.invalidateQueries({ queryKey: ["employee-incidents", employeeId] });
       setIncidentDate("");
       setIncidentDesc("");
@@ -293,7 +294,7 @@ export function EmployeeDetailDialog({
       setIncidentResolution("");
     } catch (error) {
       console.error("Error adding incident:", error);
-      toast.error("Failed to add incident");
+      toast.error("Error al agregar incidente");
     }
   };
 
@@ -306,11 +307,11 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Incident deleted");
+      toast.success("Incidente eliminado");
       queryClient.invalidateQueries({ queryKey: ["employee-incidents", employeeId] });
     } catch (error) {
       console.error("Error deleting incident:", error);
-      toast.error("Failed to delete incident");
+      toast.error("Error al eliminar incidente");
     }
   };
 
@@ -335,11 +336,11 @@ export function EmployeeDetailDialog({
 
       if (dbError) throw dbError;
 
-      toast.success("Document uploaded");
+      toast.success("Documento subido");
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
     } catch (error) {
       console.error("Error uploading document:", error);
-      toast.error("Failed to upload document");
+      toast.error("Error al subir documento");
     }
 
     e.target.value = "";
@@ -356,11 +357,11 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Document deleted");
+      toast.success("Documento eliminado");
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
     } catch (error) {
       console.error("Error deleting document:", error);
-      toast.error("Failed to delete document");
+      toast.error("Error al eliminar documento");
     }
   };
 
@@ -374,7 +375,7 @@ export function EmployeeDetailDialog({
             <User className="h-5 w-5" />
             {employee.name}
             <Badge variant={employee.is_active ? "default" : "secondary"}>
-              {employee.is_active ? "Active" : "Inactive"}
+              {employee.is_active ? "Activo" : "Inactivo"}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -382,11 +383,11 @@ export function EmployeeDetailDialog({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="info">Info</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="salary">Salary</TabsTrigger>
-            <TabsTrigger value="vacations">Vacations</TabsTrigger>
-            <TabsTrigger value="incidents">Incidents</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="history">Historial</TabsTrigger>
+            <TabsTrigger value="salary">Salario</TabsTrigger>
+            <TabsTrigger value="vacations">Vacaciones</TabsTrigger>
+            <TabsTrigger value="incidents">Incidentes</TabsTrigger>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
           </TabsList>
 
           {/* Info Tab */}
@@ -405,10 +406,10 @@ export function EmployeeDetailDialog({
                     <span className="font-mono">{employee.cedula}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date of Birth</span>
+                    <span className="text-muted-foreground">Fecha de Nacimiento</span>
                     <span>
                       {employee.date_of_birth
-                        ? format(new Date(employee.date_of_birth), "MMM d, yyyy")
+                        ? format(new Date(employee.date_of_birth), "d MMM yyyy", { locale: es })
                         : "—"}
                     </span>
                   </div>
@@ -419,22 +420,22 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Briefcase className="h-4 w-4" />
-                    Employment
+                    Empleo
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date of Hire</span>
-                    <span>{format(new Date(employee.date_of_hire), "MMM d, yyyy")}</span>
+                    <span className="text-muted-foreground">Fecha de Ingreso</span>
+                    <span>{format(new Date(employee.date_of_hire), "d MMM yyyy", { locale: es })}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Current Salary</span>
+                    <span className="text-muted-foreground">Salario Actual</span>
                     <span className="font-semibold">{formatCurrency(employee.salary)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tenure</span>
+                    <span className="text-muted-foreground">Antigüedad</span>
                     <span>
-                      {differenceInMonths(new Date(), new Date(employee.date_of_hire))} months
+                      {differenceInMonths(new Date(), new Date(employee.date_of_hire))} meses
                     </span>
                   </div>
                 </CardContent>
@@ -444,16 +445,16 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
-                    Banking
+                    Bancario
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bank</span>
+                    <span className="text-muted-foreground">Banco</span>
                     <span>{employee.bank || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Account</span>
+                    <span className="text-muted-foreground">Cuenta</span>
                     <span className="font-mono">{employee.bank_account_number || "—"}</span>
                   </div>
                 </CardContent>
@@ -463,20 +464,20 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Shirt className="h-4 w-4" />
-                    Uniform Sizes
+                    Tallas de Uniforme
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shirt</span>
+                    <span className="text-muted-foreground">Camisa</span>
                     <span>{employee.shirt_size || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pants</span>
+                    <span className="text-muted-foreground">Pantalón</span>
                     <span>{employee.pant_size || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Boots</span>
+                    <span className="text-muted-foreground">Botas</span>
                     <span>{employee.boot_size || "—"}</span>
                   </div>
                 </CardContent>
@@ -484,7 +485,7 @@ export function EmployeeDetailDialog({
             </div>
           </TabsContent>
 
-          {/* History Tab - NEW */}
+          {/* History Tab */}
           <TabsContent value="history" className="space-y-4">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -492,14 +493,14 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
-                    Current Salary
+                    Salario Actual
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold">{formatCurrency(employee.salary)}</p>
                   {salaryHistory && salaryHistory.length > 1 && (
                     <p className="text-xs text-muted-foreground">
-                      {salaryHistory.length} changes recorded
+                      {salaryHistory.length} cambios registrados
                     </p>
                   )}
                 </CardContent>
@@ -509,14 +510,14 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    Total Vacation Days
+                    Total Días Vacaciones
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold">{vacationSummary.totalVacationDays}</p>
                   {vacationSummary.upcomingVacations.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      {vacationSummary.upcomingVacations.length} upcoming
+                      {vacationSummary.upcomingVacations.length} próximas
                     </p>
                   )}
                 </CardContent>
@@ -526,13 +527,13 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
                     <Percent className="h-3 w-3" />
-                    Absence Rate
+                    Tasa de Ausencias
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold">{attendanceStats.absentRate.toFixed(1)}%</p>
                   <p className="text-xs text-muted-foreground">
-                    {attendanceStats.absentDays} of {attendanceStats.totalDays} days
+                    {attendanceStats.absentDays} de {attendanceStats.totalDays} días
                   </p>
                 </CardContent>
               </Card>
@@ -541,13 +542,13 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
                     <History className="h-3 w-3" />
-                    Avg Hours/Day
+                    Prom. Horas/Día
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold">{attendanceStats.avgHoursPerDay.toFixed(1)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {attendanceStats.totalHours.toFixed(1)} total hours
+                    {attendanceStats.totalHours.toFixed(1)} horas totales
                   </p>
                 </CardContent>
               </Card>
@@ -558,20 +559,20 @@ export function EmployeeDetailDialog({
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
-                  Salary History
+                  Historial de Salario
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {salaryHistory?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No salary history</p>
+                  <p className="text-muted-foreground text-sm">Sin historial de salario</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Effective Date</TableHead>
-                        <TableHead className="text-right">Salary</TableHead>
-                        <TableHead className="text-right">Change</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead>Fecha Efectiva</TableHead>
+                        <TableHead className="text-right">Salario</TableHead>
+                        <TableHead className="text-right">Cambio</TableHead>
+                        <TableHead>Notas</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -583,7 +584,7 @@ export function EmployeeDetailDialog({
                         return (
                           <TableRow key={record.id}>
                             <TableCell>
-                              {format(new Date(record.effective_date), "MMM d, yyyy")}
+                              {format(new Date(record.effective_date), "d MMM yyyy", { locale: es })}
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency(record.salary)}
@@ -614,28 +615,28 @@ export function EmployeeDetailDialog({
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <History className="h-4 w-4" />
-                  Recent Attendance (Last 20 entries)
+                  Asistencia Reciente (Últimas 20 entradas)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {timesheets?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No timesheet records</p>
+                  <p className="text-muted-foreground text-sm">Sin registros de asistencia</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Start</TableHead>
-                        <TableHead>End</TableHead>
-                        <TableHead className="text-right">Hours</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Entrada</TableHead>
+                        <TableHead>Salida</TableHead>
+                        <TableHead className="text-right">Horas</TableHead>
+                        <TableHead>Estado</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {timesheets?.slice(0, 20).map((ts) => (
                         <TableRow key={ts.id}>
                           <TableCell>
-                            {format(new Date(ts.work_date), "MMM d, yyyy")}
+                            {format(new Date(ts.work_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {ts.start_time ? format(new Date(`2000-01-01T${ts.start_time}`), "h:mm a") : "—"}
@@ -648,11 +649,11 @@ export function EmployeeDetailDialog({
                           </TableCell>
                           <TableCell>
                             {ts.is_absent ? (
-                              <Badge variant="destructive">Absent</Badge>
+                              <Badge variant="destructive">Ausente</Badge>
                             ) : ts.hours_worked ? (
-                              <Badge variant="default">Worked</Badge>
+                              <Badge variant="default">Trabajado</Badge>
                             ) : (
-                              <Badge variant="secondary">No Entry</Badge>
+                              <Badge variant="secondary">Sin Entrada</Badge>
                             )}
                           </TableCell>
                         </TableRow>
@@ -668,25 +669,25 @@ export function EmployeeDetailDialog({
           <TabsContent value="salary">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Salary History</CardTitle>
+                <CardTitle className="text-sm">Historial de Salario</CardTitle>
               </CardHeader>
               <CardContent>
                 {salaryHistory?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No salary history</p>
+                  <p className="text-muted-foreground text-sm">Sin historial de salario</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Effective Date</TableHead>
-                        <TableHead className="text-right">Salary</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead>Fecha Efectiva</TableHead>
+                        <TableHead className="text-right">Salario</TableHead>
+                        <TableHead>Notas</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {salaryHistory?.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell>
-                            {format(new Date(record.effective_date), "MMM d, yyyy")}
+                            {format(new Date(record.effective_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(record.salary)}
@@ -710,13 +711,13 @@ export function EmployeeDetailDialog({
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    Add Vacation Period
+                    Agregar Período de Vacaciones
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <Label>Start Date</Label>
+                      <Label>Fecha de Inicio</Label>
                       <Input
                         type="date"
                         value={vacationStart}
@@ -724,7 +725,7 @@ export function EmployeeDetailDialog({
                       />
                     </div>
                     <div>
-                      <Label>End Date</Label>
+                      <Label>Fecha de Fin</Label>
                       <Input
                         type="date"
                         value={vacationEnd}
@@ -732,9 +733,9 @@ export function EmployeeDetailDialog({
                       />
                     </div>
                     <div>
-                      <Label>Notes</Label>
+                      <Label>Notas</Label>
                       <Input
-                        placeholder="Optional notes"
+                        placeholder="Notas opcionales"
                         value={vacationNotes}
                         onChange={(e) => setVacationNotes(e.target.value)}
                       />
@@ -742,7 +743,7 @@ export function EmployeeDetailDialog({
                     <div className="flex items-end">
                       <Button onClick={handleAddVacation} className="w-full">
                         <Plus className="h-4 w-4 mr-2" />
-                        Add
+                        Agregar
                       </Button>
                     </div>
                   </div>
@@ -754,20 +755,20 @@ export function EmployeeDetailDialog({
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Vacation History
+                  Historial de Vacaciones
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {vacations?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No vacation records</p>
+                  <p className="text-muted-foreground text-sm">Sin registros de vacaciones</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>End Date</TableHead>
-                        <TableHead className="text-right">Days</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead>Fecha de Inicio</TableHead>
+                        <TableHead>Fecha de Fin</TableHead>
+                        <TableHead className="text-right">Días</TableHead>
+                        <TableHead>Notas</TableHead>
                         {canModifySettings && <TableHead className="w-12" />}
                       </TableRow>
                     </TableHeader>
@@ -777,10 +778,10 @@ export function EmployeeDetailDialog({
                         return (
                           <TableRow key={vacation.id}>
                             <TableCell>
-                              {format(new Date(vacation.start_date), "MMM d, yyyy")}
+                              {format(new Date(vacation.start_date), "d MMM yyyy", { locale: es })}
                             </TableCell>
                             <TableCell>
-                              {format(new Date(vacation.end_date), "MMM d, yyyy")}
+                              {format(new Date(vacation.end_date), "d MMM yyyy", { locale: es })}
                             </TableCell>
                             <TableCell className="text-right font-medium">{days}</TableCell>
                             <TableCell className="text-muted-foreground">
@@ -814,13 +815,13 @@ export function EmployeeDetailDialog({
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    Record Incident
+                    Registrar Incidente
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label>Date</Label>
+                      <Label>Fecha</Label>
                       <Input
                         type="date"
                         value={incidentDate}
@@ -828,31 +829,31 @@ export function EmployeeDetailDialog({
                       />
                     </div>
                     <div>
-                      <Label>Severity</Label>
+                      <Label>Severidad</Label>
                       <Select value={incidentSeverity} onValueChange={setIncidentSeverity}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select severity" />
+                          <SelectValue placeholder="Seleccionar severidad" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="minor">Minor</SelectItem>
-                          <SelectItem value="moderate">Moderate</SelectItem>
-                          <SelectItem value="major">Major</SelectItem>
-                          <SelectItem value="critical">Critical</SelectItem>
+                          <SelectItem value="minor">Menor</SelectItem>
+                          <SelectItem value="moderate">Moderado</SelectItem>
+                          <SelectItem value="major">Mayor</SelectItem>
+                          <SelectItem value="critical">Crítico</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="md:col-span-2">
-                      <Label>Description</Label>
+                      <Label>Descripción</Label>
                       <Input
-                        placeholder="Describe the incident"
+                        placeholder="Describa el incidente"
                         value={incidentDesc}
                         onChange={(e) => setIncidentDesc(e.target.value)}
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <Label>Resolution (Optional)</Label>
+                      <Label>Resolución (Opcional)</Label>
                       <Input
-                        placeholder="How was this resolved?"
+                        placeholder="¿Cómo se resolvió?"
                         value={incidentResolution}
                         onChange={(e) => setIncidentResolution(e.target.value)}
                       />
@@ -860,7 +861,7 @@ export function EmployeeDetailDialog({
                     <div className="md:col-span-2">
                       <Button onClick={handleAddIncident}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Record Incident
+                        Registrar Incidente
                       </Button>
                     </div>
                   </div>
@@ -872,20 +873,20 @@ export function EmployeeDetailDialog({
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  Incident History
+                  Historial de Incidentes
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {incidents?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No incidents recorded</p>
+                  <p className="text-muted-foreground text-sm">Sin incidentes registrados</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Severity</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Resolution</TableHead>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Severidad</TableHead>
+                        <TableHead>Descripción</TableHead>
+                        <TableHead>Resolución</TableHead>
                         {canModifySettings && <TableHead className="w-12" />}
                       </TableRow>
                     </TableHeader>
@@ -893,7 +894,7 @@ export function EmployeeDetailDialog({
                       {incidents?.map((incident) => (
                         <TableRow key={incident.id}>
                           <TableCell>
-                            {format(new Date(incident.incident_date), "MMM d, yyyy")}
+                            {format(new Date(incident.incident_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -905,7 +906,10 @@ export function EmployeeDetailDialog({
                                   : "secondary"
                               }
                             >
-                              {incident.severity || "—"}
+                              {incident.severity === "minor" ? "Menor" : 
+                               incident.severity === "moderate" ? "Moderado" :
+                               incident.severity === "major" ? "Mayor" :
+                               incident.severity === "critical" ? "Crítico" : "—"}
                             </Badge>
                           </TableCell>
                           <TableCell>{incident.description}</TableCell>
@@ -939,7 +943,7 @@ export function EmployeeDetailDialog({
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Upload className="h-4 w-4" />
-                    Upload Document
+                    Subir Documento
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -950,7 +954,7 @@ export function EmployeeDetailDialog({
                       className="max-w-sm"
                     />
                     <p className="text-sm text-muted-foreground">
-                      Upload medical permits, contracts, etc.
+                      Subir permisos médicos, contratos, etc.
                     </p>
                   </div>
                 </CardContent>
@@ -961,19 +965,19 @@ export function EmployeeDetailDialog({
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Documents
+                  Documentos
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {documents?.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No documents uploaded</p>
+                  <p className="text-muted-foreground text-sm">Sin documentos subidos</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Uploaded</TableHead>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Subido</TableHead>
                         {canModifySettings && <TableHead className="w-12" />}
                       </TableRow>
                     </TableHeader>
@@ -985,7 +989,7 @@ export function EmployeeDetailDialog({
                             {doc.document_type}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(doc.created_at), "MMM d, yyyy")}
+                            {format(new Date(doc.created_at), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           {canModifySettings && (
                             <TableCell>

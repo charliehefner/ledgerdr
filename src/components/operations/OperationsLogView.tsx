@@ -447,7 +447,7 @@ export function OperationsLogView() {
   return (
     <div className="space-y-6">
       {/* Top 5 Operations by Hectares */}
-      <Card>
+      <Card className="w-fit">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="h-4 w-4" />
@@ -458,14 +458,14 @@ export function OperationsLogView() {
           {top5Operations.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay operaciones en este período</p>
           ) : (
-            <Table>
+            <Table className="w-auto">
               <TableBody>
-                {top5Operations.map((op, index) => (
+                {top5Operations.map((op) => (
                   <TableRow key={op.name}>
-                    <TableCell className="font-medium py-2">
+                    <TableCell className="font-medium py-2 whitespace-nowrap">
                       Hectáreas {op.name}:
                     </TableCell>
-                    <TableCell className="text-right font-mono py-2">
+                    <TableCell className="text-right font-mono py-2 whitespace-nowrap">
                       {op.hectares.toFixed(1)} ha
                     </TableCell>
                   </TableRow>

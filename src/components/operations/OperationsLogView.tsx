@@ -1095,7 +1095,7 @@ export function OperationsLogView() {
               )}
               {isVisible("inputs") && <TableHead>Insumos</TableHead>}
               {isVisible("notes") && <TableHead>Notas</TableHead>}
-              {canEdit && <TableHead className="w-[70px] text-right">Acciones</TableHead>}
+              {canEdit && <TableHead className="w-[70px] text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1142,7 +1142,7 @@ export function OperationsLogView() {
                 )}
                 {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
                 {canEdit && (
-                  <TableCell className="text-right">
+                  <TableCell className="text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-8 px-2">

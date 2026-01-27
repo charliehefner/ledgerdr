@@ -143,11 +143,6 @@ export function OperationsLogView() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "management" || user?.role === "supervisor";
-  
-  // Debug logging
-  console.log("OperationsLogView - user:", user);
-  console.log("OperationsLogView - user.role:", user?.role);
-  console.log("OperationsLogView - canEdit:", canEdit);
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
   const [form, setForm] = useState({
@@ -1100,7 +1095,7 @@ export function OperationsLogView() {
               )}
               {isVisible("inputs") && <TableHead>Insumos</TableHead>}
               {isVisible("notes") && <TableHead>Notas</TableHead>}
-              {canEdit && <TableHead className="w-[50px]"></TableHead>}
+              {canEdit && <TableHead className="w-[70px] text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1147,10 +1142,10 @@ export function OperationsLogView() {
                 )}
                 {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
                 {canEdit && (
-                  <TableCell>
+                  <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="outline" size="sm" className="h-8 px-2">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

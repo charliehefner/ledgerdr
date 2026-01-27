@@ -34,7 +34,24 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock } from "lucide-react";
+import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock, MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -115,8 +132,17 @@ const operationsColumns: ColumnConfig[] = [
   { key: "notes", label: "Notas", defaultVisible: false },
 ];
 
+type SortDirection = "asc" | "desc" | null;
+type SortColumn = "date" | "field" | "farm" | "operation" | "tractor" | "implement" | "hours" | "hectares" | null;
+
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
+  const [deleteOperationId, setDeleteOperationId] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const { canWriteSection, isLoading: authLoading } = useAuth();
+  const canEdit = canWriteSection("operations");
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
   const [form, setForm] = useState({
@@ -239,10 +265,42 @@ export function OperationsLogView() {
   const selectedOperationType = operationTypes?.find(t => t.id === form.operation_type_id);
   const isMechanical = selectedOperationType?.is_mechanical ?? true;
 
-  // Filter operations by date range
+  // Calculate hours helper
+  const calculateHoursValue = (op: Operation): number => {
+    if (op.start_hours != null && op.end_hours != null) {
+      return op.end_hours - op.start_hours;
+    }
+    return 0;
+  };
+
+  // Sorting helper
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      } else {
+        setSortDirection("asc");
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    if (sortDirection === "asc") return <ArrowUp className="ml-2 h-4 w-4" />;
+    if (sortDirection === "desc") return <ArrowDown className="ml-2 h-4 w-4" />;
+    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
+
+  // Filter and sort operations
   const filteredOperations = useMemo(() => {
     if (!operations) return [];
-    return operations.filter((op) => {
+    let result = operations.filter((op) => {
       const opDate = new Date(op.operation_date);
       if (startDate && endDate) {
         return isWithinInterval(opDate, {
@@ -252,7 +310,45 @@ export function OperationsLogView() {
       }
       return true;
     });
-  }, [operations, startDate, endDate]);
+
+    // Apply sorting
+    if (sortColumn && sortDirection) {
+      result = [...result].sort((a, b) => {
+        let comparison = 0;
+        switch (sortColumn) {
+          case "date":
+            comparison = new Date(a.operation_date).getTime() - new Date(b.operation_date).getTime();
+            break;
+          case "field":
+            comparison = a.fields.name.localeCompare(b.fields.name);
+            break;
+          case "farm":
+            comparison = a.fields.farms.name.localeCompare(b.fields.farms.name);
+            break;
+          case "operation":
+            comparison = a.operation_types.name.localeCompare(b.operation_types.name);
+            break;
+          case "tractor":
+            const aVal = a.operation_types.is_mechanical ? (a.fuel_equipment?.name || "") : String(a.workers_count || 0);
+            const bVal = b.operation_types.is_mechanical ? (b.fuel_equipment?.name || "") : String(b.workers_count || 0);
+            comparison = aVal.localeCompare(bVal);
+            break;
+          case "implement":
+            comparison = (a.implements?.name || "").localeCompare(b.implements?.name || "");
+            break;
+          case "hours":
+            comparison = calculateHoursValue(a) - calculateHoursValue(b);
+            break;
+          case "hectares":
+            comparison = a.hectares_done - b.hectares_done;
+            break;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [operations, startDate, endDate, sortColumn, sortDirection]);
 
   // Top 5 operations by hectares
   const top5Operations = useMemo(() => {
@@ -385,8 +481,110 @@ export function OperationsLogView() {
     },
   });
 
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ operationId, data }: { operationId: string; data: typeof form }) => {
+      const record = {
+        operation_date: format(data.operation_date, "yyyy-MM-dd"),
+        field_id: data.field_id,
+        operation_type_id: data.operation_type_id,
+        tractor_id: isMechanical && data.tractor_id ? data.tractor_id : null,
+        implement_id: isMechanical && data.implement_id ? data.implement_id : null,
+        start_hours: isMechanical && data.start_hours ? parseFloat(data.start_hours) : null,
+        end_hours: isMechanical && data.end_hours ? parseFloat(data.end_hours) : null,
+        workers_count: !isMechanical && data.workers_count ? parseInt(data.workers_count) : null,
+        hectares_done: parseFloat(data.hectares_done),
+        notes: data.notes || null,
+      };
+
+      const { error: updateError } = await supabase
+        .from("operations")
+        .update(record)
+        .eq("id", operationId);
+      
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["operations"] });
+      toast({
+        title: "Operación actualizada",
+        description: "La operación ha sido actualizada correctamente.",
+      });
+      handleCloseDialog();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (operationId: string) => {
+      // First restore inventory quantities from operation_inputs
+      const { data: inputs, error: inputsError } = await supabase
+        .from("operation_inputs")
+        .select("inventory_item_id, quantity_used")
+        .eq("operation_id", operationId);
+      
+      if (inputsError) throw inputsError;
+
+      // Restore inventory
+      if (inputs && inputs.length > 0) {
+        for (const input of inputs) {
+          const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
+          if (item) {
+            const newQuantity = item.current_quantity + input.quantity_used;
+            const { error: updateError } = await supabase
+              .from("inventory_items")
+              .update({ current_quantity: newQuantity })
+              .eq("id", input.inventory_item_id);
+            
+            if (updateError) throw updateError;
+          }
+        }
+      }
+
+      // Delete operation_inputs
+      const { error: deleteInputsError } = await supabase
+        .from("operation_inputs")
+        .delete()
+        .eq("operation_id", operationId);
+      
+      if (deleteInputsError) throw deleteInputsError;
+
+      // Delete operation
+      const { error: deleteError } = await supabase
+        .from("operations")
+        .delete()
+        .eq("id", operationId);
+      
+      if (deleteError) throw deleteError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["operations"] });
+      queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
+      toast({
+        title: "Operación eliminada",
+        description: "La operación ha sido eliminada y el inventario restaurado.",
+      });
+      setDeleteOperationId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
+    setEditingOperation(null);
     setForm({
       operation_date: new Date(),
       field_id: "",
@@ -429,7 +627,12 @@ export function OperationsLogView() {
       });
       return;
     }
-    mutation.mutate(form);
+    
+    if (editingOperation) {
+      updateMutation.mutate({ operationId: editingOperation.id, data: form });
+    } else {
+      mutation.mutate(form);
+    }
   };
 
   const getItemName = (itemId: string) => {
@@ -530,7 +733,9 @@ export function OperationsLogView() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Registrar Operación de Campo</DialogTitle>
+                <DialogTitle>
+                  {editingOperation ? "Editar Operación de Campo" : "Registrar Operación de Campo"}
+                </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -775,8 +980,12 @@ export function OperationsLogView() {
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={mutation.isPending}>
-                    {mutation.isPending ? "Guardando..." : "Registrar Operación"}
+                  <Button type="submit" disabled={mutation.isPending || updateMutation.isPending}>
+                    {(mutation.isPending || updateMutation.isPending) 
+                      ? "Guardando..." 
+                      : editingOperation 
+                        ? "Actualizar Operación" 
+                        : "Registrar Operación"}
                   </Button>
                 </div>
               </form>
@@ -796,16 +1005,97 @@ export function OperationsLogView() {
         <Table>
           <TableHeader>
             <TableRow>
-              {isVisible("date") && <TableHead>Fecha</TableHead>}
-              {isVisible("field") && <TableHead>Campo</TableHead>}
-              {isVisible("farm") && <TableHead>Finca</TableHead>}
-              {isVisible("operation") && <TableHead>Operación</TableHead>}
-              {isVisible("tractor") && <TableHead>Tractor/Obreros</TableHead>}
-              {isVisible("implement") && <TableHead>Implemento</TableHead>}
-              {isVisible("hours") && <TableHead>Horas</TableHead>}
-              {isVisible("hectares") && <TableHead>Hectáreas</TableHead>}
+              {isVisible("date") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("date")}
+                >
+                  <div className="flex items-center">
+                    Fecha
+                    {getSortIcon("date")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("field") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("field")}
+                >
+                  <div className="flex items-center">
+                    Campo
+                    {getSortIcon("field")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("farm") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("farm")}
+                >
+                  <div className="flex items-center">
+                    Finca
+                    {getSortIcon("farm")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("operation") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("operation")}
+                >
+                  <div className="flex items-center">
+                    Operación
+                    {getSortIcon("operation")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("tractor") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("tractor")}
+                >
+                  <div className="flex items-center">
+                    Tractor/Obreros
+                    {getSortIcon("tractor")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("implement") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("implement")}
+                >
+                  <div className="flex items-center">
+                    Implemento
+                    {getSortIcon("implement")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("hours") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("hours")}
+                >
+                  <div className="flex items-center">
+                    Horas
+                    {getSortIcon("hours")}
+                  </div>
+                </TableHead>
+              )}
+              {isVisible("hectares") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("hectares")}
+                >
+                  <div className="flex items-center">
+                    Hectáreas
+                    {getSortIcon("hectares")}
+                  </div>
+                </TableHead>
+              )}
               {isVisible("inputs") && <TableHead>Insumos</TableHead>}
               {isVisible("notes") && <TableHead>Notas</TableHead>}
+              {canEdit && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -851,11 +1141,72 @@ export function OperationsLogView() {
                   </TableCell>
                 )}
                 {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
+                {canEdit && (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setEditingOperation(op);
+                          setForm({
+                            operation_date: new Date(op.operation_date),
+                            field_id: op.field_id,
+                            operation_type_id: op.operation_type_id,
+                            tractor_id: op.tractor_id || "",
+                            implement_id: op.implement_id || "",
+                            start_hours: op.start_hours?.toString() || "",
+                            end_hours: op.end_hours?.toString() || "",
+                            workers_count: op.workers_count?.toString() || "",
+                            hectares_done: op.hectares_done.toString(),
+                            notes: op.notes || "",
+                          });
+                          setIsDialogOpen(true);
+                        }}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteOperationId(op.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteOperationId} onOpenChange={(open) => !open && setDeleteOperationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar operación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará la operación y restaurará las cantidades de inventario utilizadas. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteOperationId && deleteMutation.mutate(deleteOperationId)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

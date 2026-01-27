@@ -31,8 +31,12 @@ import {
 import { Users, UserPlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
+import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
+
+// All available roles for the select dropdowns
+const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "viewer"];
 
 interface UserWithRole {
   id: string;
@@ -207,8 +211,14 @@ export function UserManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="accountant">Accountant</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    {ALL_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        <div className="flex flex-col">
+                          <span>{roleDisplayNames[role]}</span>
+                          <span className="text-xs text-muted-foreground">{roleDescriptions[role]}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -265,12 +275,15 @@ export function UserManagement() {
                       handleUpdateRole(user.id, v as AppRole)
                     }
                   >
-                    <SelectTrigger className="w-[130px]">
+                    <SelectTrigger className="w-[140px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="accountant">Accountant</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      {ALL_ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {roleDisplayNames[role]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </TableCell>

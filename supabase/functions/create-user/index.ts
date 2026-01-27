@@ -24,8 +24,9 @@ serve(async (req) => {
       throw new Error("Email, password, and role are required");
     }
 
-    if (!["admin", "accountant"].includes(role)) {
-      throw new Error("Invalid role");
+    const validRoles = ["admin", "management", "accountant", "supervisor", "viewer"];
+    if (!validRoles.includes(role)) {
+      throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

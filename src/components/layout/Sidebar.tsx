@@ -19,27 +19,35 @@ import jordLogo from "@/assets/jord-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Section, roleDisplayNames } from "@/lib/permissions";
 
-const navigation = [
-  { name: "Panel", href: "/", icon: LayoutDashboard },
-  { name: "Transacciones", href: "/transactions", icon: ArrowRightLeft },
-  { name: "Facturas", href: "/invoices", icon: FileText },
-  { name: "Reportes", href: "/reports", icon: BarChart3 },
-  { name: "Recursos Humanos", href: "/hr", icon: Users },
-  { name: "Inventario", href: "/inventory", icon: Package },
-  { name: "Combustible", href: "/fuel", icon: Fuel },
-  { name: "Equipos", href: "/equipment", icon: Tractor },
-  { name: "Operaciones", href: "/operations", icon: Activity },
+type NavItem = {
+  name: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  section: Section;
+};
+
+const navigation: NavItem[] = [
+  { name: "Panel", href: "/", icon: LayoutDashboard, section: "dashboard" },
+  { name: "Transacciones", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
+  { name: "Facturas", href: "/invoices", icon: FileText, section: "invoices" },
+  { name: "Reportes", href: "/reports", icon: BarChart3, section: "reports" },
+  { name: "Recursos Humanos", href: "/hr", icon: Users, section: "hr" },
+  { name: "Inventario", href: "/inventory", icon: Package, section: "inventory" },
+  { name: "Combustible", href: "/fuel", icon: Fuel, section: "fuel" },
+  { name: "Equipos", href: "/equipment", icon: Tractor, section: "equipment" },
+  { name: "Operaciones", href: "/operations", icon: Activity, section: "operations" },
 ];
 
-const secondaryNav = [
-  { name: "Configuración", href: "/settings", icon: Settings },
+const secondaryNav: NavItem[] = [
+  { name: "Configuración", href: "/settings", icon: Settings, section: "settings" },
 ];
 
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, canAccessSection } = useAuth();
   const { collapsed, toggleCollapsed } = useSidebar();
 
   const handleLogout = async () => {
@@ -52,7 +60,7 @@ export function Sidebar() {
     return location.pathname.startsWith(href);
   };
 
-  const NavItem = ({ item }: { item: typeof navigation[0] }) => {
+  const NavItem = ({ item }: { item: NavItem }) => {
     const link = (
       <Link
         to={item.href}
@@ -80,6 +88,13 @@ export function Sidebar() {
 
     return link;
   };
+
+  // Filter navigation items based on user's role permissions
+  const filteredNavigation = navigation.filter(item => canAccessSection(item.section));
+  const filteredSecondaryNav = secondaryNav.filter(item => canAccessSection(item.section));
+
+  // Get Spanish role name
+  const roleDisplay = user?.role ? roleDisplayNames[user.role] : "Usuario";
 
   return (
     <aside 
@@ -110,20 +125,24 @@ export function Sidebar() {
             Menú
           </div>
         )}
-        {navigation.map((item) => (
+        {filteredNavigation.map((item) => (
           <NavItem key={item.name} item={item} />
         ))}
 
-        <div className="my-4 border-t border-sidebar-border" />
+        {filteredSecondaryNav.length > 0 && (
+          <>
+            <div className="my-4 border-t border-sidebar-border" />
 
-        {!collapsed && (
-          <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            Sistema
-          </div>
+            {!collapsed && (
+              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                Sistema
+              </div>
+            )}
+            {filteredSecondaryNav.map((item) => (
+              <NavItem key={item.name} item={item} />
+            ))}
+          </>
         )}
-        {secondaryNav.map((item) => (
-          <NavItem key={item.name} item={item} />
-        ))}
       </nav>
 
       {/* User section */}
@@ -141,7 +160,7 @@ export function Sidebar() {
             {collapsed && (
               <TooltipContent side="right">
                 <div className="font-medium">{user?.email?.split("@")[0] || "User"}</div>
-                <div className="text-xs text-muted-foreground capitalize">{user?.role || 'User'}</div>
+                <div className="text-xs text-muted-foreground">{roleDisplay}</div>
               </TooltipContent>
             )}
           </Tooltip>
@@ -149,7 +168,7 @@ export function Sidebar() {
             <>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.email?.split("@")[0] || "User"}</p>
-                <p className="text-xs text-sidebar-foreground/60 capitalize">{user?.role || 'User'}</p>
+                <p className="text-xs text-sidebar-foreground/60">{roleDisplay}</p>
               </div>
               <button 
                 onClick={handleLogout}

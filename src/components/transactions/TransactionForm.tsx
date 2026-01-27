@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
+import { formatDateLocal } from '@/lib/dateUtils';
 import {
   fetchAccounts,
   fetchProjects,
@@ -97,7 +98,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       return false;
     }
     
-    const formDate = form.transaction_date.toISOString().split('T')[0];
+    const formDate = formatDateLocal(form.transaction_date);
     const formAmount = parseFloat(form.amount);
     const formName = (form.name || '').trim().toLowerCase();
     
@@ -144,11 +145,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
     try {
       const result = await createTransaction({
-        transaction_date: form.transaction_date!.toISOString().split('T')[0],
+        transaction_date: formatDateLocal(form.transaction_date!),
         master_acct_code: form.master_acct_code,
         project_code: form.project_code || undefined,
         cbs_code: form.cbs_code || undefined,
-        purchase_date: form.purchase_date?.toISOString().split('T')[0],
+        purchase_date: form.purchase_date ? formatDateLocal(form.purchase_date) : undefined,
         description: form.description,
         currency: form.currency,
         amount: parseFloat(form.amount),

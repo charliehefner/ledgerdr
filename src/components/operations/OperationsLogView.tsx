@@ -1154,7 +1154,7 @@ export function OperationsLogView() {
                         <DropdownMenuItem onClick={() => {
                           setEditingOperation(op);
                           setForm({
-                            operation_date: new Date(op.operation_date),
+                            operation_date: parseDateLocal(op.operation_date),
                             field_id: op.field_id,
                             operation_type_id: op.operation_type_id,
                             tractor_id: op.tractor_id || "",

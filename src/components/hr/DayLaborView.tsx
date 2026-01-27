@@ -20,6 +20,8 @@ interface DayLaborEntry {
   week_ending_date: string;
   operation_description: string;
   worker_name: string;
+  workers_count: number;
+  field_name: string | null;
   amount: number;
   is_closed: boolean;
 }
@@ -49,6 +51,8 @@ export function DayLaborView() {
     work_date: format(new Date(), "yyyy-MM-dd"),
     operation_description: "",
     worker_name: "",
+    workers_count: "1",
+    field_name: "",
     amount: "",
   });
 
@@ -92,7 +96,9 @@ export function DayLaborView() {
         work_date: entry.work_date,
         week_ending_date: format(selectedFriday, "yyyy-MM-dd"),
         operation_description: entry.operation_description,
-        worker_name: entry.worker_name,
+        worker_name: entry.worker_name || "",
+        workers_count: parseInt(entry.workers_count) || 1,
+        field_name: entry.field_name || null,
         amount: parseFloat(entry.amount) || 0,
       });
       if (error) throw error;
@@ -103,6 +109,8 @@ export function DayLaborView() {
         work_date: format(new Date(), "yyyy-MM-dd"),
         operation_description: "",
         worker_name: "",
+        workers_count: "1",
+        field_name: "",
         amount: "",
       });
       toast({ title: "Entrada agregada" });
@@ -142,7 +150,9 @@ export function DayLaborView() {
     const tableData = entries.map(entry => [
       format(new Date(entry.work_date), "dd/MM/yyyy"),
       entry.operation_description,
-      entry.worker_name,
+      entry.workers_count.toString(),
+      entry.worker_name || "-",
+      entry.field_name || "-",
       `RD$ ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
     ]);
     
@@ -150,12 +160,14 @@ export function DayLaborView() {
     tableData.push([
       "",
       "",
+      "",
+      "",
       "TOTAL:",
       `RD$ ${weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
     ]);
 
     autoTable(doc, {
-      head: [["Fecha", "Operación", "Trabajador", "Monto"]],
+      head: [["Fecha", "Operación", "# Trab.", "Nombre", "Campo", "Monto"]],
       body: tableData,
       startY: 45,
       styles: { fontSize: 10 },
@@ -207,8 +219,8 @@ export function DayLaborView() {
 
   const handleAddEntry = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEntry.operation_description || !newEntry.worker_name || !newEntry.amount) {
-      toast({ title: "Por favor complete todos los campos", variant: "destructive" });
+    if (!newEntry.operation_description || !newEntry.workers_count || !newEntry.amount) {
+      toast({ title: "Por favor complete los campos requeridos (Operación, # Trabajadores, Monto)", variant: "destructive" });
       return;
     }
     addEntry.mutate(newEntry);
@@ -314,23 +326,42 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1 flex-1 min-w-[200px]">
-                <label className="text-sm font-medium">Operación</label>
+                <label className="text-sm font-medium">Operación *</label>
                 <Input
                   value={newEntry.operation_description}
                   onChange={(e) => setNewEntry({ ...newEntry, operation_description: e.target.value })}
                   placeholder="Descripción del trabajo..."
                 />
               </div>
-              <div className="space-y-1 min-w-[150px]">
-                <label className="text-sm font-medium">Nombre del Trabajador</label>
+              <div className="space-y-1">
+                <label className="text-sm font-medium"># Trabajadores *</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newEntry.workers_count}
+                  onChange={(e) => setNewEntry({ ...newEntry, workers_count: e.target.value })}
+                  placeholder="1"
+                  className="w-28"
+                />
+              </div>
+              <div className="space-y-1 min-w-[140px]">
+                <label className="text-sm font-medium">Nombre (opcional)</label>
                 <Input
                   value={newEntry.worker_name}
                   onChange={(e) => setNewEntry({ ...newEntry, worker_name: e.target.value })}
-                  placeholder="Nombre del trabajador..."
+                  placeholder="Nombre..."
+                />
+              </div>
+              <div className="space-y-1 min-w-[140px]">
+                <label className="text-sm font-medium">Campo (opcional)</label>
+                <Input
+                  value={newEntry.field_name}
+                  onChange={(e) => setNewEntry({ ...newEntry, field_name: e.target.value })}
+                  placeholder="Campo..."
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Monto (RD$)</label>
+                <label className="text-sm font-medium">Monto (RD$) *</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -357,7 +388,9 @@ export function DayLaborView() {
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Operación</TableHead>
-                <TableHead>Trabajador</TableHead>
+                <TableHead className="text-center"># Trab.</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Campo</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 {!isWeekClosed && <TableHead className="w-12"></TableHead>}
               </TableRow>
@@ -365,13 +398,13 @@ export function DayLaborView() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Cargando...
                   </TableCell>
                 </TableRow>
               ) : entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     No hay entradas para esta semana
                   </TableCell>
@@ -384,7 +417,9 @@ export function DayLaborView() {
                         {format(new Date(entry.work_date), "EEE dd/MM", { locale: es })}
                       </TableCell>
                       <TableCell>{entry.operation_description}</TableCell>
-                      <TableCell>{entry.worker_name}</TableCell>
+                      <TableCell className="text-center">{entry.workers_count}</TableCell>
+                      <TableCell>{entry.worker_name || "-"}</TableCell>
+                      <TableCell>{entry.field_name || "-"}</TableCell>
                       <TableCell className="text-right font-mono">
                         RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
@@ -405,7 +440,7 @@ export function DayLaborView() {
                   ))}
                   {/* Total Row */}
                   <TableRow className="bg-muted/50 font-bold">
-                    <TableCell colSpan={3} className="text-right">
+                    <TableCell colSpan={5} className="text-right">
                       Total Semanal:
                     </TableCell>
                     <TableCell className="text-right font-mono">

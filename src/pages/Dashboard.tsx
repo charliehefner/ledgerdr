@@ -152,7 +152,7 @@ export default function Dashboard() {
                 </TableRow>
               ) : (
                 transactionsWithoutDocument.map((tx) => (
-                  <TableRow key={tx.id}>
+                  <TableRow key={tx.id} className="bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50">
                     {pendingNcfColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
                     {pendingNcfColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {pendingNcfColumns.isVisible("account") && (
@@ -227,7 +227,7 @@ export default function Dashboard() {
                 </TableRow>
               ) : (
                 transactionsWithoutAttachment.map((tx) => (
-                  <TableRow key={tx.id}>
+                  <TableRow key={tx.id} className="bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50">
                     {withoutAttachmentColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
                     {withoutAttachmentColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {withoutAttachmentColumns.isVisible("account") && (

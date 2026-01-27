@@ -7,7 +7,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
-import Invoices from "./pages/Invoices";
 import Transactions from "./pages/Transactions";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -35,7 +34,6 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-              <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/hr" element={<ProtectedRoute><HumanResources /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />

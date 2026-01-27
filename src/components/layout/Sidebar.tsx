@@ -1,7 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  FileText,
   BarChart3,
   Settings,
   LogOut,
@@ -36,7 +35,6 @@ type NavItem = {
 const navigation: NavItem[] = [
   { name: "Panel", href: "/", icon: LayoutDashboard, section: "dashboard" },
   { name: "Transacciones", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
-  { name: "Facturas", href: "/invoices", icon: FileText, section: "invoices" },
   { name: "Reportes", href: "/reports", icon: BarChart3, section: "reports" },
   { name: "Recursos Humanos", href: "/hr", icon: Users, section: "hr" },
   { name: "Inventario", href: "/inventory", icon: Package, section: "inventory" },

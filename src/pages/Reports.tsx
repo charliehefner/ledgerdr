@@ -36,18 +36,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -57,15 +45,6 @@ import { format } from "date-fns";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { getDescription } from "@/lib/getDescription";
-
-const COLORS = [
-  "hsl(220, 65%, 30%)",
-  "hsl(38, 95%, 50%)",
-  "hsl(142, 70%, 40%)",
-  "hsl(200, 95%, 45%)",
-  "hsl(280, 60%, 50%)",
-  "hsl(15, 85%, 55%)",
-];
 
 const REPORT_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: false },
@@ -240,37 +219,12 @@ export default function Reports() {
     return <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  // Calculate totals by currency (parse amount as it comes as string from API)
+  // Calculate totals by currency for PDF export
   const totalsByCurrency = transactions.reduce((acc, tx) => {
     const amount = parseFloat(String(tx.amount)) || 0;
     acc[tx.currency] = (acc[tx.currency] || 0) + amount;
     return acc;
   }, {} as Record<string, number>);
-
-  // Calculate totals by account (skip null accounts)
-  const totalsByAccount = transactions.reduce((acc, tx) => {
-    if (!tx.master_acct_code) return acc;
-    const amount = parseFloat(String(tx.amount)) || 0;
-    acc[tx.master_acct_code] = (acc[tx.master_acct_code] || 0) + amount;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const accountChartData = Object.entries(totalsByAccount)
-    .map(([account, total]) => ({ account, total }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
-
-  // Calculate totals by payment method (skip null/empty methods)
-  const totalsByPayMethod = transactions.reduce((acc, tx) => {
-    if (!tx.pay_method) return acc;
-    const amount = parseFloat(String(tx.amount)) || 0;
-    acc[tx.pay_method] = (acc[tx.pay_method] || 0) + amount;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const payMethodChartData = Object.entries(totalsByPayMethod)
-    .map(([method, total]) => ({ method, total }))
-    .sort((a, b) => b.total - a.total);
 
   // Account/CBS pair totals
   const accountCbsPairs = [
@@ -449,28 +403,6 @@ export default function Reports() {
       }
     >
       <div className="space-y-6 animate-fade-in">
-        {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Total Transactions</p>
-              <p className="text-2xl font-semibold font-mono mt-1">
-                {transactions.length}
-              </p>
-            </CardContent>
-          </Card>
-          {Object.entries(totalsByCurrency).map(([currency, total]) => (
-            <Card key={currency}>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Total {currency}</p>
-                <p className="text-2xl font-semibold font-mono mt-1">
-                  {formatCurrency(total, currency)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
         {/* Account/CBS Pair Totals */}
         <Card>
           <CardHeader>
@@ -503,97 +435,6 @@ export default function Reports() {
             </Table>
           </CardContent>
         </Card>
-
-        {/* Charts Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* By Account */}
-          <Card>
-            <CardHeader>
-              <CardTitle>By Account</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {accountChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={accountChartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      type="number"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="account"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      width={80}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [value.toFixed(2), "Total"]}
-                    />
-                    <Bar 
-                      dataKey="total" 
-                      fill="hsl(var(--primary))" 
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[280px] flex items-center justify-center text-muted-foreground">
-                  No data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* By Payment Method */}
-          <Card>
-            <CardHeader>
-              <CardTitle>By Payment Method</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payMethodChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie
-                      data={payMethodChartData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      dataKey="total"
-                      nameKey="method"
-                      label={({ method, percent }) => 
-                        `${method} (${(percent * 100).toFixed(0)}%)`
-                      }
-                      labelLine={false}
-                    >
-                      {payMethodChartData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(value: number) => [value.toFixed(2), "Total"]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[280px] flex items-center justify-center text-muted-foreground">
-                  No data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Filters Bar */}
         <Card>

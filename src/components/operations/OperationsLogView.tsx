@@ -141,8 +141,8 @@ export function OperationsLogView() {
   const [deleteOperationId, setDeleteOperationId] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const { canWriteSection, isLoading: authLoading } = useAuth();
-  const canEdit = canWriteSection("operations");
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "management" || user?.role === "supervisor";
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
   const [form, setForm] = useState({

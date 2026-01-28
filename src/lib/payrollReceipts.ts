@@ -31,6 +31,7 @@ interface PayrollData {
   isr: number;
   absenceDeduction: number;
   vacationDeduction: number;
+  loanDeduction: number;
   totalDeductions: number;
   grossPay: number;
   netPay: number;
@@ -164,6 +165,7 @@ function generateEmployeeReceipt(
       { label: "ISR", value: data.isr },
       { label: `Ausencias`, value: data.absenceDeduction },
       { label: `Vacaciones (${data.vacationDays} días)`, value: data.vacationDeduction },
+      { label: `Préstamo`, value: data.loanDeduction },
     ];
 
     doc.setFont("helvetica", "normal");

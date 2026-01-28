@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserPlus, Save } from "lucide-react";
+import { EmployeeLoansSection } from "./EmployeeLoansSection";
 
 const POSITIONS = ["Obrero", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
@@ -479,6 +480,13 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             </div>
           </form>
         </Form>
+
+        {/* Loans section - only shown when editing */}
+        {isEditing && employeeId && (
+          <div className="mt-6 pt-6 border-t">
+            <EmployeeLoansSection employeeId={employeeId} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

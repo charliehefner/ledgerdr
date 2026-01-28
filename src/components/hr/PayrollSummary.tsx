@@ -60,6 +60,15 @@ interface EmployeeVacation {
   end_date: string;
 }
 
+interface EmployeeLoan {
+  id: string;
+  employee_id: string;
+  loan_amount: number;
+  payment_amount: number;
+  remaining_payments: number;
+  is_active: boolean;
+}
+
 interface PayrollSummaryProps {
   periodId: string;
   periodStatus: string;
@@ -142,6 +151,20 @@ export function PayrollSummary({
         .select("employee_id, benefit_type, amount");
       if (error) throw error;
       return data as EmployeeBenefit[];
+    },
+  });
+
+  // Fetch active loans
+  const { data: loans = [] } = useQuery({
+    queryKey: ["employee-loans-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_loans")
+        .select("id, employee_id, loan_amount, payment_amount, remaining_payments, is_active")
+        .eq("is_active", true)
+        .gt("remaining_payments", 0);
+      if (error) throw error;
+      return data as EmployeeLoan[];
     },
   });
 
@@ -251,7 +274,11 @@ export function PayrollSummary({
     // Vacation days are paid separately, so we deduct them from base pay
     const vacationDeduction = vacationDays * dailyRate;
 
-    const totalDeductions = tss + isr + absenceDeduction + vacationDeduction;
+    // Loan deductions - sum all active loan payment amounts for this employee
+    const employeeLoans = loans.filter((l) => l.employee_id === employeeId);
+    const loanDeduction = Math.round(employeeLoans.reduce((sum, l) => sum + l.payment_amount, 0) * 100) / 100;
+
+    const totalDeductions = tss + isr + absenceDeduction + vacationDeduction + loanDeduction;
     const grossPay = basePay + overtimePay + holidayPay + totalBenefits;
     const netPay = grossPay - totalDeductions;
 
@@ -270,6 +297,7 @@ export function PayrollSummary({
       isr,
       absenceDeduction,
       vacationDeduction,
+      loanDeduction,
       totalDeductions,
       grossPay,
       netPay,
@@ -291,6 +319,7 @@ export function PayrollSummary({
       overtimePay: acc.overtimePay + p.overtimePay,
       holidayPay: acc.holidayPay + p.holidayPay,
       totalBenefits: acc.totalBenefits + p.totalBenefits,
+      loanDeduction: acc.loanDeduction + p.loanDeduction,
       totalDeductions: acc.totalDeductions + p.totalDeductions,
       grossPay: acc.grossPay + p.grossPay,
       netPay: acc.netPay + p.netPay,
@@ -304,6 +333,7 @@ export function PayrollSummary({
       overtimePay: 0,
       holidayPay: 0,
       totalBenefits: 0,
+      loanDeduction: 0,
       totalDeductions: 0,
       grossPay: 0,
       netPay: 0,
@@ -339,6 +369,7 @@ export function PayrollSummary({
         { header: "TSS", key: "tss", width: 12 },
         { header: "ISR", key: "isr", width: 12 },
         { header: "Ausencias", key: "absences", width: 12 },
+        { header: "Préstamo", key: "loan", width: 12 },
         { header: "Total Deducciones", key: "totalDed", width: 18 },
         { header: "Pago Neto", key: "netPay", width: 15 },
       ];
@@ -369,6 +400,7 @@ export function PayrollSummary({
           tss: p.tss.toFixed(2),
           isr: p.isr.toFixed(2),
           absences: p.absenceDeduction.toFixed(2),
+          loan: p.loanDeduction.toFixed(2),
           totalDed: p.totalDeductions.toFixed(2),
           netPay: p.netPay.toFixed(2),
         });
@@ -389,6 +421,7 @@ export function PayrollSummary({
         tss: "",
         isr: "",
         absences: "",
+        loan: totals.loanDeduction.toFixed(2),
         totalDed: totals.totalDeductions.toFixed(2),
         netPay: totals.netPay.toFixed(2),
       });
@@ -462,7 +495,21 @@ export function PayrollSummary({
 
       if (error) throw error;
 
-      // 3. Generate receipts automatically on close
+      // 3. Decrement remaining_payments for all active loans
+      for (const loan of loans) {
+        const newRemaining = Math.max(0, loan.remaining_payments - 1);
+        const isStillActive = newRemaining > 0;
+        
+        await supabase
+          .from("employee_loans")
+          .update({ 
+            remaining_payments: newRemaining,
+            is_active: isStillActive,
+          })
+          .eq("id", loan.id);
+      }
+
+      // 4. Generate receipts automatically on close
       await generatePayrollReceiptsZip(payrollData, nominaNumber, startDate, endDate);
     },
     onSuccess: () => {
@@ -532,6 +579,7 @@ export function PayrollSummary({
               <TableHead className="text-right text-orange-600 whitespace-nowrap">Pago Extra</TableHead>
               <TableHead className="text-right text-amber-600 whitespace-nowrap">Pago Fer</TableHead>
               <TableHead className="text-right text-green-600 whitespace-nowrap">Beneficios</TableHead>
+              <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">Deducciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -562,6 +610,9 @@ export function PayrollSummary({
                 </TableCell>
                 <TableCell className="text-right font-mono text-green-600">
                   {formatCurrency(p.totalBenefits)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-purple-600">
+                  {p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
                   {formatCurrency(p.totalDeductions)}
@@ -595,6 +646,9 @@ export function PayrollSummary({
               </TableCell>
               <TableCell className="text-right font-mono text-green-600">
                 {formatCurrency(totals.totalBenefits)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-purple-600">
+                {totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {formatCurrency(totals.totalDeductions)}

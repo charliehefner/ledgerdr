@@ -218,6 +218,56 @@ export type Database = {
           },
         ]
       }
+      employee_loans: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          is_active: boolean
+          loan_amount: number
+          loan_date: string
+          notes: string | null
+          number_of_payments: number
+          payment_amount: number
+          remaining_payments: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_active?: boolean
+          loan_amount: number
+          loan_date: string
+          notes?: string | null
+          number_of_payments: number
+          payment_amount: number
+          remaining_payments: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_active?: boolean
+          loan_amount?: number
+          loan_date?: string
+          notes?: string | null
+          number_of_payments?: number
+          payment_amount?: number
+          remaining_payments?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_loans_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_salary_history: {
         Row: {
           created_at: string

@@ -254,9 +254,10 @@ export function PayrollTimeGrid({
 
       for (const employee of salariedEmployees) {
         for (const day of days) {
-          // Skip Sundays and vacation days (Saturday is a workday)
+          // Skip Sundays, vacation days, and holidays (Saturday is a workday)
           if (isSunday(day)) continue;
           if (isEmployeeOnVacation(employee.id, day)) continue;
+          if (isDayHoliday(day)) continue;
 
           const dateStr = format(day, "yyyy-MM-dd");
           entries.push({

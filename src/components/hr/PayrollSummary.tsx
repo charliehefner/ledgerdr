@@ -82,7 +82,7 @@ const BENEFIT_TYPES = ["Teléfono", "Gasolina", "Bono"];
 const STANDARD_START = 7 * 60 + 30;
 const STANDARD_END = 16 * 60 + 30;
 const STANDARD_HOURS_PER_DAY = 8;
-const TSS_EMPLOYEE_RATE = 0.0304;
+const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
 const ISR_EXEMPTION = 34685;
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
@@ -319,6 +319,8 @@ export function PayrollSummary({
       overtimePay: acc.overtimePay + p.overtimePay,
       holidayPay: acc.holidayPay + p.holidayPay,
       totalBenefits: acc.totalBenefits + p.totalBenefits,
+      tss: acc.tss + p.tss,
+      isr: acc.isr + p.isr,
       loanDeduction: acc.loanDeduction + p.loanDeduction,
       totalDeductions: acc.totalDeductions + p.totalDeductions,
       grossPay: acc.grossPay + p.grossPay,
@@ -333,6 +335,8 @@ export function PayrollSummary({
       overtimePay: 0,
       holidayPay: 0,
       totalBenefits: 0,
+      tss: 0,
+      isr: 0,
       loanDeduction: 0,
       totalDeductions: 0,
       grossPay: 0,
@@ -579,6 +583,8 @@ export function PayrollSummary({
               <TableHead className="text-right text-orange-600 whitespace-nowrap">Pago Extra</TableHead>
               <TableHead className="text-right text-amber-600 whitespace-nowrap">Pago Fer</TableHead>
               <TableHead className="text-right text-green-600 whitespace-nowrap">Beneficios</TableHead>
+              <TableHead className="text-right text-red-600 whitespace-nowrap">TSS</TableHead>
+              <TableHead className="text-right text-red-600 whitespace-nowrap">ISR</TableHead>
               <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">Deducciones</TableHead>
             </TableRow>
@@ -610,6 +616,12 @@ export function PayrollSummary({
                 </TableCell>
                 <TableCell className="text-right font-mono text-green-600">
                   {formatCurrency(p.totalBenefits)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-600">
+                  {formatCurrency(p.tss)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-600">
+                  {p.isr > 0 ? formatCurrency(p.isr) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-purple-600">
                   {p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-"}
@@ -646,6 +658,12 @@ export function PayrollSummary({
               </TableCell>
               <TableCell className="text-right font-mono text-green-600">
                 {formatCurrency(totals.totalBenefits)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-red-600">
+                {formatCurrency(totals.tss)}
+              </TableCell>
+              <TableCell className="text-right font-mono text-red-600">
+                {totals.isr > 0 ? formatCurrency(totals.isr) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-purple-600">
                 {totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-"}

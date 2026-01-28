@@ -239,7 +239,7 @@ export function PayrollSummary({
 
     // Benefits
     const employeeBenefits = benefits.filter((b) => b.employee_id === employeeId);
-    const totalBenefits = employeeBenefits.reduce((sum, b) => sum + b.amount, 0);
+    const totalBenefits = Math.round(employeeBenefits.reduce((sum, b) => sum + b.amount, 0) * 100) / 100;
 
     // Deductions
     const tss = biweeklySalary * TSS_EMPLOYEE_RATE;

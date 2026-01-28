@@ -583,10 +583,9 @@ export function PayrollSummary({
               <TableHead className="text-right text-orange-600 whitespace-nowrap">Pago Extra</TableHead>
               <TableHead className="text-right text-amber-600 whitespace-nowrap">Pago Fer</TableHead>
               <TableHead className="text-right text-green-600 whitespace-nowrap">Beneficios</TableHead>
+              <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">TSS</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">ISR</TableHead>
-              <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
-              <TableHead className="text-right text-red-600 whitespace-nowrap">Deducciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -617,17 +616,14 @@ export function PayrollSummary({
                 <TableCell className="text-right font-mono text-green-600">
                   {formatCurrency(p.totalBenefits)}
                 </TableCell>
+                <TableCell className="text-right font-mono text-purple-600">
+                  {p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-"}
+                </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
                   {formatCurrency(p.tss)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
                   {p.isr > 0 ? formatCurrency(p.isr) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-purple-600">
-                  {p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-red-600">
-                  {formatCurrency(p.totalDeductions)}
                 </TableCell>
               </TableRow>
             ))}
@@ -659,17 +655,14 @@ export function PayrollSummary({
               <TableCell className="text-right font-mono text-green-600">
                 {formatCurrency(totals.totalBenefits)}
               </TableCell>
+              <TableCell className="text-right font-mono text-purple-600">
+                {totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-"}
+              </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {formatCurrency(totals.tss)}
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {totals.isr > 0 ? formatCurrency(totals.isr) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono text-purple-600">
-                {totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono text-red-600">
-                {formatCurrency(totals.totalDeductions)}
               </TableCell>
             </TableRow>
           </TableFooter>

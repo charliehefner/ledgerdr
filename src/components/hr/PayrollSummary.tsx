@@ -4,9 +4,10 @@ import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Download, Lock, Loader2 } from "lucide-react";
+import { Download, Lock, Loader2, FileText } from "lucide-react";
 import ExcelJS from "exceljs";
 import { createTransaction } from "@/lib/api";
+import { generatePayrollReceiptsZip } from "@/lib/payrollReceipts";
 import {
   Table,
   TableBody,
@@ -88,6 +89,7 @@ export function PayrollSummary({
   const queryClient = useQueryClient();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingReceipts, setIsGeneratingReceipts] = useState(false);
 
   // Fetch employees with bank info
   const { data: employees = [] } = useQuery({
@@ -418,6 +420,20 @@ export function PayrollSummary({
     }
   };
 
+  // Generate PDF receipts
+  const handleGenerateReceipts = async () => {
+    setIsGeneratingReceipts(true);
+    try {
+      await generatePayrollReceiptsZip(payrollData, nominaNumber, startDate, endDate);
+      toast.success("Recibos de pago generados");
+    } catch (error) {
+      toast.error("Error al generar recibos");
+      console.error(error);
+    } finally {
+      setIsGeneratingReceipts(false);
+    }
+  };
+
   // Close period mutation
   const closePeriod = useMutation({
     mutationFn: async () => {
@@ -445,11 +461,14 @@ export function PayrollSummary({
         .eq("id", periodId);
 
       if (error) throw error;
+
+      // 3. Generate receipts automatically on close
+      await generatePayrollReceiptsZip(payrollData, nominaNumber, startDate, endDate);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      toast.success("Período cerrado y transacciones registradas");
+      toast.success("Período cerrado, transacciones registradas y recibos generados");
       onPeriodClosed();
     },
     onError: (error) => {
@@ -475,6 +494,18 @@ export function PayrollSummary({
               <Download className="h-4 w-4 mr-2" />
             )}
             Exportar Excel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleGenerateReceipts}
+            disabled={isGeneratingReceipts || payrollData.length === 0}
+          >
+            {isGeneratingReceipts ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4 mr-2" />
+            )}
+            Recibos PDF
           </Button>
           {!isClosed && (
             <Button
@@ -585,6 +616,7 @@ export function PayrollSummary({
                 <li>Pago total: {formatCurrency(totals.netPay)}</li>
               </ul>
               <p className="mt-3 font-medium">Esta acción no se puede deshacer.</p>
+              <p className="mt-2 text-sm">Los recibos PDF se descargarán automáticamente.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

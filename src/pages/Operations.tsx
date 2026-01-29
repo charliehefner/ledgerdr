@@ -21,10 +21,10 @@ export default function Operations() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="log">Operations Log</TabsTrigger>
-            <TabsTrigger value="progress">Progreso de Campos</TabsTrigger>
-            <TabsTrigger value="farms">Farms & Fields</TabsTrigger>
-            <TabsTrigger value="types">Operation Types</TabsTrigger>
+            <TabsTrigger value="log" colorScheme="primary">Operations Log</TabsTrigger>
+            <TabsTrigger value="progress" colorScheme="secondary">Progreso de Campos</TabsTrigger>
+            <TabsTrigger value="farms" colorScheme="accent">Farms & Fields</TabsTrigger>
+            <TabsTrigger value="types" colorScheme="muted">Operation Types</TabsTrigger>
           </TabsList>
 
           <TabsContent value="log" className="mt-6">

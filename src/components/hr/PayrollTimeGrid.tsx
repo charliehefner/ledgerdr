@@ -515,27 +515,38 @@ export function PayrollTimeGrid({
 
   const calculateDeductions = (employeeId: string) => {
     const employee = employees.find((e) => e.id === employeeId);
-    if (!employee) return { tss: 0, isr: 0, absenceDeduction: 0 };
+    if (!employee) return { tss: 0, isr: 0, absenceDeduction: 0, vacationDeduction: 0 };
 
     const biweeklySalary = employee.salary / 2;
     const monthlySalary = employee.salary;
     const dailyRate = employee.salary / 23.83; // DR average work days
 
-    // TSS (employee portion)
-    const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
+    // Count vacation days for this employee in this period
+    const vacationDays = days.filter((day) => 
+      !isSunday(day) && isEmployeeOnVacation(employeeId, day)
+    ).length;
+    const vacationDeduction = vacationDays * dailyRate;
+    
+    // Calculate effective earnings after vacation deduction
+    // Employees on full vacation don't earn wages this period, so no TSS/ISR applies
+    const effectiveBasePay = Math.max(0, biweeklySalary - vacationDeduction);
 
-    // ISR (simplified - monthly based, divided by 2)
+    // TSS (employee portion) - only on effective earnings
+    const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
+
+    // ISR (simplified - monthly based, divided by 2) - only if working this period
     let isr = 0;
-    if (monthlySalary > ISR_EXEMPTION) {
-      // Simplified bracket (15% on excess over exemption)
-      isr = ((monthlySalary - ISR_EXEMPTION) * 0.15) / 2;
+    if (effectiveBasePay > 0 && monthlySalary > ISR_EXEMPTION) {
+      // Prorate ISR based on worked portion of the period
+      const workedRatio = effectiveBasePay / biweeklySalary;
+      isr = ((monthlySalary - ISR_EXEMPTION) * 0.15) / 2 * workedRatio;
     }
 
     // Absence deduction (prorated)
     const absenceDays = getAbsenceDays(employeeId);
     const absenceDeduction = absenceDays * dailyRate;
 
-    return { tss, isr, absenceDeduction };
+    return { tss, isr, absenceDeduction, vacationDeduction };
   };
 
   const formatCurrency = (amount: number) => {

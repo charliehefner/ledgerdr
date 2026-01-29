@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, eachDayOfInterval, isWithinInterval, parseISO, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, isWithinInterval, parseISO, isSunday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,10 +180,10 @@ export function PayrollSummary({
     });
   };
 
-  // Count vacation days for an employee in this period
+  // Count vacation days for an employee in this period (Saturday is a workday in DR)
   const getVacationDays = (employeeId: string): number => {
     const days = eachDayOfInterval({ start: startDate, end: endDate });
-    return days.filter((day) => !isWeekend(day) && isEmployeeOnVacation(employeeId, day)).length;
+    return days.filter((day) => !isSunday(day) && isEmployeeOnVacation(employeeId, day)).length;
   };
 
   const parseTimeToMinutes = (time: string): number => {

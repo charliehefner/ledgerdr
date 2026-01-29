@@ -238,8 +238,12 @@ export function PayrollSummary({
       }
     });
 
-    // Count absences (excluding vacation days)
+    // Count absences (excluding vacation days AND holiday days)
     const absenceDays = entries.filter((e) => {
+      // Holiday days with no times are NOT absences - employee gets the day off
+      if (e.is_holiday) {
+        return false;
+      }
       if (e.work_date) {
         const workDate = parseISO(e.work_date);
         if (isEmployeeOnVacation(employeeId, workDate)) {

@@ -73,7 +73,7 @@ const STANDARD_END = 16 * 60 + 30;  // 4:30 PM in minutes
 const STANDARD_HOURS_PER_DAY = 8;   // After lunch deduction
 
 // DR Labor Law rates (approximate, user should verify)
-const TSS_EMPLOYEE_RATE = 0.0304; // 3.04% AFP + SFS
+const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
 const ISR_EXEMPTION = 34685; // Monthly exemption (DOP)
 
 export function PayrollTimeGrid({
@@ -489,7 +489,7 @@ export function PayrollTimeGrid({
 
   const getAbsenceDays = (employeeId: string) => {
     return timesheets.filter(
-      (t) => t.employee_id === employeeId && t.is_absent
+      (t) => t.employee_id === employeeId && t.is_absent && !t.is_holiday
     ).length;
   };
 

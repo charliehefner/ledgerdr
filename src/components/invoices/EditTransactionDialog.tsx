@@ -54,6 +54,7 @@ export function EditTransactionDialog({
     pay_method: "",
     document: "",
     name: "",
+    rnc: "",
     comments: "",
   });
 
@@ -87,6 +88,7 @@ export function EditTransactionDialog({
         pay_method: transaction.pay_method || "",
         document: docValue,
         name: transaction.name || "",
+        rnc: transaction.rnc || "",
         comments: transaction.comments || "",
       });
       setEditedDocument(docValue);
@@ -231,14 +233,25 @@ export function EditTransactionDialog({
               />
             </div>
 
-            {/* Name */}
-            <div className="space-y-2">
-              <Label>Proveedor/Nombre</Label>
-              <Input
-                value={formData.name || ''}
-                readOnly
-                className="bg-muted"
-              />
+            {/* Name and RNC */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Proveedor/Nombre</Label>
+                <Input
+                  value={formData.name || ''}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>RNC</Label>
+                <Input
+                  value={formData.rnc || ''}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
             </div>
 
             {/* Document - EDITABLE */}

@@ -1111,6 +1111,7 @@ export type Database = {
           name: string | null
           pay_method: string | null
           project_code: string | null
+          rnc: string | null
           transaction_date: string
           updated_at: string
           void_reason: string | null
@@ -1132,6 +1133,7 @@ export type Database = {
           name?: string | null
           pay_method?: string | null
           project_code?: string | null
+          rnc?: string | null
           transaction_date: string
           updated_at?: string
           void_reason?: string | null
@@ -1153,6 +1155,7 @@ export type Database = {
           name?: string | null
           pay_method?: string | null
           project_code?: string | null
+          rnc?: string | null
           transaction_date?: string
           updated_at?: string
           void_reason?: string | null

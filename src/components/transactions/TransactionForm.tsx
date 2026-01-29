@@ -55,6 +55,7 @@ const initialFormState = {
   pay_method: '',
   document: '',
   name: '',
+  rnc: '',
   comments: '',
   exchange_rate: '',
   is_internal: false,
@@ -157,6 +158,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         pay_method: form.pay_method || undefined,
         document: form.document || undefined,
         name: form.name || undefined,
+        rnc: form.rnc || undefined,
         comments: form.comments || undefined,
         exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
         is_internal: form.is_internal,
@@ -182,7 +184,22 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   };
 
   const updateField = <K extends keyof typeof form>(field: K, value: typeof form[K]) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-fill RNC when name changes and matches a previous transaction
+      if (field === 'name' && typeof value === 'string' && value.trim()) {
+        const normalizedName = value.trim().toLowerCase();
+        const matchingTx = existingTransactions.find(
+          tx => tx.name?.trim().toLowerCase() === normalizedName && tx.rnc
+        );
+        if (matchingTx?.rnc && !prev.rnc) {
+          updated.rnc = matchingTx.rnc;
+        }
+      }
+      
+      return updated;
+    });
   };
 
   return (
@@ -387,7 +404,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           </div>
 
           {/* Additional Fields */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label>Método de Pago</Label>
               <Select
@@ -413,7 +430,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Input
                 value={form.document}
                 onChange={(e) => updateField('document', e.target.value)}
-                placeholder="Referencia de documento"
+                placeholder="NCF / Referencia"
               />
             </div>
 
@@ -422,7 +439,16 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Input
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Nombre del proveedor/beneficiario"
+                placeholder="Proveedor/Beneficiario"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>RNC</Label>
+              <Input
+                value={form.rnc}
+                onChange={(e) => updateField('rnc', e.target.value)}
+                placeholder="Registro Nacional"
               />
             </div>
           </div>

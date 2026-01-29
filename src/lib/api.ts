@@ -33,6 +33,7 @@ export interface Transaction {
   pay_method?: string;
   document?: string;
   name?: string;
+  rnc?: string;
   comments?: string;
   exchange_rate?: number;
   is_internal: boolean;
@@ -135,6 +136,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       pay_method: transaction.pay_method || null,
       document: transaction.document || null,
       name: transaction.name || null,
+      rnc: transaction.rnc || null,
       comments: transaction.comments || null,
       is_void: false,
     })

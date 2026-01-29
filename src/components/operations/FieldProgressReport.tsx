@@ -42,6 +42,20 @@ interface OperationType {
   is_active: boolean;
 }
 
+interface Farm {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+interface Field {
+  id: string;
+  name: string;
+  farm_id: string;
+  hectares: number | null;
+  is_active: boolean;
+}
+
 interface FieldProgress {
   fieldId: string;
   fieldName: string;
@@ -61,6 +75,8 @@ export function FieldProgressReport() {
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [selectedOperationType, setSelectedOperationType] = useState<string>("all");
+  const [selectedFarm, setSelectedFarm] = useState<string>("all");
+  const [selectedField, setSelectedField] = useState<string>("all");
   const [hasSearched, setHasSearched] = useState(false);
 
   // Fetch operation types
@@ -74,6 +90,34 @@ export function FieldProgressReport() {
         .order("name");
       if (error) throw error;
       return data as OperationType[];
+    },
+  });
+
+  // Fetch farms
+  const { data: farms } = useQuery({
+    queryKey: ["farms-for-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("farms")
+        .select("id, name, is_active")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as Farm[];
+    },
+  });
+
+  // Fetch fields
+  const { data: fields } = useQuery({
+    queryKey: ["fields-for-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fields")
+        .select("id, name, farm_id, hectares, is_active")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as Field[];
     },
   });
 
@@ -103,7 +147,7 @@ export function FieldProgressReport() {
   const fieldProgressData = useMemo(() => {
     if (!operations || !startDate || !endDate || !hasSearched) return [];
 
-    // Filter operations by date range and operation type
+    // Filter operations by date range, operation type, farm, and field
     const filtered = operations.filter((op) => {
       const opDate = parseDateLocal(op.operation_date);
       const inDateRange = isWithinInterval(opDate, {
@@ -111,7 +155,13 @@ export function FieldProgressReport() {
         end: endOfDay(endDate),
       });
       const matchesType = selectedOperationType === "all" || op.operation_type_id === selectedOperationType;
-      return inDateRange && matchesType;
+      
+      // Get farm_id for this operation's field
+      const fieldData = fields?.find((f) => f.id === op.field_id);
+      const matchesFarm = selectedFarm === "all" || fieldData?.farm_id === selectedFarm;
+      const matchesField = selectedField === "all" || op.field_id === selectedField;
+      
+      return inDateRange && matchesType && matchesFarm && matchesField;
     });
 
     // Group by field and aggregate
@@ -179,7 +229,20 @@ export function FieldProgressReport() {
       if (farmCompare !== 0) return farmCompare;
       return a.fieldName.localeCompare(b.fieldName);
     });
-  }, [operations, startDate, endDate, selectedOperationType, hasSearched]);
+  }, [operations, fields, startDate, endDate, selectedOperationType, selectedFarm, selectedField, hasSearched]);
+
+  // Filter fields by selected farm
+  const filteredFields = useMemo(() => {
+    if (!fields) return [];
+    if (selectedFarm === "all") return fields;
+    return fields.filter((f) => f.farm_id === selectedFarm);
+  }, [fields, selectedFarm]);
+
+  // Reset field selection when farm changes
+  const handleFarmChange = (farmId: string) => {
+    setSelectedFarm(farmId);
+    setSelectedField("all");
+  };
 
   const handleSearch = () => {
     setHasSearched(true);
@@ -338,6 +401,42 @@ export function FieldProgressReport() {
                   {operationTypes?.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Farm Filter */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-muted-foreground">Finca</label>
+              <Select value={selectedFarm} onValueChange={handleFarmChange}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Seleccionar finca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Fincas</SelectItem>
+                  {farms?.map((farm) => (
+                    <SelectItem key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Field Filter */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-muted-foreground">Campo</label>
+              <Select value={selectedField} onValueChange={setSelectedField}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Seleccionar campo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los Campos</SelectItem>
+                  {filteredFields?.map((field) => (
+                    <SelectItem key={field.id} value={field.id}>
+                      {field.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

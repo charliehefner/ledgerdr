@@ -1,0 +1,468 @@
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CalendarIcon, FileSpreadsheet, Search } from "lucide-react";
+import { format, startOfDay, endOfDay, isWithinInterval, startOfMonth } from "date-fns";
+import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
+import ExcelJS from "exceljs";
+
+interface Operation {
+  id: string;
+  operation_date: string;
+  field_id: string;
+  operation_type_id: string;
+  hectares_done: number;
+  fields: {
+    id: string;
+    name: string;
+    hectares: number | null;
+    farms: { name: string };
+  };
+  operation_types: { name: string; is_mechanical: boolean };
+  operation_inputs: Array<{
+    id: string;
+    quantity_used: number;
+    inventory_items: {
+      commercial_name: string;
+      use_unit: string;
+    };
+  }>;
+}
+
+interface OperationType {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+interface FieldProgress {
+  fieldId: string;
+  fieldName: string;
+  farmName: string;
+  totalHectares: number;
+  hectaresDone: number;
+  hectaresRemaining: number;
+  percentComplete: number;
+  inputs: Array<{
+    name: string;
+    quantity: number;
+    unit: string;
+  }>;
+}
+
+export function FieldProgressReport() {
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [selectedOperationType, setSelectedOperationType] = useState<string>("all");
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Fetch operation types
+  const { data: operationTypes } = useQuery({
+    queryKey: ["operation-types"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operation_types")
+        .select("id, name, is_active")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as OperationType[];
+    },
+  });
+
+  // Fetch all operations with related data
+  const { data: operations, isLoading } = useQuery({
+    queryKey: ["operations-for-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operations")
+        .select(`
+          id,
+          operation_date,
+          field_id,
+          operation_type_id,
+          hectares_done,
+          fields(id, name, hectares, farms(name)),
+          operation_types(name, is_mechanical),
+          operation_inputs(id, quantity_used, inventory_items(commercial_name, use_unit))
+        `)
+        .order("operation_date", { ascending: false });
+      if (error) throw error;
+      return data as Operation[];
+    },
+  });
+
+  // Calculate field progress based on filters
+  const fieldProgressData = useMemo(() => {
+    if (!operations || !startDate || !endDate || !hasSearched) return [];
+
+    // Filter operations by date range and operation type
+    const filtered = operations.filter((op) => {
+      const opDate = parseDateLocal(op.operation_date);
+      const inDateRange = isWithinInterval(opDate, {
+        start: startOfDay(startDate),
+        end: endOfDay(endDate),
+      });
+      const matchesType = selectedOperationType === "all" || op.operation_type_id === selectedOperationType;
+      return inDateRange && matchesType;
+    });
+
+    // Group by field and aggregate
+    const fieldMap = new Map<string, FieldProgress>();
+
+    filtered.forEach((op) => {
+      const fieldId = op.field_id;
+      const existing = fieldMap.get(fieldId);
+
+      if (existing) {
+        existing.hectaresDone += op.hectares_done;
+        // Aggregate inputs
+        op.operation_inputs?.forEach((input) => {
+          const existingInput = existing.inputs.find(
+            (i) => i.name === input.inventory_items.commercial_name
+          );
+          if (existingInput) {
+            existingInput.quantity += input.quantity_used;
+          } else {
+            existing.inputs.push({
+              name: input.inventory_items.commercial_name,
+              quantity: input.quantity_used,
+              unit: input.inventory_items.use_unit,
+            });
+          }
+        });
+      } else {
+        const totalHectares = op.fields?.hectares || 0;
+        const inputs: Array<{ name: string; quantity: number; unit: string }> = [];
+        
+        op.operation_inputs?.forEach((input) => {
+          inputs.push({
+            name: input.inventory_items.commercial_name,
+            quantity: input.quantity_used,
+            unit: input.inventory_items.use_unit,
+          });
+        });
+
+        fieldMap.set(fieldId, {
+          fieldId,
+          fieldName: op.fields?.name || "Unknown",
+          farmName: op.fields?.farms?.name || "Unknown",
+          totalHectares,
+          hectaresDone: op.hectares_done,
+          hectaresRemaining: 0, // calculated after
+          percentComplete: 0, // calculated after
+          inputs,
+        });
+      }
+    });
+
+    // Calculate remaining and percent
+    const result: FieldProgress[] = [];
+    fieldMap.forEach((field) => {
+      field.hectaresRemaining = Math.max(0, field.totalHectares - field.hectaresDone);
+      field.percentComplete = field.totalHectares > 0 
+        ? Math.min(100, (field.hectaresDone / field.totalHectares) * 100)
+        : 0;
+      result.push(field);
+    });
+
+    // Sort by farm name, then field name
+    return result.sort((a, b) => {
+      const farmCompare = a.farmName.localeCompare(b.farmName);
+      if (farmCompare !== 0) return farmCompare;
+      return a.fieldName.localeCompare(b.fieldName);
+    });
+  }, [operations, startDate, endDate, selectedOperationType, hasSearched]);
+
+  const handleSearch = () => {
+    setHasSearched(true);
+  };
+
+  const getOperationTypeName = () => {
+    if (selectedOperationType === "all") return "Todas las Operaciones";
+    return operationTypes?.find((t) => t.id === selectedOperationType)?.name || "";
+  };
+
+  const exportToExcel = async () => {
+    if (fieldProgressData.length === 0) return;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Progreso de Campos");
+
+    // Add title
+    worksheet.mergeCells("A1:G1");
+    worksheet.getCell("A1").value = `Reporte de Progreso: ${getOperationTypeName()}`;
+    worksheet.getCell("A1").font = { bold: true, size: 14 };
+    worksheet.getCell("A1").alignment = { horizontal: "center" };
+
+    // Add date range
+    worksheet.mergeCells("A2:G2");
+    worksheet.getCell("A2").value = `Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").alignment = { horizontal: "center" };
+
+    // Add headers
+    const headers = ["Finca", "Campo", "Ha Totales", "Ha Realizadas", "Ha Pendientes", "% Completado", "Insumos Utilizados"];
+    worksheet.addRow([]);
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Add data rows
+    fieldProgressData.forEach((field) => {
+      const inputsStr = field.inputs.length > 0
+        ? field.inputs.map((i) => `${i.name}: ${i.quantity.toFixed(2)} ${i.unit}`).join("; ")
+        : "-";
+
+      worksheet.addRow([
+        field.farmName,
+        field.fieldName,
+        field.totalHectares,
+        field.hectaresDone,
+        field.hectaresRemaining,
+        `${field.percentComplete.toFixed(1)}%`,
+        inputsStr,
+      ]);
+    });
+
+    // Add totals row
+    const totalDone = fieldProgressData.reduce((sum, f) => sum + f.hectaresDone, 0);
+    const totalArea = fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0);
+    const totalRemaining = fieldProgressData.reduce((sum, f) => sum + f.hectaresRemaining, 0);
+    worksheet.addRow([]);
+    const totalsRow = worksheet.addRow([
+      "TOTALES",
+      "",
+      totalArea,
+      totalDone,
+      totalRemaining,
+      totalArea > 0 ? `${((totalDone / totalArea) * 100).toFixed(1)}%` : "0%",
+      "",
+    ]);
+    totalsRow.eachCell((cell) => {
+      cell.font = { bold: true };
+    });
+
+    // Auto-fit columns
+    worksheet.columns.forEach((column) => {
+      column.width = 18;
+    });
+    worksheet.getColumn(7).width = 40; // Inputs column wider
+
+    // Generate and download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Progreso_Campos_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filtros del Reporte</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Date Range */}
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd MMM yyyy", { locale: es }) : "Fecha inicio"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    locale={es}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground">a</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd MMM yyyy", { locale: es }) : "Fecha fin"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    locale={es}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Operation Type */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-muted-foreground">Tipo de Operación</label>
+              <Select value={selectedOperationType} onValueChange={setSelectedOperationType}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Operaciones</SelectItem>
+                  {operationTypes?.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Search Button */}
+            <Button onClick={handleSearch} disabled={!startDate || !endDate}>
+              <Search className="mr-2 h-4 w-4" />
+              Generar Reporte
+            </Button>
+
+            {/* Export Button */}
+            {fieldProgressData.length > 0 && (
+              <Button variant="outline" onClick={exportToExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Exportar Excel
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      {hasSearched && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {getOperationTypeName()} - Progreso por Campo
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Cargando datos...</div>
+            ) : fieldProgressData.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No se encontraron operaciones para los filtros seleccionados.
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Finca</TableHead>
+                      <TableHead>Campo</TableHead>
+                      <TableHead className="text-right">Ha Totales</TableHead>
+                      <TableHead className="text-right">Ha Realizadas</TableHead>
+                      <TableHead className="text-right">Ha Pendientes</TableHead>
+                      <TableHead className="text-right">% Completado</TableHead>
+                      <TableHead>Insumos Utilizados</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fieldProgressData.map((field) => (
+                      <TableRow key={field.fieldId}>
+                        <TableCell className="font-medium">{field.farmName}</TableCell>
+                        <TableCell>{field.fieldName}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {field.totalHectares.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-primary">
+                          {field.hectaresDone.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-destructive">
+                          {field.hectaresRemaining.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full"
+                                style={{ width: `${field.percentComplete}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium w-12 text-right">
+                              {field.percentComplete.toFixed(0)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {field.inputs.length > 0 ? (
+                            <div className="space-y-0.5">
+                              {field.inputs.map((input, idx) => (
+                                <div key={idx} className="text-xs">
+                                  {input.name}: {input.quantity.toFixed(2)} {input.unit}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {/* Totals Row */}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell colSpan={2}>TOTALES</TableCell>
+                      <TableCell className="text-right font-mono">
+                        {fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-primary">
+                        {fieldProgressData.reduce((sum, f) => sum + f.hectaresDone, 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-destructive">
+                        {fieldProgressData.reduce((sum, f) => sum + f.hectaresRemaining, 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {(() => {
+                          const totalArea = fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0);
+                          const totalDone = fieldProgressData.reduce((sum, f) => sum + f.hectaresDone, 0);
+                          return totalArea > 0 ? `${((totalDone / totalArea) * 100).toFixed(0)}%` : "0%";
+                        })()}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

@@ -27,10 +27,10 @@ const tabsTriggerVariants = cva(
     variants: {
       colorScheme: {
         default: "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-        primary: "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm hover:bg-primary/10",
-        secondary: "data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-sm hover:bg-secondary/50",
-        accent: "data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm hover:bg-accent/50",
-        muted: "data-[state=active]:bg-muted-foreground/20 data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted-foreground/10",
+        primary: "bg-primary/10 text-primary hover:bg-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        secondary: "bg-secondary/50 text-secondary-foreground hover:bg-secondary/70 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-sm",
+        accent: "bg-accent/10 text-accent-foreground hover:bg-accent/20 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm",
+        muted: "bg-muted text-muted-foreground hover:bg-muted-foreground/10 data-[state=active]:bg-muted-foreground/20 data-[state=active]:text-foreground data-[state=active]:shadow-sm",
       },
     },
     defaultVariants: {

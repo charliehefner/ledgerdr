@@ -182,8 +182,14 @@ export function PayrollSummary({
 
   // Count vacation days for an employee in this period (Saturday is a workday in DR)
   const getVacationDays = (employeeId: string): number => {
-    const days = eachDayOfInterval({ start: startDate, end: endDate });
-    return days.filter((day) => !isSunday(day) && isEmployeeOnVacation(employeeId, day)).length;
+    const periodDays = eachDayOfInterval({ start: startDate, end: endDate });
+    return periodDays.filter((day) => !isSunday(day) && isEmployeeOnVacation(employeeId, day)).length;
+  };
+
+  // Count total working days in this period (excluding Sundays only)
+  const getTotalWorkingDays = (): number => {
+    const periodDays = eachDayOfInterval({ start: startDate, end: endDate });
+    return periodDays.filter((day) => !isSunday(day)).length;
   };
 
   const parseTimeToMinutes = (time: string): number => {
@@ -268,8 +274,12 @@ export function PayrollSummary({
     const employeeBenefits = benefits.filter((b) => b.employee_id === employeeId);
     const totalBenefits = Math.round(employeeBenefits.reduce((sum, b) => sum + b.amount, 0) * 100) / 100;
 
-    // Vacation days are paid separately, so we deduct them from base pay
-    const vacationDeduction = vacationDays * dailyRate;
+    // Vacation deduction: proportional to biweekly salary based on days in period
+    // This ensures vacation deduction never exceeds base pay
+    const totalWorkingDays = getTotalWorkingDays();
+    const vacationDeduction = totalWorkingDays > 0 
+      ? (vacationDays / totalWorkingDays) * biweeklySalary 
+      : 0;
     
     // Calculate effective earnings after vacation deduction (for TSS/ISR calculation)
     // Employees on full vacation don't earn wages this period, so no TSS/ISR applies

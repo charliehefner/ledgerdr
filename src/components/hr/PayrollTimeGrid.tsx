@@ -521,11 +521,17 @@ export function PayrollTimeGrid({
     const monthlySalary = employee.salary;
     const dailyRate = employee.salary / 23.83; // DR average work days
 
-    // Count vacation days for this employee in this period
+    // Count vacation days and total working days for this period
+    const totalWorkingDays = days.filter((day) => !isSunday(day)).length;
     const vacationDays = days.filter((day) => 
       !isSunday(day) && isEmployeeOnVacation(employeeId, day)
     ).length;
-    const vacationDeduction = vacationDays * dailyRate;
+    
+    // Vacation deduction: proportional to biweekly salary based on days in period
+    // This ensures vacation deduction never exceeds base pay
+    const vacationDeduction = totalWorkingDays > 0 
+      ? (vacationDays / totalWorkingDays) * biweeklySalary 
+      : 0;
     
     // Calculate effective earnings after vacation deduction
     // Employees on full vacation don't earn wages this period, so no TSS/ISR applies

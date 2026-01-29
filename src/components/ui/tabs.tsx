@@ -27,10 +27,10 @@ const tabsTriggerVariants = cva(
     variants: {
       colorScheme: {
         default: "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-        primary: "bg-primary/10 text-primary hover:bg-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
-        secondary: "bg-secondary/50 text-secondary-foreground hover:bg-secondary/70 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-sm",
-        accent: "bg-accent/10 text-accent-foreground hover:bg-accent/20 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm",
-        muted: "bg-muted text-muted-foreground hover:bg-muted-foreground/10 data-[state=active]:bg-muted-foreground/20 data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+        primary: "bg-primary/20 text-primary font-medium hover:bg-primary/30 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
+        secondary: "bg-primary/10 text-primary/80 hover:bg-primary/15 data-[state=active]:bg-primary/70 data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
+        accent: "bg-accent/25 text-accent-foreground font-medium hover:bg-accent/35 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md",
+        muted: "bg-primary/5 text-muted-foreground hover:bg-primary/10 data-[state=active]:bg-primary/50 data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
       },
     },
     defaultVariants: {

@@ -268,15 +268,24 @@ export function PayrollSummary({
     const employeeBenefits = benefits.filter((b) => b.employee_id === employeeId);
     const totalBenefits = Math.round(employeeBenefits.reduce((sum, b) => sum + b.amount, 0) * 100) / 100;
 
-    // Deductions
-    const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
-    let isr = 0;
-    if (employee.salary > ISR_EXEMPTION) {
-      isr = ((employee.salary - ISR_EXEMPTION) * 0.15) / 2;
-    }
-    const absenceDeduction = absenceDays * dailyRate;
     // Vacation days are paid separately, so we deduct them from base pay
     const vacationDeduction = vacationDays * dailyRate;
+    
+    // Calculate effective earnings after vacation deduction (for TSS/ISR calculation)
+    // Employees on full vacation don't earn wages this period, so no TSS/ISR applies
+    const effectiveBasePay = Math.max(0, basePay - vacationDeduction);
+
+    // Deductions - TSS and ISR only apply to effective earnings (not vacation pay)
+    const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
+    let isr = 0;
+    // Only calculate ISR if there are effective earnings this period
+    if (effectiveBasePay > 0 && employee.salary > ISR_EXEMPTION) {
+      // Prorate ISR based on worked portion of the period
+      const workedRatio = effectiveBasePay / biweeklySalary;
+      isr = ((employee.salary - ISR_EXEMPTION) * 0.15) / 2 * workedRatio;
+    }
+    
+    const absenceDeduction = absenceDays * dailyRate;
 
     // Loan deductions - sum all active loan payment amounts for this employee
     const employeeLoans = loans.filter((l) => l.employee_id === employeeId);

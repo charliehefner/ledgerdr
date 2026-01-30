@@ -654,6 +654,32 @@ export function OperationsLogView() {
     setNewInput({ inventory_item_id: "", quantity_used: "" });
   };
 
+  // Check for hour meter gap with previous operation on same tractor
+  const checkHourMeterGap = (tractorId: string, startHours: number, operationDate: Date): string | null => {
+    if (!operations || !tractorId) return null;
+    
+    // Find the most recent operation on this tractor before the current date
+    const tractorOps = operations
+      .filter(op => op.tractor_id === tractorId && op.end_hours != null)
+      .filter(op => {
+        const opDate = parseDateLocal(op.operation_date);
+        return opDate < operationDate;
+      })
+      .sort((a, b) => parseDateLocal(b.operation_date).getTime() - parseDateLocal(a.operation_date).getTime());
+    
+    if (tractorOps.length > 0) {
+      const lastOp = tractorOps[0];
+      const lastEndHours = lastOp.end_hours!;
+      const gap = startHours - lastEndHours;
+      
+      if (gap > 0.1) { // Allow small tolerance
+        const lastDate = format(parseDateLocal(lastOp.operation_date), "dd/MM/yyyy");
+        return `Hay una diferencia de ${gap.toFixed(1)} horas entre el horómetro fin (${lastEndHours}) del ${lastDate} y el horómetro inicio (${startHours}) de hoy. ¿Falta registrar alguna operación?`;
+      }
+    }
+    return null;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.field_id || !form.operation_type_id || !form.hectares_done) {
@@ -664,6 +690,18 @@ export function OperationsLogView() {
       });
       return;
     }
+
+    // Validate no negative hectares
+    const hectares = parseFloat(form.hectares_done);
+    if (isNaN(hectares) || hectares <= 0) {
+      toast({
+        title: "Error de Validación",
+        description: "Las hectáreas trabajadas deben ser un número positivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (isMechanical && (!form.tractor_id || !form.implement_id)) {
       toast({
         title: "Error de Validación",
@@ -672,6 +710,34 @@ export function OperationsLogView() {
       });
       return;
     }
+
+    // Validate start hours < end hours for mechanical operations
+    if (isMechanical && form.start_hours && form.end_hours) {
+      const startHours = parseFloat(form.start_hours);
+      const endHours = parseFloat(form.end_hours);
+      
+      if (startHours >= endHours) {
+        toast({
+          title: "Error de Validación",
+          description: "El horómetro inicio debe ser menor que el horómetro fin.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check for hour meter gap
+      const gapWarning = checkHourMeterGap(form.tractor_id, startHours, form.operation_date);
+      if (gapWarning) {
+        toast({
+          title: "⚠️ Alerta de Horómetro",
+          description: gapWarning,
+          variant: "default",
+          duration: 8000,
+        });
+        // Still allow submission but show the warning
+      }
+    }
+
     if (!isMechanical && !form.workers_count) {
       toast({
         title: "Error de Validación",
@@ -679,6 +745,19 @@ export function OperationsLogView() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate workers count is positive
+    if (!isMechanical && form.workers_count) {
+      const workers = parseInt(form.workers_count);
+      if (isNaN(workers) || workers <= 0) {
+        toast({
+          title: "Error de Validación",
+          description: "La cantidad de obreros debe ser un número positivo.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     if (editingOperation) {

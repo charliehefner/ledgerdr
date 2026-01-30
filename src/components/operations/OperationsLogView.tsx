@@ -744,12 +744,12 @@ export function OperationsLogView() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid grid-cols-2 gap-3">
-              <Select value={filterFarm} onValueChange={setFilterFarm}>
+              <Select value={filterFarm || "__all__"} onValueChange={(v) => setFilterFarm(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todas las fincas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las fincas</SelectItem>
+                  <SelectItem value="__all__">Todas las fincas</SelectItem>
                   {farms.map((farm) => (
                     <SelectItem key={farm.id} value={farm.id}>
                       {farm.name}
@@ -758,12 +758,12 @@ export function OperationsLogView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterField} onValueChange={setFilterField}>
+              <Select value={filterField || "__all__"} onValueChange={(v) => setFilterField(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos los campos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los campos</SelectItem>
+                  <SelectItem value="__all__">Todos los campos</SelectItem>
                   {fields
                     ?.filter(f => !filterFarm || f.farm_id === filterFarm)
                     .map((field) => (
@@ -774,12 +774,12 @@ export function OperationsLogView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterTractor} onValueChange={setFilterTractor}>
+              <Select value={filterTractor || "__all__"} onValueChange={(v) => setFilterTractor(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos los tractores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los tractores</SelectItem>
+                  <SelectItem value="__all__">Todos los tractores</SelectItem>
                   {tractors?.map((tractor) => (
                     <SelectItem key={tractor.id} value={tractor.id}>
                       {tractor.name}
@@ -788,12 +788,12 @@ export function OperationsLogView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterDriver} onValueChange={setFilterDriver}>
+              <Select value={filterDriver || "__all__"} onValueChange={(v) => setFilterDriver(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Todos los operadores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los operadores</SelectItem>
+                  <SelectItem value="__all__">Todos los operadores</SelectItem>
                   {uniqueDrivers.map((driver) => (
                     <SelectItem key={driver} value={driver}>
                       {driver}

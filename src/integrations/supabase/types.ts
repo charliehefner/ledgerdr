@@ -876,6 +876,7 @@ export type Database = {
       operations: {
         Row: {
           created_at: string
+          driver: string | null
           end_hours: number | null
           field_id: string
           hectares_done: number
@@ -891,6 +892,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          driver?: string | null
           end_hours?: number | null
           field_id: string
           hectares_done: number
@@ -906,6 +908,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          driver?: string | null
           end_hours?: number | null
           field_id?: string
           hectares_done?: number

@@ -109,7 +109,8 @@ interface Operation {
   start_hours: number | null;
   end_hours: number | null;
   notes: string | null;
-  fields: { name: string; farms: { name: string } };
+  driver: string | null;
+  fields: { name: string; farms: { name: string }; farm_id: string };
   operation_types: { name: string; is_mechanical: boolean };
   fuel_equipment: { name: string } | null;
   implements: { name: string } | null;
@@ -126,6 +127,7 @@ const operationsColumns: ColumnConfig[] = [
   { key: "farm", label: "Finca", defaultVisible: true },
   { key: "operation", label: "Operación", defaultVisible: true },
   { key: "tractor", label: "Tractor/Obreros", defaultVisible: true },
+  { key: "driver", label: "Operador", defaultVisible: true },
   { key: "implement", label: "Implemento", defaultVisible: true },
   { key: "hours", label: "Horas", defaultVisible: true },
   { key: "hectares", label: "Hectáreas", defaultVisible: true },
@@ -134,7 +136,7 @@ const operationsColumns: ColumnConfig[] = [
 ];
 
 type SortDirection = "asc" | "desc" | null;
-type SortColumn = "date" | "field" | "farm" | "operation" | "tractor" | "implement" | "hours" | "hectares" | null;
+type SortColumn = "date" | "field" | "farm" | "operation" | "tractor" | "driver" | "implement" | "hours" | "hectares" | null;
 
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -146,6 +148,13 @@ export function OperationsLogView() {
   const canEdit = user?.role === "admin" || user?.role === "management" || user?.role === "supervisor";
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
+  
+  // Filter states
+  const [filterFarm, setFilterFarm] = useState<string>("");
+  const [filterField, setFilterField] = useState<string>("");
+  const [filterTractor, setFilterTractor] = useState<string>("");
+  const [filterDriver, setFilterDriver] = useState<string>("");
+  
   const [form, setForm] = useState({
     operation_date: new Date(),
     field_id: "",
@@ -157,6 +166,7 @@ export function OperationsLogView() {
     workers_count: "",
     hectares_done: "",
     notes: "",
+    driver: "",
   });
   const [inputs, setInputs] = useState<OperationInput[]>([]);
   const [newInput, setNewInput] = useState({ inventory_item_id: "", quantity_used: "" });
@@ -251,7 +261,7 @@ export function OperationsLogView() {
         .from("operations")
         .select(`
           *,
-          fields(name, farms(name)),
+          fields(name, farm_id, farms(name)),
           operation_types(name, is_mechanical),
           fuel_equipment(name),
           implements(name),
@@ -298,17 +308,53 @@ export function OperationsLogView() {
     return <ArrowUpDown className="ml-2 h-4 w-4" />;
   };
 
+  // Get unique farms for filter
+  const farms = useMemo(() => {
+    const farmSet = new Map<string, string>();
+    fields?.forEach(f => {
+      if (f.farm_id && f.farms?.name) {
+        farmSet.set(f.farm_id, f.farms.name);
+      }
+    });
+    return Array.from(farmSet, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [fields]);
+
+  // Get unique drivers from operations for filter
+  const uniqueDrivers = useMemo(() => {
+    if (!operations) return [];
+    const driverSet = new Set<string>();
+    operations.forEach(op => {
+      if (op.driver) driverSet.add(op.driver);
+    });
+    return Array.from(driverSet).sort();
+  }, [operations]);
+
   // Filter and sort operations
   const filteredOperations = useMemo(() => {
     if (!operations) return [];
     let result = operations.filter((op) => {
       const opDate = parseDateLocal(op.operation_date);
+      
+      // Date filter
       if (startDate && endDate) {
-        return isWithinInterval(opDate, {
+        if (!isWithinInterval(opDate, {
           start: startOfDay(startDate),
           end: endOfDay(endDate),
-        });
+        })) return false;
       }
+      
+      // Farm filter
+      if (filterFarm && op.fields.farm_id !== filterFarm) return false;
+      
+      // Field filter
+      if (filterField && op.field_id !== filterField) return false;
+      
+      // Tractor filter
+      if (filterTractor && op.tractor_id !== filterTractor) return false;
+      
+      // Driver filter
+      if (filterDriver && op.driver !== filterDriver) return false;
+      
       return true;
     });
 
@@ -334,6 +380,9 @@ export function OperationsLogView() {
             const bVal = b.operation_types.is_mechanical ? (b.fuel_equipment?.name || "") : String(b.workers_count || 0);
             comparison = aVal.localeCompare(bVal);
             break;
+          case "driver":
+            comparison = (a.driver || "").localeCompare(b.driver || "");
+            break;
           case "implement":
             comparison = (a.implements?.name || "").localeCompare(b.implements?.name || "");
             break;
@@ -349,7 +398,7 @@ export function OperationsLogView() {
     }
 
     return result;
-  }, [operations, startDate, endDate, sortColumn, sortDirection]);
+  }, [operations, startDate, endDate, sortColumn, sortDirection, filterFarm, filterField, filterTractor, filterDriver]);
 
   // Top 5 operations by hectares
   const top5Operations = useMemo(() => {
@@ -424,6 +473,7 @@ export function OperationsLogView() {
         workers_count: !isMechanical && data.workers_count ? parseInt(data.workers_count) : null,
         hectares_done: parseFloat(data.hectares_done),
         notes: data.notes || null,
+        driver: isMechanical && data.driver ? data.driver : null,
       };
 
       // Insert operation
@@ -496,6 +546,7 @@ export function OperationsLogView() {
         workers_count: !isMechanical && data.workers_count ? parseInt(data.workers_count) : null,
         hectares_done: parseFloat(data.hectares_done),
         notes: data.notes || null,
+        driver: isMechanical && data.driver ? data.driver : null,
       };
 
       const { error: updateError } = await supabase
@@ -597,6 +648,7 @@ export function OperationsLogView() {
       workers_count: "",
       hectares_done: "",
       notes: "",
+      driver: "",
     });
     setInputs([]);
     setNewInput({ inventory_item_id: "", quantity_used: "" });
@@ -650,35 +702,109 @@ export function OperationsLogView() {
 
   return (
     <div className="space-y-6">
-      {/* Top 5 Operations by Hectares */}
-      <Card className="w-fit">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Top 5 Operaciones por Hectáreas
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {top5Operations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay operaciones en este período</p>
-          ) : (
-            <Table className="w-auto">
-              <TableBody>
-                {top5Operations.map((op) => (
-                  <TableRow key={op.name}>
-                    <TableCell className="font-medium py-2 whitespace-nowrap">
-                      Hectáreas {op.name}:
-                    </TableCell>
-                    <TableCell className="text-right font-mono py-2 whitespace-nowrap">
-                      {op.hectares.toFixed(1)} ha
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Top 5 Operations and Filters Row */}
+      <div className="flex flex-wrap items-start gap-6">
+        {/* Top 5 Operations by Hectares */}
+        <Card className="w-fit">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Top 5 Operaciones por Hectáreas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {top5Operations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay operaciones en este período</p>
+            ) : (
+              <Table className="w-auto">
+                <TableBody>
+                  {top5Operations.map((op) => (
+                    <TableRow key={op.name}>
+                      <TableCell className="font-medium py-2 whitespace-nowrap">
+                        Hectáreas {op.name}:
+                      </TableCell>
+                      <TableCell className="text-right font-mono py-2 whitespace-nowrap">
+                        {op.hectares.toFixed(1)} ha
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Filter Dropdowns */}
+        <Card className="w-fit">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={filterFarm} onValueChange={setFilterFarm}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Todas las fincas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas las fincas</SelectItem>
+                  {farms.map((farm) => (
+                    <SelectItem key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterField} onValueChange={setFilterField}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Todos los campos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos los campos</SelectItem>
+                  {fields
+                    ?.filter(f => !filterFarm || f.farm_id === filterFarm)
+                    .map((field) => (
+                      <SelectItem key={field.id} value={field.id}>
+                        {field.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterTractor} onValueChange={setFilterTractor}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Todos los tractores" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos los tractores</SelectItem>
+                  {tractors?.map((tractor) => (
+                    <SelectItem key={tractor.id} value={tractor.id}>
+                      {tractor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterDriver} onValueChange={setFilterDriver}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Todos los operadores" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos los operadores</SelectItem>
+                  {uniqueDrivers.map((driver) => (
+                    <SelectItem key={driver} value={driver}>
+                      {driver}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filters and Add Button */}
       <div className="flex flex-wrap items-center gap-4">
@@ -844,6 +970,16 @@ export function OperationsLogView() {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    
+                    {/* Driver field */}
+                    <div>
+                      <Label>Operador</Label>
+                      <Input
+                        value={form.driver}
+                        onChange={(e) => setForm({ ...form, driver: e.target.value })}
+                        placeholder="Nombre del operador"
+                      />
                     </div>
                     
                     {/* Tractor Hours - positioned directly below tractor/implement */}
@@ -1061,6 +1197,17 @@ export function OperationsLogView() {
                   </div>
                 </TableHead>
               )}
+              {isVisible("driver") && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("driver")}
+                >
+                  <div className="flex items-center">
+                    Operador
+                    {getSortIcon("driver")}
+                  </div>
+                </TableHead>
+              )}
               {isVisible("implement") && (
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-muted/50"
@@ -1119,6 +1266,7 @@ export function OperationsLogView() {
                       : `${op.workers_count} obreros`}
                   </TableCell>
                 )}
+                {isVisible("driver") && <TableCell>{op.driver || "-"}</TableCell>}
                 {isVisible("implement") && <TableCell>{op.implements?.name || "-"}</TableCell>}
                 {isVisible("hours") && (
                   <TableCell className="font-mono">
@@ -1164,6 +1312,7 @@ export function OperationsLogView() {
                             workers_count: op.workers_count?.toString() || "",
                             hectares_done: op.hectares_done.toString(),
                             notes: op.notes || "",
+                            driver: op.driver || "",
                           });
                           setIsDialogOpen(true);
                         }}>

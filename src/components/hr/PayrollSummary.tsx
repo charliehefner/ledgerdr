@@ -508,6 +508,7 @@ export function PayrollSummary({
           currency: "DOP",
           amount: p.netPay,
           pay_method: "Transfer BHD",
+          document: "Recibo",
           name: p.employee.name,
           is_internal: true,
           comments: `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")} | Horas: ${p.regularHours.toFixed(1)} + ${p.overtimeHours.toFixed(1)} Extra | Deducciones: ${p.totalDeductions.toFixed(2)}`,

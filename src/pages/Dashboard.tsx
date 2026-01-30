@@ -96,8 +96,9 @@ export default function Dashboard() {
     .filter(tx => !tx.document || tx.document.trim() === '');
 
   // Filter: non-voided transactions without a physical attachment
+  // Exclude account 7010 (Nomina) as these don't require attachments
   const transactionsWithoutAttachment = allTransactions
-    .filter(tx => !tx.is_void && tx.id && !attachments[tx.id]);
+    .filter(tx => !tx.is_void && tx.id && !attachments[tx.id] && tx.master_acct_code !== '7010');
 
   const getAccountDescription = (code: string) => {
     const account = accounts.find(a => a.code === code);

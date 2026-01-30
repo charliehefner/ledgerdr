@@ -651,7 +651,8 @@ export default function Reports() {
                   ) : sortedTransactions.length > 0 ? (
                     sortedTransactions.map((tx, index) => {
                       const missingDocument = !tx.document || tx.document.trim() === '';
-                      const missingAttachment = tx.id && !attachments[String(tx.id)];
+                      // Account 7010 (Nomina) doesn't require attachments
+                      const missingAttachment = tx.id && !attachments[String(tx.id)] && tx.master_acct_code !== '7010';
                       
                       // Amber for missing NCF, Rose for missing attachment (amber takes priority if both)
                       const rowClass = missingDocument 

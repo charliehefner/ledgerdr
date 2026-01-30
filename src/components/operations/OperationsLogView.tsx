@@ -693,10 +693,10 @@ export function OperationsLogView() {
 
     // Validate no negative hectares
     const hectares = parseFloat(form.hectares_done);
-    if (isNaN(hectares) || hectares <= 0) {
+    if (isNaN(hectares) || hectares < 0) {
       toast({
         title: "Error de Validación",
-        description: "Las hectáreas trabajadas deben ser un número positivo.",
+        description: "Las hectáreas trabajadas no pueden ser negativas.",
         variant: "destructive",
       });
       return;

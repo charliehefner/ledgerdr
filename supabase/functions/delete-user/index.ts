@@ -18,7 +18,7 @@ serve(async (req) => {
       throw new Error("No authorization header");
     }
 
-    const { userId } = await req.json();
+    const { userId, immediate } = await req.json();
 
     if (!userId) {
       throw new Error("User ID is required");
@@ -55,23 +55,69 @@ serve(async (req) => {
       throw new Error("Admin access required");
     }
 
-    // Use service role to delete user
+    // Use service role to get target user info and schedule deletion
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Delete from user_roles first (foreign key constraint)
-    await adminClient.from("user_roles").delete().eq("user_id", userId);
-
-    // Delete the user from auth
-    const { error: deleteError } =
-      await adminClient.auth.admin.deleteUser(userId);
-
-    if (deleteError) {
-      throw new Error(deleteError.message);
+    // Get the target user's email and role
+    const { data: targetUser, error: targetUserError } = 
+      await adminClient.auth.admin.getUserById(userId);
+    
+    if (targetUserError || !targetUser?.user) {
+      throw new Error("User not found");
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Get user's role
+    const { data: roleData } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+
+    // Check if there's already a pending deletion for this user
+    const { data: existingDeletion } = await adminClient
+      .from("scheduled_user_deletions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_cancelled", false)
+      .is("executed_at", null)
+      .single();
+
+    if (existingDeletion) {
+      throw new Error("User already has a pending deletion scheduled");
+    }
+
+    // Schedule deletion for next midnight (or immediate if requested)
+    const executeAfter = immediate 
+      ? new Date() 
+      : getNextMidnight();
+
+    const { error: scheduleError } = await adminClient
+      .from("scheduled_user_deletions")
+      .insert({
+        user_id: userId,
+        user_email: targetUser.user.email || "unknown",
+        user_role: roleData?.role || null,
+        scheduled_by: user.id,
+        execute_after: executeAfter.toISOString(),
+      });
+
+    if (scheduleError) {
+      throw new Error(scheduleError.message);
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        scheduled: !immediate,
+        execute_after: executeAfter.toISOString(),
+        message: immediate 
+          ? "User deletion scheduled for immediate processing"
+          : `User deletion scheduled for ${executeAfter.toLocaleDateString()}`
+      }), 
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error: any) {
     console.error("Error in delete-user:", error);
     return new Response(JSON.stringify({ error: error.message }), {
@@ -80,3 +126,11 @@ serve(async (req) => {
     });
   }
 });
+
+function getNextMidnight(): Date {
+  const now = new Date();
+  const nextMidnight = new Date(now);
+  nextMidnight.setDate(nextMidnight.getDate() + 1);
+  nextMidnight.setHours(0, 0, 0, 0);
+  return nextMidnight;
+}

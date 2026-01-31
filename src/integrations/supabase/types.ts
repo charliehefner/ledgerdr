@@ -1129,6 +1129,54 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_user_deletions: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          execute_after: string
+          executed_at: string | null
+          id: string
+          is_cancelled: boolean
+          reason: string | null
+          scheduled_at: string
+          scheduled_by: string
+          user_email: string
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          execute_after?: string
+          executed_at?: string | null
+          id?: string
+          is_cancelled?: boolean
+          reason?: string | null
+          scheduled_at?: string
+          scheduled_by: string
+          user_email: string
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          execute_after?: string
+          executed_at?: string | null
+          id?: string
+          is_cancelled?: boolean
+          reason?: string | null
+          scheduled_at?: string
+          scheduled_by?: string
+          user_email?: string
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       transaction_attachments: {
         Row: {
           attachment_url: string

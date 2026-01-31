@@ -116,6 +116,7 @@ interface Operation {
   implements: { name: string } | null;
   operation_inputs: { 
     id: string;
+    inventory_item_id: string;
     quantity_used: number; 
     inventory_items: { commercial_name: string; use_unit: string } 
   }[];
@@ -265,7 +266,7 @@ export function OperationsLogView() {
           operation_types(name, is_mechanical),
           fuel_equipment(name),
           implements(name),
-          operation_inputs(id, quantity_used, inventory_items(commercial_name, use_unit))
+          operation_inputs(id, inventory_item_id, quantity_used, inventory_items(commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;
@@ -534,7 +535,7 @@ export function OperationsLogView() {
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ operationId, data }: { operationId: string; data: typeof form }) => {
+    mutationFn: async ({ operationId, data, originalInputs }: { operationId: string; data: typeof form; originalInputs: OperationInput[] }) => {
       const record = {
         operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
@@ -555,12 +556,70 @@ export function OperationsLogView() {
         .eq("id", operationId);
       
       if (updateError) throw updateError;
+
+      // Restore inventory for original inputs
+      for (const input of originalInputs) {
+        const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
+        if (item) {
+          const newQuantity = item.current_quantity + input.quantity_used;
+          const { error: restoreError } = await supabase
+            .from("inventory_items")
+            .update({ current_quantity: newQuantity })
+            .eq("id", input.inventory_item_id);
+          
+          if (restoreError) throw restoreError;
+        }
+      }
+
+      // Delete old operation_inputs
+      const { error: deleteInputsError } = await supabase
+        .from("operation_inputs")
+        .delete()
+        .eq("operation_id", operationId);
+      
+      if (deleteInputsError) throw deleteInputsError;
+
+      // Insert new inputs and deduct from inventory
+      if (inputs.length > 0) {
+        const inputRecords = inputs.map(input => ({
+          operation_id: operationId,
+          inventory_item_id: input.inventory_item_id,
+          quantity_used: input.quantity_used,
+        }));
+
+        const { error: inputError } = await supabase
+          .from("operation_inputs")
+          .insert(inputRecords);
+        
+        if (inputError) throw inputError;
+
+        // Deduct from inventory (use fresh data after restore)
+        for (const input of inputs) {
+          // Get current quantity after restore
+          const { data: currentItem, error: fetchError } = await supabase
+            .from("inventory_items")
+            .select("current_quantity")
+            .eq("id", input.inventory_item_id)
+            .single();
+          
+          if (fetchError) throw fetchError;
+          
+          const newQuantity = currentItem.current_quantity - input.quantity_used;
+          const { error: deductError } = await supabase
+            .from("inventory_items")
+            .update({ current_quantity: newQuantity })
+            .eq("id", input.inventory_item_id);
+          
+          if (deductError) throw deductError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
+      queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
       toast({
         title: "Operación actualizada",
-        description: "La operación ha sido actualizada correctamente.",
+        description: "La operación ha sido actualizada y el inventario ajustado.",
       });
       handleCloseDialog();
     },
@@ -761,7 +820,12 @@ export function OperationsLogView() {
     }
     
     if (editingOperation) {
-      updateMutation.mutate({ operationId: editingOperation.id, data: form });
+      // Get original inputs from the editing operation
+      const originalInputs = editingOperation.operation_inputs?.map(input => ({
+        inventory_item_id: input.inventory_item_id,
+        quantity_used: input.quantity_used,
+      })) || [];
+      updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs });
     } else {
       mutation.mutate(form);
     }
@@ -1393,6 +1457,15 @@ export function OperationsLogView() {
                             notes: op.notes || "",
                             driver: op.driver || "",
                           });
+                          // Populate existing inputs for editing
+                          if (op.operation_inputs && op.operation_inputs.length > 0) {
+                            setInputs(op.operation_inputs.map(input => ({
+                              inventory_item_id: input.inventory_item_id,
+                              quantity_used: input.quantity_used,
+                            })));
+                          } else {
+                            setInputs([]);
+                          }
                           setIsDialogOpen(true);
                         }}>
                           <Pencil className="mr-2 h-4 w-4" />

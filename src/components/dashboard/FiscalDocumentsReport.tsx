@@ -140,25 +140,25 @@ export function FiscalDocumentsReport() {
   };
 
   return (
-    <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
+    <Card className="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30 border-blue-200 dark:border-blue-800 w-fit">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CardHeader className="pb-3">
           <CollapsibleTrigger asChild>
-            <div className="flex items-center justify-between cursor-pointer">
+            <div className="flex items-center justify-between cursor-pointer gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-                  <FileText className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg text-emerald-900 dark:text-emerald-100">
+                  <CardTitle className="text-lg text-blue-900 dark:text-blue-100">
                     Comprobantes Fiscales (E31/B01)
                   </CardTitle>
-                  <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
                     Facturas con crédito fiscal
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" className="text-emerald-700 dark:text-emerald-300">
+              <Button variant="ghost" size="sm" className="text-blue-700 dark:text-blue-300">
                 {isOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
               </Button>
             </div>

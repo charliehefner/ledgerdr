@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Paperclip } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { createTransaction } from "@/lib/api";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
+import { DayLaborAttachment } from "./DayLaborAttachment";
 
 interface DayLaborEntry {
   id: string;
@@ -247,9 +248,12 @@ export function DayLaborView() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="text-center">
-                <CardTitle className="text-lg">
-                  Jornales - Semana {format(selectedFriday, "dd/MM/yyyy")}
-                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-lg">
+                    Jornales - Semana {format(selectedFriday, "dd/MM/yyyy")}
+                  </CardTitle>
+                  <DayLaborAttachment weekEndingDate={formatDateLocal(selectedFriday)} />
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {format(weekStart, "d MMM", { locale: es })} - {format(weekEnd, "d MMM, yyyy", { locale: es })}
                 </p>

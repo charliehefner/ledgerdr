@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar, MobileSidebar } from "./Sidebar";
-import { Bell, Search, LogOut, User } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AISearchBar } from "./AISearchBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,16 +52,8 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           </div>
           
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Search - hide on mobile */}
-            {!isMobile && (
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar facturas..."
-                  className="pl-9 bg-background"
-                />
-              </div>
-            )}
+            {/* AI Search - hide on mobile */}
+            {!isMobile && <AISearchBar />}
             
             {/* Notifications */}
             <button className="relative p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">

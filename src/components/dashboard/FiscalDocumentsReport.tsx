@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
-import { FileText, Download, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Download, Calendar, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,11 +34,16 @@ interface FiscalTransaction {
   rnc: string | null;
 }
 
+type SortKey = "transaction_date" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "rnc";
+type SortDirection = "asc" | "desc" | null;
+
 export function FiscalDocumentsReport() {
   const [isOpen, setIsOpen] = useState(false);
   const today = new Date();
   const [startDate, setStartDate] = useState<Date>(startOfMonth(today));
   const [endDate, setEndDate] = useState<Date>(endOfMonth(today));
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const { data: fiscalTransactions = [], isLoading } = useQuery({
     queryKey: ["fiscal-documents", format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
@@ -58,6 +63,52 @@ export function FiscalDocumentsReport() {
     enabled: isOpen,
   });
 
+  // Sorting logic
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortKey(null);
+        setSortDirection(null);
+      } else {
+        setSortDirection("asc");
+      }
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedTransactions = useMemo(() => {
+    if (!sortKey || !sortDirection) return fiscalTransactions;
+
+    return [...fiscalTransactions].sort((a, b) => {
+      let aVal = a[sortKey];
+      let bVal = b[sortKey];
+
+      // Handle nulls
+      if (aVal === null) aVal = "";
+      if (bVal === null) bVal = "";
+
+      // Numeric comparison for amount and itbis
+      if (sortKey === "amount" || sortKey === "itbis") {
+        const aNum = typeof aVal === "number" ? aVal : 0;
+        const bNum = typeof bVal === "number" ? bVal : 0;
+        return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
+      }
+
+      // String comparison for others
+      const aStr = String(aVal).toLowerCase();
+      const bStr = String(bVal).toLowerCase();
+      if (sortDirection === "asc") {
+        return aStr.localeCompare(bStr);
+      } else {
+        return bStr.localeCompare(aStr);
+      }
+    });
+  }, [fiscalTransactions, sortKey, sortDirection]);
+
   // Calculate totals
   const totals = fiscalTransactions.reduce(
     (acc, tx) => {
@@ -72,6 +123,16 @@ export function FiscalDocumentsReport() {
     },
     { dopAmount: 0, dopItbis: 0, usdAmount: 0, usdItbis: 0 }
   );
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortKey !== columnKey) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-1 h-3 w-3" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3" />;
+  };
 
   const handleExport = async () => {
     if (fiscalTransactions.length === 0) {
@@ -245,14 +306,54 @@ export function FiscalDocumentsReport() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Moneda</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                    <TableHead className="text-right">ITBIS</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead>Documento</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>RNC</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("transaction_date")}
+                    >
+                      <div className="flex items-center">Fecha<SortIcon columnKey="transaction_date" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("currency")}
+                    >
+                      <div className="flex items-center">Moneda<SortIcon columnKey="currency" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none text-right"
+                      onClick={() => handleSort("amount")}
+                    >
+                      <div className="flex items-center justify-end">Monto<SortIcon columnKey="amount" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none text-right"
+                      onClick={() => handleSort("itbis")}
+                    >
+                      <div className="flex items-center justify-end">ITBIS<SortIcon columnKey="itbis" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("pay_method")}
+                    >
+                      <div className="flex items-center">Método<SortIcon columnKey="pay_method" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("document")}
+                    >
+                      <div className="flex items-center">Documento<SortIcon columnKey="document" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("name")}
+                    >
+                      <div className="flex items-center">Nombre<SortIcon columnKey="name" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("rnc")}
+                    >
+                      <div className="flex items-center">RNC<SortIcon columnKey="rnc" /></div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -262,14 +363,14 @@ export function FiscalDocumentsReport() {
                         Cargando...
                       </TableCell>
                     </TableRow>
-                  ) : fiscalTransactions.length === 0 ? (
+                  ) : sortedTransactions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No hay comprobantes fiscales en este período
                       </TableCell>
                     </TableRow>
                   ) : (
-                    fiscalTransactions.map((tx) => (
+                    sortedTransactions.map((tx) => (
                       <TableRow key={tx.id}>
                         <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>
                         <TableCell>{tx.currency}</TableCell>

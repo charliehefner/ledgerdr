@@ -34,6 +34,8 @@ const inventoryFunctions = [
   { value: "fungicide", label: "Fungicide" },
   { value: "insecticide", label: "Insecticide" },
   { value: "seed", label: "Seed" },
+  { value: "condicionador", label: "Condicionador" },
+  { value: "adherente", label: "Adherente" },
   { value: "other", label: "Other" },
 ];
 

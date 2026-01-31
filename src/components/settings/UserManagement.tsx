@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Users, UserPlus, Loader2, Trash2 } from "lucide-react";
+import { Users, UserPlus, Loader2, Trash2, Mail, User } from "lucide-react";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions";
@@ -45,11 +45,16 @@ interface UserWithRole {
   created_at: string;
 }
 
+// Check if email is a username-based account
+const isUsernameAccount = (email: string) => email.endsWith("@internal.jord.local");
+const extractUsername = (email: string) => email.replace("@internal.jord.local", "");
+
 export function UserManagement() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [newUserEmail, setNewUserEmail] = useState("");
+  const [useUsername, setUseUsername] = useState(false);
+  const [newUserIdentifier, setNewUserIdentifier] = useState(""); // email or username
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<AppRole>("accountant");
 
@@ -78,38 +83,40 @@ export function UserManagement() {
   });
 
   const handleCreateUser = async () => {
-    if (!newUserEmail || !newUserPassword) {
-      toast.error("Please fill in all fields");
+    if (!newUserIdentifier || !newUserPassword) {
+      toast.error("Por favor complete todos los campos");
       return;
     }
 
     if (newUserPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error("La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
     setIsCreating(true);
 
     try {
+      const body = useUsername 
+        ? { username: newUserIdentifier, password: newUserPassword, role: newUserRole }
+        : { email: newUserIdentifier, password: newUserPassword, role: newUserRole };
+
       const { data, error } = await supabase.functions.invoke("create-user", {
-        body: {
-          email: newUserEmail,
-          password: newUserPassword,
-          role: newUserRole,
-        },
+        body,
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success(`User ${newUserEmail} created successfully`);
-      setNewUserEmail("");
+      const displayName = useUsername ? newUserIdentifier : newUserIdentifier;
+      toast.success(`Usuario ${displayName} creado exitosamente`);
+      setNewUserIdentifier("");
       setNewUserPassword("");
       setNewUserRole("accountant");
+      setUseUsername(false);
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
     } catch (error: any) {
-      toast.error(error.message || "Failed to create user");
+      toast.error(error.message || "Error al crear usuario");
     } finally {
       setIsCreating(false);
     }
@@ -169,40 +176,74 @@ export function UserManagement() {
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              Add User
+              Agregar Usuario
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+              <DialogTitle>Crear Nuevo Usuario</DialogTitle>
               <DialogDescription>
-                Add a new user to the system. They will receive login
-                credentials.
+                Agregue un nuevo usuario al sistema con sus credenciales de acceso.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              {/* Toggle between email and username */}
+              <div className="flex items-center gap-4">
+                <Button
+                  type="button"
+                  variant={!useUsername ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setUseUsername(false);
+                    setNewUserIdentifier("");
+                  }}
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Con Correo
+                </Button>
+                <Button
+                  type="button"
+                  variant={useUsername ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setUseUsername(true);
+                    setNewUserIdentifier("");
+                  }}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Sin Correo
+                </Button>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="new-email">Email</Label>
+                <Label htmlFor="new-identifier">
+                  {useUsername ? "Nombre de Usuario" : "Correo Electrónico"}
+                </Label>
                 <Input
-                  id="new-email"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  id="new-identifier"
+                  type={useUsername ? "text" : "email"}
+                  placeholder={useUsername ? "ej: juan.perez" : "usuario@ejemplo.com"}
+                  value={newUserIdentifier}
+                  onChange={(e) => setNewUserIdentifier(e.target.value)}
                 />
+                {useUsername && (
+                  <p className="text-xs text-muted-foreground">
+                    El usuario iniciará sesión con este nombre de usuario y su contraseña.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password">Password</Label>
+                <Label htmlFor="new-password">Contraseña</Label>
                 <Input
                   id="new-password"
                   type="password"
-                  placeholder="Minimum 6 characters"
+                  placeholder="Mínimo 6 caracteres"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-role">Role</Label>
+                <Label htmlFor="new-role">Rol</Label>
                 <Select
                   value={newUserRole}
                   onValueChange={(v) => setNewUserRole(v as AppRole)}
@@ -229,16 +270,16 @@ export function UserManagement() {
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isCreating}
               >
-                Cancel
+                Cancelar
               </Button>
               <Button onClick={handleCreateUser} disabled={isCreating}>
                 {isCreating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Creando...
                   </>
                 ) : (
-                  "Create User"
+                  "Crear Usuario"
                 )}
               </Button>
             </DialogFooter>
@@ -252,22 +293,34 @@ export function UserManagement() {
         </div>
       ) : users.length === 0 ? (
         <p className="text-center text-muted-foreground py-8">
-          No users found. Click "Add User" to create one.
+          No se encontraron usuarios. Haga clic en "Agregar Usuario" para crear uno.
         </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+              <TableHead>Usuario/Correo</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Creado</TableHead>
+              <TableHead className="w-[100px]">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.email}</TableCell>
+                <TableCell className="font-medium">
+                  {isUsernameAccount(user.email) ? (
+                    <span className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      {extractUsername(user.email)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      {user.email}
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Select
                     value={user.role}

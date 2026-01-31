@@ -7,43 +7,61 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock, Mail, Loader2 } from "lucide-react";
+import { Lock, Mail, User, Loader2 } from "lucide-react";
 import jordLogo from "@/assets/jord-logo.png";
 
+// Domain used for username-based accounts (must match edge function)
+const USERNAME_EMAIL_DOMAIN = "internal.jord.local";
+
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Can be email or username
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Check if input looks like an email
+  const isEmail = (value: string) => value.includes("@");
+
+  // Convert username to placeholder email if needed
+  const getLoginEmail = (value: string): string => {
+    if (isEmail(value)) {
+      return value;
+    }
+    // Convert username to placeholder email
+    const sanitizedUsername = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return `${sanitizedUsername}@${USERNAME_EMAIL_DOMAIN}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await login(email, password);
+    const loginEmail = getLoginEmail(identifier);
+    const result = await login(loginEmail, password);
     
     if (result.success) {
       toast.success("Inicio de sesión exitoso");
       navigate("/");
     } else {
-      toast.error(result.error || "Correo o contraseña inválidos");
+      toast.error(result.error || "Usuario o contraseña inválidos");
     }
     setIsLoading(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
+    if (!resetEmail) {
       toast.error("Por favor ingrese su correo electrónico");
       return;
     }
     
     setIsResetting(true);
     
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     
@@ -80,8 +98,8 @@ export default function Login() {
                     id="reset-email"
                     type="email"
                     placeholder="Ingrese su correo"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
                     className="pl-9"
                     required
                   />
@@ -127,15 +145,15 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
+              <Label htmlFor="identifier">Correo o Usuario</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Ingrese su correo"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="identifier"
+                  type="text"
+                  placeholder="Ingrese su correo o usuario"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="pl-9"
                   required
                 />

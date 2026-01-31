@@ -104,8 +104,9 @@ export function PayrollSummary({
   const { data: employees = [] } = useQuery({
     queryKey: ["employees-with-bank"],
     queryFn: async () => {
+      // Use employees_safe view to mask bank account numbers for non-admin users
       const { data, error } = await supabase
-        .from("employees")
+        .from("employees_safe")
         .select("id, name, salary, position, bank, bank_account_number")
         .eq("is_active", true)
         .order("name");

@@ -94,8 +94,9 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
     queryKey: ["employee", employeeId],
     queryFn: async () => {
       if (!employeeId) return null;
+      // Use employees_safe view to mask sensitive PII for non-admin users
       const { data, error } = await supabase
-        .from("employees")
+        .from("employees_safe")
         .select("*")
         .eq("id", employeeId)
         .single();

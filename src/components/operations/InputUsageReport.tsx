@@ -1,0 +1,483 @@
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CalendarIcon, FileSpreadsheet, Search } from "lucide-react";
+import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
+import ExcelJS from "exceljs";
+
+interface OperationWithInput {
+  id: string;
+  operation_date: string;
+  hectares_done: number;
+  driver: string | null;
+  fields: {
+    name: string;
+    farms: { name: string };
+  };
+  fuel_equipment: { name: string } | null;
+  operation_inputs: Array<{
+    id: string;
+    quantity_used: number;
+    inventory_items: {
+      id: string;
+      commercial_name: string;
+      use_unit: string;
+    };
+  }>;
+}
+
+interface InventoryItem {
+  id: string;
+  commercial_name: string;
+  use_unit: string;
+  function: string;
+  is_active: boolean;
+}
+
+interface Farm {
+  id: string;
+  name: string;
+}
+
+interface Field {
+  id: string;
+  name: string;
+  farm_id: string;
+}
+
+interface UsageRow {
+  operationId: string;
+  date: string;
+  farmName: string;
+  fieldName: string;
+  amount: number;
+  hectares: number;
+  amountPerHectare: number;
+  tractor: string;
+}
+
+interface InputUsageReportProps {
+  initialInputId?: string | null;
+  initialFieldId?: string | null;
+}
+
+export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageReportProps = {}) {
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [selectedInput, setSelectedInput] = useState<string>(initialInputId || "");
+  const [selectedFarm, setSelectedFarm] = useState<string>("all");
+  const [selectedField, setSelectedField] = useState<string>(initialFieldId || "all");
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Fetch inventory items (inputs)
+  const { data: inventoryItems } = useQuery({
+    queryKey: ["inventory-items-for-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_items")
+        .select("id, commercial_name, use_unit, function, is_active")
+        .order("commercial_name");
+      if (error) throw error;
+      return data as InventoryItem[];
+    },
+  });
+
+  // Fetch farms
+  const { data: farms } = useQuery({
+    queryKey: ["farms-for-input-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("farms")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as Farm[];
+    },
+  });
+
+  // Fetch fields
+  const { data: fields } = useQuery({
+    queryKey: ["fields-for-input-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fields")
+        .select("id, name, farm_id")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as Field[];
+    },
+  });
+
+  // Fetch operations with inputs
+  const { data: operations, isLoading } = useQuery({
+    queryKey: ["operations-with-inputs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operations")
+        .select(`
+          id,
+          operation_date,
+          hectares_done,
+          driver,
+          fields(name, farms(name)),
+          fuel_equipment(name),
+          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit))
+        `)
+        .order("operation_date", { ascending: false });
+      if (error) throw error;
+      return data as OperationWithInput[];
+    },
+  });
+
+  // Filter fields by selected farm
+  const filteredFields = useMemo(() => {
+    if (!fields) return [];
+    if (selectedFarm === "all") return fields;
+    return fields.filter((f) => f.farm_id === selectedFarm);
+  }, [fields, selectedFarm]);
+
+  // Get selected input details
+  const selectedInputDetails = useMemo(() => {
+    if (!selectedInput || !inventoryItems) return null;
+    return inventoryItems.find((i) => i.id === selectedInput);
+  }, [selectedInput, inventoryItems]);
+
+  // Calculate usage data based on filters
+  const usageData = useMemo(() => {
+    if (!operations || !startDate || !endDate || !selectedInput || !hasSearched) return [];
+
+    const results: UsageRow[] = [];
+
+    operations.forEach((op) => {
+      const opDate = parseDateLocal(op.operation_date);
+      const inDateRange = isWithinInterval(opDate, {
+        start: startOfDay(startDate),
+        end: endOfDay(endDate),
+      });
+
+      if (!inDateRange) return;
+
+      // Check farm filter
+      const field = fields?.find((f) => f.name === op.fields?.name);
+      if (selectedFarm !== "all" && field?.farm_id !== selectedFarm) return;
+
+      // Check field filter
+      if (selectedField !== "all" && field?.id !== selectedField) return;
+
+      // Find the specific input usage
+      const inputUsage = op.operation_inputs?.find(
+        (input) => input.inventory_items.id === selectedInput
+      );
+
+      if (inputUsage) {
+        const hectares = op.hectares_done || 0;
+        const amount = inputUsage.quantity_used;
+        const amountPerHectare = hectares > 0 ? amount / hectares : 0;
+
+        results.push({
+          operationId: op.id,
+          date: op.operation_date,
+          farmName: op.fields?.farms?.name || "Unknown",
+          fieldName: op.fields?.name || "Unknown",
+          amount,
+          hectares,
+          amountPerHectare,
+          tractor: op.fuel_equipment?.name || op.driver || "-",
+        });
+      }
+    });
+
+    // Sort by date descending
+    return results.sort((a, b) => b.date.localeCompare(a.date));
+  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedField, hasSearched]);
+
+  // Calculate totals
+  const totals = useMemo(() => {
+    const totalAmount = usageData.reduce((sum, row) => sum + row.amount, 0);
+    const totalHectares = usageData.reduce((sum, row) => sum + row.hectares, 0);
+    const avgPerHectare = totalHectares > 0 ? totalAmount / totalHectares : 0;
+    return { totalAmount, totalHectares, avgPerHectare };
+  }, [usageData]);
+
+  const handleFarmChange = (farmId: string) => {
+    setSelectedFarm(farmId);
+    setSelectedField("all");
+  };
+
+  const handleSearch = () => {
+    setHasSearched(true);
+  };
+
+  const exportToExcel = async () => {
+    if (usageData.length === 0) return;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Uso de Insumo");
+
+    // Add title
+    worksheet.mergeCells("A1:G1");
+    worksheet.getCell("A1").value = `Reporte de Uso: ${selectedInputDetails?.commercial_name || ""}`;
+    worksheet.getCell("A1").font = { bold: true, size: 14 };
+    worksheet.getCell("A1").alignment = { horizontal: "center" };
+
+    // Add date range
+    worksheet.mergeCells("A2:G2");
+    worksheet.getCell("A2").value = `Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").alignment = { horizontal: "center" };
+
+    // Add headers
+    const unit = selectedInputDetails?.use_unit || "units";
+    const headers = ["Fecha", "Finca", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, "Tractor/Operador"];
+    worksheet.addRow([]);
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Add data rows
+    usageData.forEach((row) => {
+      worksheet.addRow([
+        format(parseDateLocal(row.date), "dd/MM/yyyy"),
+        row.farmName,
+        row.fieldName,
+        row.amount.toFixed(2),
+        row.hectares.toFixed(2),
+        row.amountPerHectare.toFixed(2),
+        row.tractor,
+      ]);
+    });
+
+    // Add totals row
+    worksheet.addRow([]);
+    const totalsRow = worksheet.addRow([
+      "TOTALES",
+      "",
+      "",
+      totals.totalAmount.toFixed(2),
+      totals.totalHectares.toFixed(2),
+      totals.avgPerHectare.toFixed(2),
+      "",
+    ]);
+    totalsRow.eachCell((cell) => {
+      cell.font = { bold: true };
+    });
+
+    // Auto-fit columns
+    worksheet.columns.forEach((column) => {
+      column.width = 16;
+    });
+
+    // Generate and download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Uso_Insumo_${selectedInputDetails?.commercial_name || "report"}_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Uso de Insumo por Campo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Date Range */}
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd MMM yyyy", { locale: es }) : "Fecha inicio"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    locale={es}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground">a</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd MMM yyyy", { locale: es }) : "Fecha fin"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    locale={es}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Input Selection */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-muted-foreground">Insumo</label>
+              <Select value={selectedInput} onValueChange={setSelectedInput}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Seleccionar insumo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {inventoryItems?.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.commercial_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Farm Filter */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-muted-foreground">Finca</label>
+              <Select value={selectedFarm} onValueChange={handleFarmChange}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Seleccionar finca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Fincas</SelectItem>
+                  {farms?.map((farm) => (
+                    <SelectItem key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Field Filter */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-muted-foreground">Campo</label>
+              <Select value={selectedField} onValueChange={setSelectedField}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Seleccionar campo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los Campos</SelectItem>
+                  {filteredFields?.map((field) => (
+                    <SelectItem key={field.id} value={field.id}>
+                      {field.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Search Button */}
+            <Button onClick={handleSearch} disabled={!startDate || !endDate || !selectedInput}>
+              <Search className="mr-2 h-4 w-4" />
+              Generar Reporte
+            </Button>
+
+            {/* Export Button */}
+            {usageData.length > 0 && (
+              <Button variant="outline" onClick={exportToExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Exportar Excel
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      {hasSearched && selectedInput && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {selectedInputDetails?.commercial_name || "Insumo"}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Cargando datos...</div>
+            ) : usageData.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No se encontró uso de este insumo para los filtros seleccionados.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Finca</TableHead>
+                        <TableHead>Campo</TableHead>
+                        <TableHead className="text-right">Cantidad ({selectedInputDetails?.use_unit})</TableHead>
+                        <TableHead className="text-right">Hectáreas</TableHead>
+                        <TableHead className="text-right">{selectedInputDetails?.use_unit}/Ha</TableHead>
+                        <TableHead>Tractor/Operador</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {usageData.map((row) => (
+                        <TableRow key={row.operationId}>
+                          <TableCell>{format(parseDateLocal(row.date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{row.farmName}</TableCell>
+                          <TableCell>{row.fieldName}</TableCell>
+                          <TableCell className="text-right">{row.amount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{row.hectares.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{row.amountPerHectare.toFixed(2)}</TableCell>
+                          <TableCell>{row.tractor}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Totals Row */}
+                      <TableRow className="font-bold bg-muted/50">
+                        <TableCell colSpan={3}>TOTALES</TableCell>
+                        <TableCell className="text-right">{totals.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{totals.totalHectares.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{totals.avgPerHectare.toFixed(2)}</TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

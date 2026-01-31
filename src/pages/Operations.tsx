@@ -1,13 +1,21 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OperationsLogView } from "@/components/operations/OperationsLogView";
 import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { FieldProgressReport } from "@/components/operations/FieldProgressReport";
+import { InputUsageReport } from "@/components/operations/InputUsageReport";
+import { FieldInputsReport } from "@/components/operations/FieldInputsReport";
 
 export default function Operations() {
-  const [activeTab, setActiveTab] = useState("log");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "log";
+  const initialInputId = searchParams.get("inputId");
+  const initialFieldId = searchParams.get("fieldId");
+  
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
     <MainLayout>
@@ -20,11 +28,13 @@ export default function Operations() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="log" colorScheme="primary">Operations Log</TabsTrigger>
             <TabsTrigger value="progress" colorScheme="secondary">Progreso de Campos</TabsTrigger>
-            <TabsTrigger value="farms" colorScheme="accent">Farms & Fields</TabsTrigger>
-            <TabsTrigger value="types" colorScheme="muted">Operation Types</TabsTrigger>
+            <TabsTrigger value="input-usage" colorScheme="accent">Uso de Insumos</TabsTrigger>
+            <TabsTrigger value="field-inputs" colorScheme="muted">Insumos por Campo</TabsTrigger>
+            <TabsTrigger value="farms" colorScheme="primary">Farms & Fields</TabsTrigger>
+            <TabsTrigger value="types" colorScheme="secondary">Operation Types</TabsTrigger>
           </TabsList>
 
           <TabsContent value="log" className="mt-6">
@@ -33,6 +43,14 @@ export default function Operations() {
 
           <TabsContent value="progress" className="mt-6">
             <FieldProgressReport />
+          </TabsContent>
+
+          <TabsContent value="input-usage" className="mt-6">
+            <InputUsageReport initialInputId={initialInputId} />
+          </TabsContent>
+
+          <TabsContent value="field-inputs" className="mt-6">
+            <FieldInputsReport initialFieldId={initialFieldId} />
           </TabsContent>
 
           <TabsContent value="farms" className="mt-6">

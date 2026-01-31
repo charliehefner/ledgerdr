@@ -123,21 +123,27 @@ export function UserManagement() {
   };
 
   const handleDeleteUser = async (userId: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete user ${email}?`)) {
+    const displayName = isUsernameAccount(email) ? extractUsername(email) : email;
+    if (!confirm(`¿Está seguro que desea programar la eliminación de ${displayName}? El usuario será eliminado a medianoche.`)) {
       return;
     }
 
     try {
-      const { error } = await supabase.functions.invoke("delete-user", {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
         body: { userId },
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      toast.success(`User ${email} deleted successfully`);
+      toast.success(`Eliminación de ${displayName} programada para medianoche`, {
+        description: "Puede cancelar desde 'Eliminaciones Pendientes' si fue un error.",
+        duration: 5000,
+      });
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-deletions"] });
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete user");
+      toast.error(error.message || "Error al programar eliminación");
     }
   };
 

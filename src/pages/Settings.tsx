@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserManagement } from "@/components/settings/UserManagement";
 import { DatabaseBackup } from "@/components/settings/DatabaseBackup";
+import { ScheduledDeletions } from "@/components/settings/ScheduledDeletions";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -62,6 +63,9 @@ export default function Settings() {
             </div>
           </div>
         )}
+
+        {/* Scheduled Deletions - Admin Only */}
+        {canModifySettings && <ScheduledDeletions />}
 
         {/* User Management - Admin Only */}
         {canModifySettings && <UserManagement />}

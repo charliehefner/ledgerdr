@@ -31,15 +31,19 @@ export default function HumanResources() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="payroll" colorScheme="primary">Nómina</TabsTrigger>
-            <TabsTrigger value="day-labor" colorScheme="secondary">Jornales</TabsTrigger>
-            <TabsTrigger value="employees" colorScheme="accent">Directorio de Empleados</TabsTrigger>
-            {canModifySettings && (
-              <TabsTrigger value="add-employee" colorScheme="muted">
-                {editingEmployee ? "Editar Empleado" : "Agregar Empleado"}
-              </TabsTrigger>
-            )}
+          <TabsList className="w-full justify-between">
+            <div className="flex">
+              <TabsTrigger value="payroll" colorScheme="primary">Nómina</TabsTrigger>
+              <TabsTrigger value="day-labor" colorScheme="secondary">Jornales</TabsTrigger>
+            </div>
+            <div className="flex">
+              <TabsTrigger value="employees" colorScheme="accent">Directorio de Empleados</TabsTrigger>
+              {canModifySettings && (
+                <TabsTrigger value="add-employee" colorScheme="muted">
+                  {editingEmployee ? "Editar Empleado" : "Agregar Empleado"}
+                </TabsTrigger>
+              )}
+            </div>
           </TabsList>
 
           <TabsContent value="payroll" className="space-y-4">

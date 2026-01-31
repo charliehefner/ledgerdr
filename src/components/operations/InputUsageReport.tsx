@@ -58,6 +58,8 @@ interface UsageRow {
   date: string;
   farmName: string;
   fieldName: string;
+  inputName: string;
+  inputUnit: string;
   amount: number;
   hectares: number;
   amountPerHectare: number;
@@ -154,7 +156,7 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
 
   // Calculate usage data based on filters
   const usageData = useMemo(() => {
-    if (!operations || !startDate || !endDate || !selectedInput || !hasSearched) return [];
+    if (!operations || !startDate || !endDate || !hasSearched) return [];
 
     const results: UsageRow[] = [];
 
@@ -174,31 +176,37 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
       // Check field filter
       if (selectedField !== "all" && field?.id !== selectedField) return;
 
-      // Find the specific input usage
-      const inputUsage = op.operation_inputs?.find(
-        (input) => input.inventory_items.id === selectedInput
-      );
+      // Get all inputs or just the selected one
+      const inputsToProcess = selectedInput === "all"
+        ? op.operation_inputs || []
+        : (op.operation_inputs || []).filter((input) => input.inventory_items.id === selectedInput);
 
-      if (inputUsage) {
+      inputsToProcess.forEach((inputUsage) => {
         const hectares = op.hectares_done || 0;
         const amount = inputUsage.quantity_used;
         const amountPerHectare = hectares > 0 ? amount / hectares : 0;
 
         results.push({
-          operationId: op.id,
+          operationId: `${op.id}-${inputUsage.id}`,
           date: op.operation_date,
           farmName: op.fields?.farms?.name || "Unknown",
           fieldName: op.fields?.name || "Unknown",
+          inputName: inputUsage.inventory_items.commercial_name,
+          inputUnit: inputUsage.inventory_items.use_unit,
           amount,
           hectares,
           amountPerHectare,
           tractor: op.fuel_equipment?.name || op.driver || "-",
         });
-      }
+      });
     });
 
-    // Sort by date descending
-    return results.sort((a, b) => b.date.localeCompare(a.date));
+    // Sort by date descending, then by input name
+    return results.sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.inputName.localeCompare(b.inputName);
+    });
   }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedField, hasSearched]);
 
   // Calculate totals
@@ -355,6 +363,7 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
                   <SelectValue placeholder="Seleccionar insumo" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Todos Insumos</SelectItem>
                   {inventoryItems?.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.commercial_name}
@@ -401,7 +410,7 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
             </div>
 
             {/* Search Button */}
-            <Button onClick={handleSearch} disabled={!startDate || !endDate || !selectedInput}>
+            <Button onClick={handleSearch} disabled={!startDate || !endDate}>
               <Search className="mr-2 h-4 w-4" />
               Generar Reporte
             </Button>
@@ -418,11 +427,11 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
       </Card>
 
       {/* Results */}
-      {hasSearched && selectedInput && (
+      {hasSearched && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {selectedInputDetails?.commercial_name || "Insumo"}
+              {selectedInput === "all" ? "Todos los Insumos" : (selectedInputDetails?.commercial_name || "Insumo")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
@@ -442,11 +451,12 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
                     <TableHeader>
                       <TableRow>
                         <TableHead>Fecha</TableHead>
+                        {selectedInput === "all" && <TableHead>Insumo</TableHead>}
                         <TableHead>Finca</TableHead>
                         <TableHead>Campo</TableHead>
-                        <TableHead className="text-right">Cantidad ({selectedInputDetails?.use_unit})</TableHead>
+                        <TableHead className="text-right">Cantidad</TableHead>
                         <TableHead className="text-right">Hectáreas</TableHead>
-                        <TableHead className="text-right">{selectedInputDetails?.use_unit}/Ha</TableHead>
+                        <TableHead className="text-right">Unidad/Ha</TableHead>
                         <TableHead>Tractor/Operador</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -454,9 +464,10 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
                       {usageData.map((row) => (
                         <TableRow key={row.operationId}>
                           <TableCell>{format(parseDateLocal(row.date), "dd/MM/yyyy")}</TableCell>
+                          {selectedInput === "all" && <TableCell>{row.inputName}</TableCell>}
                           <TableCell>{row.farmName}</TableCell>
                           <TableCell>{row.fieldName}</TableCell>
-                          <TableCell className="text-right">{row.amount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{row.amount.toFixed(2)} {row.inputUnit}</TableCell>
                           <TableCell className="text-right">{row.hectares.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{row.amountPerHectare.toFixed(2)}</TableCell>
                           <TableCell>{row.tractor}</TableCell>
@@ -464,7 +475,7 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
                       ))}
                       {/* Totals Row */}
                       <TableRow className="font-bold bg-muted/50">
-                        <TableCell colSpan={3}>TOTALES</TableCell>
+                        <TableCell colSpan={selectedInput === "all" ? 4 : 3}>TOTALES</TableCell>
                         <TableCell className="text-right">{totals.totalAmount.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.totalHectares.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.avgPerHectare.toFixed(2)}</TableCell>

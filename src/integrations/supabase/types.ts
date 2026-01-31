@@ -62,6 +62,30 @@ export type Database = {
         }
         Relationships: []
       }
+      day_labor_attachments: {
+        Row: {
+          attachment_url: string
+          created_at: string
+          id: string
+          updated_at: string
+          week_ending_date: string
+        }
+        Insert: {
+          attachment_url: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          week_ending_date: string
+        }
+        Update: {
+          attachment_url?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          week_ending_date?: string
+        }
+        Relationships: []
+      }
       day_labor_entries: {
         Row: {
           amount: number

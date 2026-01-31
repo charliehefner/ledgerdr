@@ -28,13 +28,17 @@ export default function Operations() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="log" colorScheme="primary">Operations Log</TabsTrigger>
-            <TabsTrigger value="progress" colorScheme="secondary">Progreso de Campos</TabsTrigger>
-            <TabsTrigger value="input-usage" colorScheme="accent">Uso de Insumos</TabsTrigger>
-            <TabsTrigger value="field-inputs" colorScheme="muted">Insumos por Campo</TabsTrigger>
-            <TabsTrigger value="farms" colorScheme="primary">Farms & Fields</TabsTrigger>
-            <TabsTrigger value="types" colorScheme="secondary">Operation Types</TabsTrigger>
+          <TabsList className="w-full justify-between">
+            <div className="flex flex-wrap gap-1">
+              <TabsTrigger value="log" colorScheme="primary">Operations Log</TabsTrigger>
+              <TabsTrigger value="progress" colorScheme="secondary">Progreso de Campos</TabsTrigger>
+              <TabsTrigger value="input-usage" colorScheme="accent">Uso de Insumos</TabsTrigger>
+              <TabsTrigger value="field-inputs" colorScheme="muted">Insumos por Campo</TabsTrigger>
+            </div>
+            <div className="flex gap-1">
+              <TabsTrigger value="farms" colorScheme="primary">Farms & Fields</TabsTrigger>
+              <TabsTrigger value="types" colorScheme="secondary">Operation Types</TabsTrigger>
+            </div>
           </TabsList>
 
           <TabsContent value="log" className="mt-6">

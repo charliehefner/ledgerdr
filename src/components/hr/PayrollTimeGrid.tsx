@@ -89,8 +89,9 @@ export function PayrollTimeGrid({
   const { data: employees = [] } = useQuery({
     queryKey: ["employees", "active"],
     queryFn: async () => {
+      // Use employees_safe view for consistency (no sensitive fields in this query)
       const { data, error } = await supabase
-        .from("employees")
+        .from("employees_safe")
         .select("id, name, salary, position")
         .eq("is_active", true)
         .order("name");

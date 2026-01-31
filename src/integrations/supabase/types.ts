@@ -164,6 +164,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_benefits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_documents: {
@@ -202,6 +209,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_incidents: {
@@ -238,6 +252,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_incidents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -290,6 +311,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_loans_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_salary_history: {
@@ -323,6 +351,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_salary_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -379,6 +414,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_timesheets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_timesheets_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
@@ -418,6 +460,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_vacations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1041,6 +1090,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "period_employee_benefits_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "period_employee_benefits_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
@@ -1213,7 +1269,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      employees_safe: {
+        Row: {
+          bank: string | null
+          bank_account_number: string | null
+          boot_size: string | null
+          cedula: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          date_of_hire: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          pant_size: string | null
+          position: string | null
+          salary: number | null
+          shirt_size: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bank?: never
+          bank_account_number?: never
+          boot_size?: string | null
+          cedula?: never
+          created_at?: string | null
+          date_of_birth?: string | null
+          date_of_hire?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          pant_size?: string | null
+          position?: string | null
+          salary?: number | null
+          shirt_size?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bank?: never
+          bank_account_number?: never
+          boot_size?: string | null
+          cedula?: never
+          created_at?: string | null
+          date_of_birth?: string | null
+          date_of_hire?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          pant_size?: string | null
+          position?: string | null
+          salary?: number | null
+          shirt_size?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
@@ -1227,6 +1336,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_accountant_only: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "accountant" | "management" | "supervisor" | "viewer"

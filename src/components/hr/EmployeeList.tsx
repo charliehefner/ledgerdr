@@ -76,8 +76,9 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => {
+      // Use employees_safe view to mask sensitive PII for non-admin users
       const { data, error } = await supabase
-        .from("employees")
+        .from("employees_safe")
         .select("*")
         .order("name");
 

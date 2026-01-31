@@ -20,6 +20,7 @@ import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 import { AttachmentCell } from "@/components/transactions/AttachmentCell";
+import { FiscalDocumentsReport } from "@/components/dashboard/FiscalDocumentsReport";
 
 const PENDING_NCF_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
@@ -122,6 +123,9 @@ export default function Dashboard() {
   return (
     <MainLayout title="Panel" subtitle="Resumen de sus facturas de gastos">
       <div className="space-y-6 animate-fade-in">
+        {/* Fiscal Documents Report */}
+        <FiscalDocumentsReport />
+
         {/* Transactions Without Document */}
         <div className="bg-card rounded-xl border border-border shadow-sm">
           <div className="flex items-center justify-between p-6 border-b border-border">

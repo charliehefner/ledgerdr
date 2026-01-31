@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -11,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Edit, History, Archive, ArchiveRestore, SlidersHorizontal, Download, FileSpreadsheet, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Edit, History, Archive, ArchiveRestore, SlidersHorizontal, Download, FileSpreadsheet, FileText, ArrowUpDown, ArrowUp, ArrowDown, BarChart3 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { PurchaseHistoryDialog } from "./PurchaseHistoryDialog";
@@ -83,6 +84,7 @@ type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
 
 export function InventoryList({ onEditItem }: InventoryListProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [adjustmentItem, setAdjustmentItem] = useState<{
@@ -801,6 +803,14 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
                           title="Purchase history"
                         >
                           <History className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/operations?tab=input-usage&inputId=${item.id}`)}
+                          title="Ver uso en operaciones"
+                        >
+                          <BarChart3 className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"

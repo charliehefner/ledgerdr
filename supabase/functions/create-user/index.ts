@@ -7,6 +7,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Domain used for username-based accounts (users without email)
+const USERNAME_EMAIL_DOMAIN = "internal.jord.local";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,10 +21,31 @@ serve(async (req) => {
       throw new Error("No authorization header");
     }
 
-    const { email, password, role } = await req.json();
+    const { email, username, password, role } = await req.json();
 
-    if (!email || !password || !role) {
-      throw new Error("Email, password, and role are required");
+    // Either email or username must be provided
+    if (!email && !username) {
+      throw new Error("Email or username is required");
+    }
+
+    if (!password || !role) {
+      throw new Error("Password and role are required");
+    }
+
+    // Determine the actual email to use
+    let actualEmail: string;
+    let isUsernameAccount = false;
+
+    if (username && !email) {
+      // Username-only account - create placeholder email
+      const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!sanitizedUsername) {
+        throw new Error("Invalid username - must contain at least one letter or number");
+      }
+      actualEmail = `${sanitizedUsername}@${USERNAME_EMAIL_DOMAIN}`;
+      isUsernameAccount = true;
+    } else {
+      actualEmail = email;
     }
 
     const validRoles = ["admin", "management", "accountant", "supervisor", "viewer"];
@@ -58,12 +82,16 @@ serve(async (req) => {
     // Use service role to create new user
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Create the user in auth
+    // Create the user in auth with metadata to track username accounts
     const { data: newUser, error: createError } =
       await adminClient.auth.admin.createUser({
-        email,
+        email: actualEmail,
         password,
         email_confirm: true, // Auto-confirm email
+        user_metadata: isUsernameAccount ? { 
+          username: username,
+          is_username_account: true 
+        } : undefined,
       });
 
     if (createError) {
@@ -91,7 +119,8 @@ serve(async (req) => {
         success: true,
         user: {
           id: newUser.user.id,
-          email: newUser.user.email,
+          email: actualEmail,
+          username: isUsernameAccount ? username : undefined,
           role,
         },
       }),

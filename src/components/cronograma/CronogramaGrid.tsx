@@ -638,10 +638,10 @@ function CronogramaCell({
   if (isVacation) {
     return (
       <td className={cn(
-        "border p-1 text-center min-w-[80px]",
+        "border p-1 text-center min-w-[120px] align-top",
         "bg-purple-100 dark:bg-purple-900/30"
       )}>
-        <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+        <div className="text-xs text-purple-600 dark:text-purple-400 font-medium py-1">
           {t("cronograma.vacation")}
         </div>
       </td>
@@ -651,18 +651,25 @@ function CronogramaCell({
   if (isHoliday) {
     return (
       <td className={cn(
-        "border p-1 text-center min-w-[80px]",
+        "border p-1 text-center min-w-[120px] align-top",
         "bg-amber-50 dark:bg-amber-900/20"
       )}>
-        <Input
+        <textarea
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           disabled={isDisabled}
-          className="h-7 text-xs bg-transparent border-0 focus:ring-1"
+          className="w-full min-h-[28px] text-xs bg-transparent border-0 focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
           placeholder="—"
+          rows={1}
+          style={{ height: 'auto' }}
+          onInput={(e) => {
+            const target = e.target as HTMLTextAreaElement;
+            target.style.height = 'auto';
+            target.style.height = target.scrollHeight + 'px';
+          }}
         />
       </td>
     );
@@ -670,18 +677,25 @@ function CronogramaCell({
 
   return (
     <td className={cn(
-      "border p-1 min-w-[80px]",
+      "border p-1 min-w-[120px] align-top",
       dayShade ? "bg-secondary/50" : "bg-background"
     )}>
-      <Input
+      <textarea
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         disabled={isDisabled}
-        className="h-7 text-xs border-0 bg-transparent focus:ring-1"
+        className="w-full min-h-[28px] text-xs border-0 bg-transparent focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
         placeholder="—"
+        rows={1}
+        style={{ height: 'auto' }}
+        onInput={(e) => {
+          const target = e.target as HTMLTextAreaElement;
+          target.style.height = 'auto';
+          target.style.height = target.scrollHeight + 'px';
+        }}
       />
     </td>
   );

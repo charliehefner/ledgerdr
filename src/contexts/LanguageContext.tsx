@@ -18,7 +18,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Sidebar navigation
     "nav.dashboard": "Panel",
     "nav.transactions": "Transacciones",
-    "nav.reports": "Reportes",
+    "nav.reports": "Financiero (Ledger)",
     "nav.hr": "Recursos Humanos",
     "nav.inventory": "Inventario",
     "nav.fuel": "Combustible",
@@ -309,7 +309,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Sidebar navigation
     "nav.dashboard": "Dashboard",
     "nav.transactions": "Transactions",
-    "nav.reports": "Reports",
+    "nav.reports": "Financial (Ledger)",
     "nav.hr": "Human Resources",
     "nav.inventory": "Inventory",
     "nav.fuel": "Fuel",

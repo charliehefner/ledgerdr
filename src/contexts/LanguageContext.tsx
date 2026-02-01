@@ -160,6 +160,15 @@ const translations: Record<Language, Record<string, string>> = {
     "operations.fieldInputs": "Insumos por Campo",
     "operations.farmsFields": "Fincas y Campos",
     "operations.operationTypes": "Tipos de Operación",
+    "operations.filters": "Filtros",
+    "operations.filter.farms": "Fincas",
+    "operations.filter.fields": "Campos",
+    "operations.filter.tractors": "Tractores",
+    "operations.filter.drivers": "Operadores",
+    "operations.filter.allFarms": "Todas las fincas",
+    "operations.filter.allFields": "Todos los campos",
+    "operations.filter.allTractors": "Todos los tractores",
+    "operations.filter.allDrivers": "Todos los operadores",
 
     // Dashboard specific
     "dashboard.pendingNcf": "Transacciones Pendientes de NCF",
@@ -375,6 +384,15 @@ const translations: Record<Language, Record<string, string>> = {
     "operations.fieldInputs": "Inputs by Field",
     "operations.farmsFields": "Farms & Fields",
     "operations.operationTypes": "Operation Types",
+    "operations.filters": "Filters",
+    "operations.filter.farms": "Farms",
+    "operations.filter.fields": "Fields",
+    "operations.filter.tractors": "Tractors",
+    "operations.filter.drivers": "Drivers",
+    "operations.filter.allFarms": "All farms",
+    "operations.filter.allFields": "All fields",
+    "operations.filter.allTractors": "All tractors",
+    "operations.filter.allDrivers": "All drivers",
 
     // Dashboard specific
     "dashboard.pendingNcf": "Transactions Pending NCF",

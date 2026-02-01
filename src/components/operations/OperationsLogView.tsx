@@ -58,6 +58,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDa
 import { cn } from "@/lib/utils";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Field {
   id: string;
@@ -146,6 +147,7 @@ export function OperationsLogView() {
   const [sortColumn, setSortColumn] = useState<SortColumn>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { user } = useAuth();
+  const { t } = useLanguage();
   const canEdit = user?.role === "admin" || user?.role === "management" || user?.role === "supervisor";
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
@@ -882,17 +884,19 @@ export function OperationsLogView() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Filtros
+              {t("operations.filters")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid grid-cols-2 gap-3">
               <Select value={filterFarm || "__all__"} onValueChange={(v) => setFilterFarm(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Todas las fincas" />
+                  <SelectValue>
+                    {filterFarm ? farms.find(f => f.id === filterFarm)?.name : t("operations.filter.farms")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Todas las fincas</SelectItem>
+                  <SelectItem value="__all__">{t("operations.filter.allFarms")}</SelectItem>
                   {farms.map((farm) => (
                     <SelectItem key={farm.id} value={farm.id}>
                       {farm.name}
@@ -903,10 +907,12 @@ export function OperationsLogView() {
 
               <Select value={filterField || "__all__"} onValueChange={(v) => setFilterField(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Todos los campos" />
+                  <SelectValue>
+                    {filterField ? fields?.find(f => f.id === filterField)?.name : t("operations.filter.fields")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Todos los campos</SelectItem>
+                  <SelectItem value="__all__">{t("operations.filter.allFields")}</SelectItem>
                   {fields
                     ?.filter(f => !filterFarm || f.farm_id === filterFarm)
                     .map((field) => (
@@ -919,10 +925,12 @@ export function OperationsLogView() {
 
               <Select value={filterTractor || "__all__"} onValueChange={(v) => setFilterTractor(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Todos los tractores" />
+                  <SelectValue>
+                    {filterTractor ? tractors?.find(t => t.id === filterTractor)?.name : t("operations.filter.tractors")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Todos los tractores</SelectItem>
+                  <SelectItem value="__all__">{t("operations.filter.allTractors")}</SelectItem>
                   {tractors?.map((tractor) => (
                     <SelectItem key={tractor.id} value={tractor.id}>
                       {tractor.name}
@@ -933,10 +941,12 @@ export function OperationsLogView() {
 
               <Select value={filterDriver || "__all__"} onValueChange={(v) => setFilterDriver(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Todos los operadores" />
+                  <SelectValue>
+                    {filterDriver || t("operations.filter.drivers")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Todos los operadores</SelectItem>
+                  <SelectItem value="__all__">{t("operations.filter.allDrivers")}</SelectItem>
                   {uniqueDrivers.map((driver) => (
                     <SelectItem key={driver} value={driver}>
                       {driver}

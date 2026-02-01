@@ -37,13 +37,13 @@ export default function HumanResources() {
           <TabsList className="w-full justify-between">
             <div className="flex">
               <TabsTrigger value="payroll" colorScheme="primary">{t("hr.payroll")}</TabsTrigger>
-              <TabsTrigger value="day-labor" colorScheme="secondary">{t("hr.dayLabor")}</TabsTrigger>
+              <TabsTrigger value="day-labor" colorScheme="accent">{t("hr.dayLabor")}</TabsTrigger>
             </div>
             <div className="flex">
-              <TabsTrigger value="jornaleros" colorScheme="accent">Jornaleros</TabsTrigger>
-              <TabsTrigger value="employees" colorScheme="accent">{t("hr.employees")}</TabsTrigger>
+              <TabsTrigger value="jornaleros" colorScheme="muted">Jornaleros</TabsTrigger>
+              <TabsTrigger value="employees" colorScheme="secondary">{t("hr.employees")}</TabsTrigger>
               {canModifySettings && (
-                <TabsTrigger value="add-employee" colorScheme="muted">
+                <TabsTrigger value="add-employee" colorScheme="accent">
                   {editingEmployee ? t("hr.editEmployee") : t("hr.addEmployee")}
                 </TabsTrigger>
               )}

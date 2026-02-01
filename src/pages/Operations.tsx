@@ -7,14 +7,12 @@ import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { FieldProgressReport } from "@/components/operations/FieldProgressReport";
 import { InputUsageReport } from "@/components/operations/InputUsageReport";
-import { FieldInputsReport } from "@/components/operations/FieldInputsReport";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Operations() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "log";
   const initialInputId = searchParams.get("inputId");
-  const initialFieldId = searchParams.get("fieldId");
   const { t } = useLanguage();
   
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -35,7 +33,6 @@ export default function Operations() {
               <TabsTrigger value="log" colorScheme="primary">{t("operations.log")}</TabsTrigger>
               <TabsTrigger value="progress" colorScheme="secondary">{t("operations.fieldProgress")}</TabsTrigger>
               <TabsTrigger value="input-usage" colorScheme="accent">{t("operations.inputUsage")}</TabsTrigger>
-              <TabsTrigger value="field-inputs" colorScheme="muted">{t("operations.fieldInputs")}</TabsTrigger>
             </div>
             <div className="flex gap-1">
               <TabsTrigger value="farms" colorScheme="primary">{t("operations.farmsFields")}</TabsTrigger>
@@ -53,10 +50,6 @@ export default function Operations() {
 
           <TabsContent value="input-usage" className="mt-6">
             <InputUsageReport initialInputId={initialInputId} />
-          </TabsContent>
-
-          <TabsContent value="field-inputs" className="mt-6">
-            <FieldInputsReport initialFieldId={initialFieldId} />
           </TabsContent>
 
           <TabsContent value="farms" className="mt-6">

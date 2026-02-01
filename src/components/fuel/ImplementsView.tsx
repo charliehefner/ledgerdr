@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Implement {
   id: string;
@@ -59,18 +60,8 @@ const implementTypes = [
   "Other",
 ];
 
-const implementColumns: ColumnConfig[] = [
-  { key: "name", label: "Nombre", defaultVisible: true },
-  { key: "type", label: "Tipo", defaultVisible: true },
-  { key: "brand_model", label: "Marca / Modelo", defaultVisible: true },
-  { key: "serial", label: "# Serie", defaultVisible: true },
-  { key: "purchase_date", label: "Fecha Compra", defaultVisible: false },
-  { key: "price", label: "Precio", defaultVisible: false },
-  { key: "status", label: "Estado", defaultVisible: true },
-  { key: "actions", label: "Acciones", defaultVisible: true },
-];
-
 export function ImplementsView() {
+  const { t } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingImplement, setEditingImplement] = useState<Implement | null>(null);
   const [form, setForm] = useState({
@@ -85,6 +76,17 @@ export function ImplementsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const implementColumns: ColumnConfig[] = useMemo(() => [
+    { key: "name", label: t("equipment.col.name"), defaultVisible: true },
+    { key: "type", label: t("equipment.col.type"), defaultVisible: true },
+    { key: "brand_model", label: t("equipment.col.brandModel"), defaultVisible: true },
+    { key: "serial", label: t("equipment.col.serial"), defaultVisible: true },
+    { key: "purchase_date", label: t("equipment.col.purchaseDate"), defaultVisible: false },
+    { key: "price", label: t("equipment.col.price"), defaultVisible: false },
+    { key: "status", label: t("equipment.col.status"), defaultVisible: true },
+    { key: "actions", label: t("equipment.col.actions"), defaultVisible: true },
+  ], [t]);
 
   const {
     visibility,
@@ -132,8 +134,8 @@ export function ImplementsView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["implements"] });
       toast({
-        title: editingImplement ? "Implemento actualizado" : "Implemento agregado",
-        description: `${form.name} ha sido ${editingImplement ? "actualizado" : "agregado"} exitosamente.`,
+        title: editingImplement ? t("equipment.implementUpdated") : t("equipment.implementAdded"),
+        description: `${form.name} ${t("equipment.successMessage").replace("{action}", editingImplement ? t("equipment.update").toLowerCase() : t("common.add").toLowerCase())}`,
       });
       handleCloseDialog();
     },
@@ -178,8 +180,8 @@ export function ImplementsView() {
     e.preventDefault();
     if (!form.name || !form.implement_type) {
       toast({
-        title: "Error de Validación",
-        description: "Complete todos los campos requeridos.",
+        title: t("equipment.validationError"),
+        description: t("equipment.completeRequired"),
         variant: "destructive",
       });
       return;
@@ -188,7 +190,7 @@ export function ImplementsView() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Cargando implementos...</div>;
+    return <div className="text-center py-8">{t("equipment.loadingImplements")}</div>;
   }
 
   return (
@@ -196,7 +198,7 @@ export function ImplementsView() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Wrench className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Implementos</h3>
+          <h3 className="text-lg font-semibold">{t("equipment.implements")}</h3>
         </div>
         <div className="flex items-center gap-2">
           <ColumnSelector
@@ -209,19 +211,19 @@ export function ImplementsView() {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Agregar Implemento
+                {t("equipment.addImplement")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>
-                  {editingImplement ? "Editar Implemento" : "Agregar Nuevo Implemento"}
+                  {editingImplement ? t("equipment.editImplement") : t("equipment.addNewImplement")}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <Label>Nombre del Implemento *</Label>
+                    <Label>{t("equipment.implementName")} *</Label>
                     <Input
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -230,7 +232,7 @@ export function ImplementsView() {
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Tipo *</Label>
+                    <Label>{t("equipment.form.type")} *</Label>
                     <Select
                       value={form.implement_type}
                       onValueChange={(value) => setForm({ ...form, implement_type: value })}
@@ -249,7 +251,7 @@ export function ImplementsView() {
                   </div>
 
                   <div>
-                    <Label>Marca</Label>
+                    <Label>{t("equipment.form.brand")}</Label>
                     <Input
                       value={form.brand}
                       onChange={(e) => setForm({ ...form, brand: e.target.value })}
@@ -258,7 +260,7 @@ export function ImplementsView() {
                   </div>
 
                   <div>
-                    <Label>Modelo</Label>
+                    <Label>{t("equipment.form.model")}</Label>
                     <Input
                       value={form.model}
                       onChange={(e) => setForm({ ...form, model: e.target.value })}
@@ -267,7 +269,7 @@ export function ImplementsView() {
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Número de Serie</Label>
+                    <Label>{t("equipment.form.serialNumber")}</Label>
                     <Input
                       value={form.serial_number}
                       onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
@@ -276,7 +278,7 @@ export function ImplementsView() {
                   </div>
 
                   <div>
-                    <Label>Fecha de Compra</Label>
+                    <Label>{t("equipment.form.purchaseDate")}</Label>
                     <Input
                       type="date"
                       value={form.purchase_date}
@@ -285,7 +287,7 @@ export function ImplementsView() {
                   </div>
 
                   <div>
-                    <Label>Precio de Compra ($)</Label>
+                    <Label>{t("equipment.form.purchasePrice")}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -298,10 +300,10 @@ export function ImplementsView() {
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancelar
+                    {t("common.cancel")}
                   </Button>
                   <Button type="submit" disabled={mutation.isPending}>
-                    {mutation.isPending ? "Guardando..." : editingImplement ? "Actualizar" : "Agregar Implemento"}
+                    {mutation.isPending ? t("equipment.saving") : editingImplement ? t("equipment.update") : t("equipment.addImplement")}
                   </Button>
                 </div>
               </form>
@@ -312,21 +314,21 @@ export function ImplementsView() {
 
       {!implements_ || implements_.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No hay implementos agregados. Haga clic en "Agregar Implemento" para comenzar.
+          {t("equipment.noImplements")}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                {isVisible("name") && <TableHead>Nombre</TableHead>}
-                {isVisible("type") && <TableHead>Tipo</TableHead>}
-                {isVisible("brand_model") && <TableHead>Marca / Modelo</TableHead>}
-                {isVisible("serial") && <TableHead># Serie</TableHead>}
-                {isVisible("purchase_date") && <TableHead>Fecha Compra</TableHead>}
-                {isVisible("price") && <TableHead>Precio</TableHead>}
-                {isVisible("status") && <TableHead>Estado</TableHead>}
-                {isVisible("actions") && <TableHead className="w-[80px]">Acciones</TableHead>}
+                {isVisible("name") && <TableHead>{t("equipment.col.name")}</TableHead>}
+                {isVisible("type") && <TableHead>{t("equipment.col.type")}</TableHead>}
+                {isVisible("brand_model") && <TableHead>{t("equipment.col.brandModel")}</TableHead>}
+                {isVisible("serial") && <TableHead>{t("equipment.col.serial")}</TableHead>}
+                {isVisible("purchase_date") && <TableHead>{t("equipment.col.purchaseDate")}</TableHead>}
+                {isVisible("price") && <TableHead>{t("equipment.col.price")}</TableHead>}
+                {isVisible("status") && <TableHead>{t("equipment.col.status")}</TableHead>}
+                {isVisible("actions") && <TableHead className="w-[80px]">{t("equipment.col.actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -363,7 +365,7 @@ export function ImplementsView() {
                   {isVisible("status") && (
                     <TableCell>
                       <Badge variant={implement.is_active ? "default" : "secondary"}>
-                        {implement.is_active ? "Activo" : "Inactivo"}
+                        {implement.is_active ? t("common.active") : t("common.inactive")}
                       </Badge>
                     </TableCell>
                   )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface TractorEquipment {
   id: string;
@@ -40,19 +41,8 @@ interface TractorEquipment {
   purchase_price: number | null;
 }
 
-const tractorColumns: ColumnConfig[] = [
-  { key: "name", label: "Nombre", defaultVisible: true },
-  { key: "brand_model", label: "Marca / Modelo", defaultVisible: true },
-  { key: "serial", label: "# Serie", defaultVisible: true },
-  { key: "hp", label: "HP", defaultVisible: true },
-  { key: "hour_meter", label: "Horómetro", defaultVisible: true },
-  { key: "purchase_date", label: "Fecha Compra", defaultVisible: false },
-  { key: "price", label: "Precio", defaultVisible: false },
-  { key: "status", label: "Estado", defaultVisible: true },
-  { key: "actions", label: "Acciones", defaultVisible: true },
-];
-
 export function TractorsView() {
+  const { t } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTractor, setEditingTractor] = useState<TractorEquipment | null>(null);
   const [form, setForm] = useState({
@@ -68,6 +58,18 @@ export function TractorsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const tractorColumns: ColumnConfig[] = useMemo(() => [
+    { key: "name", label: t("equipment.col.name"), defaultVisible: true },
+    { key: "brand_model", label: t("equipment.col.brandModel"), defaultVisible: true },
+    { key: "serial", label: t("equipment.col.serial"), defaultVisible: true },
+    { key: "hp", label: t("equipment.col.hp"), defaultVisible: true },
+    { key: "hour_meter", label: t("equipment.col.hourMeter"), defaultVisible: true },
+    { key: "purchase_date", label: t("equipment.col.purchaseDate"), defaultVisible: false },
+    { key: "price", label: t("equipment.col.price"), defaultVisible: false },
+    { key: "status", label: t("equipment.col.status"), defaultVisible: true },
+    { key: "actions", label: t("equipment.col.actions"), defaultVisible: true },
+  ], [t]);
 
   const {
     visibility,
@@ -119,8 +121,8 @@ export function TractorsView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["fuelEquipment"] });
       toast({
-        title: editingTractor ? "Tractor actualizado" : "Tractor agregado",
-        description: `${form.name} ha sido ${editingTractor ? "actualizado" : "agregado"} exitosamente.`,
+        title: editingTractor ? t("equipment.tractorUpdated") : t("equipment.tractorAdded"),
+        description: `${form.name} ${t("equipment.successMessage").replace("{action}", editingTractor ? t("equipment.update").toLowerCase() : t("common.add").toLowerCase())}`,
       });
       handleCloseDialog();
     },
@@ -167,8 +169,8 @@ export function TractorsView() {
     e.preventDefault();
     if (!form.name) {
       toast({
-        title: "Error de Validación",
-        description: "Ingrese el nombre del tractor.",
+        title: t("equipment.validationError"),
+        description: t("equipment.enterTractorName"),
         variant: "destructive",
       });
       return;
@@ -177,7 +179,7 @@ export function TractorsView() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Cargando tractores...</div>;
+    return <div className="text-center py-8">{t("equipment.loadingTractors")}</div>;
   }
 
   return (
@@ -185,7 +187,7 @@ export function TractorsView() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Tractor className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Tractores</h3>
+          <h3 className="text-lg font-semibold">{t("equipment.tractors")}</h3>
         </div>
         <div className="flex items-center gap-2">
           <ColumnSelector
@@ -198,19 +200,19 @@ export function TractorsView() {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Agregar Tractor
+                {t("equipment.addTractor")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>
-                  {editingTractor ? "Editar Tractor" : "Agregar Nuevo Tractor"}
+                  {editingTractor ? t("equipment.editTractor") : t("equipment.addNewTractor")}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <Label>Nombre del Tractor *</Label>
+                    <Label>{t("equipment.tractorName")} *</Label>
                     <Input
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -219,7 +221,7 @@ export function TractorsView() {
                   </div>
 
                   <div>
-                    <Label>Marca</Label>
+                    <Label>{t("equipment.form.brand")}</Label>
                     <Input
                       value={form.brand}
                       onChange={(e) => setForm({ ...form, brand: e.target.value })}
@@ -228,7 +230,7 @@ export function TractorsView() {
                   </div>
 
                   <div>
-                    <Label>Modelo</Label>
+                    <Label>{t("equipment.form.model")}</Label>
                     <Input
                       value={form.model}
                       onChange={(e) => setForm({ ...form, model: e.target.value })}
@@ -237,7 +239,7 @@ export function TractorsView() {
                   </div>
 
                   <div>
-                    <Label>Número de Serie</Label>
+                    <Label>{t("equipment.form.serialNumber")}</Label>
                     <Input
                       value={form.serial_number}
                       onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
@@ -246,7 +248,7 @@ export function TractorsView() {
                   </div>
 
                   <div>
-                    <Label>Caballos de Fuerza (HP)</Label>
+                    <Label>{t("equipment.form.hp")}</Label>
                     <Input
                       type="number"
                       value={form.hp}
@@ -256,7 +258,7 @@ export function TractorsView() {
                   </div>
 
                   <div>
-                    <Label>Horómetro Actual</Label>
+                    <Label>{t("equipment.form.hourMeter")}</Label>
                     <Input
                       type="number"
                       step="0.1"
@@ -268,7 +270,7 @@ export function TractorsView() {
                   </div>
 
                   <div>
-                    <Label>Fecha de Compra</Label>
+                    <Label>{t("equipment.form.purchaseDate")}</Label>
                     <Input
                       type="date"
                       value={form.purchase_date}
@@ -277,7 +279,7 @@ export function TractorsView() {
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Precio de Compra ($)</Label>
+                    <Label>{t("equipment.form.purchasePrice")}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -290,10 +292,10 @@ export function TractorsView() {
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancelar
+                    {t("common.cancel")}
                   </Button>
                   <Button type="submit" disabled={mutation.isPending}>
-                    {mutation.isPending ? "Guardando..." : editingTractor ? "Actualizar" : "Agregar Tractor"}
+                    {mutation.isPending ? t("equipment.saving") : editingTractor ? t("equipment.update") : t("equipment.addTractor")}
                   </Button>
                 </div>
               </form>
@@ -304,22 +306,22 @@ export function TractorsView() {
 
       {!tractors || tractors.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No hay tractores agregados. Haga clic en "Agregar Tractor" para comenzar.
+          {t("equipment.noTractors")}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                {isVisible("name") && <TableHead>Nombre</TableHead>}
-                {isVisible("brand_model") && <TableHead>Marca / Modelo</TableHead>}
-                {isVisible("serial") && <TableHead># Serie</TableHead>}
-                {isVisible("hp") && <TableHead>HP</TableHead>}
-                {isVisible("hour_meter") && <TableHead>Horómetro</TableHead>}
-                {isVisible("purchase_date") && <TableHead>Fecha Compra</TableHead>}
-                {isVisible("price") && <TableHead>Precio</TableHead>}
-                {isVisible("status") && <TableHead>Estado</TableHead>}
-                {isVisible("actions") && <TableHead className="w-[80px]">Acciones</TableHead>}
+                {isVisible("name") && <TableHead>{t("equipment.col.name")}</TableHead>}
+                {isVisible("brand_model") && <TableHead>{t("equipment.col.brandModel")}</TableHead>}
+                {isVisible("serial") && <TableHead>{t("equipment.col.serial")}</TableHead>}
+                {isVisible("hp") && <TableHead>{t("equipment.col.hp")}</TableHead>}
+                {isVisible("hour_meter") && <TableHead>{t("equipment.col.hourMeter")}</TableHead>}
+                {isVisible("purchase_date") && <TableHead>{t("equipment.col.purchaseDate")}</TableHead>}
+                {isVisible("price") && <TableHead>{t("equipment.col.price")}</TableHead>}
+                {isVisible("status") && <TableHead>{t("equipment.col.status")}</TableHead>}
+                {isVisible("actions") && <TableHead className="w-[80px]">{t("equipment.col.actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -353,7 +355,7 @@ export function TractorsView() {
                   {isVisible("status") && (
                     <TableCell>
                       <Badge variant={tractor.is_active ? "default" : "secondary"}>
-                        {tractor.is_active ? "Activo" : "Inactivo"}
+                        {tractor.is_active ? t("common.active") : t("common.inactive")}
                       </Badge>
                     </TableCell>
                   )}

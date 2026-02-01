@@ -160,7 +160,6 @@ export default function Rainfall() {
       { header: "Caoba (mm)", key: "caoba", width: 12 },
       { header: "Palmarito (mm)", key: "palmarito", width: 15 },
       { header: "Virgencita (mm)", key: "virgencita", width: 15 },
-      { header: "Total (mm)", key: "total", width: 12 },
     ];
 
     // Style header row
@@ -178,7 +177,6 @@ export default function Rainfall() {
       const caoba = record?.caoba || 0;
       const palmarito = record?.palmarito || 0;
       const virgencita = record?.virgencita || 0;
-      const total = solar + caoba + palmarito + virgencita;
 
       worksheet.addRow({
         date: format(date, "dd/MM/yyyy"),
@@ -186,12 +184,11 @@ export default function Rainfall() {
         caoba,
         palmarito,
         virgencita,
-        total,
       });
     });
 
     // Add totals row
-    const totals = records.reduce(
+    const excelTotals = records.reduce(
       (acc, r) => ({
         solar: acc.solar + (r.solar || 0),
         caoba: acc.caoba + (r.caoba || 0),
@@ -203,11 +200,10 @@ export default function Rainfall() {
 
     const totalRow = worksheet.addRow({
       date: "TOTAL",
-      solar: totals.solar,
-      caoba: totals.caoba,
-      palmarito: totals.palmarito,
-      virgencita: totals.virgencita,
-      total: totals.solar + totals.caoba + totals.palmarito + totals.virgencita,
+      solar: excelTotals.solar,
+      caoba: excelTotals.caoba,
+      palmarito: excelTotals.palmarito,
+      virgencita: excelTotals.virgencita,
     });
     totalRow.font = { bold: true };
 
@@ -336,7 +332,6 @@ export default function Rainfall() {
                           {LOCATION_LABELS[loc]}
                         </TableHead>
                       ))}
-                      <TableHead className="text-center w-[100px]">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -344,11 +339,6 @@ export default function Rainfall() {
                       const dateStr = format(date, "yyyy-MM-dd");
                       const record = getRecordForDate(date);
                       const editable = editableRecords.get(dateStr);
-                      
-                      const rowTotal = LOCATIONS.reduce((sum, loc) => {
-                        const val = editable?.[loc] ?? String(record?.[loc] || 0);
-                        return sum + (parseFloat(val) || 0);
-                      }, 0);
 
                       return (
                         <TableRow key={dateStr} className={editable?.isDirty ? "bg-yellow-50" : ""}>
@@ -373,9 +363,6 @@ export default function Rainfall() {
                               )}
                             </TableCell>
                           ))}
-                          <TableCell className="text-center font-medium">
-                            {rowTotal.toFixed(2)}
-                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -387,9 +374,6 @@ export default function Rainfall() {
                           {totals[loc].toFixed(2)}
                         </TableCell>
                       ))}
-                      <TableCell className="text-center">
-                        {(totals.solar + totals.caoba + totals.palmarito + totals.virgencita).toFixed(2)}
-                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

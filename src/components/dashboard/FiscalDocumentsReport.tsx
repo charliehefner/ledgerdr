@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 interface FiscalTransaction {
   id: string;
+  legacy_id: number | null;
   transaction_date: string;
   currency: string;
   amount: number;
@@ -34,7 +35,7 @@ interface FiscalTransaction {
   rnc: string | null;
 }
 
-type SortKey = "transaction_date" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "rnc";
+type SortKey = "legacy_id" | "transaction_date" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "rnc";
 type SortDirection = "asc" | "desc" | null;
 
 export function FiscalDocumentsReport() {
@@ -50,7 +51,7 @@ export function FiscalDocumentsReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, transaction_date, currency, amount, itbis, pay_method, document, name, rnc")
+        .select("id, legacy_id, transaction_date, currency, amount, itbis, pay_method, document, name, rnc")
         .eq("is_void", false)
         .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
         .lte("transaction_date", format(endDate, "yyyy-MM-dd"))
@@ -91,8 +92,8 @@ export function FiscalDocumentsReport() {
       if (aVal === null) aVal = "";
       if (bVal === null) bVal = "";
 
-      // Numeric comparison for amount and itbis
-      if (sortKey === "amount" || sortKey === "itbis") {
+      // Numeric comparison for amount, itbis, and legacy_id
+      if (sortKey === "amount" || sortKey === "itbis" || sortKey === "legacy_id") {
         const aNum = typeof aVal === "number" ? aVal : 0;
         const bNum = typeof bVal === "number" ? bVal : 0;
         return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
@@ -147,12 +148,12 @@ export function FiscalDocumentsReport() {
     worksheet.addRow([
       `Comprobantes Fiscales (E31/B01) - ${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`
     ]);
-    worksheet.mergeCells("A1:H1");
+    worksheet.mergeCells("A1:I1");
     worksheet.getRow(1).font = { bold: true, size: 14 };
     worksheet.addRow([]);
 
     // Column headers
-    worksheet.addRow(["Fecha", "Moneda", "Monto", "ITBIS", "Método Pago", "Documento", "Nombre", "RNC"]);
+    worksheet.addRow(["ID", "Fecha", "Moneda", "Monto", "ITBIS", "Método Pago", "Documento", "Nombre", "RNC"]);
     worksheet.getRow(3).font = { bold: true };
     worksheet.getRow(3).fill = {
       type: "pattern",
@@ -163,6 +164,7 @@ export function FiscalDocumentsReport() {
     // Data rows
     fiscalTransactions.forEach((tx) => {
       worksheet.addRow([
+        tx.legacy_id || "-",
         format(new Date(tx.transaction_date), "dd/MM/yyyy"),
         tx.currency,
         tx.amount,
@@ -177,12 +179,12 @@ export function FiscalDocumentsReport() {
     // Totals
     const lastRow = worksheet.rowCount + 2;
     worksheet.addRow([]);
-    worksheet.addRow(["TOTALES DOP", "DOP", totals.dopAmount, totals.dopItbis, "", "", "", ""]);
-    worksheet.addRow(["TOTALES USD", "USD", totals.usdAmount, totals.usdItbis, "", "", "", ""]);
+    worksheet.addRow(["", "TOTALES DOP", "DOP", totals.dopAmount, totals.dopItbis, "", "", "", ""]);
+    worksheet.addRow(["", "TOTALES USD", "USD", totals.usdAmount, totals.usdItbis, "", "", "", ""]);
 
     // Format numbers
-    worksheet.getColumn(3).numFmt = "#,##0.00";
     worksheet.getColumn(4).numFmt = "#,##0.00";
+    worksheet.getColumn(5).numFmt = "#,##0.00";
 
     // Auto-fit columns
     worksheet.columns.forEach((col) => {
@@ -308,6 +310,12 @@ export function FiscalDocumentsReport() {
                   <TableRow>
                     <TableHead 
                       className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("legacy_id")}
+                    >
+                      <div className="flex items-center">ID<SortIcon columnKey="legacy_id" /></div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
                       onClick={() => handleSort("transaction_date")}
                     >
                       <div className="flex items-center">Fecha<SortIcon columnKey="transaction_date" /></div>
@@ -359,19 +367,20 @@ export function FiscalDocumentsReport() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : sortedTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         No hay comprobantes fiscales en este período
                       </TableCell>
                     </TableRow>
                   ) : (
                     sortedTransactions.map((tx) => (
                       <TableRow key={tx.id}>
+                        <TableCell className="font-mono text-xs">{tx.legacy_id || "-"}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>
                         <TableCell>{tx.currency}</TableCell>
                         <TableCell className="text-right">{formatCurrency(tx.amount, tx.currency)}</TableCell>

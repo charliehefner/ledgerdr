@@ -219,10 +219,35 @@ export function DayLaborView() {
     },
   });
 
+  // Calculate summary grouped by worker name
+  const summaryByWorker = useMemo(() => {
+    const grouped: Record<string, { entries: DayLaborEntry[]; subtotal: number }> = {};
+    
+    // Sort entries by worker name first, then by date
+    const sortedEntries = [...entries].sort((a, b) => {
+      const nameCompare = a.worker_name.localeCompare(b.worker_name);
+      if (nameCompare !== 0) return nameCompare;
+      return a.work_date.localeCompare(b.work_date);
+    });
+    
+    sortedEntries.forEach((entry) => {
+      const name = entry.worker_name || "Sin Nombre";
+      if (!grouped[name]) {
+        grouped[name] = { entries: [], subtotal: 0 };
+      }
+      grouped[name].entries.push(entry);
+      grouped[name].subtotal += Number(entry.amount);
+    });
+    
+    // Sort worker names alphabetically
+    const sortedNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+    return sortedNames.map((name) => ({ name, ...grouped[name] }));
+  }, [entries]);
+
   const handleAddEntry = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEntry.operation_description || !newEntry.workers_count || !newEntry.amount) {
-      toast({ title: "Por favor complete los campos requeridos (Operación, # Trabajadores, Monto)", variant: "destructive" });
+    if (!newEntry.operation_description || !newEntry.workers_count || !newEntry.amount || !newEntry.worker_name.trim()) {
+      toast({ title: "Por favor complete los campos requeridos (Operación, # Trabajadores, Nombre, Monto)", variant: "destructive" });
       return;
     }
     addEntry.mutate(newEntry);
@@ -269,10 +294,6 @@ export function DayLaborView() {
                   Cerrada
                 </span>
               )}
-              <Button variant="outline" onClick={generatePDF} disabled={entries.length === 0}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Exportar PDF
-              </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button 
@@ -306,6 +327,10 @@ export function DayLaborView() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              <Button variant="outline" onClick={generatePDF} disabled={entries.length === 0}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Exportar PDF
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -350,11 +375,12 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1 min-w-[140px]">
-                <label className="text-sm font-medium">Nombre (opcional)</label>
+                <label className="text-sm font-medium">Nombre *</label>
                 <Input
                   value={newEntry.worker_name}
                   onChange={(e) => setNewEntry({ ...newEntry, worker_name: e.target.value })}
                   placeholder="Nombre..."
+                  required
                 />
               </div>
               <div className="space-y-1 min-w-[140px]">
@@ -459,6 +485,57 @@ export function DayLaborView() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Summary by Worker */}
+      {entries.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Resumen por Trabajador</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {summaryByWorker.map((group) => (
+                  <>
+                    {group.entries.map((entry, idx) => (
+                      <TableRow key={entry.id}>
+                        <TableCell>{format(parseDateLocal(entry.work_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{entry.operation_description}</TableCell>
+                        <TableCell>{idx === 0 ? group.name : ""}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/30">
+                      <TableCell colSpan={2}></TableCell>
+                      <TableCell className="font-semibold text-right">Subtotal {group.name}:</TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        RD$ {group.subtotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  </>
+                ))}
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell colSpan={2}></TableCell>
+                  <TableCell className="text-right">TOTAL:</TableCell>
+                  <TableCell className="text-right font-mono">
+                    RD$ {weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Info about closing */}
       {!isWeekClosed && !canClose && (

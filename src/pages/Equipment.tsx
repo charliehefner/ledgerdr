@@ -3,24 +3,26 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TractorsView } from "@/components/fuel/TractorsView";
 import { ImplementsView } from "@/components/fuel/ImplementsView";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Equipment() {
   const [activeTab, setActiveTab] = useState("tractors");
+  const { t } = useLanguage();
 
   return (
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Equipment</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("page.equipment.title")}</h1>
           <p className="text-muted-foreground">
-            Manage tractors and implements
+            {t("page.equipment.subtitle")}
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="tractors" colorScheme="primary">Tractors</TabsTrigger>
-            <TabsTrigger value="implements" colorScheme="secondary">Implements</TabsTrigger>
+            <TabsTrigger value="tractors" colorScheme="primary">{t("equipment.tractors")}</TabsTrigger>
+            <TabsTrigger value="implements" colorScheme="secondary">{t("equipment.implements")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tractors" className="mt-6">

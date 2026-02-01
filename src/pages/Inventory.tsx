@@ -5,11 +5,13 @@ import { InventoryItemDialog } from "@/components/inventory/InventoryItemDialog"
 import { PurchaseDialog } from "@/components/inventory/PurchaseDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, ShoppingCart } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Inventory() {
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const handleEditItem = (itemId: string) => {
     setEditingItem(itemId);
@@ -26,9 +28,9 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t("page.inventory.title")}</h1>
             <p className="text-muted-foreground">
-              Manage agricultural inputs and supplies
+              {t("page.inventory.subtitle")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -37,11 +39,11 @@ export default function Inventory() {
               onClick={() => setIsPurchaseDialogOpen(true)}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
-              Record Purchase
+              {t("inventory.recordPurchase")}
             </Button>
             <Button onClick={() => setIsItemDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Item
+              {t("inventory.addItem")}
             </Button>
           </div>
         </div>

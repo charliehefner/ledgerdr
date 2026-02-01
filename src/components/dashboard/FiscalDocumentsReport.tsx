@@ -273,10 +273,10 @@ export function FiscalDocumentsReport() {
               </div>
 
               <Button
-                variant="outline"
+                variant="excel"
                 onClick={handleExport}
                 disabled={fiscalTransactions.length === 0}
-                className="ml-auto bg-card"
+                className="ml-auto"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Exportar Excel

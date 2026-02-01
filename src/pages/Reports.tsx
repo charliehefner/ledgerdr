@@ -390,7 +390,7 @@ export default function Reports() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-popover">
-              <DropdownMenuItem onClick={exportToExcel}>
+              <DropdownMenuItem onClick={exportToExcel} className="text-excel">
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Export to Excel
               </DropdownMenuItem>

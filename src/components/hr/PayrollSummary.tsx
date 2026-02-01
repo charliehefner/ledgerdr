@@ -560,7 +560,7 @@ export function PayrollSummary({
         <h3 className="text-lg font-semibold">Resumen de Nómina</h3>
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="excel"
             onClick={handleExport}
             disabled={isExporting || payrollData.length === 0}
           >

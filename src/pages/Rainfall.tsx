@@ -322,31 +322,31 @@ export default function Rainfall() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="overflow-auto max-h-[600px] relative">
-                <Table>
-                  <TableHeader className="[&_tr]:border-b">
-                    <TableRow className="bg-background">
-                      <TableHead className="w-[120px] sticky top-0 bg-background z-10">Fecha</TableHead>
+              <div className="relative overflow-auto max-h-[600px] border rounded-md">
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="sticky top-0 z-10 bg-background border-b">
+                    <tr>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Fecha</th>
                       {LOCATIONS.map((loc) => (
-                        <TableHead key={loc} className="text-center w-[100px] sticky top-0 bg-background z-10">
+                        <th key={loc} className="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-[100px]">
                           {LOCATION_LABELS[loc]}
-                        </TableHead>
+                        </th>
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {allDates.map((date) => {
                       const dateStr = format(date, "yyyy-MM-dd");
                       const record = getRecordForDate(date);
                       const editable = editableRecords.get(dateStr);
 
                       return (
-                        <TableRow key={dateStr} className={editable?.isDirty ? "bg-yellow-50" : ""}>
-                          <TableCell className="font-medium">
+                        <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-yellow-50")}>
+                          <td className="p-4 align-middle font-medium">
                             {format(date, "dd MMM yyyy", { locale: es })}
-                          </TableCell>
+                          </td>
                           {LOCATIONS.map((loc) => (
-                            <TableCell key={loc} className="p-1">
+                            <td key={loc} className="p-1 align-middle">
                               {canEdit ? (
                                 <Input
                                   type="number"
@@ -361,22 +361,22 @@ export default function Rainfall() {
                                   {record?.[loc] || 0}
                                 </span>
                               )}
-                            </TableCell>
+                            </td>
                           ))}
-                        </TableRow>
+                        </tr>
                       );
                     })}
                     {/* Totals Row */}
-                    <TableRow className="bg-muted/50 font-bold">
-                      <TableCell>TOTAL</TableCell>
+                    <tr className="bg-muted/50 font-bold border-b">
+                      <td className="p-4 align-middle">TOTAL</td>
                       {LOCATIONS.map((loc) => (
-                        <TableCell key={loc} className="text-center">
+                        <td key={loc} className="p-4 align-middle text-center">
                           {totals[loc].toFixed(2)}
-                        </TableCell>
+                        </td>
                       ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>

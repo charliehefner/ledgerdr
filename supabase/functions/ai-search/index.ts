@@ -31,7 +31,16 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Fetch context data for the AI to use
-    const [farmsRes, fieldsRes, operationTypesRes, recentOpsRes, employeesRes] = await Promise.all([
+    const [
+      farmsRes, 
+      fieldsRes, 
+      operationTypesRes, 
+      recentOpsRes, 
+      employeesRes,
+      rainfallRes,
+      dayLaborRes,
+      inventoryRes
+    ] = await Promise.all([
       supabase.from("farms").select("id, name").eq("is_active", true),
       supabase.from("fields").select("id, name, farm_id, hectares").eq("is_active", true),
       supabase.from("operation_types").select("id, name").eq("is_active", true),
@@ -43,6 +52,9 @@ serve(async (req) => {
         implement:implements(name)
       `).order("operation_date", { ascending: false }).limit(100),
       supabase.from("employees_safe").select("id, name, position, is_active"),
+      supabase.from("rainfall_records").select("record_date, solar, caoba, palmarito, virgencita").order("record_date", { ascending: false }).limit(60),
+      supabase.from("day_labor_entries").select("work_date, worker_name, workers_count, field_name, operation_description, amount").order("work_date", { ascending: false }).limit(100),
+      supabase.from("inventory_items").select("commercial_name, molecule_name, function, current_quantity, use_unit").eq("is_active", true),
     ]);
 
     // Build context for the AI
@@ -51,6 +63,9 @@ serve(async (req) => {
     const operationTypes = operationTypesRes.data || [];
     const recentOps = recentOpsRes.data || [];
     const employees = employeesRes.data || [];
+    const rainfall = rainfallRes.data || [];
+    const dayLabor = dayLaborRes.data || [];
+    const inventory = inventoryRes.data || [];
 
     const systemPrompt = `Eres un asistente de datos para una empresa agrícola en República Dominicana llamada Dallas Agro / Jord Dominicana.
 Tu trabajo es responder preguntas sobre las operaciones, empleados y datos de la empresa basándote en los datos proporcionados.
@@ -80,12 +95,23 @@ ${recentOps.slice(0, 50).map((op: any) => {
   return `- ${op.operation_date}: ${opType} en ${fieldName} (${farmName}), ${op.hectares_done} ha${op.driver ? `, operador: ${op.driver}` : ""}`;
 }).join("\n")}
 
+PLUVIOMETRÍA (Precipitación en mm, últimos 60 días):
+Ubicaciones: Solar, Caoba, Palmarito, Virgencita
+${rainfall.slice(0, 30).map((r: any) => `- ${r.record_date}: Solar=${r.solar || 0}, Caoba=${r.caoba || 0}, Palmarito=${r.palmarito || 0}, Virgencita=${r.virgencita || 0}`).join("\n")}
+
+JORNALES (Day Labor, últimos 100 registros):
+${dayLabor.slice(0, 50).map((d: any) => `- ${d.work_date}: ${d.workers_count} trabajador(es)${d.worker_name ? ` (${d.worker_name})` : ""}, ${d.operation_description}${d.field_name ? ` en ${d.field_name}` : ""}, RD$${d.amount}`).join("\n")}
+
+INVENTARIO (Items activos, sin precios):
+${inventory.map((i: any) => `- ${i.commercial_name}${i.molecule_name ? ` (${i.molecule_name})` : ""}: ${i.current_quantity} ${i.use_unit}, Función: ${i.function}`).join("\n")}
+
 INSTRUCCIONES:
 - Responde siempre en español
 - Sé conciso pero informativo
 - Si no tienes datos suficientes para responder, indícalo claramente
 - Para cálculos de totales, suma los valores de las operaciones relevantes
-- Si la pregunta es sobre datos que no tienes (transacciones financieras, inventario detallado), indica que esos datos no están disponibles en esta búsqueda
+- Para preguntas sobre lluvia, puedes calcular totales por ubicación o fecha
+- Si la pregunta es sobre datos que no tienes (transacciones financieras, precios de inventario, préstamos de empleados), indica que esos datos no están disponibles en esta búsqueda
 - Formatea números con separadores de miles cuando sea apropiado`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

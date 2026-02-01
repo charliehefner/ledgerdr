@@ -658,7 +658,7 @@ export function CronogramaGrid() {
       <ScrollArea className="w-full">
         <div className="min-w-[900px]">
           <table className="w-full border-collapse text-sm" style={{ borderSpacing: 0 }}>
-            <thead className="border-b-[3px] border-foreground/40">
+            <thead className="border-b-[4px] border-foreground/40">
               <tr>
                 <th className="border-2 border-border bg-muted/50 p-2 text-left font-medium sticky left-0 z-10 min-w-[150px]">
                   {t("cronograma.worker")}
@@ -702,7 +702,7 @@ export function CronogramaGrid() {
                       {t("cronograma.morning")}
                     </th>
                     <th key={`pm-${idx}`} className={cn(
-                      "border border-border border-r-2 p-1 text-xs font-normal",
+                      "border border-border border-r-[3px] p-1 text-xs font-normal",
                       idx % 2 === 0 ? "bg-secondary" : "bg-muted"
                     )}>
                       {t("cronograma.afternoon")}
@@ -717,7 +717,7 @@ export function CronogramaGrid() {
                 const jornaleroIndex = additionalRows.findIndex(r => r === worker);
 
                 return (
-                  <tr key={`${worker.type}-${worker.id || rowIdx}`} className="border-b-2 border-border">
+                  <tr key={`${worker.type}-${worker.id || rowIdx}`} className="border-b-[3px] border-border">
                     <td className="border-2 border-border p-2 font-medium sticky left-0 bg-background z-10 min-w-[150px]">
                       <div className="flex items-center gap-2">
                         {isJornaleroTemp ? (
@@ -917,7 +917,7 @@ function CronogramaCell({
       <td className={cn(
         "border border-border p-1 text-center min-w-[120px] align-top",
         "bg-purple-100 dark:bg-purple-900/30",
-        isLastOfDay && "border-r-2"
+        isLastOfDay && "border-r-[3px]"
       )}>
         <div className="text-xs text-purple-600 dark:text-purple-400 font-medium py-1">
           {t("cronograma.vacation")}
@@ -931,7 +931,7 @@ function CronogramaCell({
       <td className={cn(
         "border border-border p-1 text-center min-w-[120px] align-top",
         "bg-amber-50 dark:bg-amber-900/20",
-        isLastOfDay && "border-r-2"
+        isLastOfDay && "border-r-[3px]"
       )}>
         <textarea
           ref={textareaRef}
@@ -954,7 +954,7 @@ function CronogramaCell({
     <td className={cn(
       "border border-border p-1 min-w-[120px] align-top",
       dayShade ? "bg-primary/10" : "bg-background",
-      isLastOfDay && "border-r-2"
+      isLastOfDay && "border-r-[3px]"
     )}>
       <textarea
         ref={textareaRef}

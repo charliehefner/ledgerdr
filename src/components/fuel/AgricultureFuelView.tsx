@@ -54,6 +54,7 @@ import ExcelJS from "exceljs";
 import { useAuth } from "@/contexts/AuthContext";
 import { TankHistoryView } from "./TankHistoryView";
 import { TractorHistoryView } from "./TractorHistoryView";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -112,6 +113,7 @@ export function AgricultureFuelView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.role === "admin";
 
   // Fetch agriculture tanks
@@ -272,8 +274,8 @@ export function AgricultureFuelView() {
       queryClient.invalidateQueries({ queryKey: ["fuelEquipment"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
       toast({
-        title: "Fueling recorded",
-        description: "The fuel dispensing has been recorded and deducted from inventory.",
+        title: t("fuel.msg.fuelingRecorded"),
+        description: t("fuel.msg.fuelingRecordedDesc"),
       });
       handleCloseDialog();
     },
@@ -333,8 +335,8 @@ export function AgricultureFuelView() {
       queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
       toast({
-        title: "Transaction updated",
-        description: "The fuel transaction has been updated.",
+        title: t("fuel.msg.transactionUpdated"),
+        description: t("fuel.msg.transactionUpdatedDesc"),
       });
       handleCloseEditDialog();
     },
@@ -377,8 +379,8 @@ export function AgricultureFuelView() {
       queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
       toast({
-        title: "Transaction deleted",
-        description: "The fuel transaction has been deleted.",
+        title: t("fuel.msg.transactionDeleted"),
+        description: t("fuel.msg.transactionDeletedDesc"),
       });
       setDeleteTransaction(null);
     },
@@ -430,8 +432,8 @@ export function AgricultureFuelView() {
     if (!editingTransaction) return;
     if (!editForm.pump_start_reading || !editForm.pump_end_reading || !editForm.hour_meter_reading) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
+        title: t("fuel.msg.validationError"),
+        description: t("fuel.msg.fillRequired"),
         variant: "destructive",
       });
       return;
@@ -447,8 +449,8 @@ export function AgricultureFuelView() {
     e.preventDefault();
     if (!form.tank_id || !form.equipment_id || !form.pump_start_reading || !form.pump_end_reading || !form.hour_meter_reading) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
+        title: t("fuel.msg.validationError"),
+        description: t("fuel.msg.fillRequired"),
         variant: "destructive",
       });
       return;
@@ -672,27 +674,27 @@ export function AgricultureFuelView() {
       {/* Tabs for different views */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="report">Fueling Report</TabsTrigger>
+          <TabsTrigger value="report">{t("fuel.fuelingReport")}</TabsTrigger>
           <TabsTrigger value="tank-history">
             <History className="mr-2 h-4 w-4" />
-            Tank History
+            {t("fuel.tankHistory")}
           </TabsTrigger>
           <TabsTrigger value="tractor-history">
             <Gauge className="mr-2 h-4 w-4" />
-            Tractor History
+            {t("fuel.tractorHistory")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="report" className="mt-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <h2 className="text-xl font-semibold">Fueling Report</h2>
+        <h2 className="text-xl font-semibold">{t("fuel.fuelingReport")}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {/* Date Filters */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "dd/MM/yyyy") : "Start Date"}
+                {startDate ? format(startDate, "dd/MM/yyyy") : t("fuel.startDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -710,7 +712,7 @@ export function AgricultureFuelView() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "dd/MM/yyyy") : "End Date"}
+                {endDate ? format(endDate, "dd/MM/yyyy") : t("fuel.endDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -739,27 +741,27 @@ export function AgricultureFuelView() {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
-                Record Fueling
+                {t("fuel.recordFueling")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Record Tractor Fueling</DialogTitle>
+                <DialogTitle>{t("fuel.recordTractorFueling")}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label>Tank *</Label>
+                  <Label>{t("fuel.form.tank")} *</Label>
                   <Select
                     value={form.tank_id}
                     onValueChange={(value) => setForm({ ...form, tank_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select tank" />
+                      <SelectValue placeholder={t("fuel.form.selectTank")} />
                     </SelectTrigger>
                     <SelectContent>
                       {tanks.map((tank) => (
                         <SelectItem key={tank.id} value={tank.id}>
-                          {tank.name} ({tank.current_level_gallons} gal available)
+                          {tank.name} ({tank.current_level_gallons} gal {t("fuel.form.available")})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -767,13 +769,13 @@ export function AgricultureFuelView() {
                 </div>
 
                 <div>
-                  <Label>Tractor *</Label>
+                  <Label>{t("fuel.form.tractor")} *</Label>
                   <Select
                     value={form.equipment_id}
                     onValueChange={(value) => setForm({ ...form, equipment_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select tractor" />
+                      <SelectValue placeholder={t("fuel.form.selectTractor")} />
                     </SelectTrigger>
                     <SelectContent>
                       {tractors.map((tractor) => (
@@ -788,12 +790,12 @@ export function AgricultureFuelView() {
                 {selectedTractor && (
                   <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
                     <Tractor className="inline h-4 w-4 mr-1" />
-                    Last hour meter: {selectedTractor.current_hour_meter} hrs
+                    {t("fuel.form.lastHourMeter")}: {selectedTractor.current_hour_meter} hrs
                   </div>
                 )}
 
                 <div>
-                  <Label>Current Hour Meter Reading *</Label>
+                  <Label>{t("fuel.form.currentHourMeter")} *</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -807,7 +809,7 @@ export function AgricultureFuelView() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Pump Start Reading *</Label>
+                    <Label>{t("fuel.form.pumpStart")} *</Label>
                     <Input
                       type="number"
                       step="0.1"
@@ -819,7 +821,7 @@ export function AgricultureFuelView() {
                     />
                   </div>
                   <div>
-                    <Label>Pump End Reading *</Label>
+                    <Label>{t("fuel.form.pumpEnd")} *</Label>
                     <Input
                       type="number"
                       step="0.1"
@@ -834,25 +836,25 @@ export function AgricultureFuelView() {
 
                 {calculatedGallons > 0 && (
                   <div className="text-sm font-medium text-primary bg-primary/10 p-2 rounded">
-                    Gallons to dispense: {calculatedGallons.toFixed(1)}
+                    {t("fuel.form.gallonsDispensed")}: {calculatedGallons.toFixed(1)}
                   </div>
                 )}
 
                 <div>
-                  <Label>Notes</Label>
+                  <Label>{t("fuel.form.notes")}</Label>
                   <Input
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    placeholder="Optional notes"
+                    placeholder={t("fuel.form.optionalNotes")}
                   />
                 </div>
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
+                    {t("fuel.form.cancel")}
                   </Button>
                   <Button type="submit" disabled={dispenseMutation.isPending}>
-                    {dispenseMutation.isPending ? "Recording..." : "Record"}
+                    {dispenseMutation.isPending ? t("fuel.form.submitting") : t("fuel.form.submit")}
                   </Button>
                 </div>
               </form>

@@ -163,7 +163,7 @@ export function OperationsLogView() {
   const [filterFarm, setFilterFarm] = useState<string>("");
   const [filterField, setFilterField] = useState<string>("");
   const [filterTractor, setFilterTractor] = useState<string>("");
-  const [filterDriver, setFilterDriver] = useState<string>("");
+  const [filterOperationType, setFilterOperationType] = useState<string>("");
   
   const [form, setForm] = useState({
     operation_date: new Date(),
@@ -366,15 +366,6 @@ export function OperationsLogView() {
     return Array.from(farmSet, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [fields]);
 
-  // Get unique drivers from operations for filter
-  const uniqueDrivers = useMemo(() => {
-    if (!operations) return [];
-    const driverSet = new Set<string>();
-    operations.forEach(op => {
-      if (op.driver) driverSet.add(op.driver);
-    });
-    return Array.from(driverSet).sort();
-  }, [operations]);
 
   // Filter and sort operations
   const filteredOperations = useMemo(() => {
@@ -399,8 +390,8 @@ export function OperationsLogView() {
       // Tractor filter
       if (filterTractor && op.tractor_id !== filterTractor) return false;
       
-      // Driver filter
-      if (filterDriver && op.driver !== filterDriver) return false;
+      // Operation Type filter
+      if (filterOperationType && op.operation_type_id !== filterOperationType) return false;
       
       return true;
     });
@@ -445,7 +436,7 @@ export function OperationsLogView() {
     }
 
     return result;
-  }, [operations, startDate, endDate, sortColumn, sortDirection, filterFarm, filterField, filterTractor, filterDriver]);
+  }, [operations, startDate, endDate, sortColumn, sortDirection, filterFarm, filterField, filterTractor, filterOperationType]);
 
   // Top 5 operations by hectares
   const top5Operations = useMemo(() => {
@@ -998,17 +989,17 @@ export function OperationsLogView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterDriver || "__all__"} onValueChange={(v) => setFilterDriver(v === "__all__" ? "" : v)}>
+              <Select value={filterOperationType || "__all__"} onValueChange={(v) => setFilterOperationType(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue>
-                    {filterDriver || t("operations.filter.drivers")}
+                    {filterOperationType ? operationTypes?.find(t => t.id === filterOperationType)?.name : t("operations.filter.operationTypes")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">{t("operations.filter.allDrivers")}</SelectItem>
-                  {uniqueDrivers.map((driver) => (
-                    <SelectItem key={driver} value={driver}>
-                      {driver}
+                  <SelectItem value="__all__">{t("operations.filter.allOperationTypes")}</SelectItem>
+                  {operationTypes?.map((opType) => (
+                    <SelectItem key={opType.id} value={opType.id}>
+                      {opType.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

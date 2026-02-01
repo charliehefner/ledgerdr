@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Paperclip } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { createTransaction } from "@/lib/api";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -15,6 +16,13 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
 import { DayLaborAttachment } from "./DayLaborAttachment";
+
+interface Jornalero {
+  id: string;
+  name: string;
+  cedula: string;
+  is_active: boolean;
+}
 
 interface DayLaborEntry {
   id: string;
@@ -67,6 +75,21 @@ export function DayLaborView() {
     const fridayStart = startOfDay(selectedFriday);
     return isAfter(today, fridayStart) || today.toDateString() === fridayStart.toDateString();
   }, [selectedFriday, today]);
+
+  // Fetch active jornaleros for dropdown
+  const { data: jornaleros = [] } = useQuery({
+    queryKey: ["jornaleros-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("jornaleros")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      return data as Jornalero[];
+    },
+  });
 
   // Fetch entries for the selected week
   const { data: entries = [], isLoading } = useQuery({
@@ -379,14 +402,23 @@ export function DayLaborView() {
                   className="w-28"
                 />
               </div>
-              <div className="space-y-1 min-w-[140px]">
-                <label className="text-sm font-medium">Nombre *</label>
-                <Input
+              <div className="space-y-1 min-w-[180px]">
+                <label className="text-sm font-medium">Jornalero *</label>
+                <Select
                   value={newEntry.worker_name}
-                  onChange={(e) => setNewEntry({ ...newEntry, worker_name: e.target.value })}
-                  placeholder="Nombre..."
-                  required
-                />
+                  onValueChange={(value) => setNewEntry({ ...newEntry, worker_name: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar jornalero..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jornaleros.map((j) => (
+                      <SelectItem key={j.id} value={j.name}>
+                        {j.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1 min-w-[140px]">
                 <label className="text-sm font-medium">Campo (opcional)</label>

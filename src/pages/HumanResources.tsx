@@ -5,6 +5,7 @@ import { EmployeeList } from "@/components/hr/EmployeeList";
 import { EmployeeForm } from "@/components/hr/EmployeeForm";
 import { PayrollView } from "@/components/hr/PayrollView";
 import { DayLaborView } from "@/components/hr/DayLaborView";
+import { JornalerosView } from "@/components/hr/JornalerosView";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -37,6 +38,7 @@ export default function HumanResources() {
             <div className="flex">
               <TabsTrigger value="payroll" colorScheme="primary">{t("hr.payroll")}</TabsTrigger>
               <TabsTrigger value="day-labor" colorScheme="secondary">{t("hr.dayLabor")}</TabsTrigger>
+              <TabsTrigger value="jornaleros" colorScheme="accent">Jornaleros</TabsTrigger>
             </div>
             <div className="flex">
               <TabsTrigger value="employees" colorScheme="accent">{t("hr.employees")}</TabsTrigger>
@@ -54,6 +56,10 @@ export default function HumanResources() {
 
           <TabsContent value="day-labor" className="space-y-4">
             <DayLaborView />
+          </TabsContent>
+
+          <TabsContent value="jornaleros" className="space-y-4">
+            <JornalerosView />
           </TabsContent>
 
           <TabsContent value="employees" className="space-y-4">

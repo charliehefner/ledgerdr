@@ -14,12 +14,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { format } from "date-fns";
+import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle } from "lucide-react";
+import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
+import { VacationCountdownDialog } from "./VacationCountdownDialog";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+
+interface VacationSummary {
+  employee_id: string;
+  last_vacation_end: string | null;
+}
 
 interface Employee {
   id: string;
@@ -50,6 +56,7 @@ const EMPLOYEE_COLUMNS: ColumnConfig[] = [
   { key: "cedula", label: "Cédula", defaultVisible: true },
   { key: "position", label: "Posición", defaultVisible: true },
   { key: "date_of_hire", label: "Fecha de Ingreso", defaultVisible: true },
+  { key: "vacations", label: "Vacaciones", defaultVisible: true },
   { key: "salary", label: "Salario", defaultVisible: true },
   { key: "bank", label: "Banco", defaultVisible: false },
   { key: "bank_account_number", label: "Núm. Cuenta", defaultVisible: false },
@@ -63,6 +70,11 @@ const EMPLOYEE_COLUMNS: ColumnConfig[] = [
 export function EmployeeList({ onEdit }: EmployeeListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const [vacationDialogEmployee, setVacationDialogEmployee] = useState<{
+    id: string;
+    name: string;
+    dateOfHire: string;
+  } | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "name", direction: "asc" });
   const { canModifySettings } = useAuth();
 
@@ -86,6 +98,49 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       return data as Employee[];
     },
   });
+
+  // Fetch vacation summary for all employees
+  const { data: vacationSummary = [] } = useQuery({
+    queryKey: ["employee-vacations-summary"],
+    queryFn: async () => {
+      // Get the most recent vacation end_date for each employee
+      const { data, error } = await supabase
+        .from("employee_vacations")
+        .select("employee_id, end_date")
+        .order("end_date", { ascending: false });
+
+      if (error) throw error;
+
+      // Group by employee_id, keeping only the latest
+      const summaryMap = new Map<string, string>();
+      data.forEach((v) => {
+        if (!summaryMap.has(v.employee_id)) {
+          summaryMap.set(v.employee_id, v.end_date);
+        }
+      });
+
+      return Array.from(summaryMap.entries()).map(([employee_id, last_vacation_end]) => ({
+        employee_id,
+        last_vacation_end,
+      })) as VacationSummary[];
+    },
+  });
+
+  // Helper to calculate vacation status
+  const getVacationStatus = (employeeId: string, dateOfHire: string) => {
+    const summary = vacationSummary.find((v) => v.employee_id === employeeId);
+    const baseDate = summary?.last_vacation_end
+      ? parseISO(summary.last_vacation_end)
+      : parseISO(dateOfHire);
+    const nextVacationDue = addYears(baseDate, 1);
+    const today = new Date();
+    const daysUntil = differenceInDays(nextVacationDue, today);
+    return {
+      daysUntil,
+      isOverdue: daysUntil < 0,
+      isDueSoon: daysUntil >= 0 && daysUntil <= 30,
+    };
+  };
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => {
@@ -194,6 +249,41 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
         return employee.pant_size || "—";
       case "boot_size":
         return employee.boot_size || "—";
+      case "vacations": {
+        const status = getVacationStatus(employee.id, employee.date_of_hire);
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto py-1 px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setVacationDialogEmployee({
+                id: employee.id,
+                name: employee.name,
+                dateOfHire: employee.date_of_hire,
+              });
+            }}
+          >
+            {status.isOverdue ? (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {Math.abs(status.daysUntil)} días vencido
+              </Badge>
+            ) : status.isDueSoon ? (
+              <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800">
+                <Clock className="h-3 w-3" />
+                {status.daysUntil} días
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 text-green-700 border-green-300">
+                <CheckCircle className="h-3 w-3" />
+                {status.daysUntil} días
+              </Badge>
+            )}
+          </Button>
+        );
+      }
       case "is_active":
         return (
           <Badge variant={employee.is_active ? "default" : "secondary"}>
@@ -315,6 +405,14 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
         employeeId={selectedEmployee}
         open={!!selectedEmployee}
         onOpenChange={(open) => !open && setSelectedEmployee(null)}
+      />
+
+      <VacationCountdownDialog
+        open={!!vacationDialogEmployee}
+        onOpenChange={(open) => !open && setVacationDialogEmployee(null)}
+        employeeId={vacationDialogEmployee?.id ?? null}
+        employeeName={vacationDialogEmployee?.name ?? ""}
+        dateOfHire={vacationDialogEmployee?.dateOfHire ?? ""}
       />
     </>
   );

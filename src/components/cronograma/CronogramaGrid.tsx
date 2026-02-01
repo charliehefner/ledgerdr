@@ -373,43 +373,126 @@ export function CronogramaGrid() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(language === "es" ? "Cronograma" : "Schedule");
 
-    // Header row
-    const headerRow = [language === "es" ? "Trabajador" : "Worker"];
-    weekDays.forEach((day, idx) => {
-      headerRow.push(`${fullDayLabels[idx]} ${format(day, "d/M")} AM`);
-      headerRow.push(`${fullDayLabels[idx]} ${format(day, "d/M")} PM`);
-    });
-    worksheet.addRow(headerRow);
+    // Title row
+    const titleText = language === "es" 
+      ? `Cronograma - Semana ${format(weekStart, "d/M")} al ${format(selectedSaturday, "d/M/yyyy")}`
+      : `Schedule - Week ${format(weekStart, "M/d")} to ${format(selectedSaturday, "M/d/yyyy")}`;
+    worksheet.addRow([titleText]);
+    worksheet.mergeCells(1, 1, 1, 13);
+    const titleRow = worksheet.getRow(1);
+    titleRow.font = { bold: true, size: 14 };
+    titleRow.height = 24;
+    titleRow.alignment = { vertical: "middle" };
 
-    // Style header
-    const header = worksheet.getRow(1);
-    header.font = { bold: true };
-    header.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFE8E8E8" },
-    };
+    // Empty row
+    worksheet.addRow([]);
+
+    // Header row 1 - Day names
+    const headerRow1 = [language === "es" ? "Trabajador" : "Worker"];
+    weekDays.forEach((day, idx) => {
+      headerRow1.push(`${fullDayLabels[idx]} ${format(day, "d/M")}`);
+      headerRow1.push(""); // Will be merged
+    });
+    worksheet.addRow(headerRow1);
+
+    // Merge day header cells
+    for (let i = 0; i < 6; i++) {
+      const startCol = 2 + (i * 2);
+      worksheet.mergeCells(3, startCol, 3, startCol + 1);
+    }
+
+    // Header row 2 - AM/PM
+    const headerRow2 = [""];
+    weekDays.forEach(() => {
+      headerRow2.push("AM");
+      headerRow2.push("PM");
+    });
+    worksheet.addRow(headerRow2);
+
+    // Style headers
+    const dayColors = ["FFD6E3F0", "FFE8EDF3"]; // Light blue alternating
+    [3, 4].forEach((rowNum) => {
+      const row = worksheet.getRow(rowNum);
+      row.font = { bold: true };
+      row.alignment = { horizontal: "center", vertical: "middle" };
+      row.height = 20;
+      
+      // Worker column
+      row.getCell(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+      row.getCell(1).border = { bottom: { style: "medium" }, right: { style: "thin" }, left: { style: "thin" }, top: { style: "thin" } };
+      
+      // Day columns with alternating colors
+      for (let i = 0; i < 6; i++) {
+        const color = dayColors[i % 2];
+        const col1 = 2 + (i * 2);
+        const col2 = col1 + 1;
+        [col1, col2].forEach((c) => {
+          row.getCell(c).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: color },
+          };
+          row.getCell(c).border = { bottom: { style: "medium" }, right: { style: "thin" }, left: { style: "thin" }, top: { style: "thin" } };
+        });
+      }
+    });
 
     // Data rows
+    let dataRowNum = 5;
     allWorkerRows.forEach((worker) => {
-      if (worker.isTemp && !worker.id) return; // Skip empty temp rows
+      if (worker.isTemp && !worker.id) return;
       
-      const row = [worker.name];
+      const rowData = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
         const amEntry = getEntryForCell(worker, dayNum, "morning");
         const pmEntry = getEntryForCell(worker, dayNum, "afternoon");
-        row.push(amEntry?.task || "");
-        row.push(pmEntry?.task || "");
+        rowData.push(amEntry?.task || "");
+        rowData.push(pmEntry?.task || "");
       });
-      worksheet.addRow(row);
+      worksheet.addRow(rowData);
+      
+      // Style data row
+      const row = worksheet.getRow(dataRowNum);
+      row.alignment = { vertical: "top", wrapText: true };
+      row.height = 28;
+      
+      // Worker name column
+      row.getCell(1).font = { bold: true };
+      row.getCell(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFFFFFFF" },
+      };
+      row.getCell(1).border = { bottom: { style: "thin" }, right: { style: "thin" }, left: { style: "thin" } };
+      
+      // Day columns with alternating colors
+      for (let i = 0; i < 6; i++) {
+        const color = i % 2 === 0 ? "FFE8F0F8" : "FFFFFFFF"; // Light blue / white
+        const col1 = 2 + (i * 2);
+        const col2 = col1 + 1;
+        [col1, col2].forEach((c) => {
+          row.getCell(c).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: color },
+          };
+          row.getCell(c).border = { bottom: { style: "thin" }, right: { style: "thin" }, left: { style: "thin" } };
+        });
+      }
+      
+      dataRowNum++;
     });
 
-    // Auto-width columns
-    worksheet.columns.forEach((col) => {
-      col.width = 18;
-    });
-    worksheet.getColumn(1).width = 25;
+    // Column widths
+    worksheet.getColumn(1).width = 22;
+    for (let i = 2; i <= 13; i++) {
+      worksheet.getColumn(i).width = 16;
+    }
 
     // Generate file
     const buffer = await workbook.xlsx.writeBuffer();
@@ -451,20 +534,33 @@ export function CronogramaGrid() {
         const dayNum = idx + 1;
         const amEntry = getEntryForCell(worker, dayNum, "morning");
         const pmEntry = getEntryForCell(worker, dayNum, "afternoon");
-        row.push(amEntry?.task || "—");
-        row.push(pmEntry?.task || "—");
+        row.push(amEntry?.task || "");
+        row.push(pmEntry?.task || "");
       });
       data.push(row);
     });
+
+    // Alternating day colors for PDF
+    const lightBlue: [number, number, number] = [232, 240, 248];
+    const white: [number, number, number] = [255, 255, 255];
 
     autoTable(doc, {
       head: headers,
       body: data,
       startY: 22,
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [100, 130, 160], textColor: 255 },
-      columnStyles: { 0: { cellWidth: 30 } },
+      styles: { fontSize: 7, cellPadding: 2, minCellHeight: 8 },
+      headStyles: { fillColor: [70, 100, 140], textColor: 255, fontStyle: "bold" },
+      columnStyles: { 
+        0: { cellWidth: 28, fontStyle: "bold" },
+      },
       theme: "grid",
+      didParseCell: (hookData) => {
+        // Apply alternating column colors
+        if (hookData.section === "body" && hookData.column.index > 0) {
+          const dayIndex = Math.floor((hookData.column.index - 1) / 2);
+          hookData.cell.styles.fillColor = dayIndex % 2 === 0 ? lightBlue : white;
+        }
+      },
     });
 
     doc.save(`cronograma_${format(selectedSaturday, "yyyy-MM-dd")}.pdf`);

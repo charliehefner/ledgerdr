@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfYear, endOfYear, parseISO } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, Download, Plus, Save, Loader2, CloudRain } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarIcon, Download, Save, Loader2, CloudRain, BarChart3, Table as TableIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MonthlyRainfallReport } from "@/components/rainfall/MonthlyRainfallReport";
 import ExcelJS from "exceljs";
 
 interface RainfallRecord {
@@ -58,7 +59,7 @@ export default function Rainfall() {
   const [editableRecords, setEditableRecords] = useState<Map<string, EditableRecord>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch rainfall records
+  // Fetch rainfall records for current date range
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["rainfall-records", fromDate, toDate],
     queryFn: async () => {
@@ -67,6 +68,20 @@ export default function Rainfall() {
         .select("*")
         .gte("record_date", format(fromDate, "yyyy-MM-dd"))
         .lte("record_date", format(toDate, "yyyy-MM-dd"))
+        .order("record_date", { ascending: true });
+
+      if (error) throw error;
+      return data as RainfallRecord[];
+    },
+  });
+
+  // Fetch ALL rainfall records for monthly report
+  const { data: allRecords = [] } = useQuery({
+    queryKey: ["rainfall-records-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rainfall_records")
+        .select("*")
         .order("record_date", { ascending: true });
 
       if (error) throw error;
@@ -253,138 +268,159 @@ export default function Rainfall() {
               <p className="text-muted-foreground">{t("page.rainfall.subtitle")}</p>
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {canEdit && hasChanges && (
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                {t("common.save")}
-              </Button>
-            )}
-            <Button variant="excel" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" />
-              {language === "en" ? "Export Excel" : "Exportar Excel"}
-            </Button>
-          </div>
         </div>
 
-        {/* Date Range Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{language === "en" ? "From:" : "Desde:"}</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(fromDate, "dd MMM yyyy", { locale: dateLocale })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={fromDate}
-                      onSelect={(date) => date && setFromDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+        <Tabs defaultValue="daily" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="daily" className="flex items-center gap-2">
+              <TableIcon className="h-4 w-4" />
+              {language === "en" ? "Daily Records" : "Registros Diarios"}
+            </TabsTrigger>
+            <TabsTrigger value="monthly" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              {language === "en" ? "Monthly Summary" : "Resumen Mensual"}
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{language === "en" ? "To:" : "Hasta:"}</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(toDate, "dd MMM yyyy", { locale: dateLocale })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={toDate}
-                      onSelect={(date) => date && setToDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+          <TabsContent value="daily" className="space-y-4">
+            {/* Daily Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <Card className="flex-1">
+                <CardContent className="pt-6">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{language === "en" ? "From:" : "Desde:"}</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(fromDate, "dd MMM yyyy", { locale: dateLocale })}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={fromDate}
+                            onSelect={(date) => date && setFromDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{language === "en" ? "To:" : "Hasta:"}</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(toDate, "dd MMM yyyy", { locale: dateLocale })}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={toDate}
+                            onSelect={(date) => date && setToDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-auto">
+                      {canEdit && hasChanges && (
+                        <Button onClick={handleSave} disabled={isSaving}>
+                          {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                          {t("common.save")}
+                        </Button>
+                      )}
+                      <Button variant="excel" onClick={handleExportExcel}>
+                        <Download className="h-4 w-4 mr-2" />
+                        {language === "en" ? "Export Excel" : "Exportar Excel"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Data Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{language === "en" ? "Precipitation Records (mm)" : "Registros de Precipitación (mm)"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <div className="relative overflow-auto max-h-[600px] border rounded-md">
-                <table className="w-full caption-bottom text-sm">
-                  <thead className="sticky top-0 z-10 bg-background border-b">
-                    <tr>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">{t("col.date")}</th>
-                      {LOCATIONS.map((loc) => (
-                        <th key={loc} className="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-[100px]">
-                          {LOCATION_LABELS[loc]}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allDates.map((date) => {
-                      const dateStr = format(date, "yyyy-MM-dd");
-                      const record = getRecordForDate(date);
-                      const editable = editableRecords.get(dateStr);
-
-                      return (
-                        <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-yellow-50")}>
-                          <td className="p-4 align-middle font-medium">
-                            {format(date, "dd MMM yyyy", { locale: dateLocale })}
-                          </td>
+            {/* Data Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === "en" ? "Precipitation Records (mm)" : "Registros de Precipitación (mm)"}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="relative overflow-auto max-h-[600px] border rounded-md">
+                    <table className="w-full caption-bottom text-sm">
+                      <thead className="sticky top-0 z-10 bg-background border-b">
+                        <tr>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">{t("col.date")}</th>
                           {LOCATIONS.map((loc) => (
-                            <td key={loc} className="p-1 align-middle">
-                              {canEdit ? (
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  className="text-center h-8"
-                                  value={getEditableValue(date, loc)}
-                                  onChange={(e) => handleValueChange(date, loc, e.target.value)}
-                                />
-                              ) : (
-                                <span className="block text-center">
-                                  {record?.[loc] || 0}
-                                </span>
-                              )}
+                            <th key={loc} className="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-[100px]">
+                              {LOCATION_LABELS[loc]}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allDates.map((date) => {
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          const record = getRecordForDate(date);
+                          const editable = editableRecords.get(dateStr);
+
+                          return (
+                            <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-yellow-50")}>
+                              <td className="p-4 align-middle font-medium">
+                                {format(date, "dd MMM yyyy", { locale: dateLocale })}
+                              </td>
+                              {LOCATIONS.map((loc) => (
+                                <td key={loc} className="p-1 align-middle">
+                                  {canEdit ? (
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      className="text-center h-8"
+                                      value={getEditableValue(date, loc)}
+                                      onChange={(e) => handleValueChange(date, loc, e.target.value)}
+                                    />
+                                  ) : (
+                                    <span className="block text-center">
+                                      {record?.[loc] || 0}
+                                    </span>
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                        {/* Totals Row */}
+                        <tr className="bg-muted/50 font-bold border-b">
+                          <td className="p-4 align-middle">TOTAL</td>
+                          {LOCATIONS.map((loc) => (
+                            <td key={loc} className="p-4 align-middle text-center">
+                              {totals[loc].toFixed(2)}
                             </td>
                           ))}
                         </tr>
-                      );
-                    })}
-                    {/* Totals Row */}
-                    <tr className="bg-muted/50 font-bold border-b">
-                      <td className="p-4 align-middle">TOTAL</td>
-                      {LOCATIONS.map((loc) => (
-                        <td key={loc} className="p-4 align-middle text-center">
-                          {totals[loc].toFixed(2)}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="monthly">
+            <MonthlyRainfallReport records={allRecords} />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

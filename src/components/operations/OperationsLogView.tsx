@@ -1008,19 +1008,19 @@ export function OperationsLogView() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Registrar Operación
+                {t("operations.recordOperation")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editingOperation ? "Editar Operación de Campo" : "Registrar Operación de Campo"}
+                  {editingOperation ? t("operations.editOperation") : t("operations.recordFieldOperation")}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Fecha *</Label>
+                    <Label>{t("operations.form.date")} *</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -1031,7 +1031,7 @@ export function OperationsLogView() {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.operation_date ? format(form.operation_date, "MMM d, yyyy") : "Seleccionar fecha"}
+                          {form.operation_date ? format(form.operation_date, "MMM d, yyyy") : t("operations.form.selectDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -1046,13 +1046,13 @@ export function OperationsLogView() {
                   </div>
 
                   <div>
-                    <Label>Campo *</Label>
+                    <Label>{t("operations.form.field")} *</Label>
                     <Select
                       value={form.field_id}
                       onValueChange={(value) => setForm({ ...form, field_id: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar campo" />
+                        <SelectValue placeholder={t("operations.form.selectField")} />
                       </SelectTrigger>
                       <SelectContent>
                         {fields?.map((field) => (
@@ -1066,18 +1066,18 @@ export function OperationsLogView() {
                 </div>
 
                 <div>
-                  <Label>Tipo de Operación *</Label>
+                  <Label>{t("operations.form.operationType")} *</Label>
                   <Select
                     value={form.operation_type_id}
                     onValueChange={(value) => setForm({ ...form, operation_type_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar operación" />
+                      <SelectValue placeholder={t("operations.form.selectOperation")} />
                     </SelectTrigger>
                     <SelectContent>
                       {operationTypes?.map((type) => (
                         <SelectItem key={type.id} value={type.id}>
-                          {type.name} {type.is_mechanical ? "(Mecánica)" : "(Manual)"}
+                          {type.name} ({type.is_mechanical ? t("operations.form.mechanical") : t("operations.form.manual")})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1088,31 +1088,31 @@ export function OperationsLogView() {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Tractor *</Label>
+                        <Label>{t("operations.form.tractor")} *</Label>
                         <Select
                           value={form.tractor_id}
                           onValueChange={(value) => setForm({ ...form, tractor_id: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tractor" />
+                            <SelectValue placeholder={t("operations.form.selectTractor")} />
                           </SelectTrigger>
                           <SelectContent>
-                            {tractors?.map((t) => (
-                              <SelectItem key={t.id} value={t.id}>
-                                {t.name}
+                            {tractors?.map((tr) => (
+                              <SelectItem key={tr.id} value={tr.id}>
+                                {tr.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label>Implemento *</Label>
+                        <Label>{t("operations.form.implement")} *</Label>
                         <Select
                           value={form.implement_id}
                           onValueChange={(value) => setForm({ ...form, implement_id: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar implemento" />
+                            <SelectValue placeholder={t("operations.form.selectImplement")} />
                           </SelectTrigger>
                           <SelectContent>
                             {implements_?.map((i) => (
@@ -1127,11 +1127,11 @@ export function OperationsLogView() {
                     
                     {/* Driver field */}
                     <div>
-                      <Label>Operador</Label>
+                      <Label>{t("operations.form.operator")}</Label>
                       <Input
                         value={form.driver}
                         onChange={(e) => setForm({ ...form, driver: e.target.value })}
-                        placeholder="Nombre del operador"
+                        placeholder={t("operations.form.operatorPlaceholder")}
                       />
                     </div>
                     
@@ -1140,7 +1140,7 @@ export function OperationsLogView() {
                       <div>
                         <Label className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
-                          Horómetro Inicio
+                          {t("operations.form.hourMeterStart")}
                         </Label>
                         <Input
                           type="number"
@@ -1153,7 +1153,7 @@ export function OperationsLogView() {
                       <div>
                         <Label className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
-                          Horómetro Fin
+                          {t("operations.form.hourMeterEnd")}
                         </Label>
                         <Input
                           type="number"
@@ -1165,7 +1165,7 @@ export function OperationsLogView() {
                       </div>
                       {form.start_hours && form.end_hours && (
                         <div className="col-span-2 text-sm text-muted-foreground">
-                          Horas trabajadas: <span className="font-semibold text-foreground">
+                          {t("operations.form.hoursWorked")}: <span className="font-semibold text-foreground">
                             {(parseFloat(form.end_hours) - parseFloat(form.start_hours)).toFixed(1)} hrs
                           </span>
                         </div>
@@ -1174,25 +1174,25 @@ export function OperationsLogView() {
                   </>
                 ) : (
                   <div>
-                    <Label>Número de Obreros *</Label>
+                    <Label>{t("operations.form.workersCount")} *</Label>
                     <Input
                       type="number"
                       min="1"
                       value={form.workers_count}
                       onChange={(e) => setForm({ ...form, workers_count: e.target.value })}
-                      placeholder="Ingrese cantidad de obreros"
+                      placeholder={t("operations.form.workersPlaceholder")}
                     />
                   </div>
                 )}
 
                 <div>
-                  <Label>Hectáreas Realizadas *</Label>
+                  <Label>{t("operations.form.hectaresDone")} *</Label>
                   <Input
                     type="number"
                     step="0.1"
                     value={form.hectares_done}
                     onChange={(e) => setForm({ ...form, hectares_done: e.target.value })}
-                    placeholder="Ingrese hectáreas"
+                    placeholder={t("operations.form.hectaresPlaceholder")}
                   />
                 </div>
 
@@ -1200,7 +1200,7 @@ export function OperationsLogView() {
                 <div className="border rounded-lg p-4 space-y-4">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-base font-semibold">Insumos Utilizados (Opcional)</Label>
+                    <Label className="text-base font-semibold">{t("operations.form.inputsUsed")}</Label>
                   </div>
                   
                   <div className="flex gap-2">
@@ -1209,12 +1209,12 @@ export function OperationsLogView() {
                       onValueChange={(value) => setNewInput({ ...newInput, inventory_item_id: value })}
                     >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Seleccionar insumo" />
+                        <SelectValue placeholder={t("operations.form.selectInput")} />
                       </SelectTrigger>
                       <SelectContent>
                         {inventoryItems?.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
-                            {item.commercial_name} ({item.current_quantity} {item.use_unit} disponibles)
+                            {item.commercial_name} ({item.current_quantity} {item.use_unit} {t("operations.form.available")})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1223,7 +1223,7 @@ export function OperationsLogView() {
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="Cant."
+                      placeholder={t("operations.form.qty")}
                       className="w-24"
                       value={newInput.quantity_used}
                       onChange={(e) => setNewInput({ ...newInput, quantity_used: e.target.value })}
@@ -1258,24 +1258,24 @@ export function OperationsLogView() {
                 </div>
 
                 <div>
-                  <Label>Notas</Label>
+                  <Label>{t("operations.form.notes")}</Label>
                   <Input
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    placeholder="Notas opcionales"
+                    placeholder={t("operations.form.optionalNotes")}
                   />
                 </div>
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancelar
+                    {t("operations.form.cancel")}
                   </Button>
                   <Button type="submit" disabled={mutation.isPending || updateMutation.isPending}>
                     {(mutation.isPending || updateMutation.isPending) 
-                      ? "Guardando..." 
+                      ? t("operations.form.saving")
                       : editingOperation 
-                        ? "Actualizar Operación" 
-                        : "Registrar Operación"}
+                        ? t("operations.form.updateOperation")
+                        : t("operations.recordOperation")}
                   </Button>
                 </div>
               </form>
@@ -1286,10 +1286,10 @@ export function OperationsLogView() {
 
       {/* Operations Table */}
       {isLoading ? (
-        <div className="text-center py-8">Cargando operaciones...</div>
+        <div className="text-center py-8">{t("operations.loading")}</div>
       ) : filteredOperations.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No se encontraron operaciones para el período seleccionado.
+          {t("operations.noOperations")}
         </div>
       ) : (
         <Table>

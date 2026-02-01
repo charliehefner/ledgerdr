@@ -15,6 +15,7 @@ import {
   PanelLeft,
   Menu,
   Languages,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/jord-logo.png";
@@ -46,6 +47,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.equipment", href: "/equipment", icon: Tractor, section: "equipment" },
   { nameKey: "nav.operations", href: "/operations", icon: Activity, section: "operations" },
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
+  { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
 ];
 
 const secondaryNav: NavItem[] = [

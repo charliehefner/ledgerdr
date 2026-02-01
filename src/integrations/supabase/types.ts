@@ -62,6 +62,78 @@ export type Database = {
         }
         Relationships: []
       }
+      cronograma_entries: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          id: string
+          is_holiday: boolean | null
+          is_vacation: boolean | null
+          task: string | null
+          time_slot: string
+          updated_at: string
+          week_ending_date: string
+          worker_id: string | null
+          worker_name: string
+          worker_type: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_holiday?: boolean | null
+          is_vacation?: boolean | null
+          task?: string | null
+          time_slot: string
+          updated_at?: string
+          week_ending_date: string
+          worker_id?: string | null
+          worker_name: string
+          worker_type: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_holiday?: boolean | null
+          is_vacation?: boolean | null
+          task?: string | null
+          time_slot?: string
+          updated_at?: string
+          week_ending_date?: string
+          worker_id?: string | null
+          worker_name?: string
+          worker_type?: string
+        }
+        Relationships: []
+      }
+      cronograma_weeks: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          id: string
+          is_closed: boolean | null
+          updated_at: string
+          week_ending_date: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          is_closed?: boolean | null
+          updated_at?: string
+          week_ending_date: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          is_closed?: boolean | null
+          updated_at?: string
+          week_ending_date?: string
+        }
+        Relationships: []
+      }
       day_labor_attachments: {
         Row: {
           attachment_url: string

@@ -107,11 +107,13 @@ ${inventory.map((i: any) => `- ${i.commercial_name}${i.molecule_name ? ` (${i.mo
 
 INSTRUCCIONES:
 - Responde siempre en español
-- Sé conciso pero informativo
+- Responde en oraciones naturales y completas, no listas de datos crudos
+- Ejemplo bueno: "El día con mayor precipitación fue el 1 de febrero con 110mm en Palmarito."
+- Ejemplo malo: "- 2024-02-01: Solar=0, Caoba=50, Palmarito=110, Virgencita=30"
+- Sé conciso pero informativo - una o dos oraciones claras son mejores que listas largas
 - Si no tienes datos suficientes para responder, indícalo claramente
-- Para cálculos de totales, suma los valores de las operaciones relevantes
-- Para preguntas sobre lluvia, puedes calcular totales por ubicación o fecha
-- Si la pregunta es sobre datos que no tienes (transacciones financieras, precios de inventario, préstamos de empleados), indica que esos datos no están disponibles en esta búsqueda
+- Para cálculos de totales, suma los valores y presenta el resultado en una oración
+- Si la pregunta es sobre datos que no tienes (transacciones financieras, precios de inventario, préstamos de empleados), indica que esos datos no están disponibles
 - Formatea números con separadores de miles cuando sea apropiado`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

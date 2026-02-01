@@ -38,9 +38,9 @@ export default function HumanResources() {
             <div className="flex">
               <TabsTrigger value="payroll" colorScheme="primary">{t("hr.payroll")}</TabsTrigger>
               <TabsTrigger value="day-labor" colorScheme="secondary">{t("hr.dayLabor")}</TabsTrigger>
-              <TabsTrigger value="jornaleros" colorScheme="accent">Jornaleros</TabsTrigger>
             </div>
             <div className="flex">
+              <TabsTrigger value="jornaleros" colorScheme="accent">Jornaleros</TabsTrigger>
               <TabsTrigger value="employees" colorScheme="accent">{t("hr.employees")}</TabsTrigger>
               {canModifySettings && (
                 <TabsTrigger value="add-employee" colorScheme="muted">

@@ -103,18 +103,34 @@ export function CronogramaGrid() {
   
   const isSaturday = getDay(new Date()) === 6;
 
+  // Position priority for Cronograma ordering
+  const positionPriority: Record<string, number> = {
+    'Tractorista': 1,
+    'Obrero': 2,
+    'Volteador': 3,
+    'Sereno': 4,
+    'Supervisor': 5,
+    'Administrativa': 6,
+    'Gerencia': 7,
+  };
+
   // Fetch active employees
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees-active"],
+    queryKey: ["employees-active-cronograma"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
         .select("id, name, position")
-        .eq("is_active", true)
-        .order("position")
-        .order("name");
+        .eq("is_active", true);
       if (error) throw error;
-      return data;
+      
+      // Sort by position priority, then by name
+      return data.sort((a, b) => {
+        const priorityA = positionPriority[a.position] ?? 99;
+        const priorityB = positionPriority[b.position] ?? 99;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        return a.name.localeCompare(b.name);
+      });
     },
   });
 

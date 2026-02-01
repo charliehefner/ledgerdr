@@ -322,13 +322,13 @@ export default function Rainfall() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="overflow-auto max-h-[600px]">
+              <div className="overflow-auto max-h-[600px] relative">
                 <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow>
-                      <TableHead className="w-[120px] bg-background">Fecha</TableHead>
+                  <TableHeader className="[&_tr]:border-b">
+                    <TableRow className="bg-background">
+                      <TableHead className="w-[120px] sticky top-0 bg-background z-10">Fecha</TableHead>
                       {LOCATIONS.map((loc) => (
-                        <TableHead key={loc} className="text-center w-[100px] bg-background">
+                        <TableHead key={loc} className="text-center w-[100px] sticky top-0 bg-background z-10">
                           {LOCATION_LABELS[loc]}
                         </TableHead>
                       ))}

@@ -562,7 +562,7 @@ export function CronogramaGrid() {
       <ScrollArea className="w-full">
         <div className="min-w-[900px]">
           <table className="w-full border-collapse text-sm">
-            <thead>
+            <thead className="border-b-2 border-foreground/30">
               <tr>
                 <th className="border bg-muted/50 p-2 text-left font-medium sticky left-0 z-10 min-w-[150px]">
                   {t("cronograma.worker")}

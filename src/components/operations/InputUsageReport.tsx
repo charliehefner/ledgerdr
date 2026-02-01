@@ -7,7 +7,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, FileSpreadsheet, Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CalendarIcon, FileSpreadsheet, Search, ChevronDown } from "lucide-react";
 import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -68,16 +69,16 @@ interface UsageRow {
 
 interface InputUsageReportProps {
   initialInputId?: string | null;
-  initialFieldId?: string | null;
 }
 
-export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageReportProps = {}) {
+export function InputUsageReport({ initialInputId }: InputUsageReportProps = {}) {
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [selectedInput, setSelectedInput] = useState<string>(initialInputId || "");
   const [selectedFarm, setSelectedFarm] = useState<string>("all");
-  const [selectedField, setSelectedField] = useState<string>(initialFieldId || "all");
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [fieldPopoverOpen, setFieldPopoverOpen] = useState(false);
 
   // Fetch inventory items (inputs)
   const { data: inventoryItems } = useQuery({
@@ -173,8 +174,8 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
       const field = fields?.find((f) => f.name === op.fields?.name);
       if (selectedFarm !== "all" && field?.farm_id !== selectedFarm) return;
 
-      // Check field filter
-      if (selectedField !== "all" && field?.id !== selectedField) return;
+      // Check field filter (now supports multiple fields)
+      if (selectedFields.length > 0 && field && !selectedFields.includes(field.id)) return;
 
       // Get all inputs or just the selected one
       const inputsToProcess = selectedInput === "all"
@@ -207,7 +208,7 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
       if (dateCompare !== 0) return dateCompare;
       return a.inputName.localeCompare(b.inputName);
     });
-  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedField, hasSearched]);
+  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -219,7 +220,32 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
 
   const handleFarmChange = (farmId: string) => {
     setSelectedFarm(farmId);
-    setSelectedField("all");
+    setSelectedFields([]);
+  };
+
+  const handleFieldToggle = (fieldId: string) => {
+    setSelectedFields((prev) =>
+      prev.includes(fieldId)
+        ? prev.filter((id) => id !== fieldId)
+        : [...prev, fieldId]
+    );
+  };
+
+  const handleSelectAllFields = () => {
+    if (selectedFields.length === filteredFields.length) {
+      setSelectedFields([]);
+    } else {
+      setSelectedFields(filteredFields.map((f) => f.id));
+    }
+  };
+
+  const getFieldSelectorLabel = () => {
+    if (selectedFields.length === 0) return "Todos los Campos";
+    if (selectedFields.length === 1) {
+      const field = filteredFields.find((f) => f.id === selectedFields[0]);
+      return field?.name || "1 campo";
+    }
+    return `${selectedFields.length} campos`;
   };
 
   const handleSearch = () => {
@@ -391,22 +417,56 @@ export function InputUsageReport({ initialInputId, initialFieldId }: InputUsageR
               </Select>
             </div>
 
-            {/* Field Filter */}
+            {/* Field Filter - Multi-select */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Campo</label>
-              <Select value={selectedField} onValueChange={setSelectedField}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar campo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los Campos</SelectItem>
-                  {filteredFields?.map((field) => (
-                    <SelectItem key={field.id} value={field.id}>
-                      {field.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm text-muted-foreground">Campo (Cmd+click)</label>
+              <Popover open={fieldPopoverOpen} onOpenChange={setFieldPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-[200px] justify-between font-normal"
+                  >
+                    <span className="truncate">{getFieldSelectorLabel()}</span>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[220px] p-2" align="start">
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {/* Select All option */}
+                    <div
+                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
+                      onClick={handleSelectAllFields}
+                    >
+                      <Checkbox
+                        checked={selectedFields.length === filteredFields.length && filteredFields.length > 0}
+                        className="pointer-events-none"
+                      />
+                      <span className="text-sm font-medium">
+                        {selectedFields.length === filteredFields.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                      </span>
+                    </div>
+                    <div className="border-t my-1" />
+                    {filteredFields.length === 0 ? (
+                      <div className="text-sm text-muted-foreground p-2">No hay campos</div>
+                    ) : (
+                      filteredFields.map((field) => (
+                        <div
+                          key={field.id}
+                          className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
+                          onClick={() => handleFieldToggle(field.id)}
+                        >
+                          <Checkbox
+                            checked={selectedFields.includes(field.id)}
+                            className="pointer-events-none"
+                          />
+                          <span className="text-sm">{field.name}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Search Button */}

@@ -704,7 +704,7 @@ function CronogramaCell({
   return (
     <td className={cn(
       "border p-1 min-w-[120px] align-top",
-      dayShade ? "bg-muted" : "bg-background"
+      dayShade ? "bg-primary/10" : "bg-background"
     )}>
       <textarea
         ref={textareaRef}

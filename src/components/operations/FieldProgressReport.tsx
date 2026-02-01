@@ -7,7 +7,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, FileSpreadsheet, Search } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, Search, AlertTriangle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfDay, endOfDay, isWithinInterval, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -60,10 +61,12 @@ interface FieldProgress {
   fieldId: string;
   fieldName: string;
   farmName: string;
+  operationTypeName: string;
   totalHectares: number;
   hectaresDone: number;
   hectaresRemaining: number;
   percentComplete: number;
+  isOverage: boolean;
   inputs: Array<{
     name: string;
     quantity: number;
@@ -164,12 +167,14 @@ export function FieldProgressReport() {
       return inDateRange && matchesType && matchesFarm && matchesField;
     });
 
-    // Group by field and aggregate
-    const fieldMap = new Map<string, FieldProgress>();
+    // Group by field AND operation type to show breakdown
+    const fieldOpMap = new Map<string, FieldProgress>();
 
     filtered.forEach((op) => {
       const fieldId = op.field_id;
-      const existing = fieldMap.get(fieldId);
+      const opTypeName = op.operation_types?.name || "Desconocida";
+      const compositeKey = `${fieldId}__${opTypeName}`;
+      const existing = fieldOpMap.get(compositeKey);
 
       if (existing) {
         existing.hectaresDone += op.hectares_done;
@@ -200,14 +205,16 @@ export function FieldProgressReport() {
           });
         });
 
-        fieldMap.set(fieldId, {
+        fieldOpMap.set(compositeKey, {
           fieldId,
           fieldName: op.fields?.name || "Unknown",
           farmName: op.fields?.farms?.name || "Unknown",
+          operationTypeName: opTypeName,
           totalHectares,
           hectaresDone: op.hectares_done,
           hectaresRemaining: 0, // calculated after
           percentComplete: 0, // calculated after
+          isOverage: false, // calculated after
           inputs,
         });
       }
@@ -215,19 +222,22 @@ export function FieldProgressReport() {
 
     // Calculate remaining and percent
     const result: FieldProgress[] = [];
-    fieldMap.forEach((field) => {
+    fieldOpMap.forEach((field) => {
       field.hectaresRemaining = Math.max(0, field.totalHectares - field.hectaresDone);
       field.percentComplete = field.totalHectares > 0 
         ? Math.min(100, (field.hectaresDone / field.totalHectares) * 100)
         : 0;
+      field.isOverage = field.hectaresDone > field.totalHectares;
       result.push(field);
     });
 
-    // Sort by farm name, then field name
+    // Sort by farm name, then field name, then operation type
     return result.sort((a, b) => {
       const farmCompare = a.farmName.localeCompare(b.farmName);
       if (farmCompare !== 0) return farmCompare;
-      return a.fieldName.localeCompare(b.fieldName);
+      const fieldCompare = a.fieldName.localeCompare(b.fieldName);
+      if (fieldCompare !== 0) return fieldCompare;
+      return a.operationTypeName.localeCompare(b.operationTypeName);
     });
   }, [operations, fields, startDate, endDate, selectedOperationType, selectedFarm, selectedField, hasSearched]);
 
@@ -260,18 +270,18 @@ export function FieldProgressReport() {
     const worksheet = workbook.addWorksheet("Progreso de Campos");
 
     // Add title
-    worksheet.mergeCells("A1:G1");
+    worksheet.mergeCells("A1:H1");
     worksheet.getCell("A1").value = `Reporte de Progreso: ${getOperationTypeName()}`;
     worksheet.getCell("A1").font = { bold: true, size: 14 };
     worksheet.getCell("A1").alignment = { horizontal: "center" };
 
     // Add date range
-    worksheet.mergeCells("A2:G2");
+    worksheet.mergeCells("A2:H2");
     worksheet.getCell("A2").value = `Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     // Add headers
-    const headers = ["Finca", "Campo", "Ha Totales", "Ha Realizadas", "Ha Pendientes", "% Completado", "Insumos Utilizados"];
+    const headers = ["Finca", "Campo", "Tipo de Operación", "Ha Totales", "Ha Realizadas", "Ha Pendientes", "% Completado", "Insumos Utilizados"];
     worksheet.addRow([]);
     const headerRow = worksheet.addRow(headers);
     headerRow.eachCell((cell) => {
@@ -295,15 +305,27 @@ export function FieldProgressReport() {
         ? field.inputs.map((i) => `${i.name}: ${i.quantity.toFixed(2)} ${i.unit}`).join("; ")
         : "-";
 
-      worksheet.addRow([
+      const row = worksheet.addRow([
         field.farmName,
         field.fieldName,
+        field.operationTypeName,
         field.totalHectares,
         field.hectaresDone,
         field.hectaresRemaining,
         `${field.percentComplete.toFixed(1)}%`,
         inputsStr,
       ]);
+
+      // Highlight overages in yellow
+      if (field.isOverage) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFEB3B" },
+          };
+        });
+      }
     });
 
     // Add totals row
@@ -313,6 +335,7 @@ export function FieldProgressReport() {
     worksheet.addRow([]);
     const totalsRow = worksheet.addRow([
       "TOTALES",
+      "",
       "",
       totalArea,
       totalDone,
@@ -328,7 +351,7 @@ export function FieldProgressReport() {
     worksheet.columns.forEach((column) => {
       column.width = 18;
     });
-    worksheet.getColumn(7).width = 40; // Inputs column wider
+    worksheet.getColumn(8).width = 40; // Inputs column wider
 
     // Generate and download
     const buffer = await workbook.xlsx.writeBuffer();
@@ -485,6 +508,7 @@ export function FieldProgressReport() {
                     <TableRow>
                       <TableHead>Finca</TableHead>
                       <TableHead>Campo</TableHead>
+                      <TableHead>Tipo de Operación</TableHead>
                       <TableHead className="text-right">Ha Totales</TableHead>
                       <TableHead className="text-right">Ha Realizadas</TableHead>
                       <TableHead className="text-right">Ha Pendientes</TableHead>
@@ -493,15 +517,32 @@ export function FieldProgressReport() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fieldProgressData.map((field) => (
-                      <TableRow key={field.fieldId}>
+                    {fieldProgressData.map((field, index) => (
+                      <TableRow key={`${field.fieldId}-${field.operationTypeName}-${index}`}>
                         <TableCell className="font-medium">{field.farmName}</TableCell>
                         <TableCell>{field.fieldName}</TableCell>
+                        <TableCell>{field.operationTypeName}</TableCell>
                         <TableCell className="text-right font-mono">
                           {field.totalHectares.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-primary">
-                          {field.hectaresDone.toFixed(2)}
+                        <TableCell className="text-right font-mono">
+                          <div className="flex items-center justify-end gap-1">
+                            {field.isOverage && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Ha Realizadas excede Ha Totales</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <span className={field.isOverage ? "text-amber-600" : "text-primary"}>
+                              {field.hectaresDone.toFixed(2)}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-mono text-destructive">
                           {field.hectaresRemaining.toFixed(2)}
@@ -510,11 +551,11 @@ export function FieldProgressReport() {
                           <div className="flex items-center justify-end gap-2">
                             <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-primary rounded-full"
-                                style={{ width: `${field.percentComplete}%` }}
+                                className={`h-full rounded-full ${field.isOverage ? "bg-amber-500" : "bg-primary"}`}
+                                style={{ width: `${Math.min(field.percentComplete, 100)}%` }}
                               />
                             </div>
-                            <span className="text-sm font-medium w-12 text-right">
+                            <span className={`text-sm font-medium w-12 text-right ${field.isOverage ? "text-amber-600" : ""}`}>
                               {field.percentComplete.toFixed(0)}%
                             </span>
                           </div>
@@ -534,9 +575,8 @@ export function FieldProgressReport() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {/* Totals Row */}
                     <TableRow className="bg-muted/50 font-bold">
-                      <TableCell colSpan={2}>TOTALES</TableCell>
+                      <TableCell colSpan={3}>TOTALES</TableCell>
                       <TableCell className="text-right font-mono">
                         {fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0).toFixed(2)}
                       </TableCell>

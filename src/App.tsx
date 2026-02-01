@@ -15,6 +15,7 @@ import Fuel from "./pages/Fuel";
 import Inventory from "./pages/Inventory";
 import Equipment from "./pages/Equipment";
 import Operations from "./pages/Operations";
+import Rainfall from "./pages/Rainfall";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/fuel" element={<ProtectedRoute><Fuel /></ProtectedRoute>} />
               <Route path="/equipment" element={<ProtectedRoute><Equipment /></ProtectedRoute>} />
               <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
+              <Route path="/rainfall" element={<ProtectedRoute><Rainfall /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

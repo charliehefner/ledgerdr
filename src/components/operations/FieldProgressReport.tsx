@@ -474,7 +474,7 @@ export function FieldProgressReport() {
 
             {/* Export Button */}
             {fieldProgressData.length > 0 && (
-              <Button variant="outline" onClick={exportToExcel}>
+              <Button variant="excel" onClick={exportToExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Exportar Excel
               </Button>

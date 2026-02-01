@@ -727,7 +727,7 @@ export function AgricultureFuelView() {
           </Popover>
 
           {/* Export Buttons */}
-          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={sortedTransactions.length === 0}>
+          <Button variant="excel" size="sm" onClick={exportToExcel} disabled={sortedTransactions.length === 0}>
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Excel
           </Button>

@@ -73,6 +73,10 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        excel: {
+          DEFAULT: "hsl(var(--excel))",
+          foreground: "hsl(var(--excel-foreground))",
+        },
         chart: {
           1: "hsl(var(--chart-1))",
           2: "hsl(var(--chart-2))",

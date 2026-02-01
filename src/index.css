@@ -48,6 +48,8 @@
     --warning-foreground: 220 30% 15%;
     --info: 200 95% 45%;
     --info-foreground: 0 0% 100%;
+    --excel: 174 60% 45%;
+    --excel-foreground: 0 0% 100%;
 
     /* Invoice status colors */
     --status-draft: 215 15% 60%;
@@ -112,6 +114,8 @@
     --warning-foreground: 220 30% 8%;
     --info: 200 95% 50%;
     --info-foreground: 0 0% 100%;
+    --excel: 174 55% 50%;
+    --excel-foreground: 0 0% 100%;
 
     --status-draft: 215 15% 50%;
     --status-pending: 38 92% 55%;

@@ -261,7 +261,7 @@ export default function Rainfall() {
                 {t("common.save")}
               </Button>
             )}
-            <Button variant="outline" onClick={handleExportExcel}>
+            <Button variant="excel" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               {language === "en" ? "Export Excel" : "Exportar Excel"}
             </Button>

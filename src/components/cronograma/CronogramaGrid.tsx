@@ -415,7 +415,7 @@ export function CronogramaGrid() {
                       colSpan={2}
                       className={cn(
                         "border p-2 text-center font-medium",
-                        idx % 2 === 0 ? "bg-muted/30" : "bg-muted/50",
+                        idx % 2 === 0 ? "bg-secondary" : "bg-muted",
                         isHol && "bg-amber-100 dark:bg-amber-900/30"
                       )}
                     >
@@ -438,13 +438,13 @@ export function CronogramaGrid() {
                   <>
                     <th key={`am-${idx}`} className={cn(
                       "border p-1 text-xs font-normal",
-                      idx % 2 === 0 ? "bg-muted/30" : "bg-muted/50"
+                      idx % 2 === 0 ? "bg-secondary" : "bg-muted"
                     )}>
                       {t("cronograma.morning")}
                     </th>
                     <th key={`pm-${idx}`} className={cn(
                       "border p-1 text-xs font-normal",
-                      idx % 2 === 0 ? "bg-muted/30" : "bg-muted/50"
+                      idx % 2 === 0 ? "bg-secondary" : "bg-muted"
                     )}>
                       {t("cronograma.afternoon")}
                     </th>
@@ -671,7 +671,7 @@ function CronogramaCell({
   return (
     <td className={cn(
       "border p-1 min-w-[80px]",
-      dayShade ? "bg-background" : "bg-muted/20"
+      dayShade ? "bg-secondary/50" : "bg-background"
     )}>
       <Input
         value={localValue}

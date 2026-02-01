@@ -14,39 +14,42 @@ import {
   PanelLeftClose,
   PanelLeft,
   Menu,
+  Languages,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/jord-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Section, roleDisplayNames } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 
 type NavItem = {
-  name: string;
+  nameKey: string;
   href: string;
   icon: typeof LayoutDashboard;
   section: Section;
 };
 
 const navigation: NavItem[] = [
-  { name: "Panel", href: "/", icon: LayoutDashboard, section: "dashboard" },
-  { name: "Transacciones", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
-  { name: "Reportes", href: "/reports", icon: BarChart3, section: "reports" },
-  { name: "Recursos Humanos", href: "/hr", icon: Users, section: "hr" },
-  { name: "Inventario", href: "/inventory", icon: Package, section: "inventory" },
-  { name: "Combustible", href: "/fuel", icon: Fuel, section: "fuel" },
-  { name: "Equipos", href: "/equipment", icon: Tractor, section: "equipment" },
-  { name: "Operaciones", href: "/operations", icon: Activity, section: "operations" },
-  { name: "Pluviometría", href: "/rainfall", icon: CloudRain, section: "rainfall" },
+  { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
+  { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
+  { nameKey: "nav.reports", href: "/reports", icon: BarChart3, section: "reports" },
+  { nameKey: "nav.hr", href: "/hr", icon: Users, section: "hr" },
+  { nameKey: "nav.inventory", href: "/inventory", icon: Package, section: "inventory" },
+  { nameKey: "nav.fuel", href: "/fuel", icon: Fuel, section: "fuel" },
+  { nameKey: "nav.equipment", href: "/equipment", icon: Tractor, section: "equipment" },
+  { nameKey: "nav.operations", href: "/operations", icon: Activity, section: "operations" },
+  { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
 ];
 
 const secondaryNav: NavItem[] = [
-  { name: "Configuración", href: "/settings", icon: Settings, section: "settings" },
+  { nameKey: "nav.settings", href: "/settings", icon: Settings, section: "settings" },
 ];
 
 // Sidebar content component (shared between desktop and mobile)
@@ -59,6 +62,7 @@ function SidebarContent({
   const navigate = useNavigate();
   const { user, logout, canAccessSection } = useAuth();
   const { collapsed, toggleCollapsed } = useSidebar();
+  const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
 
   const handleLogout = async () => {
@@ -77,6 +81,7 @@ function SidebarContent({
 
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const showCollapsed = collapsed && !isMobile;
+    const itemName = t(item.nameKey);
     
     const link = (
       <Link
@@ -89,7 +94,7 @@ function SidebarContent({
         )}
       >
         <item.icon className="h-5 w-5 shrink-0" />
-        {(!showCollapsed || isMobile) && <span>{item.name}</span>}
+        {(!showCollapsed || isMobile) && <span>{itemName}</span>}
       </Link>
     );
 
@@ -98,7 +103,7 @@ function SidebarContent({
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{link}</TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
-            {item.name}
+            {itemName}
           </TooltipContent>
         </Tooltip>
       );
@@ -139,11 +144,11 @@ function SidebarContent({
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {(!showCollapsed || isMobile) && (
           <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-            Menú
+            {t("sidebar.menu")}
           </div>
         )}
         {filteredNavigation.map((item) => (
-          <NavItemComponent key={item.name} item={item} />
+          <NavItemComponent key={item.nameKey} item={item} />
         ))}
 
         {filteredSecondaryNav.length > 0 && (
@@ -152,13 +157,47 @@ function SidebarContent({
 
             {(!showCollapsed || isMobile) && (
               <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                Sistema
+                {t("sidebar.system")}
               </div>
             )}
             {filteredSecondaryNav.map((item) => (
-              <NavItemComponent key={item.name} item={item} />
+              <NavItemComponent key={item.nameKey} item={item} />
             ))}
           </>
+        )}
+
+        {/* Language Toggle */}
+        <div className="my-4 border-t border-sidebar-border" />
+        {(!showCollapsed || isMobile) ? (
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-sidebar-foreground/70">
+              <Languages className="h-4 w-4" />
+              <span>{t("sidebar.language")}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className={cn(language === "es" ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/50")}>ES</span>
+              <Switch
+                checked={language === "en"}
+                onCheckedChange={(checked) => setLanguage(checked ? "en" : "es")}
+                className="scale-75"
+              />
+              <span className={cn(language === "en" ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/50")}>EN</span>
+            </div>
+          </div>
+        ) : (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setLanguage(language === "es" ? "en" : "es")}
+                className="w-full flex justify-center p-2 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+              >
+                <Languages className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              {language === "es" ? "Switch to English" : "Cambiar a Español"}
+            </TooltipContent>
+          </Tooltip>
         )}
       </nav>
 

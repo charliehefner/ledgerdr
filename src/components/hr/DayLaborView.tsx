@@ -137,51 +137,8 @@ export function DayLaborView() {
     },
   });
 
-  // Generate PDF
+  // Generate PDF - Summary by Worker (Resumen Jornal)
   const generatePDF = () => {
-    const doc = new jsPDF();
-    const fridayStr = format(selectedFriday, "dd/MM/yyyy");
-    
-    doc.setFontSize(18);
-    doc.text(`Jornales Semana ${fridayStr}`, 14, 20);
-    
-    doc.setFontSize(11);
-    doc.text(`Período: ${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`, 14, 30);
-    doc.text(`Total Entradas: ${entries.length}`, 14, 37);
-    
-    const tableData = entries.map(entry => [
-      format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
-      entry.operation_description,
-      entry.workers_count.toString(),
-      entry.worker_name || "-",
-      entry.field_name || "-",
-      `RD$ ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
-    ]);
-    
-    // Add total row
-    tableData.push([
-      "",
-      "",
-      "",
-      "",
-      "TOTAL:",
-      `RD$ ${weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
-    ]);
-
-    autoTable(doc, {
-      head: [["Fecha", "Operación", "# Trab.", "Nombre", "Campo", "Monto"]],
-      body: tableData,
-      startY: 45,
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [59, 130, 246] },
-      footStyles: { fillColor: [229, 231, 235], textColor: [0, 0, 0], fontStyle: "bold" },
-    });
-
-    doc.save(`Jornales_Semana_${format(selectedFriday, "yyyy-MM-dd")}.pdf`);
-  };
-
-  // Generate Summary PDF grouped by worker
-  const generateSummaryPDF = () => {
     const doc = new jsPDF();
     const fridayStr = format(selectedFriday, "dd/MM/yyyy");
     
@@ -538,13 +495,7 @@ export function DayLaborView() {
       {entries.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Resumen Jornal</CardTitle>
-              <Button variant="outline" size="sm" onClick={generateSummaryPDF}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Exportar Resumen PDF
-              </Button>
-            </div>
+            <CardTitle className="text-base">Resumen Jornal</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>

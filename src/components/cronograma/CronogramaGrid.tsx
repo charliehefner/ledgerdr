@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addWeeks, subWeeks, getDay, eachDayOfInterval, isSameDay, parseISO, isWithinInterval } from "date-fns";
@@ -622,12 +622,26 @@ function CronogramaCell({
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea on initial load and when value changes
+  const autoResize = useCallback(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, []);
 
   useEffect(() => {
     if (!isFocused) {
       setLocalValue(value);
     }
   }, [value, isFocused]);
+
+  // Resize on initial render and when localValue changes
+  useEffect(() => {
+    autoResize();
+  }, [localValue, autoResize]);
 
   const handleBlur = () => {
     setIsFocused(false);
@@ -671,6 +685,7 @@ function CronogramaCell({
         "bg-amber-50 dark:bg-amber-900/20"
       )}>
         <textarea
+          ref={textareaRef}
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onFocus={() => setIsFocused(true)}
@@ -680,12 +695,7 @@ function CronogramaCell({
           className="w-full min-h-[28px] text-xs bg-transparent border-0 focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
           placeholder="—"
           rows={1}
-          style={{ height: 'auto' }}
-          onInput={(e) => {
-            const target = e.target as HTMLTextAreaElement;
-            target.style.height = 'auto';
-            target.style.height = target.scrollHeight + 'px';
-          }}
+          onInput={autoResize}
         />
       </td>
     );
@@ -697,6 +707,7 @@ function CronogramaCell({
       dayShade ? "bg-secondary/50" : "bg-background"
     )}>
       <textarea
+        ref={textareaRef}
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onFocus={() => setIsFocused(true)}
@@ -706,12 +717,7 @@ function CronogramaCell({
         className="w-full min-h-[28px] text-xs border-0 bg-transparent focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
         placeholder="—"
         rows={1}
-        style={{ height: 'auto' }}
-        onInput={(e) => {
-          const target = e.target as HTMLTextAreaElement;
-          target.style.height = 'auto';
-          target.style.height = target.scrollHeight + 'px';
-        }}
+        onInput={autoResize}
       />
     </td>
   );

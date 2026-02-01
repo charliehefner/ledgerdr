@@ -122,6 +122,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
       return false;
     }
+    // ITBIS cannot exceed 18% of amount
+    if (form.itbis && form.amount) {
+      const itbisValue = parseFloat(form.itbis);
+      const amountValue = parseFloat(form.amount);
+      if (itbisValue > amountValue * 0.18) {
+        return false;
+      }
+    }
     return true;
   };
 
@@ -131,6 +139,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (!isValid()) {
       if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
         toast.error('Proyecto y código CBS son requeridos para la cuenta 1180');
+      } else if (form.itbis && form.amount && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
+        toast.error('ITBIS no puede exceder el 18% del monto');
       } else {
         toast.error('Por favor complete todos los campos requeridos');
       }

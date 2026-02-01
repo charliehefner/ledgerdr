@@ -1129,6 +1129,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rainfall_records: {
+        Row: {
+          caoba: number | null
+          created_at: string
+          id: string
+          palmarito: number | null
+          record_date: string
+          solar: number | null
+          updated_at: string
+          virgencita: number | null
+        }
+        Insert: {
+          caoba?: number | null
+          created_at?: string
+          id?: string
+          palmarito?: number | null
+          record_date: string
+          solar?: number | null
+          updated_at?: string
+          virgencita?: number | null
+        }
+        Update: {
+          caoba?: number | null
+          created_at?: string
+          id?: string
+          palmarito?: number | null
+          record_date?: string
+          solar?: number | null
+          updated_at?: string
+          virgencita?: number | null
+        }
+        Relationships: []
+      }
       scheduled_user_deletions: {
         Row: {
           cancelled_at: string | null

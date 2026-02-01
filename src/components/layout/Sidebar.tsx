@@ -10,6 +10,7 @@ import {
   Fuel,
   Activity,
   Tractor,
+  CloudRain,
   PanelLeftClose,
   PanelLeft,
   Menu,
@@ -41,6 +42,7 @@ const navigation: NavItem[] = [
   { name: "Combustible", href: "/fuel", icon: Fuel, section: "fuel" },
   { name: "Equipos", href: "/equipment", icon: Tractor, section: "equipment" },
   { name: "Operaciones", href: "/operations", icon: Activity, section: "operations" },
+  { name: "Pluviometría", href: "/rainfall", icon: CloudRain, section: "rainfall" },
 ];
 
 const secondaryNav: NavItem[] = [

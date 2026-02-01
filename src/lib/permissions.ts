@@ -53,7 +53,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   fuel: ["admin", "management", "supervisor", "viewer"],
   equipment: ["admin", "management", "supervisor", "viewer"],
   operations: ["admin", "management", "supervisor", "viewer"],
-  rainfall: ["admin", "management", "supervisor", "viewer"],
+  rainfall: ["admin", "management", "accountant", "supervisor", "viewer"],
   settings: ["admin"],
 };
 

@@ -596,6 +596,7 @@ export type Database = {
           hp: number | null
           id: string
           is_active: boolean
+          maintenance_interval_hours: number
           model: string | null
           name: string
           purchase_date: string | null
@@ -611,6 +612,7 @@ export type Database = {
           hp?: number | null
           id?: string
           is_active?: boolean
+          maintenance_interval_hours?: number
           model?: string | null
           name: string
           purchase_date?: string | null
@@ -626,6 +628,7 @@ export type Database = {
           hp?: number | null
           id?: string
           is_active?: boolean
+          maintenance_interval_hours?: number
           model?: string | null
           name?: string
           purchase_date?: string | null
@@ -1237,6 +1240,47 @@ export type Database = {
         }
         Relationships: []
       }
+      tractor_maintenance: {
+        Row: {
+          created_at: string
+          hour_meter_reading: number
+          id: string
+          maintenance_date: string
+          maintenance_type: string
+          notes: string | null
+          tractor_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hour_meter_reading: number
+          id?: string
+          maintenance_date?: string
+          maintenance_type?: string
+          notes?: string | null
+          tractor_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hour_meter_reading?: number
+          id?: string
+          maintenance_date?: string
+          maintenance_type?: string
+          notes?: string | null
+          tractor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tractor_maintenance_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_attachments: {
         Row: {
           attachment_url: string
@@ -1433,6 +1477,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_hours_until_maintenance: {
+        Args: { p_tractor_id: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

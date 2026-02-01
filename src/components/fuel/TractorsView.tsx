@@ -20,12 +20,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Tractor } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Pencil, Tractor, Wrench, AlertTriangle, Clock, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { TractorMaintenanceDialog } from "./TractorMaintenanceDialog";
 
 interface TractorEquipment {
   id: string;
@@ -39,12 +46,19 @@ interface TractorEquipment {
   hp: number | null;
   purchase_date: string | null;
   purchase_price: number | null;
+  maintenance_interval_hours: number;
+}
+
+interface MaintenanceRecord {
+  tractor_id: string;
+  hour_meter_reading: number;
 }
 
 export function TractorsView() {
   const { t } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTractor, setEditingTractor] = useState<TractorEquipment | null>(null);
+  const [selectedTractorForMaintenance, setSelectedTractorForMaintenance] = useState<TractorEquipment | null>(null);
   const [form, setForm] = useState({
     name: "",
     current_hour_meter: "0",
@@ -54,6 +68,7 @@ export function TractorsView() {
     hp: "",
     purchase_date: "",
     purchase_price: "",
+    maintenance_interval_hours: "500",
   });
 
   const { toast } = useToast();
@@ -62,9 +77,10 @@ export function TractorsView() {
   const tractorColumns: ColumnConfig[] = useMemo(() => [
     { key: "name", label: t("equipment.col.name"), defaultVisible: true },
     { key: "brand_model", label: t("equipment.col.brandModel"), defaultVisible: true },
-    { key: "serial", label: t("equipment.col.serial"), defaultVisible: true },
+    { key: "serial", label: t("equipment.col.serial"), defaultVisible: false },
     { key: "hp", label: t("equipment.col.hp"), defaultVisible: true },
     { key: "hour_meter", label: t("equipment.col.hourMeter"), defaultVisible: true },
+    { key: "maintenance", label: "Mantenimiento", defaultVisible: true },
     { key: "purchase_date", label: t("equipment.col.purchaseDate"), defaultVisible: false },
     { key: "price", label: t("equipment.col.price"), defaultVisible: false },
     { key: "status", label: t("equipment.col.status"), defaultVisible: true },
@@ -92,6 +108,45 @@ export function TractorsView() {
     },
   });
 
+  // Fetch latest maintenance for each tractor
+  const { data: latestMaintenance = [] } = useQuery({
+    queryKey: ["tractors-latest-maintenance"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tractor_maintenance")
+        .select("tractor_id, hour_meter_reading")
+        .order("hour_meter_reading", { ascending: false });
+      if (error) throw error;
+      
+      // Get only the latest maintenance per tractor
+      const latestByTractor = new Map<string, number>();
+      (data as MaintenanceRecord[]).forEach((m) => {
+        if (!latestByTractor.has(m.tractor_id)) {
+          latestByTractor.set(m.tractor_id, m.hour_meter_reading);
+        }
+      });
+      
+      return Array.from(latestByTractor.entries()).map(([tractor_id, hour_meter_reading]) => ({
+        tractor_id,
+        hour_meter_reading,
+      }));
+    },
+  });
+
+  // Helper to get maintenance status for a tractor
+  const getMaintenanceStatus = (tractor: TractorEquipment) => {
+    const lastMaint = latestMaintenance.find(m => m.tractor_id === tractor.id);
+    const lastHours = lastMaint?.hour_meter_reading ?? 0;
+    const hoursSinceMaint = tractor.current_hour_meter - lastHours;
+    const hoursUntil = tractor.maintenance_interval_hours - hoursSinceMaint;
+    
+    return {
+      hoursUntil,
+      isOverdue: hoursUntil < 0,
+      isDueSoon: hoursUntil >= 0 && hoursUntil <= 50,
+    };
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
       const record = {
@@ -104,6 +159,7 @@ export function TractorsView() {
         hp: data.hp ? parseFloat(data.hp) : null,
         purchase_date: data.purchase_date || null,
         purchase_price: data.purchase_price ? parseFloat(data.purchase_price) : null,
+        maintenance_interval_hours: parseInt(data.maintenance_interval_hours) || 500,
       };
 
       if (editingTractor) {
@@ -146,6 +202,7 @@ export function TractorsView() {
       hp: tractor.hp?.toString() || "",
       purchase_date: tractor.purchase_date || "",
       purchase_price: tractor.purchase_price?.toString() || "",
+      maintenance_interval_hours: tractor.maintenance_interval_hours?.toString() || "500",
     });
     setIsDialogOpen(true);
   };
@@ -162,6 +219,7 @@ export function TractorsView() {
       hp: "",
       purchase_date: "",
       purchase_price: "",
+      maintenance_interval_hours: "500",
     });
   };
 
@@ -278,7 +336,7 @@ export function TractorsView() {
                     />
                   </div>
 
-                  <div className="col-span-2">
+                  <div>
                     <Label>{t("equipment.form.purchasePrice")}</Label>
                     <Input
                       type="number"
@@ -287,6 +345,19 @@ export function TractorsView() {
                       onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
                       placeholder="ej. 150000"
                     />
+                  </div>
+
+                  <div>
+                    <Label>Intervalo Mant. (hrs)</Label>
+                    <Input
+                      type="number"
+                      value={form.maintenance_interval_hours}
+                      onChange={(e) => setForm({ ...form, maintenance_interval_hours: e.target.value })}
+                      placeholder="500"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {form.brand?.toLowerCase().includes("volvo") ? "Volvo: recomendado 250 hrs" : "Estándar: 500 hrs"}
+                    </p>
                   </div>
                 </div>
 
@@ -318,64 +389,121 @@ export function TractorsView() {
                 {isVisible("serial") && <TableHead>{t("equipment.col.serial")}</TableHead>}
                 {isVisible("hp") && <TableHead>{t("equipment.col.hp")}</TableHead>}
                 {isVisible("hour_meter") && <TableHead>{t("equipment.col.hourMeter")}</TableHead>}
+                {isVisible("maintenance") && <TableHead>Mantenimiento</TableHead>}
                 {isVisible("purchase_date") && <TableHead>{t("equipment.col.purchaseDate")}</TableHead>}
                 {isVisible("price") && <TableHead>{t("equipment.col.price")}</TableHead>}
                 {isVisible("status") && <TableHead>{t("equipment.col.status")}</TableHead>}
-                {isVisible("actions") && <TableHead className="w-[80px]">{t("equipment.col.actions")}</TableHead>}
+                {isVisible("actions") && <TableHead className="w-[100px]">{t("equipment.col.actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tractors.map((tractor) => (
-                <TableRow key={tractor.id}>
-                  {isVisible("name") && <TableCell className="font-medium">{tractor.name}</TableCell>}
-                  {isVisible("brand_model") && (
-                    <TableCell>
-                      {tractor.brand || tractor.model
-                        ? `${tractor.brand || ""} ${tractor.model || ""}`.trim()
-                        : "-"}
-                    </TableCell>
-                  )}
-                  {isVisible("serial") && <TableCell>{tractor.serial_number || "-"}</TableCell>}
-                  {isVisible("hp") && <TableCell>{tractor.hp ? `${tractor.hp} HP` : "-"}</TableCell>}
-                  {isVisible("hour_meter") && <TableCell>{tractor.current_hour_meter} hrs</TableCell>}
-                  {isVisible("purchase_date") && (
-                    <TableCell>
-                      {tractor.purchase_date
-                        ? format(new Date(tractor.purchase_date), "MMM d, yyyy")
-                        : "-"}
-                    </TableCell>
-                  )}
-                  {isVisible("price") && (
-                    <TableCell>
-                      {tractor.purchase_price
-                        ? `$${tractor.purchase_price.toLocaleString()}`
-                        : "-"}
-                    </TableCell>
-                  )}
-                  {isVisible("status") && (
-                    <TableCell>
-                      <Badge variant={tractor.is_active ? "default" : "secondary"}>
-                        {tractor.is_active ? t("common.active") : t("common.inactive")}
-                      </Badge>
-                    </TableCell>
-                  )}
-                  {isVisible("actions") && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(tractor)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
+              {tractors.map((tractor) => {
+                const maintStatus = getMaintenanceStatus(tractor);
+                return (
+                  <TableRow key={tractor.id}>
+                    {isVisible("name") && <TableCell className="font-medium">{tractor.name}</TableCell>}
+                    {isVisible("brand_model") && (
+                      <TableCell>
+                        {tractor.brand || tractor.model
+                          ? `${tractor.brand || ""} ${tractor.model || ""}`.trim()
+                          : "-"}
+                      </TableCell>
+                    )}
+                    {isVisible("serial") && <TableCell>{tractor.serial_number || "-"}</TableCell>}
+                    {isVisible("hp") && <TableCell>{tractor.hp ? `${tractor.hp} HP` : "-"}</TableCell>}
+                    {isVisible("hour_meter") && <TableCell>{tractor.current_hour_meter} hrs</TableCell>}
+                    {isVisible("maintenance") && (
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 cursor-pointer" onClick={() => setSelectedTractorForMaintenance(tractor)}>
+                                {maintStatus.isOverdue ? (
+                                  <Badge variant="destructive" className="gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {Math.abs(Math.round(maintStatus.hoursUntil))} hrs vencido
+                                  </Badge>
+                                ) : maintStatus.isDueSoon ? (
+                                  <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800">
+                                    <Clock className="h-3 w-3" />
+                                    {Math.round(maintStatus.hoursUntil)} hrs
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="gap-1 text-green-700 border-green-300">
+                                    <CheckCircle className="h-3 w-3" />
+                                    {Math.round(maintStatus.hoursUntil)} hrs
+                                  </Badge>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{maintStatus.isOverdue ? "Mantenimiento vencido" : `Próximo mant. en ${Math.round(maintStatus.hoursUntil)} hrs`}</p>
+                              <p className="text-xs text-muted-foreground">Intervalo: cada {tractor.maintenance_interval_hours} hrs</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    )}
+                    {isVisible("purchase_date") && (
+                      <TableCell>
+                        {tractor.purchase_date
+                          ? format(new Date(tractor.purchase_date), "MMM d, yyyy")
+                          : "-"}
+                      </TableCell>
+                    )}
+                    {isVisible("price") && (
+                      <TableCell>
+                        {tractor.purchase_price
+                          ? `$${tractor.purchase_price.toLocaleString()}`
+                          : "-"}
+                      </TableCell>
+                    )}
+                    {isVisible("status") && (
+                      <TableCell>
+                        <Badge variant={tractor.is_active ? "default" : "secondary"}>
+                          {tractor.is_active ? t("common.active") : t("common.inactive")}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {isVisible("actions") && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSelectedTractorForMaintenance(tractor)}
+                            title="Ver Mantenimiento"
+                          >
+                            <Wrench className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(tractor)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       )}
+
+      {/* Maintenance Dialog */}
+      <TractorMaintenanceDialog
+        tractorId={selectedTractorForMaintenance?.id ?? null}
+        tractorName={selectedTractorForMaintenance?.name ?? ""}
+        currentHourMeter={selectedTractorForMaintenance?.current_hour_meter ?? 0}
+        maintenanceInterval={selectedTractorForMaintenance?.maintenance_interval_hours ?? 500}
+        open={!!selectedTractorForMaintenance}
+        onOpenChange={(open) => !open && setSelectedTractorForMaintenance(null)}
+      />
     </div>
   );
 }

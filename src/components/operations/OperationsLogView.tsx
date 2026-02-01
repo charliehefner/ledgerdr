@@ -77,6 +77,13 @@ interface OperationType {
 interface TractorEquipment {
   id: string;
   name: string;
+  current_hour_meter: number;
+  maintenance_interval_hours: number;
+}
+
+interface MaintenanceRecord {
+  tractor_id: string;
+  hour_meter_reading: number;
 }
 
 interface Implement {
@@ -219,7 +226,7 @@ export function OperationsLogView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fuel_equipment")
-        .select("id, name")
+        .select("id, name, current_hour_meter, maintenance_interval_hours")
         .eq("equipment_type", "tractor")
         .eq("is_active", true)
         .order("name");
@@ -227,6 +234,43 @@ export function OperationsLogView() {
       return data as TractorEquipment[];
     },
   });
+
+  // Fetch latest maintenance for each tractor
+  const { data: tractorMaintenanceData = new Map<string, number>() } = useQuery({
+    queryKey: ["tractors-maintenance-operations"],
+    queryFn: async (): Promise<Map<string, number>> => {
+      const { data, error } = await supabase
+        .from("tractor_maintenance")
+        .select("tractor_id, hour_meter_reading")
+        .order("hour_meter_reading", { ascending: false });
+      if (error) throw error;
+      
+      // Get only the latest maintenance per tractor
+      const latestByTractor = new Map<string, number>();
+      (data as MaintenanceRecord[]).forEach((m) => {
+        if (!latestByTractor.has(m.tractor_id)) {
+          latestByTractor.set(m.tractor_id, m.hour_meter_reading);
+        }
+      });
+      
+      return latestByTractor;
+    },
+  });
+
+  // Helper to check if tractor maintenance is overdue
+  const checkMaintenanceOverdue = (tractorId: string): { isOverdue: boolean; hoursOverdue: number } | null => {
+    const tractor = tractors?.find(t => t.id === tractorId);
+    if (!tractor) return null;
+    
+    const lastMaintHours = tractorMaintenanceData.get(tractorId) ?? 0;
+    const hoursSinceMaint = tractor.current_hour_meter - lastMaintHours;
+    const hoursUntil = tractor.maintenance_interval_hours - hoursSinceMaint;
+    
+    if (hoursUntil < 0) {
+      return { isOverdue: true, hoursOverdue: Math.abs(Math.round(hoursUntil)) };
+    }
+    return null;
+  };
 
   // Fetch implements
   const { data: implements_ } = useQuery({
@@ -794,6 +838,21 @@ export function OperationsLogView() {
           description: gapWarning,
           variant: "default",
           duration: 8000,
+        });
+        // Still allow submission but show the warning
+      }
+    }
+
+    // Check if tractor maintenance is overdue (for mechanical operations)
+    if (isMechanical && form.tractor_id) {
+      const maintenanceStatus = checkMaintenanceOverdue(form.tractor_id);
+      if (maintenanceStatus?.isOverdue) {
+        const tractorName = tractors?.find(t => t.id === form.tractor_id)?.name || "Tractor";
+        toast({
+          title: "🔧 ¡Mantenimiento Vencido!",
+          description: `${tractorName} tiene el mantenimiento vencido por ${maintenanceStatus.hoursOverdue} horas. Se recomienda realizar mantenimiento antes de continuar.`,
+          variant: "destructive",
+          duration: 10000,
         });
         // Still allow submission but show the warning
       }

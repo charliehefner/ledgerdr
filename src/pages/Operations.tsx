@@ -8,12 +8,14 @@ import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { FieldProgressReport } from "@/components/operations/FieldProgressReport";
 import { InputUsageReport } from "@/components/operations/InputUsageReport";
 import { FieldInputsReport } from "@/components/operations/FieldInputsReport";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Operations() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "log";
   const initialInputId = searchParams.get("inputId");
   const initialFieldId = searchParams.get("fieldId");
+  const { t } = useLanguage();
   
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -21,23 +23,23 @@ export default function Operations() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Operations</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("page.operations.title")}</h1>
           <p className="text-muted-foreground">
-            Track field operations across farms
+            {t("page.operations.subtitle")}
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-between">
             <div className="flex flex-wrap gap-1">
-              <TabsTrigger value="log" colorScheme="primary">Operations Log</TabsTrigger>
-              <TabsTrigger value="progress" colorScheme="secondary">Progreso de Campos</TabsTrigger>
-              <TabsTrigger value="input-usage" colorScheme="accent">Uso de Insumos</TabsTrigger>
-              <TabsTrigger value="field-inputs" colorScheme="muted">Insumos por Campo</TabsTrigger>
+              <TabsTrigger value="log" colorScheme="primary">{t("operations.log")}</TabsTrigger>
+              <TabsTrigger value="progress" colorScheme="secondary">{t("operations.fieldProgress")}</TabsTrigger>
+              <TabsTrigger value="input-usage" colorScheme="accent">{t("operations.inputUsage")}</TabsTrigger>
+              <TabsTrigger value="field-inputs" colorScheme="muted">{t("operations.fieldInputs")}</TabsTrigger>
             </div>
             <div className="flex gap-1">
-              <TabsTrigger value="farms" colorScheme="primary">Farms & Fields</TabsTrigger>
-              <TabsTrigger value="types" colorScheme="secondary">Operation Types</TabsTrigger>
+              <TabsTrigger value="farms" colorScheme="primary">{t("operations.farmsFields")}</TabsTrigger>
+              <TabsTrigger value="types" colorScheme="secondary">{t("operations.operationTypes")}</TabsTrigger>
             </div>
           </TabsList>
 

@@ -22,43 +22,45 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserManagement } from "@/components/settings/UserManagement";
 import { DatabaseBackup } from "@/components/settings/DatabaseBackup";
 import { ScheduledDeletions } from "@/components/settings/ScheduledDeletions";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
+  const { t } = useLanguage();
 
   const handleTestConnection = () => {
     if (!canModifySettings) {
-      toast.error("No tiene permiso para modificar la configuración");
+      toast.error(t("msg.noPermission"));
       return;
     }
-    toast.info("Probando conexión a base de datos...");
+    toast.info(t("msg.testingConnection"));
     setTimeout(() => {
-      toast.success("¡Conexión a base de datos exitosa!");
+      toast.success(t("msg.connectionSuccess"));
     }, 1500);
   };
 
   const handleSave = () => {
     if (!canModifySettings) {
-      toast.error("No tiene permiso para modificar la configuración");
+      toast.error(t("msg.noPermission"));
       return;
     }
-    toast.success("¡Configuración guardada exitosamente!");
+    toast.success(t("msg.settingsSaved"));
   };
 
   return (
-    <MainLayout title="Configuración" subtitle="Configure su aplicación">
+    <MainLayout title={t("page.settings.title")} subtitle={t("page.settings.subtitle")}>
       <div className="max-w-3xl space-y-8 animate-fade-in">
         {/* Access Restriction Banner */}
         {!canModifySettings && (
           <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-center gap-3">
             <Lock className="h-5 w-5 text-destructive" />
             <div>
-              <p className="font-medium text-destructive">Acceso Solo Lectura</p>
+              <p className="font-medium text-destructive">{t("settings.readOnlyAccess")}</p>
               <p className="text-sm text-muted-foreground">
-                Puede ver la configuración pero no puede hacer cambios estructurales. Contacte a un administrador para modificaciones.
+                {t("settings.readOnlyMessage")}
               </p>
             </div>
           </div>
@@ -80,9 +82,9 @@ export default function Settings() {
               <Database className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Conexión de Base de Datos</h3>
+              <h3 className="font-semibold">{t("settings.database")}</h3>
               <p className="text-sm text-muted-foreground">
-                Conectar a su base de datos PostgreSQL
+                {t("settings.databaseSubtitle")}
               </p>
             </div>
           </div>
@@ -90,23 +92,23 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="host">Host</Label>
+                <Label htmlFor="host">{t("form.host")}</Label>
                 <Input id="host" placeholder="db.example.com" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="port">Puerto</Label>
+                <Label htmlFor="port">{t("form.port")}</Label>
                 <Input id="port" placeholder="5432" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="database">Nombre de Base de Datos</Label>
+                <Label htmlFor="database">{t("form.databaseName")}</Label>
                 <Input id="database" placeholder="expense_ledger" disabled={!canModifySettings} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user">Usuario</Label>
+                <Label htmlFor="user">{t("form.username")}</Label>
                 <Input id="user" placeholder="db_user" disabled={!canModifySettings} />
               </div>
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">{t("form.password")}</Label>
                 <Input id="password" type="password" placeholder="••••••••" disabled={!canModifySettings} />
               </div>
             </div>
@@ -114,11 +116,8 @@ export default function Settings() {
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={handleTestConnection} disabled={!canModifySettings}>
                 <TestTube className="mr-2 h-4 w-4" />
-                Probar Conexión
+                {t("settings.testConnection")}
               </Button>
-              <span className="text-sm text-muted-foreground">
-                Pruebe antes de guardar para asegurar conectividad
-              </span>
             </div>
           </div>
         </div>
@@ -130,9 +129,9 @@ export default function Settings() {
               <Palette className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Preferencias</h3>
+              <h3 className="font-semibold">{t("settings.preferences")}</h3>
               <p className="text-sm text-muted-foreground">
-                Personalice su experiencia
+                {t("settings.preferencesSubtitle")}
               </p>
             </div>
           </div>
@@ -140,7 +139,7 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="currency">Moneda Predeterminada</Label>
+                <Label htmlFor="currency">{t("settings.defaultCurrency")}</Label>
                 <Select defaultValue="usd" disabled={!canModifySettings}>
                   <SelectTrigger>
                     <SelectValue />
@@ -154,7 +153,7 @@ export default function Settings() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dateFormat">Formato de Fecha</Label>
+                <Label htmlFor="dateFormat">{t("settings.dateFormat")}</Label>
                 <Select defaultValue="mdy" disabled={!canModifySettings}>
                   <SelectTrigger>
                     <SelectValue />
@@ -169,7 +168,7 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="taxRate">Tasa de Impuesto Predeterminada (%)</Label>
+              <Label htmlFor="taxRate">{t("settings.taxRate")}</Label>
               <Input 
                 id="taxRate" 
                 type="number" 
@@ -188,9 +187,9 @@ export default function Settings() {
               <Bell className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Notificaciones</h3>
+              <h3 className="font-semibold">{t("settings.notifications")}</h3>
               <p className="text-sm text-muted-foreground">
-                Administre sus preferencias de notificación
+                {t("settings.notificationsSubtitle")}
               </p>
             </div>
           </div>
@@ -198,9 +197,9 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Alertas de Vencimiento</p>
+                <p className="font-medium">{t("settings.dueAlerts")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Reciba notificaciones cuando las facturas se venzan
+                  {t("settings.dueAlertsDesc")}
                 </p>
               </div>
               <Switch defaultChecked disabled={!canModifySettings} />
@@ -208,9 +207,9 @@ export default function Settings() {
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Recordatorios de Pago</p>
+                <p className="font-medium">{t("settings.paymentReminders")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Recordar sobre fechas de vencimiento próximas
+                  {t("settings.paymentRemindersDesc")}
                 </p>
               </div>
               <Switch defaultChecked disabled={!canModifySettings} />
@@ -218,9 +217,9 @@ export default function Settings() {
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Resumen Semanal</p>
+                <p className="font-medium">{t("settings.weeklySummary")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Recibir un resumen semanal de gastos por correo
+                  {t("settings.weeklySummaryDesc")}
                 </p>
               </div>
               <Switch disabled={!canModifySettings} />
@@ -233,11 +232,9 @@ export default function Settings() {
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
-              <p className="font-medium">Nota de Seguridad</p>
+              <p className="font-medium">{t("settings.securityNote")}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Las credenciales de la base de datos se almacenan de forma segura y encriptada. 
-                Para uso en producción, recomendamos usar variables de entorno 
-                y gestión segura de secretos.
+                {t("settings.securityNoteText")}
               </p>
             </div>
           </div>
@@ -248,7 +245,7 @@ export default function Settings() {
           <div className="flex justify-end">
             <Button size="lg" onClick={handleSave}>
               <Save className="mr-2 h-4 w-4" />
-              Guardar Configuración
+              {t("settings.saveSettings")}
             </Button>
           </div>
         )}

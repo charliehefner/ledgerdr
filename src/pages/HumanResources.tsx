@@ -6,11 +6,13 @@ import { EmployeeForm } from "@/components/hr/EmployeeForm";
 import { PayrollView } from "@/components/hr/PayrollView";
 import { DayLaborView } from "@/components/hr/DayLaborView";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function HumanResources() {
   const [activeTab, setActiveTab] = useState("payroll");
   const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
   const { canModifySettings } = useAuth();
+  const { t } = useLanguage();
 
   const handleEditEmployee = (employeeId: string) => {
     setEditingEmployee(employeeId);
@@ -26,21 +28,21 @@ export default function HumanResources() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Recursos Humanos</h1>
-          <p className="text-muted-foreground mt-1">Gestionar nómina y registros de empleados</p>
+          <h1 className="text-3xl font-bold text-foreground">{t("page.hr.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("page.hr.subtitle")}</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="w-full justify-between">
             <div className="flex">
-              <TabsTrigger value="payroll" colorScheme="primary">Nómina</TabsTrigger>
-              <TabsTrigger value="day-labor" colorScheme="secondary">Jornales</TabsTrigger>
+              <TabsTrigger value="payroll" colorScheme="primary">{t("hr.payroll")}</TabsTrigger>
+              <TabsTrigger value="day-labor" colorScheme="secondary">{t("hr.dayLabor")}</TabsTrigger>
             </div>
             <div className="flex">
-              <TabsTrigger value="employees" colorScheme="accent">Directorio de Empleados</TabsTrigger>
+              <TabsTrigger value="employees" colorScheme="accent">{t("hr.employees")}</TabsTrigger>
               {canModifySettings && (
                 <TabsTrigger value="add-employee" colorScheme="muted">
-                  {editingEmployee ? "Editar Empleado" : "Agregar Empleado"}
+                  {editingEmployee ? t("hr.editEmployee") : t("hr.addEmployee")}
                 </TabsTrigger>
               )}
             </div>

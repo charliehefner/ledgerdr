@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { CalendarIcon, Download, Plus, Save, Loader2, CloudRain } from "lucide-r
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import ExcelJS from "exceljs";
 
 interface RainfallRecord {
@@ -47,8 +48,10 @@ const LOCATION_LABELS: Record<typeof LOCATIONS[number], string> = {
 export default function Rainfall() {
   const { toast } = useToast();
   const { canWriteSection } = useAuth();
+  const { t, language } = useLanguage();
   const queryClient = useQueryClient();
-  const canEdit = canWriteSection("operations"); // Using operations permission for rainfall
+  const canEdit = canWriteSection("operations");
+  const dateLocale = language === "en" ? enUS : es;
 
   const [fromDate, setFromDate] = useState<Date>(startOfMonth(new Date()));
   const [toDate, setToDate] = useState<Date>(endOfMonth(new Date()));
@@ -113,7 +116,7 @@ export default function Rainfall() {
   const handleSave = async () => {
     const dirtyRecords = Array.from(editableRecords.values()).filter((r) => r.isDirty);
     if (dirtyRecords.length === 0) {
-      toast({ title: "No hay cambios para guardar" });
+      toast({ title: language === "en" ? "No changes to save" : "No hay cambios para guardar" });
       return;
     }
 
@@ -135,12 +138,12 @@ export default function Rainfall() {
         if (error) throw error;
       }
 
-      toast({ title: "Datos guardados correctamente" });
+      toast({ title: language === "en" ? "Data saved successfully" : "Datos guardados correctamente" });
       setEditableRecords(new Map());
       queryClient.invalidateQueries({ queryKey: ["rainfall-records"] });
     } catch (error: any) {
       toast({
-        title: "Error al guardar",
+        title: language === "en" ? "Error saving" : "Error al guardar",
         description: error.message,
         variant: "destructive",
       });
@@ -151,11 +154,12 @@ export default function Rainfall() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Pluviometría");
+    const sheetName = language === "en" ? "Rainfall" : "Pluviometría";
+    const worksheet = workbook.addWorksheet(sheetName);
 
     // Headers
     worksheet.columns = [
-      { header: "Fecha", key: "date", width: 15 },
+      { header: t("col.date"), key: "date", width: 15 },
       { header: "Solar (mm)", key: "solar", width: 12 },
       { header: "Caoba (mm)", key: "caoba", width: 12 },
       { header: "Palmarito (mm)", key: "palmarito", width: 15 },
@@ -245,8 +249,8 @@ export default function Rainfall() {
           <div className="flex items-center gap-3">
             <CloudRain className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Pluviometría</h1>
-              <p className="text-muted-foreground">Registro de precipitación por ubicación</p>
+              <h1 className="text-2xl font-bold text-foreground">{t("page.rainfall.title")}</h1>
+              <p className="text-muted-foreground">{t("page.rainfall.subtitle")}</p>
             </div>
           </div>
 
@@ -254,12 +258,12 @@ export default function Rainfall() {
             {canEdit && hasChanges && (
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Guardar
+                {t("common.save")}
               </Button>
             )}
             <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
-              Exportar Excel
+              {language === "en" ? "Export Excel" : "Exportar Excel"}
             </Button>
           </div>
         </div>
@@ -269,12 +273,12 @@ export default function Rainfall() {
           <CardContent className="pt-6">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Desde:</span>
+                <span className="text-sm font-medium">{language === "en" ? "From:" : "Desde:"}</span>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(fromDate, "dd MMM yyyy", { locale: es })}
+                      {format(fromDate, "dd MMM yyyy", { locale: dateLocale })}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -289,12 +293,12 @@ export default function Rainfall() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Hasta:</span>
+                <span className="text-sm font-medium">{language === "en" ? "To:" : "Hasta:"}</span>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(toDate, "dd MMM yyyy", { locale: es })}
+                      {format(toDate, "dd MMM yyyy", { locale: dateLocale })}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -314,7 +318,7 @@ export default function Rainfall() {
         {/* Data Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Registros de Precipitación (mm)</CardTitle>
+            <CardTitle>{language === "en" ? "Precipitation Records (mm)" : "Registros de Precipitación (mm)"}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -326,7 +330,7 @@ export default function Rainfall() {
                 <table className="w-full caption-bottom text-sm">
                   <thead className="sticky top-0 z-10 bg-background border-b">
                     <tr>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Fecha</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">{t("col.date")}</th>
                       {LOCATIONS.map((loc) => (
                         <th key={loc} className="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-[100px]">
                           {LOCATION_LABELS[loc]}
@@ -343,7 +347,7 @@ export default function Rainfall() {
                       return (
                         <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-yellow-50")}>
                           <td className="p-4 align-middle font-medium">
-                            {format(date, "dd MMM yyyy", { locale: es })}
+                            {format(date, "dd MMM yyyy", { locale: dateLocale })}
                           </td>
                           {LOCATIONS.map((loc) => (
                             <td key={loc} className="p-1 align-middle">

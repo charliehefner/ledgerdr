@@ -883,6 +883,33 @@ export type Database = {
           },
         ]
       }
+      jornaleros: {
+        Row: {
+          cedula: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          cedula: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          cedula?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       operation_inputs: {
         Row: {
           created_at: string

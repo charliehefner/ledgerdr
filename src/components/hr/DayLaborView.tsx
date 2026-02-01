@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addWeeks, subWeeks, isAfter, startOfDay, eachDayOfInterval, getDay } from "date-fns";
@@ -178,6 +178,54 @@ export function DayLaborView() {
     });
 
     doc.save(`Jornales_Semana_${format(selectedFriday, "yyyy-MM-dd")}.pdf`);
+  };
+
+  // Generate Summary PDF grouped by worker
+  const generateSummaryPDF = () => {
+    const doc = new jsPDF();
+    const fridayStr = format(selectedFriday, "dd/MM/yyyy");
+    
+    doc.setFontSize(18);
+    doc.text(`Resumen Jornal - Semana ${fridayStr}`, 14, 20);
+    
+    doc.setFontSize(11);
+    doc.text(`Período: ${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`, 14, 30);
+    
+    const tableData: (string | { content: string; colSpan?: number; styles?: object })[][] = [];
+    
+    summaryByWorker.forEach((group) => {
+      group.entries.forEach((entry, idx) => {
+        tableData.push([
+          format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
+          entry.operation_description,
+          idx === 0 ? group.name : "",
+          `RD$ ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
+        ]);
+      });
+      // Subtotal row
+      tableData.push([
+        { content: "", colSpan: 2 },
+        { content: `Subtotal ${group.name}:`, styles: { fontStyle: "bold", halign: "right" } },
+        { content: `RD$ ${group.subtotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`, styles: { fontStyle: "bold" } },
+      ] as any);
+    });
+    
+    // Grand total row
+    tableData.push([
+      { content: "", colSpan: 2 },
+      { content: "TOTAL:", styles: { fontStyle: "bold", halign: "right" } },
+      { content: `RD$ ${weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`, styles: { fontStyle: "bold" } },
+    ] as any);
+
+    autoTable(doc, {
+      head: [["Fecha", "Descripción", "Nombre", "Monto"]],
+      body: tableData,
+      startY: 38,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`Resumen_Jornal_${format(selectedFriday, "yyyy-MM-dd")}.pdf`);
   };
 
   // Close week mutation
@@ -490,7 +538,13 @@ export function DayLaborView() {
       {entries.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Resumen por Trabajador</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Resumen Jornal</CardTitle>
+              <Button variant="outline" size="sm" onClick={generateSummaryPDF}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Exportar Resumen PDF
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -504,7 +558,7 @@ export function DayLaborView() {
               </TableHeader>
               <TableBody>
                 {summaryByWorker.map((group) => (
-                  <>
+                  <React.Fragment key={group.name}>
                     {group.entries.map((entry, idx) => (
                       <TableRow key={entry.id}>
                         <TableCell>{format(parseDateLocal(entry.work_date), "dd/MM/yyyy")}</TableCell>
@@ -522,7 +576,7 @@ export function DayLaborView() {
                         RD$ {group.subtotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
-                  </>
+                  </React.Fragment>
                 ))}
                 <TableRow className="bg-muted/50 font-bold">
                   <TableCell colSpan={2}></TableCell>

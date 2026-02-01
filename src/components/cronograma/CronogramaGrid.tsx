@@ -5,7 +5,7 @@ import { format, addWeeks, subWeeks, getDay, eachDayOfInterval, isSameDay, parse
 import { es, enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, ClipboardPaste } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, ClipboardPaste, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
@@ -28,6 +28,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type CronogramaEntry = {
   id: string;
@@ -355,6 +364,124 @@ export function CronogramaGrid() {
     ? ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
     : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  const fullDayLabels = language === "es"
+    ? ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  // Export to Excel
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(language === "es" ? "Cronograma" : "Schedule");
+
+    // Header row
+    const headerRow = [language === "es" ? "Trabajador" : "Worker"];
+    weekDays.forEach((day, idx) => {
+      headerRow.push(`${fullDayLabels[idx]} ${format(day, "d/M")} AM`);
+      headerRow.push(`${fullDayLabels[idx]} ${format(day, "d/M")} PM`);
+    });
+    worksheet.addRow(headerRow);
+
+    // Style header
+    const header = worksheet.getRow(1);
+    header.font = { bold: true };
+    header.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE8E8E8" },
+    };
+
+    // Data rows
+    allWorkerRows.forEach((worker) => {
+      if (worker.isTemp && !worker.id) return; // Skip empty temp rows
+      
+      const row = [worker.name];
+      weekDays.forEach((day, idx) => {
+        const dayNum = idx + 1;
+        const amEntry = getEntryForCell(worker, dayNum, "morning");
+        const pmEntry = getEntryForCell(worker, dayNum, "afternoon");
+        row.push(amEntry?.task || "");
+        row.push(pmEntry?.task || "");
+      });
+      worksheet.addRow(row);
+    });
+
+    // Auto-width columns
+    worksheet.columns.forEach((col) => {
+      col.width = 18;
+    });
+    worksheet.getColumn(1).width = 25;
+
+    // Generate file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cronograma_${format(selectedSaturday, "yyyy-MM-dd")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(language === "es" ? "Excel exportado" : "Excel exported");
+  };
+
+  // Export to PDF
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    
+    // Title
+    const title = language === "es" 
+      ? `Cronograma - Semana ${format(weekStart, "d/M")} al ${format(selectedSaturday, "d/M/yyyy")}`
+      : `Schedule - Week ${format(weekStart, "M/d")} to ${format(selectedSaturday, "M/d/yyyy")}`;
+    doc.setFontSize(14);
+    doc.text(title, 14, 15);
+
+    // Table headers
+    const headers = [[language === "es" ? "Trabajador" : "Worker"]];
+    weekDays.forEach((day, idx) => {
+      headers[0].push(`${dayLabels[idx]} ${format(day, "d/M")} AM`);
+      headers[0].push(`${dayLabels[idx]} ${format(day, "d/M")} PM`);
+    });
+
+    // Table data
+    const data: string[][] = [];
+    allWorkerRows.forEach((worker) => {
+      if (worker.isTemp && !worker.id) return;
+      
+      const row = [worker.name];
+      weekDays.forEach((day, idx) => {
+        const dayNum = idx + 1;
+        const amEntry = getEntryForCell(worker, dayNum, "morning");
+        const pmEntry = getEntryForCell(worker, dayNum, "afternoon");
+        row.push(amEntry?.task || "—");
+        row.push(pmEntry?.task || "—");
+      });
+      data.push(row);
+    });
+
+    autoTable(doc, {
+      head: headers,
+      body: data,
+      startY: 22,
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [100, 130, 160], textColor: 255 },
+      columnStyles: { 0: { cellWidth: 30 } },
+      theme: "grid",
+    });
+
+    doc.save(`cronograma_${format(selectedSaturday, "yyyy-MM-dd")}.pdf`);
+    toast.success(language === "es" ? "PDF exportado" : "PDF exported");
+  };
+
+  // Get entry for a cell
+  const getEntryForCell = (worker: WorkerRow, dayOfWeek: number, timeSlot: "morning" | "afternoon") => {
+    return entries.find(
+      (e) =>
+        e.worker_name === worker.name &&
+        e.worker_type === worker.type &&
+        e.day_of_week === dayOfWeek &&
+        e.time_slot === timeSlot
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Week Navigation */}
@@ -377,6 +504,26 @@ export function CronogramaGrid() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Export dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="bg-excel text-excel-foreground hover:bg-excel/90">
+                <Download className="h-4 w-4 mr-2" />
+                {t("common.export")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportExcel}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <FileText className="h-4 w-4 mr-2" />
+                PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {isWeekClosed ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Lock className="h-4 w-4" />

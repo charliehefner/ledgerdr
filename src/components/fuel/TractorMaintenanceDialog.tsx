@@ -104,6 +104,7 @@ export function TractorMaintenanceDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tractor-maintenance", tractorId] });
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors-latest-maintenance"] });
       toast.success("Mantenimiento registrado");
       // Reset form
       setMaintenanceDate(format(new Date(), "yyyy-MM-dd"));
@@ -130,6 +131,7 @@ export function TractorMaintenanceDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tractor-maintenance", tractorId] });
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors-latest-maintenance"] });
       toast.success("Registro eliminado");
     },
     onError: (error) => {

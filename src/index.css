@@ -38,6 +38,18 @@
     /* Accent - Warm amber for highlights */
     --accent: 38 95% 50%;
     --accent-foreground: 220 30% 15%;
+    
+    /* Tab color schemes - Brighter, more vivid */
+    --tab-turquoise: 174 70% 42%;
+    --tab-turquoise-light: 174 65% 85%;
+    --tab-coral: 12 85% 60%;
+    --tab-coral-light: 12 75% 90%;
+    --tab-sky: 200 90% 50%;
+    --tab-sky-light: 200 85% 88%;
+    --tab-violet: 270 70% 55%;
+    --tab-violet-light: 270 60% 90%;
+    --tab-lime: 82 70% 45%;
+    --tab-lime-light: 82 60% 88%;
 
     /* Status colors */
     --destructive: 0 72% 51%;
@@ -105,6 +117,18 @@
 
     --accent: 38 95% 55%;
     --accent-foreground: 220 30% 8%;
+    
+    /* Tab color schemes - Dark mode */
+    --tab-turquoise: 174 65% 50%;
+    --tab-turquoise-light: 174 50% 20%;
+    --tab-coral: 12 80% 55%;
+    --tab-coral-light: 12 60% 20%;
+    --tab-sky: 200 85% 55%;
+    --tab-sky-light: 200 70% 20%;
+    --tab-violet: 270 65% 60%;
+    --tab-violet-light: 270 50% 22%;
+    --tab-lime: 82 65% 50%;
+    --tab-lime-light: 82 50% 18%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;

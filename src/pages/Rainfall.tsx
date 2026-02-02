@@ -272,11 +272,11 @@ export default function Rainfall() {
 
         <Tabs defaultValue="daily" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="daily" className="flex items-center gap-2">
+            <TabsTrigger value="daily" colorScheme="turquoise" className="flex items-center gap-2">
               <TableIcon className="h-4 w-4" />
               {language === "en" ? "Daily Records" : "Registros Diarios"}
             </TabsTrigger>
-            <TabsTrigger value="monthly" className="flex items-center gap-2">
+            <TabsTrigger value="monthly" colorScheme="sky" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               {language === "en" ? "Monthly Summary" : "Resumen Mensual"}
             </TabsTrigger>

@@ -84,6 +84,29 @@ export default {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
+        // Tab color tokens
+        tab: {
+          turquoise: {
+            DEFAULT: "hsl(var(--tab-turquoise))",
+            light: "hsl(var(--tab-turquoise-light))",
+          },
+          coral: {
+            DEFAULT: "hsl(var(--tab-coral))",
+            light: "hsl(var(--tab-coral-light))",
+          },
+          sky: {
+            DEFAULT: "hsl(var(--tab-sky))",
+            light: "hsl(var(--tab-sky-light))",
+          },
+          violet: {
+            DEFAULT: "hsl(var(--tab-violet))",
+            light: "hsl(var(--tab-violet-light))",
+          },
+          lime: {
+            DEFAULT: "hsl(var(--tab-lime))",
+            light: "hsl(var(--tab-lime-light))",
+          },
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

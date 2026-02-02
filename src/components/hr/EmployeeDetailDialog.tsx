@@ -383,12 +383,12 @@ export function EmployeeDetailDialog({
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="info">Info</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
-            <TabsTrigger value="salary">Salario</TabsTrigger>
-            <TabsTrigger value="vacations">Vacaciones</TabsTrigger>
-            <TabsTrigger value="incidents">Incidentes</TabsTrigger>
-            <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="info" colorScheme="turquoise">Info</TabsTrigger>
+            <TabsTrigger value="history" colorScheme="sky">Historial</TabsTrigger>
+            <TabsTrigger value="salary" colorScheme="lime">Salario</TabsTrigger>
+            <TabsTrigger value="vacations" colorScheme="coral">Vacaciones</TabsTrigger>
+            <TabsTrigger value="incidents" colorScheme="violet">Incidentes</TabsTrigger>
+            <TabsTrigger value="documents" colorScheme="sky">Documentos</TabsTrigger>
           </TabsList>
 
           {/* Info Tab */}

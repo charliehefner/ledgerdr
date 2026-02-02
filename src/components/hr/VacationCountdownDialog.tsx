@@ -196,11 +196,11 @@ export function VacationCountdownDialog({
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="status">Estado</TabsTrigger>
-            <TabsTrigger value="add" disabled={!canModifySettings}>
+            <TabsTrigger value="status" colorScheme="turquoise">Estado</TabsTrigger>
+            <TabsTrigger value="add" colorScheme="coral" disabled={!canModifySettings}>
               Registrar
             </TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
+            <TabsTrigger value="history" colorScheme="sky">Historial</TabsTrigger>
           </TabsList>
 
           {/* Status Tab */}

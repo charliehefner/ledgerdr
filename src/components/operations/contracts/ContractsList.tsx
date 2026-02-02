@@ -150,12 +150,10 @@ export function ContractsList({
                         <FileText className="h-4 w-4" />
                       </Button>
                       
-                      {/* Edit Button - only for active contracts */}
-                      {contract.is_active && (
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(contract)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
+                      {/* Edit Button */}
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(contract)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       
                       {/* Close Contract Button - only for active contracts */}
                       {contract.is_active && (

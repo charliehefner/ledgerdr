@@ -11,6 +11,7 @@ import { ContractsList } from "./contracts/ContractsList";
 import { DailyEntryDialog } from "./contracts/DailyEntryDialog";
 import { DailyEntriesList } from "./contracts/DailyEntriesList";
 import { ContractReport } from "./contracts/ContractReport";
+import { ContractDetailReport } from "./contracts/ContractDetailReport";
 import { toast } from "sonner";
 
 export interface ServiceContract {
@@ -64,6 +65,9 @@ export function ContractedServicesView() {
   const [editingEntry, setEditingEntry] = useState<ContractEntry | null>(null);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [detailReportOpen, setDetailReportOpen] = useState(false);
+  const [detailContract, setDetailContract] = useState<ServiceContract | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   // Fetch contracts
   const { data: contracts = [], isLoading: loadingContracts } = useQuery({
@@ -127,6 +131,23 @@ export function ContractedServicesView() {
     },
   });
 
+  const closeContractMutation = useMutation({
+    mutationFn: async (contract: ServiceContract) => {
+      const { error } = await supabase
+        .from("service_contracts")
+        .update({ is_active: false })
+        .eq("id", contract.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-contracts"] });
+      toast.success(t("contracts.closed"));
+    },
+    onError: () => {
+      toast.error(t("contracts.closeError"));
+    },
+  });
+
   const deleteEntryMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -137,6 +158,7 @@ export function ContractedServicesView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-contract-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["contract-entries-detail"] });
       toast.success(t("contracts.entryDeleted"));
     },
     onError: () => {
@@ -162,6 +184,15 @@ export function ContractedServicesView() {
   const handleNewContract = () => {
     setEditingContract(null);
     setContractDialogOpen(true);
+  };
+
+  const handleViewDetails = (contract: ServiceContract) => {
+    setDetailContract(contract);
+    setDetailReportOpen(true);
+  };
+
+  const handleCloseContract = (contract: ServiceContract) => {
+    closeContractMutation.mutate(contract);
   };
 
   const activeContracts = contracts.filter((c) => c.is_active);
@@ -200,14 +231,18 @@ export function ContractedServicesView() {
         <TabsContent value="contracts" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>{t("contracts.activeContracts")}</CardTitle>
+              <CardTitle>{t("contracts.contracts")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ContractsList
                 contracts={contracts}
                 isLoading={loadingContracts}
+                showInactive={showInactive}
+                onShowInactiveChange={setShowInactive}
                 onEdit={handleEditContract}
                 onDelete={(id) => deleteContractMutation.mutate(id)}
+                onClose={handleCloseContract}
+                onViewDetails={handleViewDetails}
               />
             </CardContent>
           </Card>
@@ -265,6 +300,14 @@ export function ContractedServicesView() {
         onOpenChange={setReportOpen}
         contracts={contracts}
         entries={entries}
+      />
+
+      <ContractDetailReport
+        open={detailReportOpen}
+        onOpenChange={setDetailReportOpen}
+        contract={detailContract}
+        onEditEntry={handleEditEntry}
+        onDeleteEntry={(id) => deleteEntryMutation.mutate(id)}
       />
     </div>
   );

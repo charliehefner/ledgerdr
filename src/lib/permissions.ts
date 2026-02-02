@@ -28,6 +28,34 @@ export type Section =
   | "cronograma"
   | "settings";
 
+// HR sub-tabs for granular access control
+export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-employee";
+
+// Which HR tabs each role can access
+const hrTabPermissions: Record<HrTab, UserRole[]> = {
+  payroll: ["admin", "management", "accountant"],
+  "day-labor": ["admin", "management", "accountant", "supervisor"],
+  jornaleros: ["admin", "management", "accountant", "supervisor"],
+  employees: ["admin", "management", "accountant"],
+  "add-employee": ["admin", "management"],
+};
+
+/**
+ * Check if a role can access a specific HR tab
+ */
+export function canAccessHrTab(role: UserRole | undefined, tab: HrTab): boolean {
+  if (!role) return false;
+  return hrTabPermissions[tab]?.includes(role) ?? false;
+}
+
+/**
+ * Get the default HR tab for a role
+ */
+export function getDefaultHrTabForRole(role: UserRole): HrTab {
+  if (role === "supervisor") return "day-labor";
+  return "payroll";
+}
+
 // Maps routes to sections
 export const routeToSection: Record<string, Section> = {
   "/": "dashboard",
@@ -50,7 +78,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   transactions: ["admin", "management", "accountant", "viewer"],
   invoices: ["admin", "management", "accountant", "viewer"],
   reports: ["admin", "management", "accountant", "viewer"],
-  hr: ["admin", "management", "accountant"],
+  hr: ["admin", "management", "accountant", "supervisor"],
   inventory: ["admin", "management", "supervisor", "viewer"],
   fuel: ["admin", "management", "supervisor", "viewer"],
   equipment: ["admin", "management", "supervisor", "viewer"],

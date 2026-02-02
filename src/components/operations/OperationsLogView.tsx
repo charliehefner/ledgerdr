@@ -35,7 +35,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock, MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock, MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -509,7 +509,7 @@ export function OperationsLogView() {
         start_hours: isMechanical && data.start_hours ? parseFloat(data.start_hours) : null,
         end_hours: isMechanical && data.end_hours ? parseFloat(data.end_hours) : null,
         workers_count: !isMechanical && data.workers_count ? parseInt(data.workers_count) : null,
-        hectares_done: parseFloat(data.hectares_done),
+        hectares_done: data.hectares_done ? parseFloat(data.hectares_done) : null,
         notes: data.notes || null,
         driver: isMechanical && data.driver ? data.driver : null,
       };
@@ -582,7 +582,7 @@ export function OperationsLogView() {
         start_hours: isMechanical && data.start_hours ? parseFloat(data.start_hours) : null,
         end_hours: isMechanical && data.end_hours ? parseFloat(data.end_hours) : null,
         workers_count: !isMechanical && data.workers_count ? parseInt(data.workers_count) : null,
-        hectares_done: parseFloat(data.hectares_done),
+        hectares_done: data.hectares_done ? parseFloat(data.hectares_done) : null,
         notes: data.notes || null,
         driver: isMechanical && data.driver ? data.driver : null,
       };
@@ -778,24 +778,28 @@ export function OperationsLogView() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.field_id || !form.operation_type_id || !form.hectares_done) {
+    // Morning entry only requires: field, operation type, and for mechanical: tractor, implement, start hours
+    // End of day adds: end hours, hectares done, inputs
+    if (!form.field_id || !form.operation_type_id) {
       toast({
         title: "Error de Validación",
-        description: "Complete todos los campos requeridos.",
+        description: "Complete todos los campos requeridos (Campo y Tipo de Operación).",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate no negative hectares
-    const hectares = parseFloat(form.hectares_done);
-    if (isNaN(hectares) || hectares < 0) {
-      toast({
-        title: "Error de Validación",
-        description: "Las hectáreas trabajadas no pueden ser negativas.",
-        variant: "destructive",
-      });
-      return;
+    // Validate no negative hectares if provided
+    if (form.hectares_done) {
+      const hectares = parseFloat(form.hectares_done);
+      if (isNaN(hectares) || hectares < 0) {
+        toast({
+          title: "Error de Validación",
+          description: "Las hectáreas trabajadas no pueden ser negativas.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (isMechanical && (!form.tractor_id || !form.implement_id)) {
@@ -807,7 +811,7 @@ export function OperationsLogView() {
       return;
     }
 
-    // Validate start hours < end hours for mechanical operations
+    // Validate start hours < end hours for mechanical operations (only if both provided)
     if (isMechanical && form.start_hours && form.end_hours) {
       const startHours = parseFloat(form.start_hours);
       const endHours = parseFloat(form.end_hours);
@@ -1204,6 +1208,7 @@ export function OperationsLogView() {
                         <Label className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           {t("operations.form.hourMeterEnd")}
+                          <span className="text-xs text-muted-foreground font-normal">(Cierre)</span>
                         </Label>
                         <Input
                           type="number"
@@ -1236,7 +1241,10 @@ export function OperationsLogView() {
                 )}
 
                 <div>
-                  <Label>{t("operations.form.hectaresDone")} *</Label>
+                  <Label className="flex items-center gap-2">
+                    {t("operations.form.hectaresDone")}
+                    <span className="text-xs text-muted-foreground font-normal">(Cierre)</span>
+                  </Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -1251,6 +1259,7 @@ export function OperationsLogView() {
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
                     <Label className="text-base font-semibold">{t("operations.form.inputsUsed")}</Label>
+                    <span className="text-xs text-muted-foreground font-normal">(Cierre)</span>
                   </div>
                   
                   <div className="flex gap-2">
@@ -1450,100 +1459,121 @@ export function OperationsLogView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOperations.map((op) => (
-              <TableRow key={op.id}>
-                {isVisible("date") && <TableCell>{format(parseDateLocal(op.operation_date), "MMM d, yyyy")}</TableCell>}
-                {isVisible("field") && <TableCell className="font-medium">{op.fields.name}</TableCell>}
-                {isVisible("farm") && <TableCell>{op.fields.farms.name}</TableCell>}
-                {isVisible("operation") && (
-                  <TableCell>
-                    <Badge variant={op.operation_types.is_mechanical ? "default" : "secondary"}>
-                      {op.operation_types.name}
-                    </Badge>
-                  </TableCell>
-                )}
-                {isVisible("tractor") && (
-                  <TableCell>
-                    {op.operation_types.is_mechanical
-                      ? op.fuel_equipment?.name || "-"
-                      : `${op.workers_count} obreros`}
-                  </TableCell>
-                )}
-                {isVisible("driver") && <TableCell>{op.driver || "-"}</TableCell>}
-                {isVisible("implement") && <TableCell>{op.implements?.name || "-"}</TableCell>}
-                {isVisible("hours") && (
-                  <TableCell className="font-mono">
-                    {calculateHours(op)} {calculateHours(op) !== "-" && "hrs"}
-                  </TableCell>
-                )}
-                {isVisible("hectares") && <TableCell className="font-medium">{op.hectares_done} ha</TableCell>}
-                {isVisible("inputs") && (
-                  <TableCell>
-                    {op.operation_inputs && op.operation_inputs.length > 0 ? (
-                      <div className="space-y-1">
-                        {op.operation_inputs.map((input) => (
-                          <div key={input.id} className="text-xs">
-                            {input.inventory_items.commercial_name}: {input.quantity_used} {input.inventory_items.use_unit}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                )}
-                {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
-                {canEdit && (
-                  <TableCell className="text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 px-2">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setEditingOperation(op);
-                          setForm({
-                            operation_date: parseDateLocal(op.operation_date),
-                            field_id: op.field_id,
-                            operation_type_id: op.operation_type_id,
-                            tractor_id: op.tractor_id || "",
-                            implement_id: op.implement_id || "",
-                            start_hours: op.start_hours?.toString() || "",
-                            end_hours: op.end_hours?.toString() || "",
-                            workers_count: op.workers_count?.toString() || "",
-                            hectares_done: op.hectares_done.toString(),
-                            notes: op.notes || "",
-                            driver: op.driver || "",
-                          });
-                          // Populate existing inputs for editing
-                          if (op.operation_inputs && op.operation_inputs.length > 0) {
-                            setInputs(op.operation_inputs.map(input => ({
-                              inventory_item_id: input.inventory_item_id,
-                              quantity_used: input.quantity_used,
-                            })));
-                          } else {
-                            setInputs([]);
-                          }
-                          setIsDialogOpen(true);
-                        }}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setDeleteOperationId(op.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
+            {filteredOperations.map((op) => {
+              // Check if operation is missing closing data
+              const isMissingClosingData = op.operation_types.is_mechanical 
+                ? (op.end_hours == null || op.hectares_done == null || op.hectares_done === 0)
+                : (op.hectares_done == null || op.hectares_done === 0);
+              
+              return (
+                <TableRow key={op.id} className={isMissingClosingData ? "bg-warning/10" : ""}>
+                  {isVisible("date") && (
+                    <TableCell className="flex items-center gap-2">
+                      {isMissingClosingData && (
+                        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label="Falta datos de cierre" />
+                      )}
+                      {format(parseDateLocal(op.operation_date), "MMM d, yyyy")}
+                    </TableCell>
+                  )}
+                  {isVisible("field") && <TableCell className="font-medium">{op.fields.name}</TableCell>}
+                  {isVisible("farm") && <TableCell>{op.fields.farms.name}</TableCell>}
+                  {isVisible("operation") && (
+                    <TableCell>
+                      <Badge variant={op.operation_types.is_mechanical ? "default" : "secondary"}>
+                        {op.operation_types.name}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {isVisible("tractor") && (
+                    <TableCell>
+                      {op.operation_types.is_mechanical
+                        ? op.fuel_equipment?.name || "-"
+                        : `${op.workers_count} obreros`}
+                    </TableCell>
+                  )}
+                  {isVisible("driver") && <TableCell>{op.driver || "-"}</TableCell>}
+                  {isVisible("implement") && <TableCell>{op.implements?.name || "-"}</TableCell>}
+                  {isVisible("hours") && (
+                    <TableCell className={cn("font-mono", op.operation_types.is_mechanical && op.end_hours == null && "text-warning")}>
+                      {calculateHours(op)} {calculateHours(op) !== "-" && "hrs"}
+                    </TableCell>
+                  )}
+                  {isVisible("hectares") && (
+                    <TableCell className={cn("font-medium", (op.hectares_done == null || op.hectares_done === 0) && "text-warning")}>
+                      {op.hectares_done != null ? `${op.hectares_done} ha` : "-"}
+                    </TableCell>
+                  )}
+                  {isVisible("inputs") && (
+                    <TableCell>
+                      {op.operation_inputs && op.operation_inputs.length > 0 ? (
+                        <div className="space-y-1">
+                          {op.operation_inputs.map((input) => (
+                            <div key={input.id} className="text-xs">
+                              {input.inventory_items.commercial_name}: {input.quantity_used} {input.inventory_items.use_unit}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  )}
+                  {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
+                  {canEdit && (
+                    <TableCell className={cn(
+                      "text-right sticky right-0 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                      isMissingClosingData ? "bg-warning/10" : "bg-background"
+                    )}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 px-2">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setEditingOperation(op);
+                            setForm({
+                              operation_date: parseDateLocal(op.operation_date),
+                              field_id: op.field_id,
+                              operation_type_id: op.operation_type_id,
+                              tractor_id: op.tractor_id || "",
+                              implement_id: op.implement_id || "",
+                              start_hours: op.start_hours?.toString() || "",
+                              end_hours: op.end_hours?.toString() || "",
+                              workers_count: op.workers_count?.toString() || "",
+                              hectares_done: op.hectares_done?.toString() || "",
+                              notes: op.notes || "",
+                              driver: op.driver || "",
+                            });
+                            // Populate existing inputs for editing
+                            if (op.operation_inputs && op.operation_inputs.length > 0) {
+                              setInputs(op.operation_inputs.map(input => ({
+                                inventory_item_id: input.inventory_item_id,
+                                quantity_used: input.quantity_used,
+                              })));
+                            } else {
+                              setInputs([]);
+                            }
+                            setIsDialogOpen(true);
+                          }}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            {isMissingClosingData ? "Completar Cierre" : "Editar"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteOperationId(op.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}

@@ -1054,7 +1054,7 @@ export type Database = {
           driver: string | null
           end_hours: number | null
           field_id: string
-          hectares_done: number
+          hectares_done: number | null
           id: string
           implement_id: string | null
           notes: string | null
@@ -1070,7 +1070,7 @@ export type Database = {
           driver?: string | null
           end_hours?: number | null
           field_id: string
-          hectares_done: number
+          hectares_done?: number | null
           id?: string
           implement_id?: string | null
           notes?: string | null
@@ -1086,7 +1086,7 @@ export type Database = {
           driver?: string | null
           end_hours?: number | null
           field_id?: string
-          hectares_done?: number
+          hectares_done?: number | null
           id?: string
           implement_id?: string | null
           notes?: string | null

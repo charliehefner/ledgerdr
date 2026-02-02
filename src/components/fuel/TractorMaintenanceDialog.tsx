@@ -129,6 +129,7 @@ export function TractorMaintenanceDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tractor-maintenance", tractorId] });
+      queryClient.invalidateQueries({ queryKey: ["tractors"] });
       toast.success("Registro eliminado");
     },
     onError: (error) => {

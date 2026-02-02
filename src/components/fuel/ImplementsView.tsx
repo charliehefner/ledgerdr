@@ -48,6 +48,7 @@ interface Implement {
 
 const implementTypes = [
   "Disk Harrow",
+  "Harvest",
   "Plow",
   "Cultivator",
   "Sprayer",

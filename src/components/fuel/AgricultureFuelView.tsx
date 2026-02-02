@@ -674,12 +674,12 @@ export function AgricultureFuelView() {
       {/* Tabs for different views */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="report">{t("fuel.fuelingReport")}</TabsTrigger>
-          <TabsTrigger value="tank-history">
+          <TabsTrigger value="report" colorScheme="turquoise">{t("fuel.fuelingReport")}</TabsTrigger>
+          <TabsTrigger value="tank-history" colorScheme="sky">
             <History className="mr-2 h-4 w-4" />
             {t("fuel.tankHistory")}
           </TabsTrigger>
-          <TabsTrigger value="tractor-history">
+          <TabsTrigger value="tractor-history" colorScheme="coral">
             <Gauge className="mr-2 h-4 w-4" />
             {t("fuel.tractorHistory")}
           </TabsTrigger>

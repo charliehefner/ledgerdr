@@ -188,9 +188,9 @@ export function TractorMaintenanceDialog({
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="status">Estado</TabsTrigger>
-            <TabsTrigger value="add">Registrar</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
+            <TabsTrigger value="status" colorScheme="turquoise">Estado</TabsTrigger>
+            <TabsTrigger value="add" colorScheme="coral">Registrar</TabsTrigger>
+            <TabsTrigger value="history" colorScheme="sky">Historial</TabsTrigger>
           </TabsList>
 
           {/* Status Tab */}

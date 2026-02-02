@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import JSZip from "jszip";
 import { Progress } from "@/components/ui/progress";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Tables to export (order matters for foreign key dependencies)
 const TABLES_TO_EXPORT = [
@@ -660,6 +661,8 @@ export function DatabaseBackup() {
     return sql;
   };
 
+  const { t, language } = useLanguage();
+
   const handleExport = async () => {
     setIsExporting(true);
     setProgress(0);
@@ -670,7 +673,7 @@ export function DatabaseBackup() {
       let completedSteps = 0;
 
       // Step 1: Add schema
-      setCurrentStep("Generando esquema de base de datos...");
+      setCurrentStep(t("backup.generatingSchema"));
       zip.file('00_schema.sql', SCHEMA_SQL);
       completedSteps++;
       setProgress((completedSteps / totalSteps) * 100);
@@ -685,7 +688,7 @@ export function DatabaseBackup() {
       const allData: Record<string, unknown[]> = {};
       
       for (const tableName of TABLES_TO_EXPORT) {
-        setCurrentStep(`Exportando ${tableName}...`);
+        setCurrentStep(t("backup.exportingTable").replace("{table}", tableName));
         const data = await fetchTableData(tableName);
         allData[tableName] = data;
         dataSQL += generateSQLInserts(tableName, data as Record<string, unknown>[]);
@@ -703,7 +706,7 @@ export function DatabaseBackup() {
       }
 
       // Step 3: Fetch attachments
-      setCurrentStep("Descargando archivos adjuntos...");
+      setCurrentStep(t("backup.downloadingAttachments"));
       const attachmentsFolder = zip.folder('attachments');
       const transactionAttachments = await fetchStorageFiles('transaction-attachments');
       for (const file of transactionAttachments) {
@@ -774,7 +777,7 @@ export function DatabaseBackup() {
 `);
 
       // Generate and download
-      setCurrentStep("Generando archivo ZIP...");
+      setCurrentStep(t("backup.generatingZip"));
       const blob = await zip.generateAsync({ 
         type: 'blob',
         compression: 'DEFLATE',
@@ -791,10 +794,15 @@ export function DatabaseBackup() {
       URL.revokeObjectURL(url);
       
       setProgress(100);
-      toast.success(`¡Respaldo completo! ${metadata.totalRows.toLocaleString()} filas + ${transactionAttachments.length + employeeDocuments.length} archivos exportados.`);
+      const totalFiles = transactionAttachments.length + employeeDocuments.length;
+      toast.success(
+        t("backup.complete")
+          .replace("{rows}", metadata.totalRows.toLocaleString(language === 'es' ? 'es-DO' : 'en-US'))
+          .replace("{files}", totalFiles.toString())
+      );
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Error al exportar la base de datos');
+      toast.error(t("backup.error"));
     } finally {
       setIsExporting(false);
       setCurrentStep("");
@@ -809,42 +817,42 @@ export function DatabaseBackup() {
           <Database className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold">Respaldo Completo de Base de Datos</h3>
+          <h3 className="font-semibold">{t("backup.title")}</h3>
           <p className="text-sm text-muted-foreground">
-            Descarga un respaldo completo para migración del sistema
+            {t("backup.subtitle")}
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
           <div className="flex gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-800 dark:text-amber-200">
-              <p className="font-medium mb-1">Este respaldo incluye TODO lo necesario:</p>
-              <ul className="list-disc list-inside space-y-0.5 text-amber-700 dark:text-amber-300">
-                <li>Esquema completo (CREATE TABLE, tipos, funciones)</li>
-                <li>Todos los datos de {TABLES_TO_EXPORT.length} tablas</li>
-                <li>Archivos adjuntos (facturas y documentos)</li>
-                <li>Instrucciones de restauración</li>
+            <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium mb-1">{t("backup.includesAll")}</p>
+              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                <li>{t("backup.schemaComplete")}</li>
+                <li>{t("backup.allDataFrom").replace("{count}", TABLES_TO_EXPORT.length.toString())}</li>
+                <li>{t("backup.attachments")}</li>
+                <li>{t("backup.instructions")}</li>
               </ul>
             </div>
           </div>
         </div>
 
         <p className="text-sm text-muted-foreground">
-          El archivo ZIP contendrá:
+          {t("backup.zipContains")}
         </p>
         <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-          <li><strong>00_schema.sql</strong> - Estructura completa de la base de datos</li>
-          <li><strong>01_data.sql</strong> - INSERT statements para todos los datos</li>
-          <li><strong>backup.json</strong> - Todos los datos en formato JSON</li>
-          <li><strong>attachments/</strong> - Todos los archivos adjuntos</li>
-          <li><strong>README.md</strong> - Instrucciones de restauración</li>
+          <li><strong>00_schema.sql</strong> - {t("backup.schemaFile")}</li>
+          <li><strong>01_data.sql</strong> - {t("backup.dataFile")}</li>
+          <li><strong>backup.json</strong> - {t("backup.jsonFile")}</li>
+          <li><strong>attachments/</strong> - {t("backup.attachmentsFolder")}</li>
+          <li><strong>README.md</strong> - {t("backup.readmeFile")}</li>
         </ul>
 
         <p className="text-xs text-muted-foreground italic">
-          Tamaño estimado: ~15-20 MB (datos + ~12 MB de archivos adjuntos)
+          {t("backup.estimatedSize")}
         </p>
         
         {isExporting && (
@@ -863,12 +871,12 @@ export function DatabaseBackup() {
           {isExporting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Exportando... {Math.round(progress)}%
+              {t("backup.exporting")} {Math.round(progress)}%
             </>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              Descargar Respaldo Completo
+              {t("backup.downloadBackup")}
             </>
           )}
         </Button>

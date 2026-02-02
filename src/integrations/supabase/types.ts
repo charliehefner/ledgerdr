@@ -1312,6 +1312,144 @@ export type Database = {
         }
         Relationships: []
       }
+      service_contract_entries: {
+        Row: {
+          calculated_cost: number
+          comments: string | null
+          contract_id: string
+          cost_override: number | null
+          created_at: string
+          description: string
+          entry_date: string
+          id: string
+          units_charged: number
+          updated_at: string
+        }
+        Insert: {
+          calculated_cost?: number
+          comments?: string | null
+          contract_id: string
+          cost_override?: number | null
+          created_at?: string
+          description: string
+          entry_date?: string
+          id?: string
+          units_charged?: number
+          updated_at?: string
+        }
+        Update: {
+          calculated_cost?: number
+          comments?: string | null
+          contract_id?: string
+          cost_override?: number | null
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          units_charged?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contract_entries_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_contract_line_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          entry_id: string
+          id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description: string
+          entry_id: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          entry_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contract_line_items_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "service_contract_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_contracts: {
+        Row: {
+          bank: string | null
+          bank_account: string | null
+          contract_name: string
+          created_at: string
+          farm_id: string | null
+          id: string
+          is_active: boolean
+          operation_type: string
+          operation_type_other: string | null
+          owner_cedula_rnc: string | null
+          owner_name: string
+          price_per_unit: number
+          unit_type: string
+          updated_at: string
+        }
+        Insert: {
+          bank?: string | null
+          bank_account?: string | null
+          contract_name: string
+          created_at?: string
+          farm_id?: string | null
+          id?: string
+          is_active?: boolean
+          operation_type: string
+          operation_type_other?: string | null
+          owner_cedula_rnc?: string | null
+          owner_name: string
+          price_per_unit?: number
+          unit_type: string
+          updated_at?: string
+        }
+        Update: {
+          bank?: string | null
+          bank_account?: string | null
+          contract_name?: string
+          created_at?: string
+          farm_id?: string | null
+          id?: string
+          is_active?: boolean
+          operation_type?: string
+          operation_type_other?: string | null
+          owner_cedula_rnc?: string | null
+          owner_name?: string
+          price_per_unit?: number
+          unit_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contracts_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tractor_maintenance: {
         Row: {
           created_at: string

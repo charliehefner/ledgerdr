@@ -7,6 +7,7 @@ import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { FieldProgressReport } from "@/components/operations/FieldProgressReport";
 import { InputUsageReport } from "@/components/operations/InputUsageReport";
+import { ContractedServicesView } from "@/components/operations/ContractedServicesView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Operations() {
@@ -33,6 +34,7 @@ export default function Operations() {
               <TabsTrigger value="log" colorScheme="primary">{t("operations.log")}</TabsTrigger>
               <TabsTrigger value="progress" colorScheme="secondary">{t("operations.fieldProgress")}</TabsTrigger>
               <TabsTrigger value="input-usage" colorScheme="accent">{t("operations.inputUsage")}</TabsTrigger>
+              <TabsTrigger value="contracts" colorScheme="primary">{t("operations.contracts")}</TabsTrigger>
             </div>
             <div className="flex gap-1">
               <TabsTrigger value="farms" colorScheme="primary">{t("operations.farmsFields")}</TabsTrigger>
@@ -50,6 +52,10 @@ export default function Operations() {
 
           <TabsContent value="input-usage" className="mt-6">
             <InputUsageReport initialInputId={initialInputId} />
+          </TabsContent>
+
+          <TabsContent value="contracts" className="mt-6">
+            <ContractedServicesView />
           </TabsContent>
 
           <TabsContent value="farms" className="mt-6">

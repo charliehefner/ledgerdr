@@ -346,27 +346,30 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="farm_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("contracts.farm")}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("contracts.selectFarm")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">{t("contracts.noFarm")}</SelectItem>
-                        {farms.map((farm) => (
-                          <SelectItem key={farm.id} value={farm.id}>
-                            {farm.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <FormField
+                  control={form.control}
+                  name="farm_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("contracts.farm")}</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
+                        value={field.value || "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("contracts.selectFarm")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">{t("contracts.noFarm")}</SelectItem>
+                          {farms.map((farm) => (
+                            <SelectItem key={farm.id} value={farm.id}>
+                              {farm.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Pencil } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { createTransaction } from "@/lib/api";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -16,6 +16,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
 import { DayLaborAttachment } from "./DayLaborAttachment";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface Jornalero {
   id: string;
@@ -45,18 +46,27 @@ function getFridayOfWeek(date: Date): Date {
   return friday;
 }
 
-// Get the Monday of the week for a given date
-function getMondayOfWeek(date: Date): Date {
+// Get the Sunday (start) of the week for a given date (Sunday-Saturday week)
+function getSundayOfWeek(date: Date): Date {
   const dayOfWeek = getDay(date);
-  const daysFromMonday = (dayOfWeek + 6) % 7;
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - daysFromMonday);
-  return monday;
+  const sunday = new Date(date);
+  sunday.setDate(date.getDate() - dayOfWeek);
+  return sunday;
+}
+
+// Get the Saturday (end) of the week for a given date (Sunday-Saturday week)
+function getSaturdayOfWeek(date: Date): Date {
+  const dayOfWeek = getDay(date);
+  const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
+  const saturday = new Date(date);
+  saturday.setDate(date.getDate() + daysUntilSaturday);
+  return saturday;
 }
 
 export function DayLaborView() {
   const queryClient = useQueryClient();
   const [selectedFriday, setSelectedFriday] = useState(() => getFridayOfWeek(new Date()));
+  const [editingEntry, setEditingEntry] = useState<DayLaborEntry | null>(null);
   const [newEntry, setNewEntry] = useState({
     work_date: formatDateLocal(new Date()),
     operation_description: "",
@@ -66,10 +76,11 @@ export function DayLaborView() {
     amount: "",
   });
 
-  const weekStart = getMondayOfWeek(selectedFriday);
-  const weekEnd = selectedFriday;
+  // Week runs Sunday to Saturday, but we keep Friday as the reference for continuity
+  const weekStart = getSundayOfWeek(selectedFriday);
+  const weekEnd = getSaturdayOfWeek(selectedFriday);
 
-  // Check if close button should be enabled (Friday morning or later, but not after Sunday)
+  // Check if close button should be enabled (Friday morning or later)
   const today = new Date();
   const canClose = useMemo(() => {
     const fridayStart = startOfDay(selectedFriday);
@@ -159,6 +170,45 @@ export function DayLaborView() {
       toast({ title: "Error al eliminar entrada", description: error.message, variant: "destructive" });
     },
   });
+
+  // Update entry mutation
+  const updateEntry = useMutation({
+    mutationFn: async (entry: DayLaborEntry) => {
+      const { error } = await supabase
+        .from("day_labor_entries")
+        .update({
+          work_date: entry.work_date,
+          operation_description: entry.operation_description,
+          worker_name: entry.worker_name,
+          workers_count: entry.workers_count,
+          field_name: entry.field_name || null,
+          amount: entry.amount,
+        })
+        .eq("id", entry.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["day-labor"] });
+      setEditingEntry(null);
+      toast({ title: "Entrada actualizada" });
+    },
+    onError: (error) => {
+      toast({ title: "Error al actualizar entrada", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleEditEntry = (entry: DayLaborEntry) => {
+    setEditingEntry({ ...entry });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingEntry) return;
+    if (!editingEntry.operation_description || !editingEntry.worker_name || !editingEntry.amount) {
+      toast({ title: "Por favor complete los campos requeridos", variant: "destructive" });
+      return;
+    }
+    updateEntry.mutate(editingEntry);
+  };
 
   // Generate PDF - Summary by Worker (Resumen Jornal)
   const generatePDF = () => {
@@ -492,7 +542,15 @@ export function DayLaborView() {
                         RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       {!isWeekClosed && (
-                        <TableCell>
+                        <TableCell className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditEntry(entry)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -580,6 +638,89 @@ export function DayLaborView() {
           El botón de cerrar estará disponible el viernes ({format(selectedFriday, "d MMM", { locale: es })})
         </p>
       )}
+
+      {/* Edit Entry Dialog */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Entrada</DialogTitle>
+          </DialogHeader>
+          {editingEntry && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Fecha</label>
+                <Input
+                  type="date"
+                  value={editingEntry.work_date}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, work_date: e.target.value })}
+                  min={format(weekStart, "yyyy-MM-dd")}
+                  max={format(weekEnd, "yyyy-MM-dd")}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Operación *</label>
+                <Input
+                  value={editingEntry.operation_description}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, operation_description: e.target.value })}
+                  placeholder="Descripción del trabajo..."
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium"># Trabajadores *</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={editingEntry.workers_count}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, workers_count: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Jornalero *</label>
+                <Select
+                  value={editingEntry.worker_name}
+                  onValueChange={(value) => setEditingEntry({ ...editingEntry, worker_name: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar jornalero..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jornaleros.map((j) => (
+                      <SelectItem key={j.id} value={j.name}>
+                        {j.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Campo (opcional)</label>
+                <Input
+                  value={editingEntry.field_name || ""}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, field_name: e.target.value })}
+                  placeholder="Campo..."
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Monto (RD$) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editingEntry.amount}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingEntry(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updateEntry.isPending}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, UserCheck, UserX, Search, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { canWriteHrTab } from "@/lib/permissions";
 
 interface Jornalero {
   id: string;
@@ -22,7 +23,8 @@ interface Jornalero {
 
 export function JornalerosView() {
   const queryClient = useQueryClient();
-  const { canModifySettings } = useAuth();
+  const { user } = useAuth();
+  const canWrite = canWriteHrTab(user?.role, "jornaleros");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -153,7 +155,7 @@ export function JornalerosView() {
               >
                 {showInactive ? "Ocultar Inactivos" : "Mostrar Inactivos"}
               </Button>
-              {canModifySettings && (
+              {canWrite && (
                 <Button onClick={() => handleOpenDialog()}>
                   <Plus className="h-4 w-4 mr-2" />
                   Agregar Jornalero
@@ -184,7 +186,7 @@ export function JornalerosView() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Cédula</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
-                {canModifySettings && <TableHead className="w-24 text-center">Acciones</TableHead>}
+                {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -210,7 +212,7 @@ export function JornalerosView() {
                         {jornalero.is_active ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
-                    {canModifySettings && (
+                    {canWrite && (
                       <TableCell>
                         <div className="flex items-center justify-center gap-1">
                           <Button

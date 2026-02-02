@@ -261,10 +261,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Dashboard specific
     "dashboard.pendingNcf": "Transacciones Pendientes de NCF",
     "dashboard.pendingNcfSubtitle": "Falta número de comprobante fiscal",
-    "dashboard.noAttachment": "Transacciones Sin Adjunto",
-    "dashboard.noAttachmentSubtitle": "Pendiente de subir recibo/imagen",
+    "dashboard.noPaymentReceipt": "Sin Comprobante de Pago",
+    "dashboard.noPaymentReceiptSubtitle": "Falta comprobante de pago adjunto",
     "dashboard.allDocsAttached": "Todas las transacciones tienen documentos adjuntos",
-    "dashboard.allAttached": "Todas las transacciones tienen adjuntos subidos",
+    "dashboard.allPaymentReceipts": "Todas las transacciones tienen comprobante de pago",
+    
+    // Attachment categories
+    "attachment.ncf": "NCF",
+    "attachment.paymentReceipt": "Comprobante de Pago",
+    "attachment.quote": "Cotización",
 
     // Reports specific
     "reports.purchaseTotals": "Totales de Compra por Cuenta y CBS",
@@ -597,10 +602,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Dashboard specific
     "dashboard.pendingNcf": "Transactions Pending NCF",
     "dashboard.pendingNcfSubtitle": "Missing fiscal receipt number",
-    "dashboard.noAttachment": "Transactions Without Attachment",
-    "dashboard.noAttachmentSubtitle": "Pending receipt/image upload",
+    "dashboard.noPaymentReceipt": "Without Payment Receipt",
+    "dashboard.noPaymentReceiptSubtitle": "Missing payment receipt attachment",
     "dashboard.allDocsAttached": "All transactions have documents attached",
-    "dashboard.allAttached": "All transactions have attachments uploaded",
+    "dashboard.allPaymentReceipts": "All transactions have payment receipts",
+    
+    // Attachment categories
+    "attachment.ncf": "NCF",
+    "attachment.paymentReceipt": "Payment Receipt",
+    "attachment.quote": "Quote",
 
     // Reports specific
     "reports.purchaseTotals": "Purchase Totals by Account & CBS",

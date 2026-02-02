@@ -11,31 +11,32 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
-import { getAttachmentUrls } from '@/lib/attachments';
+import { getAllAttachmentUrls, AttachmentCategory } from '@/lib/attachments';
 import { getDescription } from '@/lib/getDescription';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { AttachmentCell } from './AttachmentCell';
+import { MultiAttachmentCell } from './MultiAttachmentCell';
 import { EditTransactionDialog } from '@/components/invoices/EditTransactionDialog';
 import { useColumnVisibility, ColumnConfig } from '@/hooks/useColumnVisibility';
 import { ColumnSelector } from '@/components/ui/column-selector';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const RECENT_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "Fecha", defaultVisible: true },
-  { key: "account", label: "Cuenta", defaultVisible: true },
-  { key: "project", label: "Proyecto", defaultVisible: false },
-  { key: "cbsCode", label: "Código CBS", defaultVisible: false },
-  { key: "purchaseDate", label: "Fecha Compra", defaultVisible: false },
-  { key: "description", label: "Descripción", defaultVisible: false },
-  { key: "currency", label: "Moneda", defaultVisible: true },
-  { key: "amount", label: "Monto", defaultVisible: true },
-  { key: "itbis", label: "ITBIS", defaultVisible: false },
-  { key: "payMethod", label: "Método Pago", defaultVisible: true },
-  { key: "document", label: "Documento", defaultVisible: true },
-  { key: "name", label: "Nombre", defaultVisible: false },
-  { key: "comments", label: "Comentarios", defaultVisible: false },
-  { key: "exchangeRate", label: "Tasa Cambio", defaultVisible: false },
-  { key: "attach", label: "Adjunto", defaultVisible: true },
+  { key: "date", label: "col.date", defaultVisible: true },
+  { key: "account", label: "col.account", defaultVisible: true },
+  { key: "project", label: "col.project", defaultVisible: false },
+  { key: "cbsCode", label: "col.cbsCode", defaultVisible: false },
+  { key: "purchaseDate", label: "col.purchaseDate", defaultVisible: false },
+  { key: "description", label: "common.description", defaultVisible: false },
+  { key: "currency", label: "col.currency", defaultVisible: true },
+  { key: "amount", label: "common.amount", defaultVisible: true },
+  { key: "itbis", label: "col.itbis", defaultVisible: false },
+  { key: "payMethod", label: "col.payMethod", defaultVisible: true },
+  { key: "document", label: "col.document", defaultVisible: true },
+  { key: "name", label: "common.name", defaultVisible: false },
+  { key: "comments", label: "col.comments", defaultVisible: false },
+  { key: "exchangeRate", label: "col.exchangeRate", defaultVisible: false },
+  { key: "attach", label: "col.attachment", defaultVisible: true },
 ];
 
 interface RecentTransactionsProps {
@@ -46,6 +47,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const queryClient = useQueryClient();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { t, language } = useLanguage();
 
   const columnVisibility = useColumnVisibility("recent-transactions", RECENT_COLUMNS);
 
@@ -70,10 +72,10 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   // Get transaction IDs to fetch attachments
   const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
 
-  // Fetch attachments from local database
-  const { data: attachments = {} } = useQuery({
+  // Fetch all attachments with categories from local database
+  const { data: allAttachments = {} } = useQuery({
     queryKey: ['transactionAttachments', transactionIds],
-    queryFn: () => getAttachmentUrls(transactionIds),
+    queryFn: () => getAllAttachmentUrls(transactionIds),
     enabled: transactionIds.length > 0,
   });
 
@@ -84,7 +86,11 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
 
   const getAccountDescription = (code: string) => {
     const account = accounts.find(a => a.code === code);
-    return account ? getDescription(account) : code;
+    return account ? getDescription(account, language) : code;
+  };
+
+  const getAttachmentsForTransaction = (txId: string): Record<AttachmentCategory, string | null> => {
+    return allAttachments[txId] || { ncf: null, payment_receipt: null, quote: null };
   };
 
   const visibleCount = columnVisibility.visibleColumns.length;
@@ -92,7 +98,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>Transacciones Recientes</CardTitle>
+        <CardTitle>{language === 'es' ? 'Transacciones Recientes' : 'Recent Transactions'}</CardTitle>
         <ColumnSelector
           columns={columnVisibility.allColumns}
           visibility={columnVisibility.visibility}
@@ -106,15 +112,15 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
             <TableHeader>
               <TableRow>
                 {columnVisibility.isVisible("id") && <TableHead>ID</TableHead>}
-                {columnVisibility.isVisible("date") && <TableHead>Fecha</TableHead>}
-                {columnVisibility.isVisible("account") && <TableHead>Cuenta</TableHead>}
-                {columnVisibility.isVisible("description") && <TableHead>Descripción</TableHead>}
-                {columnVisibility.isVisible("currency") && <TableHead>Moneda</TableHead>}
-                {columnVisibility.isVisible("amount") && <TableHead className="text-right">Monto</TableHead>}
-                {columnVisibility.isVisible("payMethod") && <TableHead>Método Pago</TableHead>}
-                {columnVisibility.isVisible("document") && <TableHead>Documento</TableHead>}
-                {columnVisibility.isVisible("name") && <TableHead>Nombre</TableHead>}
-                {columnVisibility.isVisible("attach") && <TableHead className="text-center">Adjunto</TableHead>}
+                {columnVisibility.isVisible("date") && <TableHead>{t("col.date")}</TableHead>}
+                {columnVisibility.isVisible("account") && <TableHead>{t("col.account")}</TableHead>}
+                {columnVisibility.isVisible("description") && <TableHead>{t("common.description")}</TableHead>}
+                {columnVisibility.isVisible("currency") && <TableHead>{t("col.currency")}</TableHead>}
+                {columnVisibility.isVisible("amount") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
+                {columnVisibility.isVisible("payMethod") && <TableHead>{t("col.payMethod")}</TableHead>}
+                {columnVisibility.isVisible("document") && <TableHead>{t("col.document")}</TableHead>}
+                {columnVisibility.isVisible("name") && <TableHead>{t("common.name")}</TableHead>}
+                {columnVisibility.isVisible("attach") && <TableHead className="text-center">{t("col.attachment")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -174,9 +180,9 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     {columnVisibility.isVisible("attach") && (
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         {tx.id ? (
-                          <AttachmentCell
+                          <MultiAttachmentCell
                             transactionId={tx.id}
-                            attachmentUrl={attachments[String(tx.id)] || null}
+                            attachments={getAttachmentsForTransaction(String(tx.id))}
                             onUpdate={handleAttachmentUpdate}
                           />
                         ) : (
@@ -189,7 +195,9 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
               ) : (
                 <TableRow>
                   <TableCell colSpan={visibleCount} className="text-center text-muted-foreground py-8">
-                    No hay transacciones aún. Agregue su primera transacción arriba.
+                    {language === 'es' 
+                      ? 'No hay transacciones aún. Agregue su primera transacción arriba.'
+                      : 'No transactions yet. Add your first transaction above.'}
                   </TableCell>
                 </TableRow>
               )}

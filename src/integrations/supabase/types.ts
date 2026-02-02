@@ -1355,6 +1355,7 @@ export type Database = {
       }
       transaction_attachments: {
         Row: {
+          attachment_category: string
           attachment_url: string
           created_at: string
           id: string
@@ -1362,6 +1363,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachment_category?: string
           attachment_url: string
           created_at?: string
           id?: string
@@ -1369,6 +1371,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachment_category?: string
           attachment_url?: string
           created_at?: string
           id?: string

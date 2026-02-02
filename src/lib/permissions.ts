@@ -40,12 +40,29 @@ const hrTabPermissions: Record<HrTab, UserRole[]> = {
   "add-employee": ["admin", "management"],
 };
 
+// Which HR tabs each role can write to (add/edit/delete)
+const hrTabWritePermissions: Record<HrTab, UserRole[]> = {
+  payroll: ["admin", "management", "accountant"],
+  "day-labor": ["admin", "management", "accountant", "supervisor"],
+  jornaleros: ["admin", "management", "accountant", "supervisor"],
+  employees: ["admin", "management", "accountant"],
+  "add-employee": ["admin", "management"],
+};
+
 /**
  * Check if a role can access a specific HR tab
  */
 export function canAccessHrTab(role: UserRole | undefined, tab: HrTab): boolean {
   if (!role) return false;
   return hrTabPermissions[tab]?.includes(role) ?? false;
+}
+
+/**
+ * Check if a role can write to a specific HR tab
+ */
+export function canWriteHrTab(role: UserRole | undefined, tab: HrTab): boolean {
+  if (!role) return false;
+  return hrTabWritePermissions[tab]?.includes(role) ?? false;
 }
 
 /**

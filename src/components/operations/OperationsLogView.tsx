@@ -35,7 +35,8 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock, MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
+import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock, MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import ExcelJS from "exceljs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -454,6 +455,108 @@ export function OperationsLogView() {
       .sort((a, b) => b.hectares - a.hectares)
       .slice(0, 5);
   }, [filteredOperations]);
+
+  // Export to Excel function
+  const exportToExcel = async () => {
+    if (filteredOperations.length === 0) return;
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Bitácora de Operaciones");
+
+    // Define columns based on visible columns
+    const columns: { header: string; key: string; width: number }[] = [];
+    if (isVisible("date")) columns.push({ header: "Fecha", key: "date", width: 15 });
+    if (isVisible("field")) columns.push({ header: "Campo", key: "field", width: 20 });
+    if (isVisible("farm")) columns.push({ header: "Finca", key: "farm", width: 20 });
+    if (isVisible("operation")) columns.push({ header: "Operación", key: "operation", width: 25 });
+    if (isVisible("tractor")) columns.push({ header: "Tractor/Obreros", key: "tractor", width: 20 });
+    if (isVisible("driver")) columns.push({ header: "Operador", key: "driver", width: 20 });
+    if (isVisible("implement")) columns.push({ header: "Implemento", key: "implement", width: 20 });
+    if (isVisible("hours")) columns.push({ header: "Horas", key: "hours", width: 10 });
+    if (isVisible("hectares")) columns.push({ header: "Hectáreas", key: "hectares", width: 12 });
+    if (isVisible("inputs")) columns.push({ header: "Insumos", key: "inputs", width: 40 });
+    if (isVisible("notes")) columns.push({ header: "Notas", key: "notes", width: 30 });
+
+    sheet.columns = columns;
+
+    // Style header row
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4F81BD" },
+    };
+    sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+
+    // Add data rows
+    filteredOperations.forEach((op) => {
+      const hoursWorked = op.start_hours != null && op.end_hours != null
+        ? (op.end_hours - op.start_hours).toFixed(1)
+        : "";
+      
+      const inputsText = op.operation_inputs
+        .map(input => `${input.inventory_items.commercial_name}: ${input.quantity_used} ${input.inventory_items.use_unit}`)
+        .join(", ");
+
+      const row: Record<string, string | number> = {};
+      if (isVisible("date")) row.date = format(parseDateLocal(op.operation_date), "dd/MM/yyyy");
+      if (isVisible("field")) row.field = op.fields.name;
+      if (isVisible("farm")) row.farm = op.fields.farms.name;
+      if (isVisible("operation")) row.operation = op.operation_types.name;
+      if (isVisible("tractor")) {
+        row.tractor = op.operation_types.is_mechanical 
+          ? (op.fuel_equipment?.name || "") 
+          : `${op.workers_count || 0} obreros`;
+      }
+      if (isVisible("driver")) row.driver = op.driver || "";
+      if (isVisible("implement")) row.implement = op.implements?.name || "";
+      if (isVisible("hours")) row.hours = hoursWorked;
+      if (isVisible("hectares")) row.hectares = op.hectares_done;
+      if (isVisible("inputs")) row.inputs = inputsText;
+      if (isVisible("notes")) row.notes = op.notes || "";
+
+      sheet.addRow(row);
+    });
+
+    // Add summary row
+    const totalHectares = filteredOperations.reduce((sum, op) => sum + op.hectares_done, 0);
+    const totalHours = filteredOperations.reduce((sum, op) => {
+      if (op.start_hours != null && op.end_hours != null) {
+        return sum + (op.end_hours - op.start_hours);
+      }
+      return sum;
+    }, 0);
+
+    const summaryRow: Record<string, string | number> = {};
+    columns.forEach(col => {
+      if (col.key === "date") summaryRow.date = "TOTAL";
+      else if (col.key === "hours") summaryRow.hours = totalHours.toFixed(1);
+      else if (col.key === "hectares") summaryRow.hectares = totalHectares.toFixed(2);
+      else summaryRow[col.key] = "";
+    });
+    const lastRowIdx = sheet.addRow(summaryRow).number;
+    sheet.getRow(lastRowIdx).font = { bold: true };
+    sheet.getRow(lastRowIdx).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFD9E1F2" },
+    };
+
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `bitacora-operaciones-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exportación Exitosa",
+      description: `Se exportaron ${filteredOperations.length} operaciones.`,
+    });
+  };
 
   const addInput = () => {
     if (!newInput.inventory_item_id || !newInput.quantity_used) {
@@ -1052,6 +1155,12 @@ export function OperationsLogView() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          {filteredOperations.length > 0 && (
+            <Button variant="excel" onClick={exportToExcel}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Exportar Excel
+            </Button>
+          )}
           <ColumnSelector
             columns={allColumns}
             visibility={visibility}

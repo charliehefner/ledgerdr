@@ -171,8 +171,8 @@ export function PayrollView() {
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="w-full justify-between">
-                  <TabsTrigger value="timesheet" colorScheme="primary">Hoja de Tiempo</TabsTrigger>
-                  <TabsTrigger value="summary" colorScheme="secondary">Resumen y Cierre</TabsTrigger>
+                  <TabsTrigger value="timesheet">Hoja de Tiempo</TabsTrigger>
+                  <TabsTrigger value="summary">Resumen y Cierre</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="timesheet" className="mt-4">

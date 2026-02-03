@@ -35,7 +35,7 @@ export default function Inventory() {
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setIsPurchaseDialogOpen(true)}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />

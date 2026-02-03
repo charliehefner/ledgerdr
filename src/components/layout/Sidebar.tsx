@@ -37,6 +37,22 @@ type NavItem = {
   section: Section;
 };
 
+// Section color mapping for subtle visual hints
+const sectionColors: Record<Section, string> = {
+  dashboard: "",
+  transactions: "",
+  invoices: "",
+  reports: "",
+  hr: "bg-section-hr",
+  inventory: "bg-section-inventory",
+  fuel: "bg-section-fuel",
+  equipment: "bg-section-fuel",
+  operations: "bg-section-operations",
+  rainfall: "bg-section-rainfall",
+  cronograma: "",
+  settings: "",
+};
+
 const navigation: NavItem[] = [
   { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
   { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
@@ -84,6 +100,7 @@ function SidebarContent({
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const showCollapsed = collapsed && !isMobile;
     const itemName = t(item.nameKey);
+    const sectionColor = sectionColors[item.section];
     
     const link = (
       <Link
@@ -95,7 +112,12 @@ function SidebarContent({
           showCollapsed && "justify-center px-2"
         )}
       >
-        <item.icon className="h-5 w-5 shrink-0" />
+        <div className="relative">
+          <item.icon className="h-5 w-5 shrink-0" />
+          {sectionColor && (
+            <span className={cn("absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full", sectionColor)} />
+          )}
+        </div>
         {(!showCollapsed || isMobile) && <span>{itemName}</span>}
       </Link>
     );

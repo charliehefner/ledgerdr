@@ -205,8 +205,8 @@ export function ContractedServicesView() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <TabsList>
-            <TabsTrigger value="contracts" colorScheme="turquoise">{t("contracts.contracts")}</TabsTrigger>
-            <TabsTrigger value="entries" colorScheme="coral">{t("contracts.dailyEntries")}</TabsTrigger>
+            <TabsTrigger value="contracts">{t("contracts.contracts")}</TabsTrigger>
+            <TabsTrigger value="entries">{t("contracts.dailyEntries")}</TabsTrigger>
           </TabsList>
           
           <div className="flex gap-2">

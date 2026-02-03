@@ -22,9 +22,9 @@ export default function Fuel() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="agriculture" colorScheme="primary">{t("fuel.agriculture")}</TabsTrigger>
-            <TabsTrigger value="industry" colorScheme="secondary">{t("fuel.industry")}</TabsTrigger>
-            <TabsTrigger value="tanks" colorScheme="accent">{t("fuel.tanks")}</TabsTrigger>
+            <TabsTrigger value="agriculture">{t("fuel.agriculture")}</TabsTrigger>
+            <TabsTrigger value="industry">{t("fuel.industry")}</TabsTrigger>
+            <TabsTrigger value="tanks">{t("fuel.tanks")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="agriculture" className="mt-6">

@@ -1461,9 +1461,11 @@ export function OperationsLogView() {
           <TableBody>
             {filteredOperations.map((op) => {
               // Check if operation is missing closing data
+              // For mechanical: requires end_hours (hectares_done is optional, 0 is valid)
+              // For non-mechanical: no strict closure requirements, hectares is optional
               const isMissingClosingData = op.operation_types.is_mechanical 
-                ? (op.end_hours == null || op.hectares_done == null || op.hectares_done === 0)
-                : (op.hectares_done == null || op.hectares_done === 0);
+                ? (op.end_hours == null)
+                : false;
               
               return (
                 <TableRow key={op.id} className={isMissingClosingData ? "bg-warning/10" : ""}>

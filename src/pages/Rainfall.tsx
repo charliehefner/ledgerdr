@@ -272,11 +272,11 @@ export default function Rainfall() {
 
         <Tabs defaultValue="daily" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="daily" colorScheme="turquoise" className="flex items-center gap-2">
+            <TabsTrigger value="daily" className="flex items-center gap-2">
               <TableIcon className="h-4 w-4" />
               {language === "en" ? "Daily Records" : "Registros Diarios"}
             </TabsTrigger>
-            <TabsTrigger value="monthly" colorScheme="sky" className="flex items-center gap-2">
+            <TabsTrigger value="monthly" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               {language === "en" ? "Monthly Summary" : "Resumen Mensual"}
             </TabsTrigger>
@@ -335,7 +335,7 @@ export default function Rainfall() {
                           {t("common.save")}
                         </Button>
                       )}
-                      <Button variant="excel" onClick={handleExportExcel}>
+                      <Button variant="outline" onClick={handleExportExcel}>
                         <Download className="h-4 w-4 mr-2" />
                         {language === "en" ? "Export Excel" : "Exportar Excel"}
                       </Button>
@@ -375,7 +375,7 @@ export default function Rainfall() {
                           const editable = editableRecords.get(dateStr);
 
                           return (
-                            <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-yellow-50")}>
+                            <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-warning/10")}>
                               <td className="p-4 align-middle font-medium">
                                 {format(date, "dd MMM yyyy", { locale: dateLocale })}
                               </td>

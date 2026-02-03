@@ -31,14 +31,14 @@ export default function Operations() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-between">
             <div className="flex flex-wrap gap-1">
-              <TabsTrigger value="log" colorScheme="primary">{t("operations.log")}</TabsTrigger>
-              <TabsTrigger value="progress" colorScheme="secondary">{t("operations.fieldProgress")}</TabsTrigger>
-              <TabsTrigger value="input-usage" colorScheme="accent">{t("operations.inputUsage")}</TabsTrigger>
-              <TabsTrigger value="contracts" colorScheme="primary">{t("operations.contracts")}</TabsTrigger>
+              <TabsTrigger value="log">{t("operations.log")}</TabsTrigger>
+              <TabsTrigger value="progress">{t("operations.fieldProgress")}</TabsTrigger>
+              <TabsTrigger value="input-usage">{t("operations.inputUsage")}</TabsTrigger>
+              <TabsTrigger value="contracts">{t("operations.contracts")}</TabsTrigger>
             </div>
             <div className="flex gap-1">
-              <TabsTrigger value="farms" colorScheme="primary">{t("operations.farmsFields")}</TabsTrigger>
-              <TabsTrigger value="types" colorScheme="secondary">{t("operations.operationTypes")}</TabsTrigger>
+              <TabsTrigger value="farms">{t("operations.farmsFields")}</TabsTrigger>
+              <TabsTrigger value="types">{t("operations.operationTypes")}</TabsTrigger>
             </div>
           </TabsList>
 

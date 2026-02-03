@@ -21,8 +21,8 @@ export default function Equipment() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="tractors" colorScheme="primary">{t("equipment.tractors")}</TabsTrigger>
-            <TabsTrigger value="implements" colorScheme="secondary">{t("equipment.implements")}</TabsTrigger>
+            <TabsTrigger value="tractors">{t("equipment.tractors")}</TabsTrigger>
+            <TabsTrigger value="implements">{t("equipment.implements")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tractors" className="mt-6">

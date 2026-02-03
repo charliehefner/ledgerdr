@@ -160,14 +160,14 @@ export function TractorMaintenanceDialog({
     }
     if (isDueSoon) {
       return (
-        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-sm">
+        <Badge variant="secondary" className="bg-warning/20 text-warning-foreground text-sm">
           <Clock className="h-3 w-3 mr-1" />
           Próximo en {Math.round(hoursUntilNextMaintenance)} hrs
         </Badge>
       );
     }
     return (
-      <Badge variant="default" className="bg-green-100 text-green-800 text-sm">
+      <Badge variant="default" className="bg-success/20 text-success-foreground text-sm">
         <CheckCircle className="h-3 w-3 mr-1" />
         OK - {Math.round(hoursUntilNextMaintenance)} hrs restantes
       </Badge>
@@ -188,9 +188,9 @@ export function TractorMaintenanceDialog({
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="status" colorScheme="turquoise">Estado</TabsTrigger>
-            <TabsTrigger value="add" colorScheme="coral">Registrar</TabsTrigger>
-            <TabsTrigger value="history" colorScheme="sky">Historial</TabsTrigger>
+            <TabsTrigger value="status">Estado</TabsTrigger>
+            <TabsTrigger value="add">Registrar</TabsTrigger>
+            <TabsTrigger value="history">Historial</TabsTrigger>
           </TabsList>
 
           {/* Status Tab */}

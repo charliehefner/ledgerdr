@@ -54,21 +54,21 @@ export default function HumanResources() {
           <TabsList className="w-full justify-between">
             <div className="flex">
               {canAccessTab("payroll") && (
-                <TabsTrigger value="payroll" colorScheme="primary">{t("hr.payroll")}</TabsTrigger>
+                <TabsTrigger value="payroll">{t("hr.payroll")}</TabsTrigger>
               )}
               {canAccessTab("day-labor") && (
-                <TabsTrigger value="day-labor" colorScheme="accent">{t("hr.dayLabor")}</TabsTrigger>
+                <TabsTrigger value="day-labor">{t("hr.dayLabor")}</TabsTrigger>
               )}
             </div>
             <div className="flex">
               {canAccessTab("jornaleros") && (
-                <TabsTrigger value="jornaleros" colorScheme="muted">Jornaleros</TabsTrigger>
+                <TabsTrigger value="jornaleros">Jornaleros</TabsTrigger>
               )}
               {canAccessTab("employees") && (
-                <TabsTrigger value="employees" colorScheme="secondary">{t("hr.employees")}</TabsTrigger>
+                <TabsTrigger value="employees">{t("hr.employees")}</TabsTrigger>
               )}
               {canAccessTab("add-employee") && canModifySettings && (
-                <TabsTrigger value="add-employee" colorScheme="accent">
+                <TabsTrigger value="add-employee">
                   {editingEmployee ? t("hr.editEmployee") : t("hr.addEmployee")}
                 </TabsTrigger>
               )}

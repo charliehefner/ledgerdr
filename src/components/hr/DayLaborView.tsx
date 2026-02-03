@@ -405,7 +405,7 @@ export function DayLaborView() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button variant="secondary" onClick={generatePDF} disabled={entries.length === 0}>
+              <Button variant="outline" onClick={generatePDF} disabled={entries.length === 0}>
                 <FileDown className="h-4 w-4 mr-2" />
                 Exportar PDF
               </Button>

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { FileText, Download, Calendar, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -165,7 +166,7 @@ export function FiscalDocumentsReport() {
     fiscalTransactions.forEach((tx) => {
       worksheet.addRow([
         tx.legacy_id || "-",
-        format(new Date(tx.transaction_date), "dd/MM/yyyy"),
+        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
         tx.currency,
         tx.amount,
         tx.itbis || 0,

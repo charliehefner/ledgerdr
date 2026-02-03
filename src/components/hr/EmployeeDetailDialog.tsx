@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays, differenceInMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -208,12 +209,12 @@ export function EmployeeDetailDialog({
 
     const today = new Date();
     const totalVacationDays = vacations.reduce((sum, v) => {
-      const days = differenceInDays(new Date(v.end_date), new Date(v.start_date)) + 1;
+      const days = differenceInDays(parseDateLocal(v.end_date), parseDateLocal(v.start_date)) + 1;
       return sum + days;
     }, 0);
 
     const upcomingVacations = vacations.filter(
-      (v) => new Date(v.start_date) > today
+      (v) => parseDateLocal(v.start_date) > today
     );
 
     return { totalVacationDays, upcomingVacations };
@@ -410,7 +411,7 @@ export function EmployeeDetailDialog({
                     <span className="text-muted-foreground">Fecha de Nacimiento</span>
                     <span>
                       {employee.date_of_birth
-                        ? format(new Date(employee.date_of_birth), "d MMM yyyy", { locale: es })
+                        ? format(parseDateLocal(employee.date_of_birth), "d MMM yyyy", { locale: es })
                         : "—"}
                     </span>
                   </div>
@@ -427,7 +428,7 @@ export function EmployeeDetailDialog({
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fecha de Ingreso</span>
-                    <span>{format(new Date(employee.date_of_hire), "d MMM yyyy", { locale: es })}</span>
+                    <span>{format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Salario Actual</span>
@@ -436,7 +437,7 @@ export function EmployeeDetailDialog({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Antigüedad</span>
                     <span>
-                      {differenceInMonths(new Date(), new Date(employee.date_of_hire))} meses
+                      {differenceInMonths(new Date(), parseDateLocal(employee.date_of_hire))} meses
                     </span>
                   </div>
                 </CardContent>
@@ -584,8 +585,8 @@ export function EmployeeDetailDialog({
                           : null;
                         return (
                           <TableRow key={record.id}>
-                            <TableCell>
-                              {format(new Date(record.effective_date), "d MMM yyyy", { locale: es })}
+                          <TableCell>
+                            {format(parseDateLocal(record.effective_date), "d MMM yyyy", { locale: es })}
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency(record.salary)}
@@ -637,7 +638,7 @@ export function EmployeeDetailDialog({
                       {timesheets?.slice(0, 20).map((ts) => (
                         <TableRow key={ts.id}>
                           <TableCell>
-                            {format(new Date(ts.work_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(ts.work_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {ts.start_time ? format(new Date(`2000-01-01T${ts.start_time}`), "h:mm a") : "—"}
@@ -688,7 +689,7 @@ export function EmployeeDetailDialog({
                       {salaryHistory?.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell>
-                            {format(new Date(record.effective_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(record.effective_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(record.salary)}
@@ -775,14 +776,14 @@ export function EmployeeDetailDialog({
                     </TableHeader>
                     <TableBody>
                       {vacations?.map((vacation) => {
-                        const days = differenceInDays(new Date(vacation.end_date), new Date(vacation.start_date)) + 1;
+                        const days = differenceInDays(parseDateLocal(vacation.end_date), parseDateLocal(vacation.start_date)) + 1;
                         return (
                           <TableRow key={vacation.id}>
                             <TableCell>
-                              {format(new Date(vacation.start_date), "d MMM yyyy", { locale: es })}
+                              {format(parseDateLocal(vacation.start_date), "d MMM yyyy", { locale: es })}
                             </TableCell>
                             <TableCell>
-                              {format(new Date(vacation.end_date), "d MMM yyyy", { locale: es })}
+                              {format(parseDateLocal(vacation.end_date), "d MMM yyyy", { locale: es })}
                             </TableCell>
                             <TableCell className="text-right font-medium">{days}</TableCell>
                             <TableCell className="text-muted-foreground">
@@ -895,7 +896,7 @@ export function EmployeeDetailDialog({
                       {incidents?.map((incident) => (
                         <TableRow key={incident.id}>
                           <TableCell>
-                            {format(new Date(incident.incident_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(incident.incident_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>
                             <Badge

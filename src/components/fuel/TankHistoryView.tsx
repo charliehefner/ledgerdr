@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fuel, CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { parseDateLocal } from "@/lib/dateUtils";
 
 type SortField = "transaction_date" | "tractor" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -95,7 +96,7 @@ export function TankHistoryView() {
     // Filter by date range
     if (startDate || endDate) {
       filtered = filtered.filter((tx) => {
-        const txDate = new Date(tx.transaction_date);
+        const txDate = parseDateLocal(tx.transaction_date);
         if (startDate && endDate) {
           return isWithinInterval(txDate, { 
             start: startOfDay(startDate), 
@@ -119,7 +120,7 @@ export function TankHistoryView() {
       let comparison = 0;
       switch (sortField) {
         case "transaction_date":
-          comparison = new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
+          comparison = parseDateLocal(a.transaction_date).getTime() - parseDateLocal(b.transaction_date).getTime();
           break;
         case "tractor":
           comparison = a.fuel_equipment.name.localeCompare(b.fuel_equipment.name);
@@ -264,7 +265,7 @@ export function TankHistoryView() {
           <TableBody>
             {sortedTransactions.map((tx) => (
               <TableRow key={tx.id}>
-                <TableCell>{format(new Date(tx.transaction_date), "MMM d, yyyy HH:mm")}</TableCell>
+                <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
                 <TableCell>{tx.fuel_tanks.name}</TableCell>
                 <TableCell>{tx.fuel_equipment.name}</TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>

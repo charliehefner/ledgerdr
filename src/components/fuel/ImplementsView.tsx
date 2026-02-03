@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -352,7 +353,7 @@ export function ImplementsView() {
                   {isVisible("purchase_date") && (
                     <TableCell>
                       {implement.purchase_date
-                        ? format(new Date(implement.purchase_date), "MMM d, yyyy")
+                        ? format(parseDateLocal(implement.purchase_date), "MMM d, yyyy")
                         : "-"}
                     </TableCell>
                   )}

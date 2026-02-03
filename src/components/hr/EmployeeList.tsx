@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle } from "lucide-react";
 import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
 import { VacationCountdownDialog } from "./VacationCountdownDialog";
@@ -229,10 +230,10 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "cedula":
         return <span className="font-mono text-sm">{employee.cedula}</span>;
       case "date_of_hire":
-        return format(new Date(employee.date_of_hire), "d MMM yyyy", { locale: es });
+        return format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es });
       case "date_of_birth":
         return employee.date_of_birth
-          ? format(new Date(employee.date_of_birth), "d MMM yyyy", { locale: es })
+          ? format(parseDateLocal(employee.date_of_birth), "d MMM yyyy", { locale: es })
           : "—";
       case "salary":
         return formatCurrency(employee.salary);

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format, eachDayOfInterval, isWithinInterval, parseISO, isSunday } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -172,8 +173,8 @@ export function PayrollSummary({
   // Check if employee is on vacation for a specific date
   const isEmployeeOnVacation = (employeeId: string, date: Date): boolean => {
     return vacations.some((v) => {
-      const vacStart = parseISO(v.start_date);
-      const vacEnd = parseISO(v.end_date);
+      const vacStart = parseDateLocal(v.start_date);
+      const vacEnd = parseDateLocal(v.end_date);
       return (
         v.employee_id === employeeId &&
         isWithinInterval(date, { start: vacStart, end: vacEnd })
@@ -210,7 +211,7 @@ export function PayrollSummary({
     entries.forEach((t) => {
       // Skip vacation days - they are paid separately
       if (t.work_date) {
-        const workDate = parseISO(t.work_date);
+        const workDate = parseDateLocal(t.work_date);
         if (isEmployeeOnVacation(employeeId, workDate)) {
           return; // Skip this entry
         }
@@ -252,7 +253,7 @@ export function PayrollSummary({
         return false;
       }
       if (e.work_date) {
-        const workDate = parseISO(e.work_date);
+        const workDate = parseDateLocal(e.work_date);
         if (isEmployeeOnVacation(employeeId, workDate)) {
           return false; // Vacation days are not absences
         }

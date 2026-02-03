@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Fuel, Zap } from "lucide-react";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -514,7 +515,7 @@ export function IndustryFuelView() {
             {transactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>
-                  {format(new Date(tx.transaction_date), "MMM d, yyyy HH:mm")}
+                  {format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell>
                   <Badge variant={tx.transaction_type === "refill" ? "default" : "secondary"}>

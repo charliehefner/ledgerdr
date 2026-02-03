@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -447,7 +448,7 @@ export function TractorsView() {
                     {isVisible("purchase_date") && (
                       <TableCell>
                         {tractor.purchase_date
-                          ? format(new Date(tractor.purchase_date), "MMM d, yyyy")
+                          ? format(parseDateLocal(tractor.purchase_date), "MMM d, yyyy")
                           : "-"}
                       </TableCell>
                     )}

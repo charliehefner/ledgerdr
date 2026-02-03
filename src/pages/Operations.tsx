@@ -30,6 +30,16 @@ export default function Operations() {
               content: <OperationsLogView />,
             },
             {
+              value: "contracts",
+              label: t("operations.contracts"),
+              content: <ContractedServicesView />,
+            },
+          ],
+        },
+        {
+          align: "right",
+          tabs: [
+            {
               value: "progress",
               label: t("operations.fieldProgress"),
               content: <FieldProgressReport />,
@@ -38,11 +48,6 @@ export default function Operations() {
               value: "input-usage",
               label: t("operations.inputUsage"),
               content: <InputUsageReport initialInputId={initialInputId} />,
-            },
-            {
-              value: "contracts",
-              label: t("operations.contracts"),
-              content: <ContractedServicesView />,
             },
           ],
         },

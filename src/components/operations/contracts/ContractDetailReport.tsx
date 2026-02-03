@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ServiceContract, ContractEntry, ContractLineItem } from "../ContractedServicesView";
 import { format } from "date-fns";
-import { Download, FileText, Pencil, Trash2 } from "lucide-react";
+import { Download, FileText, Pencil, Trash2, Plus, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { PaymentDialog, ContractPayment } from "./PaymentDialog";
 
 interface ContractDetailReportProps {
   open: boolean;
@@ -68,9 +69,12 @@ export function ContractDetailReport({
   onDeleteEntry,
 }: ContractDetailReportProps) {
   const { language, t } = useLanguage();
+  const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<ContractPayment | null>(null);
 
   // Fetch entries for this contract
   const { data: entries = [], isLoading } = useQuery({
@@ -102,9 +106,51 @@ export function ContractDetailReport({
     enabled: !!contract && open,
   });
 
+  // Fetch payments for this contract
+  const { data: payments = [], isLoading: loadingPayments } = useQuery({
+    queryKey: ["contract-payments-detail", contract?.id],
+    queryFn: async () => {
+      if (!contract) return [];
+      
+      const { data, error } = await supabase
+        .from("service_contract_payments")
+        .select("*")
+        .eq("contract_id", contract.id)
+        .order("payment_date", { ascending: false });
+      
+      if (error) throw error;
+      return data as ContractPayment[];
+    },
+    enabled: !!contract && open,
+  });
+
+  // Delete payment mutation
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("service_contract_payments")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contract-payments-detail"] });
+      toast.success(t("contracts.paymentDeleted"));
+    },
+    onError: () => {
+      toast.error(t("contracts.paymentDeleteError"));
+    },
+  });
+
   const filteredEntries = entries.filter((entry) => {
     if (startDate && entry.entry_date < startDate) return false;
     if (endDate && entry.entry_date > endDate) return false;
+    return true;
+  });
+
+  const filteredPayments = payments.filter((payment) => {
+    if (startDate && payment.payment_date < startDate) return false;
+    if (endDate && payment.payment_date > endDate) return false;
     return true;
   });
 
@@ -120,8 +166,30 @@ export function ContractDetailReport({
   };
 
   const totalUnits = filteredEntries.reduce((sum, e) => sum + e.units_charged, 0);
-  const totalCost = filteredEntries.reduce((sum, e) => sum + getFinalCost(e), 0);
+  const totalInvoiced = filteredEntries.reduce((sum, e) => sum + getFinalCost(e), 0);
+  const totalPaid = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const balance = totalInvoiced - totalPaid;
   const unitLabel = contract ? UNIT_LABELS[contract.unit_type] || contract.unit_type : "";
+
+  // Combine entries and payments for chronological display
+  type ReportItem = 
+    | { type: 'entry'; date: string; data: ContractEntry }
+    | { type: 'payment'; date: string; data: ContractPayment };
+
+  const combinedItems: ReportItem[] = [
+    ...filteredEntries.map(e => ({ type: 'entry' as const, date: e.entry_date, data: e })),
+    ...filteredPayments.map(p => ({ type: 'payment' as const, date: p.payment_date, data: p })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  const handleAddPayment = () => {
+    setEditingPayment(null);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleEditPayment = (payment: ContractPayment) => {
+    setEditingPayment(payment);
+    setPaymentDialogOpen(true);
+  };
 
   const generatePdf = async () => {
     if (!contract) return;
@@ -229,21 +297,73 @@ export function ContractDetailReport({
           5: { halign: 'right', cellWidth: 25, fontStyle: 'bold' },
         },
         foot: [[
-          t("common.total"),
+          t("contracts.totalInvoiced"),
           "",
           `${totalUnits.toLocaleString()} ${unitLabel}`,
           "",
           "",
-          `$${totalCost.toLocaleString()}`,
+          `$${totalInvoiced.toLocaleString()}`,
         ]],
         footStyles: { fillColor: [229, 231, 235], textColor: [0, 0, 0], fontStyle: 'bold' },
       });
       
+      let finalY = (doc as any).lastAutoTable.finalY || 200;
+      
+      // Payments table if there are payments
+      if (filteredPayments.length > 0) {
+        finalY += 10;
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(t("contracts.payments"), 14, finalY);
+        finalY += 5;
+
+        const paymentData = filteredPayments.map((payment) => [
+          format(new Date(payment.payment_date), "dd/MM/yyyy"),
+          payment.transaction_id,
+          `$${Number(payment.amount).toLocaleString()}`,
+          payment.notes || "",
+        ]);
+
+        autoTable(doc, {
+          startY: finalY,
+          head: [[
+            t("common.date"),
+            t("contracts.transactionId"),
+            t("common.amount"),
+            t("common.notes"),
+          ]],
+          body: paymentData,
+          theme: "striped",
+          headStyles: { fillColor: [34, 197, 94] },
+          styles: { fontSize: 8 },
+          foot: [[
+            t("contracts.totalPaid"),
+            "",
+            `$${totalPaid.toLocaleString()}`,
+            "",
+          ]],
+          footStyles: { fillColor: [229, 231, 235], textColor: [0, 0, 0], fontStyle: 'bold' },
+        });
+        
+        finalY = (doc as any).lastAutoTable.finalY || finalY + 30;
+      }
+      
+      // Summary section
+      finalY += 10;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${t("contracts.totalInvoiced")}: $${totalInvoiced.toLocaleString()}`, 14, finalY);
+      finalY += 6;
+      doc.text(`${t("contracts.totalPaid")}: $${totalPaid.toLocaleString()}`, 14, finalY);
+      finalY += 6;
+      doc.setFontSize(12);
+      doc.text(`${t("contracts.balance")}: $${balance.toLocaleString()}`, 14, finalY);
+      
       // Footer with generation date
-      const finalY = (doc as any).lastAutoTable.finalY || 200;
+      finalY += 15;
       doc.setFontSize(8);
       doc.setFont("helvetica", "italic");
-      doc.text(`${t("common.date")}: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, finalY + 15);
+      doc.text(`${t("common.date")}: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, finalY);
       
       // Save PDF
       doc.save(`${contract.contract_name.replace(/[^a-zA-Z0-9]/g, '-')}-report-${format(new Date(), "yyyy-MM-dd")}.pdf`);
@@ -443,14 +563,14 @@ export function ContractDetailReport({
                   })}
                   {/* Totals Row */}
                   <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell colSpan={2}>{t("common.total")}</TableCell>
+                    <TableCell colSpan={2}>{t("contracts.totalInvoiced")}</TableCell>
                     <TableCell className="text-right font-mono">
                       {totalUnits.toLocaleString()} {unitLabel}
                     </TableCell>
                     <TableCell></TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right font-mono text-lg">
-                      ${totalCost.toLocaleString()}
+                      ${totalInvoiced.toLocaleString()}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -459,7 +579,129 @@ export function ContractDetailReport({
             </TableBody>
           </Table>
         </div>
+
+        {/* Payments Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              {t("contracts.payments")}
+            </h4>
+            <Button variant="outline" size="sm" onClick={handleAddPayment}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("contracts.addPayment")}
+            </Button>
+          </div>
+          
+          <div className="overflow-x-auto border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("common.date")}</TableHead>
+                  <TableHead>{t("contracts.transactionId")}</TableHead>
+                  <TableHead className="text-right">{t("common.amount")}</TableHead>
+                  <TableHead>{t("common.notes")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingPayments ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      {t("common.loading")}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      {t("contracts.noPayments")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    {filteredPayments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>{format(new Date(payment.payment_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell className="font-mono">{payment.transaction_id}</TableCell>
+                        <TableCell className="text-right font-mono text-green-600 font-semibold">
+                          ${Number(payment.amount).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{payment.notes || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditPayment(payment)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t("contracts.confirmDeletePayment")}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t("contracts.confirmDeletePaymentDesc")}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deletePaymentMutation.mutate(payment.id)}>
+                                    {t("common.delete")}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {/* Total Paid Row */}
+                    <TableRow className="bg-green-50 dark:bg-green-950/20 font-semibold">
+                      <TableCell colSpan={2}>{t("contracts.totalPaid")}</TableCell>
+                      <TableCell className="text-right font-mono text-lg text-green-600">
+                        ${totalPaid.toLocaleString()}
+                      </TableCell>
+                      <TableCell colSpan={2}></TableCell>
+                    </TableRow>
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {/* Summary Section */}
+        <div className="border rounded-lg p-4 bg-muted/30 space-y-2">
+          <h4 className="font-semibold mb-3">{t("contracts.contractSummary")}</h4>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="p-3 bg-background rounded-lg border">
+              <div className="text-sm text-muted-foreground">{t("contracts.totalInvoiced")}</div>
+              <div className="text-xl font-bold font-mono">${totalInvoiced.toLocaleString()}</div>
+            </div>
+            <div className="p-3 bg-background rounded-lg border">
+              <div className="text-sm text-muted-foreground">{t("contracts.totalPaid")}</div>
+              <div className="text-xl font-bold font-mono text-green-600">${totalPaid.toLocaleString()}</div>
+            </div>
+            <div className="p-3 bg-background rounded-lg border">
+              <div className="text-sm text-muted-foreground">{t("contracts.balance")}</div>
+              <div className={`text-xl font-bold font-mono ${balance > 0 ? 'text-amber-600' : balance < 0 ? 'text-green-600' : ''}`}>
+                ${balance.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
       </DialogContent>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        payment={editingPayment}
+        contracts={contract ? [contract] : []}
+        preselectedContractId={contract?.id}
+      />
     </Dialog>
   );
 }

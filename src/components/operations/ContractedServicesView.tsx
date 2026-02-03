@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, DollarSign } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContractDialog } from "./contracts/ContractDialog";
 import { ContractsList } from "./contracts/ContractsList";
@@ -12,6 +12,7 @@ import { DailyEntryDialog } from "./contracts/DailyEntryDialog";
 import { DailyEntriesList } from "./contracts/DailyEntriesList";
 import { ContractReport } from "./contracts/ContractReport";
 import { ContractDetailReport } from "./contracts/ContractDetailReport";
+import { PaymentDialog } from "./contracts/PaymentDialog";
 import { toast } from "sonner";
 
 export interface ServiceContract {
@@ -69,6 +70,7 @@ export function ContractedServicesView() {
   const [detailReportOpen, setDetailReportOpen] = useState(false);
   const [detailContract, setDetailContract] = useState<ServiceContract | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   // Fetch contracts
   const { data: contracts = [], isLoading: loadingContracts } = useQuery({
@@ -216,6 +218,10 @@ export function ContractedServicesView() {
             )}
             {activeTab === "entries" && (
               <>
+                <Button variant="outline" onClick={() => setPaymentDialogOpen(true)} disabled={activeContracts.length === 0}>
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {t("contracts.addPayment")}
+                </Button>
                 <Button variant="outline" onClick={() => setReportOpen(true)}>
                   <FileText className="h-4 w-4 mr-2" />
                   {t("contracts.viewReport")}
@@ -309,6 +315,13 @@ export function ContractedServicesView() {
         contract={detailContract}
         onEditEntry={handleEditEntry}
         onDeleteEntry={(id) => deleteEntryMutation.mutate(id)}
+      />
+
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        payment={null}
+        contracts={activeContracts}
       />
     </div>
   );

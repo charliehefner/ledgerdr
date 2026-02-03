@@ -50,6 +50,20 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
 
   const selectedContract = contracts.find((c) => c.id === selectedContractId) || null;
 
+  // When contract is selected, set start date to contract creation date
+  const handleContractChange = (contractId: string) => {
+    setSelectedContractId(contractId);
+    const contract = contracts.find((c) => c.id === contractId);
+    if (contract) {
+      // Use the contract's created_at date as the start date
+      setStartDate(contract.created_at.split("T")[0]);
+      setEndDate(""); // Keep end date open
+    } else {
+      setStartDate("");
+      setEndDate("");
+    }
+  };
+
   const filteredEntries = entries.filter((entry) => {
     if (!selectedContractId || entry.contract_id !== selectedContractId) {
       return false;
@@ -219,9 +233,9 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
         <div className="flex flex-wrap gap-4 items-end">
           <div className="space-y-1">
             <label className="text-sm text-muted-foreground">{t("contracts.selectContract")}</label>
-            <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+            <Select value={selectedContractId} onValueChange={handleContractChange}>
               <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder={t("contracts.selectContractPlaceholder")} />
+                <SelectValue placeholder="" />
               </SelectTrigger>
               <SelectContent>
                 {contracts.map((c) => (

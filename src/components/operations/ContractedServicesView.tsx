@@ -211,20 +211,22 @@ export function ContractedServicesView() {
           
           <div className="flex gap-2">
             {activeTab === "contracts" && (
-              <Button onClick={handleNewContract}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t("contracts.addContract")}
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setReportOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t("contracts.viewReport")}
+                </Button>
+                <Button onClick={handleNewContract}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("contracts.addContract")}
+                </Button>
+              </>
             )}
             {activeTab === "entries" && (
               <>
                 <Button variant="outline" onClick={() => setPaymentDialogOpen(true)} disabled={activeContracts.length === 0}>
                   <DollarSign className="h-4 w-4 mr-2" />
                   {t("contracts.addPayment")}
-                </Button>
-                <Button variant="outline" onClick={() => setReportOpen(true)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  {t("contracts.viewReport")}
                 </Button>
                 <Button onClick={handleNewEntry} disabled={activeContracts.length === 0}>
                   <Plus className="h-4 w-4 mr-2" />

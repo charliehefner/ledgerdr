@@ -1395,6 +1395,7 @@ export type Database = {
         Row: {
           bank: string | null
           bank_account: string | null
+          comments: string | null
           contract_name: string
           created_at: string
           farm_id: string | null
@@ -1411,6 +1412,7 @@ export type Database = {
         Insert: {
           bank?: string | null
           bank_account?: string | null
+          comments?: string | null
           contract_name: string
           created_at?: string
           farm_id?: string | null
@@ -1427,6 +1429,7 @@ export type Database = {
         Update: {
           bank?: string | null
           bank_account?: string | null
+          comments?: string | null
           contract_name?: string
           created_at?: string
           farm_id?: string | null

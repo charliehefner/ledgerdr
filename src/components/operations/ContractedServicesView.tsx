@@ -29,6 +29,7 @@ export interface ServiceContract {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  comments: string | null;
   farm?: { name: string } | null;
 }
 

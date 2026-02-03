@@ -12,6 +12,7 @@ import {
 import { Pencil, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+import { parseDateLocal } from "@/lib/dateUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,7 +84,7 @@ export function DailyEntriesList({ entries, isLoading, onEdit, onDelete }: Daily
 
             return (
               <TableRow key={entry.id}>
-                <TableCell>{format(new Date(entry.entry_date), "dd/MM/yyyy")}</TableCell>
+                <TableCell>{format(parseDateLocal(entry.entry_date), "dd/MM/yyyy")}</TableCell>
                 <TableCell className="font-medium">
                   {contract?.contract_name || "-"}
                 </TableCell>

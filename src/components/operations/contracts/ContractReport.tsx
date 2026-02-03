@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContractEntry, ServiceContract } from "../ContractedServicesView";
 import { format } from "date-fns";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { Download, FileText } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -75,7 +76,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
       return false;
     }
     return true;
-  }).sort((a, b) => new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime());
+  }).sort((a, b) => parseDateLocal(a.entry_date).getTime() - parseDateLocal(b.entry_date).getTime());
 
   const getFinalCost = (entry: ContractEntry) => {
     const baseCost = entry.cost_override !== null ? entry.cost_override : entry.calculated_cost;
@@ -129,7 +130,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     yPos += 6;
     
     if (startDate || endDate) {
-      const dateRange = `Período: ${startDate ? format(new Date(startDate), "dd/MM/yyyy") : "Inicio"} - ${endDate ? format(new Date(endDate), "dd/MM/yyyy") : "Presente"}`;
+      const dateRange = `Período: ${startDate ? format(parseDateLocal(startDate), "dd/MM/yyyy") : "Inicio"} - ${endDate ? format(parseDateLocal(endDate), "dd/MM/yyyy") : "Presente"}`;
       doc.text(dateRange, 14, yPos);
       yPos += 6;
     }
@@ -145,7 +146,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
       
       // Main entry row
       tableData.push([
-        format(new Date(entry.entry_date), "dd/MM/yyyy"),
+        format(parseDateLocal(entry.entry_date), "dd/MM/yyyy"),
         entry.description,
         `${entry.units_charged.toLocaleString()} ${UNIT_LABELS[selectedContract.unit_type]}`,
         `$${baseCost.toLocaleString()}`,
@@ -349,7 +350,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
 
                       return (
                         <TableRow key={entry.id}>
-                          <TableCell>{format(new Date(entry.entry_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{format(parseDateLocal(entry.entry_date), "dd/MM/yyyy")}</TableCell>
                           <TableCell>
                             <div className="max-w-xs">
                               {entry.description}

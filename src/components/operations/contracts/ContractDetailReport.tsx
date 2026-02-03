@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ServiceContract, ContractEntry, ContractLineItem } from "../ContractedServicesView";
 import { format } from "date-fns";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { Download, FileText, Pencil, Trash2, Plus, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -265,7 +266,7 @@ export function ContractDetailReport({
         const baseCost = entry.cost_override !== null ? entry.cost_override : entry.calculated_cost;
         
         return [
-          format(new Date(entry.entry_date), "dd/MM/yyyy"),
+          format(parseDateLocal(entry.entry_date), "dd/MM/yyyy"),
           entry.description,
           `${entry.units_charged.toLocaleString()} ${unitLabel}`,
           `$${baseCost.toLocaleString()}`,
@@ -318,7 +319,7 @@ export function ContractDetailReport({
         finalY += 5;
 
         const paymentData = filteredPayments.map((payment) => [
-          format(new Date(payment.payment_date), "dd/MM/yyyy"),
+          format(parseDateLocal(payment.payment_date), "dd/MM/yyyy"),
           payment.transaction_id,
           `$${Number(payment.amount).toLocaleString()}`,
           payment.notes || "",
@@ -497,7 +498,7 @@ export function ContractDetailReport({
 
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell>{format(new Date(entry.entry_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{format(parseDateLocal(entry.entry_date), "dd/MM/yyyy")}</TableCell>
                         <TableCell>
                           <div className="max-w-xs">
                             {entry.description}
@@ -621,7 +622,7 @@ export function ContractDetailReport({
                   <>
                     {filteredPayments.map((payment) => (
                       <TableRow key={payment.id}>
-                        <TableCell>{format(new Date(payment.payment_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
                         <TableCell className="font-mono">{payment.transaction_id}</TableCell>
                         <TableCell className="text-right font-mono text-green-600 font-semibold">
                           ${Number(payment.amount).toLocaleString()}

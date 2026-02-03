@@ -90,7 +90,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6" role="main" aria-label="Main content">
           {children}
         </main>
       </div>

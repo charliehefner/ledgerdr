@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabbedPageLayout, TabGroup } from "@/components/layout/TabbedPageLayout";
 import { EmployeeList } from "@/components/hr/EmployeeList";
-import { EmployeeForm } from "@/components/hr/EmployeeForm";
+import { EmployeeFormDialog } from "@/components/hr/EmployeeFormDialog";
 import { PayrollView } from "@/components/hr/PayrollView";
 import { DayLaborView } from "@/components/hr/DayLaborView";
 import { JornalerosView } from "@/components/hr/JornalerosView";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessHrTab, getDefaultHrTabForRole, HrTab } from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
+import { UserPlus } from "lucide-react";
 
 export default function HumanResources() {
   const { canModifySettings, user } = useAuth();
@@ -18,7 +19,8 @@ export default function HumanResources() {
   const [activeTab, setActiveTab] = useState<string>(() => 
     userRole ? getDefaultHrTabForRole(userRole) : "payroll"
   );
-  const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
+  const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
 
   // Update default tab when role changes
   useEffect(() => {
@@ -28,87 +30,89 @@ export default function HumanResources() {
         setActiveTab(defaultTab);
       }
     }
-  }, [userRole]);
+  }, [userRole, activeTab]);
 
   const handleEditEmployee = (employeeId: string) => {
-    setEditingEmployee(employeeId);
-    setActiveTab("add-employee");
+    setEditingEmployeeId(employeeId);
+    setEmployeeDialogOpen(true);
   };
 
-  const handleFormComplete = () => {
-    setEditingEmployee(null);
-    setActiveTab("employees");
+  const handleAddEmployee = () => {
+    setEditingEmployeeId(null);
+    setEmployeeDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setEmployeeDialogOpen(false);
+      setEditingEmployeeId(null);
+    }
   };
 
   const canAccessTab = (tab: HrTab) => canAccessHrTab(userRole, tab);
 
+  // Build tab groups based on permissions
+  const mainTabs = [];
+  if (canAccessTab("payroll")) {
+    mainTabs.push({
+      value: "payroll",
+      label: t("hr.payroll"),
+      content: <PayrollView />,
+    });
+  }
+  if (canAccessTab("day-labor")) {
+    mainTabs.push({
+      value: "day-labor",
+      label: t("hr.dayLabor"),
+      content: <DayLaborView />,
+    });
+  }
+
+  const rightTabs = [];
+  if (canAccessTab("jornaleros")) {
+    rightTabs.push({
+      value: "jornaleros",
+      label: "Jornaleros",
+      content: <JornalerosView />,
+    });
+  }
+  if (canAccessTab("employees")) {
+    rightTabs.push({
+      value: "employees",
+      label: t("hr.employees"),
+      content: <EmployeeList onEdit={handleEditEmployee} />,
+    });
+  }
+
+  const tabGroups: TabGroup[] = [{ tabs: mainTabs }];
+  if (rightTabs.length > 0) {
+    tabGroups.push({ tabs: rightTabs, align: "right" });
+  }
+
+  // Add Employee button only visible when on employees tab and has permission
+  const actions = activeTab === "employees" && canModifySettings ? (
+    <Button size="sm" onClick={handleAddEmployee}>
+      <UserPlus className="h-4 w-4 mr-2" />
+      {t("hr.addEmployee")}
+    </Button>
+  ) : null;
+
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("page.hr.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("page.hr.subtitle")}</p>
-        </div>
+    <>
+      <TabbedPageLayout
+        title={t("page.hr.title")}
+        subtitle={t("page.hr.subtitle")}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabGroups={tabGroups}
+        actions={actions}
+      />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="w-full justify-between">
-            <div className="flex">
-              {canAccessTab("payroll") && (
-                <TabsTrigger value="payroll">{t("hr.payroll")}</TabsTrigger>
-              )}
-              {canAccessTab("day-labor") && (
-                <TabsTrigger value="day-labor">{t("hr.dayLabor")}</TabsTrigger>
-              )}
-            </div>
-            <div className="flex">
-              {canAccessTab("jornaleros") && (
-                <TabsTrigger value="jornaleros">Jornaleros</TabsTrigger>
-              )}
-              {canAccessTab("employees") && (
-                <TabsTrigger value="employees">{t("hr.employees")}</TabsTrigger>
-              )}
-              {canAccessTab("add-employee") && canModifySettings && (
-                <TabsTrigger value="add-employee">
-                  {editingEmployee ? t("hr.editEmployee") : t("hr.addEmployee")}
-                </TabsTrigger>
-              )}
-            </div>
-          </TabsList>
-
-          {canAccessTab("payroll") && (
-            <TabsContent value="payroll" className="space-y-4">
-              <PayrollView />
-            </TabsContent>
-          )}
-
-          {canAccessTab("day-labor") && (
-            <TabsContent value="day-labor" className="space-y-4">
-              <DayLaborView />
-            </TabsContent>
-          )}
-
-          {canAccessTab("jornaleros") && (
-            <TabsContent value="jornaleros" className="space-y-4">
-              <JornalerosView />
-            </TabsContent>
-          )}
-
-          {canAccessTab("employees") && (
-            <TabsContent value="employees" className="space-y-4">
-              <EmployeeList onEdit={handleEditEmployee} />
-            </TabsContent>
-          )}
-
-          {canAccessTab("add-employee") && canModifySettings && (
-            <TabsContent value="add-employee" className="space-y-4">
-              <EmployeeForm 
-                employeeId={editingEmployee} 
-                onComplete={handleFormComplete}
-              />
-            </TabsContent>
-          )}
-        </Tabs>
-      </div>
-    </MainLayout>
+      <EmployeeFormDialog
+        employeeId={editingEmployeeId}
+        open={employeeDialogOpen}
+        onOpenChange={handleDialogClose}
+      />
+    </>
   );
 }

@@ -21,7 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Tractor, Users } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Plus, Pencil, Tractor, Users, Settings2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface OperationType {
@@ -181,9 +182,11 @@ export function OperationTypesView() {
       </div>
 
       {!operationTypes || operationTypes.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No operation types defined yet. Click "Add Operation Type" to get started.
-        </div>
+        <EmptyState
+          icon={Settings2}
+          title="Sin tipos de operación"
+          description="No hay tipos de operación definidos. Haga clic en 'Add Operation Type' para comenzar."
+        />
       ) : (
         <Table>
           <TableHeader>

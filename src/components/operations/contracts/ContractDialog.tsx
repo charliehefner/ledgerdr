@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -48,6 +49,7 @@ interface FormData {
   price_per_unit: number;
   farm_id: string;
   is_active: boolean;
+  comments: string;
 }
 
 const OPERATION_TYPES = [
@@ -82,6 +84,7 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
       price_per_unit: 0,
       farm_id: "",
       is_active: true,
+      comments: "",
     },
   });
 
@@ -112,6 +115,7 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
         price_per_unit: contract.price_per_unit,
         farm_id: contract.farm_id || "",
         is_active: contract.is_active,
+        comments: contract.comments || "",
       });
     } else {
       form.reset({
@@ -126,6 +130,7 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
         price_per_unit: 0,
         farm_id: "",
         is_active: true,
+        comments: "",
       });
     }
   }, [contract, form]);
@@ -144,6 +149,7 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
         price_per_unit: data.price_per_unit,
         farm_id: data.farm_id || null,
         is_active: data.is_active,
+        comments: data.comments || null,
       };
 
       if (contract) {
@@ -375,6 +381,24 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="comments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("contracts.comments")}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder={t("contracts.commentsPlaceholder")}
+                      rows={3}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

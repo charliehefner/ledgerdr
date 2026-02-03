@@ -84,8 +84,25 @@ export default {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
-        // Tab color tokens
+        // Section indicator colors for navigation hints
+        section: {
+          operations: "hsl(var(--section-operations))",
+          fuel: "hsl(var(--section-fuel))",
+          hr: "hsl(var(--section-hr))",
+          inventory: "hsl(var(--section-inventory))",
+          rainfall: "hsl(var(--section-rainfall))",
+        },
+        // Tab color tokens - unified to primary for consistency
         tab: {
+          inactive: {
+            bg: "transparent",
+            text: "hsl(var(--tab-inactive-text))",
+          },
+          active: {
+            bg: "hsl(var(--tab-active-bg))",
+            text: "hsl(var(--tab-active-text))",
+          },
+          // Legacy tokens mapped to primary (backward compatibility)
           turquoise: {
             DEFAULT: "hsl(var(--tab-turquoise))",
             light: "hsl(var(--tab-turquoise-light))",

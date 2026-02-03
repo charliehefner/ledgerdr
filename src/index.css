@@ -2,8 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Financial Ledger Design System
-   Professional, clean aesthetic inspired by modern accounting tools
+/* Enterprise Design System
+   Clean, professional aesthetic with single accent color
+   Optimized for daylight field use with WCAG AA compliance
    All colors are HSL
 */
 
@@ -11,160 +12,190 @@
 
 @layer base {
   :root {
-    /* Core surfaces - Clean white with subtle warmth */
-    --background: 210 20% 98%;
-    --foreground: 220 30% 15%;
+    /* Core surfaces - Neutral first */
+    --background: 220 14% 97%;      /* #F7F8FA */
+    --foreground: 210 24% 16%;      /* #1F2933 */
 
     /* Cards - Pure white for data display */
-    --card: 0 0% 100%;
-    --card-foreground: 220 30% 15%;
+    --card: 0 0% 100%;              /* #FFFFFF */
+    --card-foreground: 210 24% 16%;
 
     /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 15%;
+    --popover-foreground: 210 24% 16%;
 
-    /* Primary - Professional navy blue */
-    --primary: 220 65% 30%;
+    /* Primary - Forest green (SINGLE ACCENT) */
+    --primary: 163 58% 28%;         /* #1E6F5C */
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Soft slate */
-    --secondary: 215 20% 93%;
-    --secondary-foreground: 220 30% 25%;
+    /* Secondary - Outline/ghost style */
+    --secondary: 210 40% 96%;       /* #F1F5F9 */
+    --secondary-foreground: 215 25% 27%; /* #334155 */
 
     /* Muted surfaces */
-    --muted: 215 15% 95%;
-    --muted-foreground: 215 15% 45%;
+    --muted: 220 14% 96%;           /* #F9FAFB - zebra rows */
+    --muted-foreground: 220 9% 46%; /* #6B7280 */
 
-    /* Accent - Warm amber for highlights */
-    --accent: 38 95% 50%;
-    --accent-foreground: 220 30% 15%;
+    /* Accent - Subtle highlight (same family as primary) */
+    --accent: 163 30% 95%;
+    --accent-foreground: 163 58% 23%;
     
-    /* Tab color schemes - Brighter, more vivid */
-    --tab-turquoise: 174 70% 42%;
-    --tab-turquoise-light: 174 65% 85%;
-    --tab-coral: 12 85% 60%;
-    --tab-coral-light: 12 75% 90%;
-    --tab-sky: 200 90% 50%;
-    --tab-sky-light: 200 85% 88%;
-    --tab-violet: 270 70% 55%;
-    --tab-violet-light: 270 60% 90%;
-    --tab-lime: 82 70% 45%;
-    --tab-lime-light: 82 60% 88%;
+    /* Section indicator colors - Subtle hints for navigation */
+    --section-operations: 163 58% 28%;    /* Primary green */
+    --section-fuel: 200 80% 45%;          /* Sky blue */
+    --section-hr: 38 80% 50%;             /* Warm amber */
+    --section-inventory: 270 50% 50%;     /* Soft violet */
+    --section-rainfall: 174 60% 40%;      /* Teal */
 
-    /* Status colors */
-    --destructive: 0 72% 51%;
+    /* Tab styling - Neutral with primary accent */
+    --tab-inactive-bg: transparent;
+    --tab-inactive-text: 220 9% 46%;      /* text-secondary */
+    --tab-active-bg: 163 58% 28%;         /* primary */
+    --tab-active-text: 0 0% 100%;         /* white */
+
+    /* Legacy tab tokens - mapped to neutral/primary */
+    --tab-turquoise: 163 58% 28%;
+    --tab-turquoise-light: 163 30% 95%;
+    --tab-coral: 163 58% 28%;
+    --tab-coral-light: 163 30% 95%;
+    --tab-sky: 163 58% 28%;
+    --tab-sky-light: 163 30% 95%;
+    --tab-violet: 163 58% 28%;
+    --tab-violet-light: 163 30% 95%;
+    --tab-lime: 163 58% 28%;
+    --tab-lime-light: 163 30% 95%;
+
+    /* Status colors - High contrast for accessibility */
+    --destructive: 0 72% 51%;       /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
-    --success: 142 70% 40%;
+    --success: 163 58% 28%;         /* Matches primary */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 220 30% 15%;
-    --info: 200 95% 45%;
+    --warning: 38 92% 50%;          /* Amber */
+    --warning-foreground: 210 24% 16%;
+    --info: 200 95% 45%;            /* Blue */
     --info-foreground: 0 0% 100%;
-    --excel: 174 60% 45%;
+    
+    /* Export button - Secondary outline style */
+    --excel: 215 25% 27%;
     --excel-foreground: 0 0% 100%;
 
     /* Invoice status colors */
-    --status-draft: 215 15% 60%;
+    --status-draft: 220 9% 46%;
     --status-pending: 38 92% 50%;
     --status-approved: 200 95% 45%;
-    --status-paid: 142 70% 40%;
+    --status-paid: 163 58% 28%;
     --status-overdue: 0 72% 51%;
 
     /* Borders and inputs */
-    --border: 215 25% 88%;
-    --input: 215 25% 88%;
-    --ring: 220 65% 30%;
+    --border: 220 13% 91%;          /* #E5E7EB */
+    --input: 220 13% 91%;
+    --ring: 163 58% 28%;
 
     --radius: 0.5rem;
 
-    /* Sidebar - Light blue professional look */
-    --sidebar-background: 210 40% 55%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 38 95% 50%;
-    --sidebar-primary-foreground: 220 30% 15%;
-    --sidebar-accent: 210 45% 48%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 210 35% 50%;
-    --sidebar-ring: 38 95% 50%;
+    /* Sidebar - Professional neutral with primary accent */
+    --sidebar-background: 210 24% 16%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 163 58% 28%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 22%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 210 20% 25%;
+    --sidebar-ring: 163 58% 28%;
     --sidebar-logo-background: 0 0% 100%;
 
     /* Chart colors for reports */
-    --chart-1: 220 65% 30%;
-    --chart-2: 38 95% 50%;
-    --chart-3: 142 70% 40%;
-    --chart-4: 200 95% 45%;
-    --chart-5: 280 60% 50%;
+    --chart-1: 163 58% 28%;
+    --chart-2: 200 80% 45%;
+    --chart-3: 38 80% 50%;
+    --chart-4: 270 50% 50%;
+    --chart-5: 0 72% 51%;
   }
 
   .dark {
-    --background: 220 30% 8%;
-    --foreground: 215 20% 95%;
+    /* Core surfaces */
+    --background: 220 20% 10%;
+    --foreground: 220 14% 96%;
 
-    --card: 220 30% 12%;
-    --card-foreground: 215 20% 95%;
+    --card: 220 20% 14%;
+    --card-foreground: 220 14% 96%;
 
-    --popover: 220 30% 12%;
-    --popover-foreground: 215 20% 95%;
+    --popover: 220 20% 14%;
+    --popover-foreground: 220 14% 96%;
 
-    --primary: 215 80% 60%;
-    --primary-foreground: 220 30% 8%;
+    /* Primary - Forest green */
+    --primary: 163 50% 45%;
+    --primary-foreground: 220 20% 10%;
 
-    --secondary: 220 25% 20%;
-    --secondary-foreground: 215 20% 90%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 14% 90%;
 
-    --muted: 220 25% 18%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 9% 55%;
 
-    --accent: 38 95% 55%;
-    --accent-foreground: 220 30% 8%;
+    --accent: 163 40% 20%;
+    --accent-foreground: 163 50% 65%;
     
-    /* Tab color schemes - Dark mode */
-    --tab-turquoise: 174 65% 50%;
-    --tab-turquoise-light: 174 50% 20%;
-    --tab-coral: 12 80% 55%;
-    --tab-coral-light: 12 60% 20%;
-    --tab-sky: 200 85% 55%;
-    --tab-sky-light: 200 70% 20%;
-    --tab-violet: 270 65% 60%;
-    --tab-violet-light: 270 50% 22%;
-    --tab-lime: 82 65% 50%;
-    --tab-lime-light: 82 50% 18%;
+    /* Section indicator colors - Dark mode */
+    --section-operations: 163 50% 45%;
+    --section-fuel: 200 70% 55%;
+    --section-hr: 38 70% 55%;
+    --section-inventory: 270 45% 55%;
+    --section-rainfall: 174 50% 50%;
+
+    /* Tab styling - Dark mode */
+    --tab-inactive-bg: transparent;
+    --tab-inactive-text: 220 9% 55%;
+    --tab-active-bg: 163 50% 45%;
+    --tab-active-text: 220 20% 10%;
+
+    /* Legacy tab tokens - dark mode */
+    --tab-turquoise: 163 50% 45%;
+    --tab-turquoise-light: 163 35% 18%;
+    --tab-coral: 163 50% 45%;
+    --tab-coral-light: 163 35% 18%;
+    --tab-sky: 163 50% 45%;
+    --tab-sky-light: 163 35% 18%;
+    --tab-violet: 163 50% 45%;
+    --tab-violet-light: 163 35% 18%;
+    --tab-lime: 163 50% 45%;
+    --tab-lime-light: 163 35% 18%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 70% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 220 30% 8%;
-    --info: 200 95% 50%;
-    --info-foreground: 0 0% 100%;
-    --excel: 174 55% 50%;
-    --excel-foreground: 0 0% 100%;
+    --success: 163 50% 45%;
+    --success-foreground: 220 20% 10%;
+    --warning: 38 85% 55%;
+    --warning-foreground: 220 20% 10%;
+    --info: 200 90% 55%;
+    --info-foreground: 220 20% 10%;
+    --excel: 220 14% 80%;
+    --excel-foreground: 220 20% 10%;
 
-    --status-draft: 215 15% 50%;
-    --status-pending: 38 92% 55%;
-    --status-approved: 200 95% 50%;
-    --status-paid: 142 70% 45%;
+    --status-draft: 220 9% 50%;
+    --status-pending: 38 85% 55%;
+    --status-approved: 200 90% 55%;
+    --status-paid: 163 50% 45%;
     --status-overdue: 0 62% 50%;
 
-    --border: 220 25% 22%;
-    --input: 220 25% 22%;
-    --ring: 215 80% 60%;
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 163 50% 45%;
 
-    --sidebar-background: 220 30% 6%;
-    --sidebar-foreground: 215 20% 85%;
-    --sidebar-primary: 38 95% 55%;
-    --sidebar-primary-foreground: 220 30% 8%;
-    --sidebar-accent: 220 30% 15%;
-    --sidebar-accent-foreground: 215 20% 90%;
-    --sidebar-border: 220 25% 15%;
-    --sidebar-ring: 38 95% 55%;
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 220 14% 90%;
+    --sidebar-primary: 163 50% 45%;
+    --sidebar-primary-foreground: 220 20% 8%;
+    --sidebar-accent: 220 20% 14%;
+    --sidebar-accent-foreground: 220 14% 90%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 163 50% 45%;
 
-    --chart-1: 215 80% 60%;
-    --chart-2: 38 95% 55%;
-    --chart-3: 142 70% 45%;
-    --chart-4: 200 95% 50%;
-    --chart-5: 280 60% 55%;
+    --chart-1: 163 50% 45%;
+    --chart-2: 200 70% 55%;
+    --chart-3: 38 70% 55%;
+    --chart-4: 270 45% 55%;
+    --chart-5: 0 62% 50%;
   }
 }
 
@@ -189,7 +220,7 @@
 }
 
 @layer components {
-  /* Data table styling */
+  /* Data table styling - WCAG AA compliant */
   .data-table {
     @apply w-full text-sm;
   }
@@ -206,17 +237,22 @@
     @apply bg-muted/50;
   }
 
+  /* Zebra striping - subtle */
+  .data-table tbody tr:nth-child(even) td {
+    @apply bg-muted/30;
+  }
+
   /* Amount formatting */
   .amount {
     @apply font-mono tabular-nums text-right;
   }
 
   .amount-positive {
-    @apply text-success;
+    @apply text-success font-semibold;
   }
 
   .amount-negative {
-    @apply text-destructive;
+    @apply text-destructive font-semibold;
   }
 
   /* Status badges */
@@ -264,5 +300,47 @@
 
   .nav-item.active {
     @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium;
+  }
+
+  /* Button hierarchy helpers */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-secondary {
+    @apply border border-border bg-transparent text-secondary-foreground hover:bg-secondary;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground;
+  }
+
+  .btn-destructive {
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  }
+
+  /* Section indicators - Subtle color hints */
+  .section-indicator {
+    @apply w-1 h-4 rounded-full;
+  }
+
+  .section-indicator-operations {
+    background-color: hsl(var(--section-operations));
+  }
+
+  .section-indicator-fuel {
+    background-color: hsl(var(--section-fuel));
+  }
+
+  .section-indicator-hr {
+    background-color: hsl(var(--section-hr));
+  }
+
+  .section-indicator-inventory {
+    background-color: hsl(var(--section-inventory));
+  }
+
+  .section-indicator-rainfall {
+    background-color: hsl(var(--section-rainfall));
   }
 }

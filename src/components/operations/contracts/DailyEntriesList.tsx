@@ -86,7 +86,9 @@ export function DailyEntriesList({ entries, isLoading, onEdit, onDelete }: Daily
               <TableRow key={entry.id}>
                 <TableCell>{format(parseDateLocal(entry.entry_date), "dd/MM/yyyy")}</TableCell>
                 <TableCell className="font-medium">
-                  {contract?.contract_name || "-"}
+                  {contract 
+                    ? `${contract.contract_name.split(" ")[0]} ${contract.owner_name.split(" ")[0]}`
+                    : "-"}
                 </TableCell>
                 <TableCell>
                   <div className="max-w-xs truncate" title={entry.description}>

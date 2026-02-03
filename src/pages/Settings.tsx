@@ -17,7 +17,6 @@ import {
   Database, 
   Shield, 
   Bell, 
-  Palette,
   Save,
   TestTube,
   Lock,
@@ -147,64 +146,6 @@ export default function Settings() {
                       <TestTube className="mr-2 h-4 w-4" />
                       {t("settings.testConnection")}
                     </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preferences */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Palette className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{t("settings.preferences")}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {t("settings.preferencesSubtitle")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="currency">{t("settings.defaultCurrency")}</Label>
-                      <Select defaultValue="usd" disabled={!canModifySettings}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="usd">USD ($)</SelectItem>
-                          <SelectItem value="eur">EUR (€)</SelectItem>
-                          <SelectItem value="gbp">GBP (£)</SelectItem>
-                          <SelectItem value="cad">CAD ($)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dateFormat">{t("settings.dateFormat")}</Label>
-                      <Select defaultValue="mdy" disabled={!canModifySettings}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mdy">MM/DD/AAAA</SelectItem>
-                          <SelectItem value="dmy">DD/MM/AAAA</SelectItem>
-                          <SelectItem value="ymd">AAAA-MM-DD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="taxRate">{t("settings.taxRate")}</Label>
-                    <Input 
-                      id="taxRate" 
-                      type="number" 
-                      placeholder="8.0" 
-                      className="w-32"
-                      disabled={!canModifySettings}
-                    />
                   </div>
                 </div>
               </div>

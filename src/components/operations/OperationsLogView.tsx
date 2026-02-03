@@ -35,10 +35,11 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarIcon, Tractor, Users, MapPin, Activity, Trash2, Package, Clock, MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, FileSpreadsheet, FileText, Download, ChevronDown } from "lucide-react";
-import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { 
+  Plus, CalendarIcon, Users, MapPin, Activity, Trash2, Package, 
+  MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, 
+  FileSpreadsheet, FileText, Download, ChevronDown 
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,95 +61,21 @@ import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-interface Field {
-  id: string;
-  name: string;
-  hectares: number | null;
-  farm_id: string;
-  farms: { name: string };
-}
-
-interface OperationType {
-  id: string;
-  name: string;
-  is_mechanical: boolean;
-}
-
-interface TractorEquipment {
-  id: string;
-  name: string;
-  current_hour_meter: number;
-  maintenance_interval_hours: number;
-}
-
-interface MaintenanceRecord {
-  tractor_id: string;
-  hour_meter_reading: number;
-}
-
-interface Implement {
-  id: string;
-  name: string;
-  implement_type: string;
-}
-
-interface InventoryItem {
-  id: string;
-  commercial_name: string;
-  use_unit: string;
-  current_quantity: number;
-  function: string;
-}
-
-interface OperationInput {
-  inventory_item_id: string;
-  quantity_used: number;
-}
-
-interface Operation {
-  id: string;
-  operation_date: string;
-  field_id: string;
-  operation_type_id: string;
-  tractor_id: string | null;
-  implement_id: string | null;
-  workers_count: number | null;
-  hectares_done: number;
-  start_hours: number | null;
-  end_hours: number | null;
-  notes: string | null;
-  driver: string | null;
-  fields: { name: string; farms: { name: string }; farm_id: string };
-  operation_types: { name: string; is_mechanical: boolean };
-  fuel_equipment: { name: string } | null;
-  implements: { name: string } | null;
-  operation_inputs: { 
-    id: string;
-    inventory_item_id: string;
-    quantity_used: number; 
-    inventory_items: { commercial_name: string; use_unit: string } 
-  }[];
-}
-
-const operationsColumns: ColumnConfig[] = [
-  { key: "date", label: "Fecha", defaultVisible: true },
-  { key: "field", label: "Campo", defaultVisible: true },
-  { key: "farm", label: "Finca", defaultVisible: true },
-  { key: "operation", label: "Operación", defaultVisible: true },
-  { key: "tractor", label: "Tractor/Obreros", defaultVisible: true },
-  { key: "driver", label: "Operador", defaultVisible: true },
-  { key: "implement", label: "Implemento", defaultVisible: true },
-  { key: "hours", label: "Horas", defaultVisible: true },
-  { key: "hectares", label: "Hectáreas", defaultVisible: true },
-  { key: "inputs", label: "Insumos", defaultVisible: true },
-  { key: "notes", label: "Notas", defaultVisible: false },
-];
-
-type SortDirection = "asc" | "desc" | null;
-type SortColumn = "date" | "field" | "farm" | "operation" | "tractor" | "driver" | "implement" | "hours" | "hectares" | null;
+// Import extracted modules
+import { 
+  Field, OperationType, TractorEquipment, MaintenanceRecord, 
+  Implement, InventoryItem, OperationInput, Operation, 
+  SortDirection, SortColumn 
+} from "./types";
+import { operationsColumns } from "./constants";
+import { 
+  calculateHoursValue, calculateHoursDisplay, 
+  checkMaintenanceOverdue, checkHourMeterGap, isMissingClosingData 
+} from "./utils";
+import { useOperationsExport } from "./useOperationsExport";
 
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -248,7 +175,6 @@ export function OperationsLogView() {
         .order("hour_meter_reading", { ascending: false });
       if (error) throw error;
       
-      // Get only the latest maintenance per tractor
       const latestByTractor = new Map<string, number>();
       (data as MaintenanceRecord[]).forEach((m) => {
         if (!latestByTractor.has(m.tractor_id)) {
@@ -259,21 +185,6 @@ export function OperationsLogView() {
       return latestByTractor;
     },
   });
-
-  // Helper to check if tractor maintenance is overdue
-  const checkMaintenanceOverdue = (tractorId: string): { isOverdue: boolean; hoursOverdue: number } | null => {
-    const tractor = tractors?.find(t => t.id === tractorId);
-    if (!tractor) return null;
-    
-    const lastMaintHours = tractorMaintenanceData.get(tractorId) ?? 0;
-    const hoursSinceMaint = tractor.current_hour_meter - lastMaintHours;
-    const hoursUntil = tractor.maintenance_interval_hours - hoursSinceMaint;
-    
-    if (hoursUntil < 0) {
-      return { isOverdue: true, hoursOverdue: Math.abs(Math.round(hoursUntil)) };
-    }
-    return null;
-  };
 
   // Fetch implements
   const { data: implements_ } = useQuery({
@@ -326,14 +237,6 @@ export function OperationsLogView() {
   const selectedOperationType = operationTypes?.find(t => t.id === form.operation_type_id);
   const isMechanical = selectedOperationType?.is_mechanical ?? true;
 
-  // Calculate hours helper
-  const calculateHoursValue = (op: Operation): number => {
-    if (op.start_hours != null && op.end_hours != null) {
-      return op.end_hours - op.start_hours;
-    }
-    return 0;
-  };
-
   // Sorting helper
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -368,7 +271,6 @@ export function OperationsLogView() {
     });
     return Array.from(farmSet, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [fields]);
-
 
   // Filter and sort operations
   const filteredOperations = useMemo(() => {
@@ -458,215 +360,13 @@ export function OperationsLogView() {
       .slice(0, 5);
   }, [filteredOperations]);
 
-  // Export to Excel function
-  const exportToExcel = async () => {
-    if (filteredOperations.length === 0) return;
-
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Bitácora de Operaciones");
-
-    // Define columns based on visible columns
-    const columns: { header: string; key: string; width: number }[] = [];
-    if (isVisible("date")) columns.push({ header: "Fecha", key: "date", width: 15 });
-    if (isVisible("field")) columns.push({ header: "Campo", key: "field", width: 20 });
-    if (isVisible("farm")) columns.push({ header: "Finca", key: "farm", width: 20 });
-    if (isVisible("operation")) columns.push({ header: "Operación", key: "operation", width: 25 });
-    if (isVisible("tractor")) columns.push({ header: "Tractor/Obreros", key: "tractor", width: 20 });
-    if (isVisible("driver")) columns.push({ header: "Operador", key: "driver", width: 20 });
-    if (isVisible("implement")) columns.push({ header: "Implemento", key: "implement", width: 20 });
-    if (isVisible("hours")) columns.push({ header: "Horas", key: "hours", width: 10 });
-    if (isVisible("hectares")) columns.push({ header: "Hectáreas", key: "hectares", width: 12 });
-    if (isVisible("inputs")) columns.push({ header: "Insumos", key: "inputs", width: 40 });
-    if (isVisible("notes")) columns.push({ header: "Notas", key: "notes", width: 30 });
-
-    sheet.columns = columns;
-
-    // Style header row
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF4F81BD" },
-    };
-    sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-
-    // Add data rows
-    filteredOperations.forEach((op) => {
-      const hoursWorked = op.start_hours != null && op.end_hours != null
-        ? (op.end_hours - op.start_hours).toFixed(1)
-        : "";
-      
-      const inputsText = op.operation_inputs
-        .map(input => `${input.inventory_items.commercial_name}: ${input.quantity_used} ${input.inventory_items.use_unit}`)
-        .join(", ");
-
-      const row: Record<string, string | number> = {};
-      if (isVisible("date")) row.date = format(parseDateLocal(op.operation_date), "dd/MM/yyyy");
-      if (isVisible("field")) row.field = op.fields.name;
-      if (isVisible("farm")) row.farm = op.fields.farms.name;
-      if (isVisible("operation")) row.operation = op.operation_types.name;
-      if (isVisible("tractor")) {
-        row.tractor = op.operation_types.is_mechanical 
-          ? (op.fuel_equipment?.name || "") 
-          : `${op.workers_count || 0} obreros`;
-      }
-      if (isVisible("driver")) row.driver = op.driver || "";
-      if (isVisible("implement")) row.implement = op.implements?.name || "";
-      if (isVisible("hours")) row.hours = hoursWorked;
-      if (isVisible("hectares")) row.hectares = op.hectares_done;
-      if (isVisible("inputs")) row.inputs = inputsText;
-      if (isVisible("notes")) row.notes = op.notes || "";
-
-      sheet.addRow(row);
-    });
-
-    // Add summary row
-    const totalHectares = filteredOperations.reduce((sum, op) => sum + op.hectares_done, 0);
-    const totalHours = filteredOperations.reduce((sum, op) => {
-      if (op.start_hours != null && op.end_hours != null) {
-        return sum + (op.end_hours - op.start_hours);
-      }
-      return sum;
-    }, 0);
-
-    const summaryRow: Record<string, string | number> = {};
-    columns.forEach(col => {
-      if (col.key === "date") summaryRow.date = "TOTAL";
-      else if (col.key === "hours") summaryRow.hours = totalHours.toFixed(1);
-      else if (col.key === "hectares") summaryRow.hectares = totalHectares.toFixed(2);
-      else summaryRow[col.key] = "";
-    });
-    const lastRowIdx = sheet.addRow(summaryRow).number;
-    sheet.getRow(lastRowIdx).font = { bold: true };
-    sheet.getRow(lastRowIdx).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD9E1F2" },
-    };
-
-    // Generate and download file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `bitacora-operaciones-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Exportación Exitosa",
-      description: `Se exportaron ${filteredOperations.length} operaciones a Excel.`,
-    });
-  };
-
-  // Export to PDF function
-  const exportToPDF = () => {
-    if (filteredOperations.length === 0) return;
-
-    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
-    
-    // Title
-    pdf.setFontSize(16);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Bitácora de Operaciones", 14, 15);
-    
-    // Date range subtitle
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    const dateRangeText = startDate && endDate 
-      ? `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
-      : "Todas las fechas";
-    pdf.text(dateRangeText, 14, 22);
-    pdf.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 27);
-
-    // Build column headers based on visibility
-    const headers: string[] = [];
-    if (isVisible("date")) headers.push("Fecha");
-    if (isVisible("field")) headers.push("Campo");
-    if (isVisible("farm")) headers.push("Finca");
-    if (isVisible("operation")) headers.push("Operación");
-    if (isVisible("tractor")) headers.push("Tractor/Obreros");
-    if (isVisible("driver")) headers.push("Operador");
-    if (isVisible("implement")) headers.push("Implemento");
-    if (isVisible("hours")) headers.push("Horas");
-    if (isVisible("hectares")) headers.push("Ha");
-    if (isVisible("inputs")) headers.push("Insumos");
-    if (isVisible("notes")) headers.push("Notas");
-
-    // Build data rows
-    const rows = filteredOperations.map((op) => {
-      const hoursWorked = op.start_hours != null && op.end_hours != null
-        ? (op.end_hours - op.start_hours).toFixed(1)
-        : "";
-      
-      const inputsText = op.operation_inputs
-        .map(input => `${input.inventory_items.commercial_name}: ${input.quantity_used}`)
-        .join("; ");
-
-      const row: string[] = [];
-      if (isVisible("date")) row.push(format(parseDateLocal(op.operation_date), "dd/MM/yyyy"));
-      if (isVisible("field")) row.push(op.fields.name);
-      if (isVisible("farm")) row.push(op.fields.farms.name);
-      if (isVisible("operation")) row.push(op.operation_types.name);
-      if (isVisible("tractor")) {
-        row.push(op.operation_types.is_mechanical 
-          ? (op.fuel_equipment?.name || "") 
-          : `${op.workers_count || 0} obreros`);
-      }
-      if (isVisible("driver")) row.push(op.driver || "");
-      if (isVisible("implement")) row.push(op.implements?.name || "");
-      if (isVisible("hours")) row.push(hoursWorked);
-      if (isVisible("hectares")) row.push(op.hectares_done.toString());
-      if (isVisible("inputs")) row.push(inputsText);
-      if (isVisible("notes")) row.push(op.notes || "");
-
-      return row;
-    });
-
-    // Add totals row
-    const totalHectares = filteredOperations.reduce((sum, op) => sum + op.hectares_done, 0);
-    const totalHours = filteredOperations.reduce((sum, op) => {
-      if (op.start_hours != null && op.end_hours != null) {
-        return sum + (op.end_hours - op.start_hours);
-      }
-      return sum;
-    }, 0);
-
-    const totalsRow: string[] = [];
-    headers.forEach((header) => {
-      if (header === "Fecha") totalsRow.push("TOTAL");
-      else if (header === "Horas") totalsRow.push(totalHours.toFixed(1));
-      else if (header === "Ha") totalsRow.push(totalHectares.toFixed(2));
-      else totalsRow.push("");
-    });
-    rows.push(totalsRow);
-
-    // Generate table
-    autoTable(pdf, {
-      head: [headers],
-      body: rows,
-      startY: 32,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [79, 129, 189], textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      didParseCell: (data) => {
-        // Style the totals row
-        if (data.row.index === rows.length - 1) {
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [217, 225, 242];
-        }
-      },
-    });
-
-    // Save PDF
-    pdf.save(`bitacora-operaciones-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-
-    toast({
-      title: "Exportación Exitosa",
-      description: `Se exportaron ${filteredOperations.length} operaciones a PDF.`,
-    });
-  };
+  // Use exported functions hook
+  const { exportToExcel, exportToPDF } = useOperationsExport({
+    filteredOperations,
+    isVisible,
+    startDate,
+    endDate,
+  });
 
   const addInput = () => {
     if (!newInput.inventory_item_id || !newInput.quantity_used) {
@@ -727,7 +427,6 @@ export function OperationsLogView() {
         driver: isMechanical && data.driver ? data.driver : null,
       };
 
-      // Insert operation
       const { data: operation, error: opError } = await supabase
         .from("operations")
         .insert(record)
@@ -845,7 +544,6 @@ export function OperationsLogView() {
 
         // Deduct from inventory (use fresh data after restore)
         for (const input of inputs) {
-          // Get current quantity after restore
           const { data: currentItem, error: fetchError } = await supabase
             .from("inventory_items")
             .select("current_quantity")
@@ -885,7 +583,6 @@ export function OperationsLogView() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (operationId: string) => {
-      // First restore inventory quantities from operation_inputs
       const { data: inputs, error: inputsError } = await supabase
         .from("operation_inputs")
         .select("inventory_item_id, quantity_used")
@@ -909,7 +606,6 @@ export function OperationsLogView() {
         }
       }
 
-      // Delete operation_inputs
       const { error: deleteInputsError } = await supabase
         .from("operation_inputs")
         .delete()
@@ -917,7 +613,6 @@ export function OperationsLogView() {
       
       if (deleteInputsError) throw deleteInputsError;
 
-      // Delete operation
       const { error: deleteError } = await supabase
         .from("operations")
         .delete()
@@ -963,40 +658,13 @@ export function OperationsLogView() {
     setNewInput({ inventory_item_id: "", quantity_used: "" });
   };
 
-  // Check for hour meter gap with previous operation on same tractor
-  const checkHourMeterGap = (tractorId: string, startHours: number, operationDate: Date): string | null => {
-    if (!operations || !tractorId) return null;
-    
-    // Find the most recent operation on this tractor before the current date
-    const tractorOps = operations
-      .filter(op => op.tractor_id === tractorId && op.end_hours != null)
-      .filter(op => {
-        const opDate = parseDateLocal(op.operation_date);
-        return opDate < operationDate;
-      })
-      .sort((a, b) => parseDateLocal(b.operation_date).getTime() - parseDateLocal(a.operation_date).getTime());
-    
-    if (tractorOps.length > 0) {
-      const lastOp = tractorOps[0];
-      const lastEndHours = lastOp.end_hours!;
-      const gap = startHours - lastEndHours;
-      
-      if (gap > 0.1) { // Allow small tolerance
-        const lastDate = format(parseDateLocal(lastOp.operation_date), "dd/MM/yyyy");
-        return `Hay una diferencia de ${gap.toFixed(1)} horas entre el horómetro fin (${lastEndHours}) del ${lastDate} y el horómetro inicio (${startHours}) de hoy. ¿Falta registrar alguna operación?`;
-      }
-    }
-    return null;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Morning entry only requires: field, operation type, and for mechanical: tractor, implement, start hours
-    // End of day adds: end hours, hectares done, inputs
+    
     if (!form.field_id || !form.operation_type_id) {
       toast({
         title: "Error de Validación",
-        description: "Complete todos los campos requeridos (Campo y Tipo de Operación).",
+        description: "Campo y tipo de operación son requeridos.",
         variant: "destructive",
       });
       return;
@@ -1039,7 +707,7 @@ export function OperationsLogView() {
       }
 
       // Check for hour meter gap
-      const gapWarning = checkHourMeterGap(form.tractor_id, startHours, form.operation_date);
+      const gapWarning = checkHourMeterGap(form.tractor_id, startHours, form.operation_date, operations);
       if (gapWarning) {
         toast({
           title: "⚠️ Alerta de Horómetro",
@@ -1047,13 +715,12 @@ export function OperationsLogView() {
           variant: "default",
           duration: 8000,
         });
-        // Still allow submission but show the warning
       }
     }
 
     // Check if tractor maintenance is overdue (for mechanical operations)
     if (isMechanical && form.tractor_id) {
-      const maintenanceStatus = checkMaintenanceOverdue(form.tractor_id);
+      const maintenanceStatus = checkMaintenanceOverdue(form.tractor_id, tractors, tractorMaintenanceData);
       if (maintenanceStatus?.isOverdue) {
         const tractorName = tractors?.find(t => t.id === form.tractor_id)?.name || "Tractor";
         toast({
@@ -1062,7 +729,6 @@ export function OperationsLogView() {
           variant: "destructive",
           duration: 10000,
         });
-        // Still allow submission but show the warning
       }
     }
 
@@ -1089,7 +755,6 @@ export function OperationsLogView() {
     }
     
     if (editingOperation) {
-      // Get original inputs from the editing operation
       const originalInputs = editingOperation.operation_inputs?.map(input => ({
         inventory_item_id: input.inventory_item_id,
         quantity_used: input.quantity_used,
@@ -1103,13 +768,6 @@ export function OperationsLogView() {
   const getItemName = (itemId: string) => {
     const item = inventoryItems?.find(i => i.id === itemId);
     return item ? `${item.commercial_name} (${item.use_unit})` : itemId;
-  };
-
-  const calculateHours = (op: Operation) => {
-    if (op.start_hours != null && op.end_hours != null) {
-      return (op.end_hours - op.start_hours).toFixed(1);
-    }
-    return "-";
   };
 
   return (
@@ -1422,80 +1080,76 @@ export function OperationsLogView() {
                         placeholder={t("operations.form.operatorPlaceholder")}
                       />
                     </div>
-                    
-                    {/* Tractor Hours - positioned directly below tractor/implement */}
-                    <div className="grid grid-cols-2 gap-4 bg-muted/30 rounded-lg p-3">
+
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <Label className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          {t("operations.form.hourMeterStart")}
-                        </Label>
+                        <Label>{t("operations.form.startHours")}</Label>
                         <Input
                           type="number"
                           step="0.1"
                           value={form.start_hours}
                           onChange={(e) => setForm({ ...form, start_hours: e.target.value })}
-                          placeholder="ej. 1250.5"
+                          placeholder="0.0"
                         />
                       </div>
                       <div>
-                        <Label className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          {t("operations.form.hourMeterEnd")}
-                          <span className="text-xs text-muted-foreground font-normal">(Cierre)</span>
-                        </Label>
+                        <Label>{t("operations.form.endHours")}</Label>
                         <Input
                           type="number"
                           step="0.1"
                           value={form.end_hours}
                           onChange={(e) => setForm({ ...form, end_hours: e.target.value })}
-                          placeholder="ej. 1258.0"
+                          placeholder="0.0"
                         />
                       </div>
-                      {form.start_hours && form.end_hours && (
-                        <div className="col-span-2 text-sm text-muted-foreground">
-                          {t("operations.form.hoursWorked")}: <span className="font-semibold text-foreground">
-                            {(parseFloat(form.end_hours) - parseFloat(form.start_hours)).toFixed(1)} hrs
-                          </span>
-                        </div>
-                      )}
+                      <div>
+                        <Label>{t("operations.form.hectaresDone")}</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.hectares_done}
+                          onChange={(e) => setForm({ ...form, hectares_done: e.target.value })}
+                          placeholder="0.00"
+                        />
+                      </div>
                     </div>
                   </>
                 ) : (
-                  <div>
-                    <Label>{t("operations.form.workersCount")} *</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={form.workers_count}
-                      onChange={(e) => setForm({ ...form, workers_count: e.target.value })}
-                      placeholder={t("operations.form.workersPlaceholder")}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>{t("operations.form.workersCount")} *</Label>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          min="1"
+                          value={form.workers_count}
+                          onChange={(e) => setForm({ ...form, workers_count: e.target.value })}
+                          placeholder="1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>{t("operations.form.hectaresDone")}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={form.hectares_done}
+                        onChange={(e) => setForm({ ...form, hectares_done: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
                 )}
 
-                <div>
-                  <Label className="flex items-center gap-2">
-                    {t("operations.form.hectaresDone")}
-                    <span className="text-xs text-muted-foreground font-normal">(Cierre)</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={form.hectares_done}
-                    onChange={(e) => setForm({ ...form, hectares_done: e.target.value })}
-                    placeholder={t("operations.form.hectaresPlaceholder")}
-                  />
-                </div>
-
                 {/* Inputs Section */}
-                <div className="border rounded-lg p-4 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-base font-semibold">{t("operations.form.inputsUsed")}</Label>
-                    <span className="text-xs text-muted-foreground font-normal">(Cierre)</span>
-                  </div>
-                  
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    {t("operations.form.inputsUsed")}
+                  </Label>
                   <div className="flex gap-2">
                     <Select
                       value={newInput.inventory_item_id}
@@ -1694,18 +1348,13 @@ export function OperationsLogView() {
           </TableHeader>
           <TableBody>
             {filteredOperations.map((op) => {
-              // Check if operation is missing closing data
-              // For mechanical: requires end_hours (hectares_done is optional, 0 is valid)
-              // For non-mechanical: no strict closure requirements, hectares is optional
-              const isMissingClosingData = op.operation_types.is_mechanical 
-                ? (op.end_hours == null)
-                : false;
+              const missingClosingData = isMissingClosingData(op);
               
               return (
-                <TableRow key={op.id} className={isMissingClosingData ? "bg-warning/10" : ""}>
+                <TableRow key={op.id} className={missingClosingData ? "bg-warning/10" : ""}>
                   {isVisible("date") && (
                     <TableCell className="flex items-center gap-2">
-                      {isMissingClosingData && (
+                      {missingClosingData && (
                         <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label="Falta datos de cierre" />
                       )}
                       {format(parseDateLocal(op.operation_date), "MMM d, yyyy")}
@@ -1731,7 +1380,7 @@ export function OperationsLogView() {
                   {isVisible("implement") && <TableCell>{op.implements?.name || "-"}</TableCell>}
                   {isVisible("hours") && (
                     <TableCell className={cn("font-mono", op.operation_types.is_mechanical && op.end_hours == null && "text-warning")}>
-                      {calculateHours(op)} {calculateHours(op) !== "-" && "hrs"}
+                      {calculateHoursDisplay(op)} {calculateHoursDisplay(op) !== "-" && "hrs"}
                     </TableCell>
                   )}
                   {isVisible("hectares") && (
@@ -1758,7 +1407,7 @@ export function OperationsLogView() {
                   {canEdit && (
                     <TableCell className={cn(
                       "text-right sticky right-0 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]",
-                      isMissingClosingData ? "bg-warning/10" : "bg-background"
+                      missingClosingData ? "bg-warning/10" : "bg-background"
                     )}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1782,7 +1431,6 @@ export function OperationsLogView() {
                               notes: op.notes || "",
                               driver: op.driver || "",
                             });
-                            // Populate existing inputs for editing
                             if (op.operation_inputs && op.operation_inputs.length > 0) {
                               setInputs(op.operation_inputs.map(input => ({
                                 inventory_item_id: input.inventory_item_id,
@@ -1794,7 +1442,7 @@ export function OperationsLogView() {
                             setIsDialogOpen(true);
                           }}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            {isMissingClosingData ? "Completar Cierre" : "Editar"}
+                            {missingClosingData ? "Completar Cierre" : "Editar"}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"

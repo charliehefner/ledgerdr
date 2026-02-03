@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -87,8 +88,8 @@ export function VacationCountdownDialog({
   // Calculate vacation status
   const lastVacation = vacationHistory[0];
   const baseDate = lastVacation
-    ? parseISO(lastVacation.end_date)
-    : parseISO(dateOfHire);
+    ? parseDateLocal(lastVacation.end_date)
+    : parseDateLocal(dateOfHire);
   const nextVacationDue = addYears(baseDate, 1);
   const today = new Date();
   const daysUntilVacation = differenceInDays(nextVacationDue, today);
@@ -179,7 +180,7 @@ export function VacationCountdownDialog({
   };
 
   const calculateVacationDays = (start: string, end: string) => {
-    return differenceInDays(parseISO(end), parseISO(start)) + 1;
+    return differenceInDays(parseDateLocal(end), parseDateLocal(start)) + 1;
   };
 
   if (!employeeId) return null;
@@ -216,14 +217,14 @@ export function VacationCountdownDialog({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Fecha de Ingreso</span>
                   <span className="font-medium">
-                    {format(parseISO(dateOfHire), "d MMM yyyy", { locale: es })}
+                    {format(parseDateLocal(dateOfHire), "d MMM yyyy", { locale: es })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Última Vacación</span>
                   <span className="font-medium">
                     {lastVacation
-                      ? format(parseISO(lastVacation.end_date), "d MMM yyyy", { locale: es })
+                      ? format(parseDateLocal(lastVacation.end_date), "d MMM yyyy", { locale: es })
                       : "Sin registro"}
                   </span>
                 </div>
@@ -349,10 +350,10 @@ export function VacationCountdownDialog({
                       {vacationHistory.map((vacation) => (
                         <TableRow key={vacation.id}>
                           <TableCell>
-                            {format(parseISO(vacation.start_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(vacation.start_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>
-                            {format(parseISO(vacation.end_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(vacation.end_date), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>
                             {calculateVacationDays(vacation.start_date, vacation.end_date)}

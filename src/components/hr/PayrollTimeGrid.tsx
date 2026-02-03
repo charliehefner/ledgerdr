@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { format, eachDayOfInterval, isSunday, isSaturday, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -228,8 +229,8 @@ export function PayrollTimeGrid({
   const isEmployeeOnVacation = (employeeId: string, date: Date): boolean => {
     const dateStr = format(date, "yyyy-MM-dd");
     return vacations.some((v) => {
-      const vacStart = parseISO(v.start_date);
-      const vacEnd = parseISO(v.end_date);
+      const vacStart = parseDateLocal(v.start_date);
+      const vacEnd = parseDateLocal(v.end_date);
       return (
         v.employee_id === employeeId &&
         isWithinInterval(date, { start: vacStart, end: vacEnd })

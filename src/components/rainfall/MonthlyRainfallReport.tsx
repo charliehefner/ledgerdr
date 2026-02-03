@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { format, parseISO, startOfYear, endOfYear } from "date-fns";
 import { es, enUS } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,7 +49,7 @@ export function MonthlyRainfallReport({ records }: MonthlyRainfallReportProps) {
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     records.forEach((r) => {
-      const year = parseISO(r.record_date).getFullYear();
+      const year = parseDateLocal(r.record_date).getFullYear();
       years.add(year);
     });
     // Add current year if not present
@@ -69,7 +70,7 @@ export function MonthlyRainfallReport({ records }: MonthlyRainfallReportProps) {
 
     // Aggregate records by month
     records.forEach((record) => {
-      const date = parseISO(record.record_date);
+      const date = parseDateLocal(record.record_date);
       if (date.getFullYear() === selectedYear) {
         const month = date.getMonth();
         LOCATIONS.forEach((loc) => {

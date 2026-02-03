@@ -55,6 +55,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TankHistoryView } from "./TankHistoryView";
 import { TractorHistoryView } from "./TractorHistoryView";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { parseDateLocal } from "@/lib/dateUtils";
 
 type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -170,7 +171,7 @@ export function AgricultureFuelView() {
     if (!startDate && !endDate) return transactions;
     
     return transactions.filter((tx) => {
-      const txDate = new Date(tx.transaction_date);
+      const txDate = parseDateLocal(tx.transaction_date);
       if (startDate && endDate) {
         return isWithinInterval(txDate, { 
           start: startOfDay(startDate), 
@@ -497,7 +498,7 @@ export function AgricultureFuelView() {
 
       switch (sortField) {
         case "transaction_date":
-          comparison = new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
+          comparison = parseDateLocal(a.transaction_date).getTime() - parseDateLocal(b.transaction_date).getTime();
           break;
         case "tank":
           comparison = a.fuel_tanks.name.localeCompare(b.fuel_tanks.name);
@@ -563,7 +564,7 @@ export function AgricultureFuelView() {
     // Add data
     sortedTransactions.forEach((tx) => {
       worksheet.addRow([
-        format(new Date(tx.transaction_date), "dd/MM/yyyy HH:mm"),
+        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
         tx.fuel_tanks.name,
         tx.fuel_equipment.name,
         tx.hour_meter_reading,
@@ -617,7 +618,7 @@ export function AgricultureFuelView() {
 
     // Table data
     const tableData = sortedTransactions.map((tx) => [
-      format(new Date(tx.transaction_date), "dd/MM/yyyy HH:mm"),
+      format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
       tx.fuel_tanks.name,
       tx.fuel_equipment.name,
       tx.hour_meter_reading.toString(),
@@ -968,7 +969,7 @@ export function AgricultureFuelView() {
             {sortedTransactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>
-                  {format(new Date(tx.transaction_date), "MMM d, yyyy HH:mm")}
+                  {format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell>{tx.fuel_tanks.name}</TableCell>
                 <TableCell>{tx.fuel_equipment.name}</TableCell>
@@ -1026,7 +1027,7 @@ export function AgricultureFuelView() {
               <div className="text-sm text-muted-foreground bg-muted p-2 rounded space-y-1">
                 <p><strong>Tank:</strong> {editingTransaction.fuel_tanks.name}</p>
                 <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment.name}</p>
-                <p><strong>Date:</strong> {format(new Date(editingTransaction.transaction_date), "MMM d, yyyy HH:mm")}</p>
+                <p><strong>Date:</strong> {format(parseDateLocal(editingTransaction.transaction_date), "MMM d, yyyy")}</p>
               </div>
             )}
 

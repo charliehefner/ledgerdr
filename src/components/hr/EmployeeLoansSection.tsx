@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -278,7 +279,7 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
                       {activeLoans.map((loan) => (
                         <TableRow key={loan.id}>
                           <TableCell>
-                            {format(new Date(loan.loan_date), "dd/MM/yyyy")}
+                            {format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {formatCurrency(loan.loan_amount)}
@@ -332,7 +333,7 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
                       {inactiveLoans.map((loan) => (
                         <TableRow key={loan.id}>
                           <TableCell>
-                            {format(new Date(loan.loan_date), "dd/MM/yyyy")}
+                            {format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {formatCurrency(loan.loan_amount)}

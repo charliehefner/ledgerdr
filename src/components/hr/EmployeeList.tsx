@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle } from "lucide-react";
 import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -271,12 +272,12 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                 {Math.abs(status.daysUntil)} días vencido
               </Badge>
             ) : status.isDueSoon ? (
-              <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800">
+              <Badge variant="secondary" className="gap-1 bg-warning/20 text-warning-foreground">
                 <Clock className="h-3 w-3" />
                 {status.daysUntil} días
               </Badge>
             ) : (
-              <Badge variant="outline" className="gap-1 text-green-700 border-green-300">
+              <Badge variant="outline" className="gap-1 text-success border-success/30">
                 <CheckCircle className="h-3 w-3" />
                 {status.daysUntil} días
               </Badge>
@@ -334,9 +335,11 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : sortedAndFilteredEmployees.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? "No hay empleados que coincidan con la búsqueda" : "No se encontraron empleados. ¡Agregue el primer empleado!"}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={searchTerm ? "No hay resultados" : "Sin empleados"}
+              description={searchTerm ? "No hay empleados que coincidan con la búsqueda" : "Agregue el primer empleado para comenzar."}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

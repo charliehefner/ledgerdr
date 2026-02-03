@@ -33,6 +33,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Plus, Pencil, MapPin, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -324,9 +325,11 @@ export function FarmsFieldsView() {
 
       {/* Farms & Fields Accordion */}
       {!farms || farms.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No farms added yet. Click "Add Farm" to get started.
-        </div>
+        <EmptyState
+          icon={MapPin}
+          title="Sin fincas"
+          description="No hay fincas agregadas. Haga clic en 'Add Farm' para comenzar."
+        />
       ) : (
         <Accordion type="multiple" className="space-y-2">
           {farms.map((farm) => (

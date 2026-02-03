@@ -5,10 +5,15 @@ import { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -46,9 +51,10 @@ const employeeSchema = z.object({
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
 
-interface EmployeeFormProps {
+interface EmployeeFormDialogProps {
   employeeId: string | null;
-  onComplete: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
@@ -68,7 +74,7 @@ const BANKS = [
   "Banco Vimenca",
 ];
 
-export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
+export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeFormDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!employeeId;
 
@@ -94,7 +100,6 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
     queryKey: ["employee", employeeId],
     queryFn: async () => {
       if (!employeeId) return null;
-      // Use employees_safe view to mask sensitive PII for non-admin users
       const { data, error } = await supabase
         .from("employees_safe")
         .select("*")
@@ -104,7 +109,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
       if (error) throw error;
       return data;
     },
-    enabled: !!employeeId,
+    enabled: !!employeeId && open,
   });
 
   useEffect(() => {
@@ -123,8 +128,23 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
         shirt_size: employee.shirt_size || "",
         is_active: employee.is_active,
       });
+    } else if (!employeeId) {
+      form.reset({
+        name: "",
+        cedula: "",
+        position: "Obrero",
+        bank: "",
+        bank_account_number: "",
+        date_of_birth: "",
+        date_of_hire: "",
+        salary: 0,
+        boot_size: "",
+        pant_size: "",
+        shirt_size: "",
+        is_active: true,
+      });
     }
-  }, [employee, form]);
+  }, [employee, employeeId, form]);
 
   const onSubmit = async (data: EmployeeFormData) => {
     try {
@@ -151,7 +171,6 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
 
         if (error) throw error;
 
-        // Log salary change if different
         if (employee && employee.salary !== data.salary) {
           await supabase.from("employee_salary_history").insert({
             employee_id: employeeId,
@@ -177,7 +196,6 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
           throw error;
         }
 
-        // Create initial salary history entry
         await supabase.from("employee_salary_history").insert({
           employee_id: newEmployee.id,
           salary: data.salary,
@@ -190,7 +208,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
 
       queryClient.invalidateQueries({ queryKey: ["employees"] });
       form.reset();
-      onComplete();
+      onOpenChange(false);
     } catch (error) {
       console.error("Error saving employee:", error);
       toast.error("Error al guardar empleado");
@@ -198,14 +216,15 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-primary" />
-          <CardTitle>{isEditing ? "Editar Empleado" : "Agregar Nuevo Empleado"}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            {isEditing ? "Editar Empleado" : "Agregar Nuevo Empleado"}
+          </DialogTitle>
+        </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Personal Information */}
@@ -470,8 +489,8 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={onComplete}>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit">
@@ -488,7 +507,7 @@ export function EmployeeForm({ employeeId, onComplete }: EmployeeFormProps) {
             <EmployeeLoansSection employeeId={employeeId} />
           </div>
         )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

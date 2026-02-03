@@ -22,30 +22,27 @@ const TabsList = React.forwardRef<
 TabsList.displayName = TabsPrimitive.List.displayName;
 
 const tabsTriggerVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       colorScheme: {
-        default: "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-        // Turquoise - Primary action tabs (darker text for contrast)
-        turquoise: "bg-[hsl(var(--tab-turquoise-light))] text-[hsl(174_70%_25%)] hover:bg-[hsl(var(--tab-turquoise))]/20 data-[state=active]:bg-[hsl(var(--tab-turquoise))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        // Coral - Accent/attention tabs (darker text for contrast)
-        coral: "bg-[hsl(var(--tab-coral-light))] text-[hsl(12_85%_35%)] hover:bg-[hsl(var(--tab-coral))]/20 data-[state=active]:bg-[hsl(var(--tab-coral))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        // Sky - Secondary tabs (darker text for contrast)
-        sky: "bg-[hsl(var(--tab-sky-light))] text-[hsl(200_90%_30%)] hover:bg-[hsl(var(--tab-sky))]/20 data-[state=active]:bg-[hsl(var(--tab-sky))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        // Violet - Configuration/settings tabs (darker text for contrast)
-        violet: "bg-[hsl(var(--tab-violet-light))] text-[hsl(270_70%_35%)] hover:bg-[hsl(var(--tab-violet))]/20 data-[state=active]:bg-[hsl(var(--tab-violet))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        // Lime - Success/action tabs (darker text for contrast)
-        lime: "bg-[hsl(var(--tab-lime-light))] text-[hsl(82_70%_28%)] hover:bg-[hsl(var(--tab-lime))]/20 data-[state=active]:bg-[hsl(var(--tab-lime))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        // Legacy schemes (mapped to new colors with darker text)
-        primary: "bg-[hsl(var(--tab-turquoise-light))] text-[hsl(174_70%_25%)] hover:bg-[hsl(var(--tab-turquoise))]/20 data-[state=active]:bg-[hsl(var(--tab-turquoise))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        secondary: "bg-[hsl(var(--tab-sky-light))] text-[hsl(200_90%_30%)] hover:bg-[hsl(var(--tab-sky))]/20 data-[state=active]:bg-[hsl(var(--tab-sky))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        accent: "bg-[hsl(var(--tab-coral-light))] text-[hsl(12_85%_35%)] hover:bg-[hsl(var(--tab-coral))]/20 data-[state=active]:bg-[hsl(var(--tab-coral))] data-[state=active]:text-white data-[state=active]:shadow-md",
-        muted: "bg-[hsl(var(--tab-violet-light))] text-[hsl(270_70%_35%)] hover:bg-[hsl(var(--tab-violet))]/20 data-[state=active]:bg-[hsl(var(--tab-violet))] data-[state=active]:text-white data-[state=active]:shadow-md",
+        // Default - Neutral inactive, primary active
+        default: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        // All color schemes unified to primary accent
+        turquoise: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        coral: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        sky: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        violet: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        lime: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        // Legacy schemes - all unified
+        primary: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        secondary: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        accent: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+        muted: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
       },
     },
     defaultVariants: {
-      colorScheme: "turquoise",
+      colorScheme: "default",
     },
   }
 );

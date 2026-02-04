@@ -54,27 +54,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Helper to set user with role - logs out if role fetch fails
     const setUserWithRole = async (authUser: User): Promise<boolean> => {
-      const role = await fetchUserRole(authUser.id);
-      
-      if (!role) {
-        // Role fetch failed - force logout for security
-        console.error('Role fetch failed, forcing logout for security');
-        await supabase.auth.signOut();
+      try {
+        const role = await fetchUserRole(authUser.id);
+        
+        if (!role) {
+          // Role fetch failed - force logout for security
+          console.error('Role fetch failed, forcing logout for security');
+          await supabase.auth.signOut();
+          if (isMounted) {
+            setUser(null);
+            setSession(null);
+            setIsLoading(false); // Ensure loading stops
+          }
+          return false;
+        }
+        
+        if (isMounted) {
+          setUser({
+            id: authUser.id,
+            email: authUser.email || '',
+            role,
+          });
+        }
+        return true;
+      } catch (err) {
+        console.error('Error in setUserWithRole:', err);
         if (isMounted) {
           setUser(null);
           setSession(null);
+          setIsLoading(false);
         }
         return false;
       }
-      
-      if (isMounted) {
-        setUser({
-          id: authUser.id,
-          email: authUser.email || '',
-          role,
-        });
-      }
-      return true;
     };
 
     // First set up the auth state change listener for ONGOING changes
@@ -132,6 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.user) {
         const role = await fetchUserRole(data.user.id);
+        
+        if (!role) {
+          // Role fetch failed - logout and report error
+          await supabase.auth.signOut();
+          return { success: false, error: 'Unable to fetch user permissions. Please contact an administrator.' };
+        }
+        
         setUser({
           id: data.user.id,
           email: data.user.email || '',

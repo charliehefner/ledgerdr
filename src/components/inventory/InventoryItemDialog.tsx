@@ -227,11 +227,11 @@ export function InventoryItemDialog({
                 id="cas_number"
                 value={form.cas_number}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  const value = e.target.value.replace(/[^0-9-]/g, '').slice(0, 12);
                   setForm({ ...form, cas_number: value });
                 }}
-                placeholder="e.g., 1071836"
-                maxLength={10}
+                placeholder="e.g., 1071-83-6"
+                maxLength={12}
               />
             </div>
 

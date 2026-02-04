@@ -9,10 +9,10 @@ Transaction attachments now support three distinct categories, allowing users to
 | Category | English Label | Spanish Label | Required | Dashboard Table |
 |----------|---------------|---------------|----------|-----------------|
 | `ncf` | NCF | NCF | No (tracked via document field) | Pending NCF |
-| `payment_receipt` | Payment Receipt | Comprobante de Pago | Yes* | Without Payment Receipt |
+| `payment_receipt` | Payment Receipt | Comprobante de Pago | No* | Without Payment Receipt |
 | `quote` | Quote | Cotización | No | N/A |
 
-*Nomina (payroll) transactions are exempt from the payment receipt requirement but can still have attachments.
+*Uploading either NCF or Payment Receipt satisfies the "Without Payment Receipt" requirement. Bank receipts are typically available online.
 
 ## Database Schema
 

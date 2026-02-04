@@ -106,14 +106,18 @@ export default function Dashboard() {
     .filter(tx => !tx.is_void)
     .filter(tx => !tx.document || tx.document.trim() === '');
 
-  // Filter: non-voided transactions without a payment_receipt attachment
-  // Exclude Nomina transactions as they don't require payment receipts
+  // Filter: non-voided transactions without either NCF or payment_receipt attachment
+  // NCF is sufficient - payment receipt is optional (available on bank website)
+  // Exclude Nomina transactions as they don't require attachments
   const transactionsWithoutPaymentReceipt = allTransactions
     .filter(tx => !tx.is_void && tx.id)
     .filter(tx => !isNominaTransaction(tx))
     .filter(tx => {
       const attachments = allAttachments[String(tx.id)];
-      return !attachments?.payment_receipt;
+      // Transaction is resolved if it has EITHER an NCF or a payment_receipt
+      const hasNcf = !!attachments?.ncf;
+      const hasPaymentReceipt = !!attachments?.payment_receipt;
+      return !hasNcf && !hasPaymentReceipt;
     });
 
   const getAccountDescription = (code: string) => {

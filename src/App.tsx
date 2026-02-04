@@ -16,6 +16,7 @@ import Fuel from "./pages/Fuel";
 import Inventory from "./pages/Inventory";
 import Equipment from "./pages/Equipment";
 import Operations from "./pages/Operations";
+import Herbicide from "./pages/Herbicide";
 import Rainfall from "./pages/Rainfall";
 import Cronograma from "./pages/Cronograma";
 import Login from "./pages/Login";
@@ -44,6 +45,7 @@ const App = () => (
                 <Route path="/fuel" element={<ProtectedRoute><Fuel /></ProtectedRoute>} />
                 <Route path="/equipment" element={<ProtectedRoute><Equipment /></ProtectedRoute>} />
                 <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
+                <Route path="/herbicide" element={<ProtectedRoute><Herbicide /></ProtectedRoute>} />
                 <Route path="/rainfall" element={<ProtectedRoute><Rainfall /></ProtectedRoute>} />
                 <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

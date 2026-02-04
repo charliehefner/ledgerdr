@@ -26,10 +26,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
-import { getAttachmentUrls } from "@/lib/attachments";
+import { getAllAttachmentUrls, AttachmentCategory } from "@/lib/attachments";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter } from "lucide-react";
-import { AttachmentCell } from "@/components/transactions/AttachmentCell";
+import { MultiAttachmentCell } from "@/components/transactions/MultiAttachmentCell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -158,12 +158,22 @@ export default function Reports() {
   // Get transaction IDs to fetch attachments
   const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
 
-  // Fetch attachments from local database
-  const { data: attachments = {} } = useQuery({
+  // Fetch all attachments with categories from local database
+  const { data: allAttachments = {} } = useQuery({
     queryKey: ['reportAttachments', transactionIds],
-    queryFn: () => getAttachmentUrls(transactionIds),
+    queryFn: () => getAllAttachmentUrls(transactionIds),
     enabled: transactionIds.length > 0,
   });
+
+  const getAttachmentsForTransaction = (txId: string): Record<AttachmentCategory, string | null> => {
+    return allAttachments[txId] || { ncf: null, payment_receipt: null, quote: null };
+  };
+
+  // Check if transaction has any attachment (for row highlighting)
+  const hasAnyAttachment = (txId: string): boolean => {
+    const attachs = allAttachments[txId];
+    return !!(attachs?.ncf || attachs?.payment_receipt || attachs?.quote);
+  };
 
   // Sorted transactions
   const sortedTransactions = useMemo(() => {
@@ -652,7 +662,7 @@ export default function Reports() {
                     sortedTransactions.map((tx, index) => {
                       const missingDocument = !tx.document || tx.document.trim() === '';
                       // Account 7010 (Nomina) doesn't require attachments
-                      const missingAttachment = tx.id && !attachments[String(tx.id)] && tx.master_acct_code !== '7010';
+                      const missingAttachment = tx.id && !hasAnyAttachment(String(tx.id)) && tx.master_acct_code !== '7010';
                       
                       // Amber for missing NCF, Rose for missing attachment (amber takes priority if both)
                       const rowClass = missingDocument 
@@ -718,9 +728,9 @@ export default function Reports() {
                           {columnVisibility.isVisible("attach") && (
                             <TableCell className="text-center">
                               {tx.id ? (
-                                <AttachmentCell
+                                <MultiAttachmentCell
                                   transactionId={tx.id}
-                                  attachmentUrl={attachments[String(tx.id)] || null}
+                                  attachments={getAttachmentsForTransaction(String(tx.id))}
                                   onUpdate={handleAttachmentUpdate}
                                 />
                               ) : (

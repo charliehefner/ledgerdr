@@ -44,45 +44,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Set up auth state listener BEFORE checking session
   useEffect(() => {
-    // First set up the auth state change listener
+    let isMounted = true;
+
+    // Helper to set user with role
+    const setUserWithRole = async (authUser: User) => {
+      const role = await fetchUserRole(authUser.id);
+      if (isMounted) {
+        setUser({
+          id: authUser.id,
+          email: authUser.email || '',
+          role,
+        });
+      }
+    };
+
+    // First set up the auth state change listener for ONGOING changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!isMounted) return;
+        
         setSession(currentSession);
         
         if (currentSession?.user) {
-          // Defer role fetching to avoid blocking the auth state change
-          setTimeout(async () => {
-            const role = await fetchUserRole(currentSession.user.id);
-            setUser({
-              id: currentSession.user.id,
-              email: currentSession.user.email || '',
-              role,
-            });
-            setIsLoading(false);
-          }, 0);
+          // Await role fetch to prevent rendering with undefined role
+          await setUserWithRole(currentSession.user);
         } else {
           setUser(null);
-          setIsLoading(false);
         }
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      
-      if (existingSession?.user) {
-        const role = await fetchUserRole(existingSession.user.id);
-        setUser({
-          id: existingSession.user.id,
-          email: existingSession.user.email || '',
-          role,
-        });
+    // INITIAL load - controls isLoading state
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        setSession(existingSession);
+        
+        if (existingSession?.user) {
+          await setUserWithRole(existingSession.user);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

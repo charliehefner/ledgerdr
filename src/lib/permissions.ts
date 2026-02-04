@@ -169,7 +169,7 @@ export function canAccessRoute(role: UserRole | undefined, route: string): boole
 export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case "supervisor":
-      return "/inventory"; // Supervisors don't have dashboard access
+      return "/operations"; // Supervisors don't have dashboard access
     default:
       return "/";
   }

@@ -31,24 +31,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user role from user_roles table
-  const fetchUserRole = async (userId: string): Promise<UserRole> => {
+  // Returns null if fetch fails - caller must handle logout
+  const fetchUserRole = async (userId: string): Promise<UserRole | null> => {
     const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
     
     if (error) {
       console.error('Error fetching user role:', error);
-      return 'accountant'; // Default to accountant if role not found
+      return null; // Signal failure - do not default to any role
     }
     
-    return (data as UserRole) || 'accountant';
+    if (!data) {
+      console.error('No role found for user:', userId);
+      return null;
+    }
+    
+    return data as UserRole;
   };
 
   // Set up auth state listener BEFORE checking session
   useEffect(() => {
     let isMounted = true;
 
-    // Helper to set user with role
-    const setUserWithRole = async (authUser: User) => {
+    // Helper to set user with role - logs out if role fetch fails
+    const setUserWithRole = async (authUser: User): Promise<boolean> => {
       const role = await fetchUserRole(authUser.id);
+      
+      if (!role) {
+        // Role fetch failed - force logout for security
+        console.error('Role fetch failed, forcing logout for security');
+        await supabase.auth.signOut();
+        if (isMounted) {
+          setUser(null);
+          setSession(null);
+        }
+        return false;
+      }
+      
       if (isMounted) {
         setUser({
           id: authUser.id,
@@ -56,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role,
         });
       }
+      return true;
     };
 
     // First set up the auth state change listener for ONGOING changes

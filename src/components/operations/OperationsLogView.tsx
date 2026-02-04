@@ -310,13 +310,13 @@ export function OperationsLogView() {
             comparison = parseDateLocal(a.operation_date).getTime() - parseDateLocal(b.operation_date).getTime();
             break;
           case "field":
-            comparison = a.fields.name.localeCompare(b.fields.name);
+            comparison = (a.fields?.name || "").localeCompare(b.fields?.name || "");
             break;
           case "farm":
-            comparison = a.fields.farms.name.localeCompare(b.fields.farms.name);
+            comparison = (a.fields?.farms?.name || "").localeCompare(b.fields?.farms?.name || "");
             break;
           case "operation":
-            comparison = a.operation_types.name.localeCompare(b.operation_types.name);
+            comparison = (a.operation_types?.name || "").localeCompare(b.operation_types?.name || "");
             break;
           case "tractor":
             const aVal = a.operation_types.is_mechanical ? (a.fuel_equipment?.name || "") : String(a.workers_count || 0);
@@ -348,11 +348,11 @@ export function OperationsLogView() {
     const operationHectares: Record<string, { name: string; hectares: number }> = {};
     
     filteredOperations.forEach((op) => {
-      const opName = op.operation_types.name;
+      const opName = op.operation_types?.name || "Unknown";
       if (!operationHectares[opName]) {
         operationHectares[opName] = { name: opName, hectares: 0 };
       }
-      operationHectares[opName].hectares += op.hectares_done;
+      operationHectares[opName].hectares += op.hectares_done || 0;
     });
     
     return Object.values(operationHectares)
@@ -1361,12 +1361,12 @@ export function OperationsLogView() {
                       {format(parseDateLocal(op.operation_date), "MMM d, yyyy")}
                     </TableCell>
                   )}
-                  {isVisible("field") && <TableCell className="font-medium">{op.fields.name}</TableCell>}
-                  {isVisible("farm") && <TableCell>{op.fields.farms.name}</TableCell>}
+                  {isVisible("field") && <TableCell className="font-medium">{op.fields?.name || "-"}</TableCell>}
+                  {isVisible("farm") && <TableCell>{op.fields?.farms?.name || "-"}</TableCell>}
                   {isVisible("operation") && (
                     <TableCell>
-                      <Badge variant={op.operation_types.is_mechanical ? "default" : "secondary"}>
-                        {op.operation_types.name}
+                      <Badge variant={op.operation_types?.is_mechanical ? "default" : "secondary"}>
+                        {op.operation_types?.name || "-"}
                       </Badge>
                     </TableCell>
                   )}
@@ -1393,9 +1393,9 @@ export function OperationsLogView() {
                     <TableCell>
                       {op.operation_inputs && op.operation_inputs.length > 0 ? (
                         <div className="space-y-1">
-                          {op.operation_inputs.map((input) => (
+                      {op.operation_inputs.map((input) => (
                             <div key={input.id} className="text-xs">
-                              {input.inventory_items.commercial_name}: {input.quantity_used} {input.inventory_items.use_unit}
+                              {input.inventory_items?.commercial_name || "Unknown"}: {input.quantity_used} {input.inventory_items?.use_unit || ""}
                             </div>
                           ))}
                         </div>

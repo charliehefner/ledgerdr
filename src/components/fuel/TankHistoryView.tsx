@@ -123,7 +123,7 @@ export function TankHistoryView() {
           comparison = parseDateLocal(a.transaction_date).getTime() - parseDateLocal(b.transaction_date).getTime();
           break;
         case "tractor":
-          comparison = a.fuel_equipment.name.localeCompare(b.fuel_equipment.name);
+          comparison = (a.fuel_equipment?.name || "").localeCompare(b.fuel_equipment?.name || "");
           break;
         case "gallons":
           comparison = a.gallons - b.gallons;
@@ -266,8 +266,8 @@ export function TankHistoryView() {
             {sortedTransactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
-                <TableCell>{tx.fuel_tanks.name}</TableCell>
-                <TableCell>{tx.fuel_equipment.name}</TableCell>
+                <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
+                <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
                 <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
               </TableRow>

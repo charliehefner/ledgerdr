@@ -176,7 +176,7 @@ export function TractorHistoryView() {
     transactionsWithStats.forEach((tx) => {
       if (!summaries[tx.equipment_id]) {
         summaries[tx.equipment_id] = { 
-          name: tx.fuel_equipment.name, 
+          name: tx.fuel_equipment?.name || "Unknown", 
           totalGallons: 0, 
           totalHours: 0,
           avgConsumption: 0,
@@ -318,8 +318,8 @@ export function TractorHistoryView() {
             {sortedTransactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
-                <TableCell>{tx.fuel_equipment.name}</TableCell>
-                <TableCell>{tx.fuel_tanks.name}</TableCell>
+                <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
+                <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
                 <TableCell>{tx.previous_hour_meter?.toFixed(1) || "0"}</TableCell>
                 <TableCell>{tx.hour_meter_reading.toFixed(1)}</TableCell>

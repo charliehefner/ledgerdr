@@ -39,7 +39,7 @@ export function FieldSelectionSection({
       {
         fieldId: field.id,
         fieldName: field.name,
-        farmName: field.farms.name,
+        farmName: field.farms?.name || "",
         totalHectares: field.hectares || 0,
         hectaresToApply: field.hectares || 0,
       },
@@ -71,9 +71,9 @@ export function FieldSelectionSection({
               <SelectValue placeholder={t("herbicide.selectField")} />
             </SelectTrigger>
             <SelectContent>
-              {availableFields.map((field) => (
+              {availableFields.filter(f => f.farms?.name).map((field) => (
                 <SelectItem key={field.id} value={field.id}>
-                  {field.farms.name} - {field.name} ({field.hectares || 0} ha)
+                  {field.farms?.name} - {field.name} ({field.hectares || 0} ha)
                 </SelectItem>
               ))}
             </SelectContent>

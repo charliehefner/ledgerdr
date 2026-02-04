@@ -66,6 +66,9 @@ export function MultiAttachmentCell({
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Memoize showCategories to prevent infinite re-renders
+  const categoriesKey = showCategories.join(',');
+  
   // Fetch signed URLs for all attachments
   useEffect(() => {
     async function fetchSignedUrls() {
@@ -83,7 +86,8 @@ export function MultiAttachmentCell({
       setIsLoadingUrls(false);
     }
     fetchSignedUrls();
-  }, [attachments, showCategories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachments.ncf, attachments.payment_receipt, attachments.quote, categoriesKey]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

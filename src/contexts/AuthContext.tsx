@@ -51,15 +51,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Set up auth state listener BEFORE checking session
   useEffect(() => {
     let isMounted = true;
+    console.log('[Auth] Starting auth initialization...');
 
     // Helper to set user with role - logs out if role fetch fails
     const setUserWithRole = async (authUser: User): Promise<boolean> => {
       try {
+        console.log('[Auth] Fetching role for user:', authUser.id);
         const role = await fetchUserRole(authUser.id);
+        console.log('[Auth] Role result:', role);
         
         if (!role) {
           // Role fetch failed - force logout for security
-          console.error('Role fetch failed, forcing logout for security');
+          console.error('[Auth] Role fetch failed, forcing logout for security');
           await supabase.auth.signOut();
           if (isMounted) {
             setUser(null);
@@ -78,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return true;
       } catch (err) {
-        console.error('Error in setUserWithRole:', err);
+        console.error('[Auth] Error in setUserWithRole:', err);
         if (isMounted) {
           setUser(null);
           setSession(null);
@@ -91,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // First set up the auth state change listener for ONGOING changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log('[Auth] onAuthStateChange event:', event);
         if (!isMounted) return;
         
         setSession(currentSession);
@@ -107,15 +111,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // INITIAL load - controls isLoading state
     const initializeAuth = async () => {
       try {
+        console.log('[Auth] Getting existing session...');
         const { data: { session: existingSession } } = await supabase.auth.getSession();
+        console.log('[Auth] Existing session:', existingSession ? 'found' : 'none');
         if (!isMounted) return;
 
         setSession(existingSession);
         
         if (existingSession?.user) {
+          console.log('[Auth] User found, fetching role...');
           await setUserWithRole(existingSession.user);
         }
+      } catch (err) {
+        console.error('[Auth] Error in initializeAuth:', err);
       } finally {
+        console.log('[Auth] Setting isLoading to false');
         if (isMounted) {
           setIsLoading(false);
         }

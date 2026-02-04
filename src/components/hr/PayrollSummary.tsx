@@ -314,12 +314,15 @@ export function PayrollSummary({
     const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
     
     // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
+    // TSS contributions are pre-tax deductions that reduce the taxable base
     let isr = 0;
     if (effectiveBasePay > 0) {
-      // Project annual income based on effective earnings ratio
+      // Deduct TSS from taxable income (AFP 2.87% + SFS 3.04% = 5.91%)
+      const taxableBasePay = effectiveBasePay - tss;
+      // Project annual taxable income
       const workedRatio = effectiveBasePay / biweeklySalary;
-      const projectedAnnualIncome = employee.salary * 12 * workedRatio;
-      const annualISR = calculateAnnualISR(projectedAnnualIncome);
+      const projectedAnnualTaxableIncome = (taxableBasePay * 2) * 12 / (workedRatio > 0 ? workedRatio : 1) * workedRatio;
+      const annualISR = calculateAnnualISR(projectedAnnualTaxableIncome);
       // Divide by 24 for bi-monthly withholding
       isr = annualISR / 24;
     }

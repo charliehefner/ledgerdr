@@ -16,6 +16,7 @@ import {
   Menu,
   Languages,
   CalendarClock,
+  Beaker,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/jord-logo.png";
@@ -48,6 +49,7 @@ const sectionColors: Record<Section, string> = {
   fuel: "bg-section-fuel",
   equipment: "bg-section-fuel",
   operations: "bg-section-operations",
+  herbicide: "bg-section-operations",
   rainfall: "bg-section-rainfall",
   cronograma: "",
   settings: "",
@@ -62,6 +64,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.fuel", href: "/fuel", icon: Fuel, section: "fuel" },
   { nameKey: "nav.equipment", href: "/equipment", icon: Tractor, section: "equipment" },
   { nameKey: "nav.operations", href: "/operations", icon: Activity, section: "operations" },
+  { nameKey: "nav.herbicide", href: "/herbicide", icon: Beaker, section: "herbicide" },
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
   { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
 ];

@@ -24,6 +24,7 @@ export type Section =
   | "fuel"
   | "equipment"
   | "operations"
+  | "herbicide"
   | "rainfall"
   | "cronograma"
   | "settings";
@@ -84,6 +85,7 @@ export const routeToSection: Record<string, Section> = {
   "/fuel": "fuel",
   "/equipment": "equipment",
   "/operations": "operations",
+  "/herbicide": "herbicide",
   "/rainfall": "rainfall",
   "/cronograma": "cronograma",
   "/settings": "settings",
@@ -100,6 +102,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   fuel: ["admin", "management", "supervisor", "viewer"],
   equipment: ["admin", "management", "supervisor", "viewer"],
   operations: ["admin", "management", "supervisor", "viewer"],
+  herbicide: ["admin", "management", "supervisor", "viewer"],
   rainfall: ["admin", "management", "accountant", "supervisor", "viewer"],
   cronograma: ["admin", "management", "supervisor", "viewer"],
   settings: ["admin"],
@@ -117,6 +120,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   fuel: ["admin", "management", "supervisor"],
   equipment: ["admin", "management", "supervisor"],
   operations: ["admin", "management", "supervisor"],
+  herbicide: ["admin", "management", "supervisor"],
   rainfall: ["admin", "management", "supervisor"],
   cronograma: ["admin", "management", "supervisor"],
   settings: ["admin"],

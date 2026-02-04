@@ -36,8 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[Auth] Starting role fetch for:', userId);
       
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+        setTimeout(() => reject(new Error('Role fetch timeout after 10s')), 10000)
+      );
+      
       // Use the security definer function which bypasses RLS
-      const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
+      const rpcPromise = supabase.rpc('get_user_role', { _user_id: userId });
+      
+      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
       
       console.log('[Auth] Role RPC result:', { data, error });
       

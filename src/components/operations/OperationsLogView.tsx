@@ -1002,9 +1002,9 @@ export function OperationsLogView() {
                         <SelectValue placeholder={t("operations.form.selectField")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {fields?.map((field) => (
+                        {fields?.filter(f => f.farms?.name).map((field) => (
                           <SelectItem key={field.id} value={field.id}>
-                            {field.name} ({field.farms.name})
+                            {field.name} ({field.farms?.name})
                           </SelectItem>
                         ))}
                       </SelectContent>

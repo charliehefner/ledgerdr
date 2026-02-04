@@ -154,7 +154,7 @@ export function IndustryFuelView() {
         .from("fuel_tanks")
         .select("current_level_gallons, capacity_gallons")
         .eq("id", data.tank_id)
-        .single();
+        .maybeSingle();
 
       if (tank) {
         const newLevel = Math.min(
@@ -196,7 +196,7 @@ export function IndustryFuelView() {
         .from("fuel_equipment")
         .select("current_hour_meter")
         .eq("id", data.equipment_id)
-        .single();
+        .maybeSingle();
 
       // Find the industry tank to link to (use first one for now)
       const { data: industryTank } = await supabase
@@ -205,7 +205,7 @@ export function IndustryFuelView() {
         .eq("use_type", "industry")
         .eq("is_active", true)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!industryTank) {
         throw new Error("No industry tank found. Please add an industry tank first.");

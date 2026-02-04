@@ -48,30 +48,45 @@ export function DayLaborAttachment({ weekEndingDate }: DayLaborAttachmentProps) 
 
   // Fetch existing attachment for this week
   useEffect(() => {
+    let isMounted = true;
+    
     async function fetchAttachment() {
       if (!weekEndingDate) return;
       
       setIsLoadingUrl(true);
-      const { data, error } = await supabase
-        .from('day_labor_attachments')
-        .select('attachment_url')
-        .eq('week_ending_date', weekEndingDate)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('day_labor_attachments')
+          .select('attachment_url')
+          .eq('week_ending_date', weekEndingDate)
+          .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching day labor attachment:', error);
-      } else if (data?.attachment_url) {
-        setAttachmentUrl(data.attachment_url);
-        // Get signed URL
-        const url = await getSignedUrl(data.attachment_url);
-        setSignedUrl(url);
-      } else {
-        setAttachmentUrl(null);
-        setSignedUrl(null);
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('Error fetching day labor attachment:', error);
+        } else if (data?.attachment_url) {
+          setAttachmentUrl(data.attachment_url);
+          // Get signed URL
+          const url = await getSignedUrl(data.attachment_url);
+          if (isMounted) {
+            setSignedUrl(url);
+          }
+        } else {
+          setAttachmentUrl(null);
+          setSignedUrl(null);
+        }
+      } catch (err) {
+        console.error('Error in fetchAttachment:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingUrl(false);
+        }
       }
-      setIsLoadingUrl(false);
     }
     fetchAttachment();
+    
+    return () => { isMounted = false; };
   }, [weekEndingDate]);
 
   const getSignedUrl = async (storagePath: string): Promise<string | null> => {

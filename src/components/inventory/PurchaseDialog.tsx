@@ -104,9 +104,10 @@ export function PurchaseDialog({
         .from("inventory_items")
         .select("current_quantity, use_unit")
         .eq("id", data.item_id)
-        .single();
+        .maybeSingle();
 
       if (fetchError) throw fetchError;
+      if (!currentItem) throw new Error("Inventory item not found");
 
       // e.g., buying 5 packages of 20L each = 100L added
       const addedQuantity = quantity * packagingQuantity;

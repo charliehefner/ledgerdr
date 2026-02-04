@@ -55,6 +55,8 @@ const initialFormState = {
   function: "other" as string,
   use_unit: "kg",
   co2_equivalent: "",
+  cas_number: "",
+  normal_dose_per_ha: "",
 };
 
 export function InventoryItemDialog({
@@ -88,6 +90,8 @@ export function InventoryItemDialog({
         function: existingItem.function,
         use_unit: existingItem.use_unit,
         co2_equivalent: existingItem.co2_equivalent?.toString() || "",
+        cas_number: (existingItem as any).cas_number || "",
+        normal_dose_per_ha: (existingItem as any).normal_dose_per_ha?.toString() || "",
       });
     } else if (!editingItemId) {
       setForm(initialFormState);
@@ -104,16 +108,20 @@ export function InventoryItemDialog({
         co2_equivalent: data.co2_equivalent
           ? parseFloat(data.co2_equivalent)
           : null,
+        cas_number: data.cas_number || null,
+        normal_dose_per_ha: data.normal_dose_per_ha
+          ? parseFloat(data.normal_dose_per_ha)
+          : null,
       };
 
       if (editingItemId) {
         const { error } = await supabase
           .from("inventory_items")
-          .update(payload)
+          .update(payload as any)
           .eq("id", editingItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("inventory_items").insert(payload);
+        const { error } = await supabase.from("inventory_items").insert(payload as any);
         if (error) throw error;
       }
     },
@@ -181,10 +189,10 @@ export function InventoryItemDialog({
                 value={form.function}
                 onValueChange={(val) => setForm({ ...form, function: val })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   {inventoryFunctions.map((fn) => (
                     <SelectItem key={fn.value} value={fn.value}>
                       {fn.label}
@@ -200,10 +208,10 @@ export function InventoryItemDialog({
                 value={form.use_unit}
                 onValueChange={(val) => setForm({ ...form, use_unit: val })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   {useUnits.map((unit) => (
                     <SelectItem key={unit.value} value={unit.value}>
                       {unit.label}
@@ -211,6 +219,38 @@ export function InventoryItemDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cas_number">CAS Number</Label>
+              <Input
+                id="cas_number"
+                value={form.cas_number}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setForm({ ...form, cas_number: value });
+                }}
+                placeholder="e.g., 1071836"
+                maxLength={10}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="normal_dose_per_ha">
+                Normal Dose ({useUnits.find(u => u.value === form.use_unit)?.label.split(' ')[0] || form.use_unit}/ha)
+              </Label>
+              <Input
+                id="normal_dose_per_ha"
+                type="number"
+                step="0.01"
+                min="0.01"
+                max="9.99"
+                value={form.normal_dose_per_ha}
+                onChange={(e) =>
+                  setForm({ ...form, normal_dose_per_ha: e.target.value })
+                }
+                placeholder="0.01 - 9.99"
+              />
             </div>
 
             <div className="space-y-2 col-span-2">

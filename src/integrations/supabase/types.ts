@@ -853,6 +853,7 @@ export type Database = {
       }
       inventory_items: {
         Row: {
+          cas_number: string | null
           co2_equivalent: number | null
           commercial_name: string
           created_at: string
@@ -861,6 +862,7 @@ export type Database = {
           id: string
           is_active: boolean
           molecule_name: string | null
+          normal_dose_per_ha: number | null
           price_per_purchase_unit: number
           purchase_unit_quantity: number
           purchase_unit_type: string
@@ -870,6 +872,7 @@ export type Database = {
           use_unit: string
         }
         Insert: {
+          cas_number?: string | null
           co2_equivalent?: number | null
           commercial_name: string
           created_at?: string
@@ -878,6 +881,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           molecule_name?: string | null
+          normal_dose_per_ha?: number | null
           price_per_purchase_unit?: number
           purchase_unit_quantity?: number
           purchase_unit_type?: string
@@ -887,6 +891,7 @@ export type Database = {
           use_unit?: string
         }
         Update: {
+          cas_number?: string | null
           co2_equivalent?: number | null
           commercial_name?: string
           created_at?: string
@@ -895,6 +900,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           molecule_name?: string | null
+          normal_dose_per_ha?: number | null
           price_per_purchase_unit?: number
           purchase_unit_quantity?: number
           purchase_unit_type?: string

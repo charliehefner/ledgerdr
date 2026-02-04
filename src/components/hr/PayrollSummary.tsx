@@ -317,14 +317,20 @@ export function PayrollSummary({
     // TSS contributions are pre-tax deductions that reduce the taxable base
     let isr = 0;
     if (effectiveBasePay > 0) {
-      // Deduct TSS from taxable income (AFP 2.87% + SFS 3.04% = 5.91%)
-      const taxableBasePay = effectiveBasePay - tss;
-      // Project annual taxable income
+      // Calculate monthly taxable income (gross minus TSS)
+      const monthlyGross = employee.salary;
+      const monthlyTSS = monthlyGross * TSS_EMPLOYEE_RATE;
+      const monthlyTaxable = monthlyGross - monthlyTSS;
+      
+      // Project to annual taxable income
+      const annualTaxableIncome = monthlyTaxable * 12;
+      
+      // Calculate annual ISR using progressive brackets
+      const annualISR = calculateAnnualISR(annualTaxableIncome);
+      
+      // Prorate for this period based on worked ratio
       const workedRatio = effectiveBasePay / biweeklySalary;
-      const projectedAnnualTaxableIncome = (taxableBasePay * 2) * 12 / (workedRatio > 0 ? workedRatio : 1) * workedRatio;
-      const annualISR = calculateAnnualISR(projectedAnnualTaxableIncome);
-      // Divide by 24 for bi-monthly withholding
-      isr = annualISR / 24;
+      isr = (annualISR / 24) * workedRatio;
     }
     
     const absenceDeduction = absenceDays * dailyRate;

@@ -204,14 +204,14 @@ export function AgricultureFuelView() {
         .from("fuel_equipment")
         .select("current_hour_meter")
         .eq("id", data.equipment_id)
-        .single();
+        .maybeSingle();
 
       // Get tank's fuel type to match with inventory
       const { data: tankData } = await supabase
         .from("fuel_tanks")
         .select("fuel_type")
         .eq("id", data.tank_id)
-        .single();
+        .maybeSingle();
 
       // Insert transaction
       const { error: txError } = await supabase.from("fuel_transactions").insert({
@@ -232,7 +232,7 @@ export function AgricultureFuelView() {
         .from("fuel_tanks")
         .select("current_level_gallons")
         .eq("id", data.tank_id)
-        .single();
+        .maybeSingle();
 
       if (tank) {
         const { error: tankError } = await supabase
@@ -321,7 +321,7 @@ export function AgricultureFuelView() {
           .from("fuel_tanks")
           .select("current_level_gallons")
           .eq("id", data.originalTx.tank_id)
-          .single();
+          .maybeSingle();
 
         if (tank) {
           const { error: tankError } = await supabase
@@ -358,7 +358,7 @@ export function AgricultureFuelView() {
         .from("fuel_tanks")
         .select("current_level_gallons, capacity_gallons")
         .eq("id", tx.tank_id)
-        .single();
+        .maybeSingle();
 
       if (tank) {
         const newLevel = Math.min(tank.capacity_gallons, tank.current_level_gallons + tx.gallons);

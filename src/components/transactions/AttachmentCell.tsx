@@ -46,17 +46,30 @@ export function AttachmentCell({ transactionId, attachmentUrl, onUpdate }: Attac
 
   // Fetch signed URL when attachment URL changes
   useEffect(() => {
+    let isMounted = true;
+    
     async function fetchSignedUrl() {
       if (attachmentUrl) {
         setIsLoadingUrl(true);
-        const url = await getSignedAttachmentUrl(attachmentUrl);
-        setSignedUrl(url);
-        setIsLoadingUrl(false);
+        try {
+          const url = await getSignedAttachmentUrl(attachmentUrl);
+          if (isMounted) {
+            setSignedUrl(url);
+          }
+        } catch (error) {
+          console.error('Error fetching signed URL:', error);
+        } finally {
+          if (isMounted) {
+            setIsLoadingUrl(false);
+          }
+        }
       } else {
         setSignedUrl(null);
       }
     }
     fetchSignedUrl();
+    
+    return () => { isMounted = false; };
   }, [attachmentUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -548,9 +548,10 @@ export function OperationsLogView() {
             .from("inventory_items")
             .select("current_quantity")
             .eq("id", input.inventory_item_id)
-            .single();
+            .maybeSingle();
           
           if (fetchError) throw fetchError;
+          if (!currentItem) throw new Error(`Inventory item ${input.inventory_item_id} not found`);
           
           const newQuantity = currentItem.current_quantity - input.quantity_used;
           const { error: deductError } = await supabase

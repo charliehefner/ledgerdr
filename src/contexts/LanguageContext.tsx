@@ -115,6 +115,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Inventory Module
     "inventory.addItem": "Agregar Artículo",
     "inventory.recordPurchase": "Registrar Compra",
+    "inventory.stockReport": "Reporte de Stock",
     "inventory.currentStock": "Inventario Actual",
     "inventory.purchases": "Compras",
 
@@ -607,6 +608,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Inventory Module
     "inventory.addItem": "Add Item",
     "inventory.recordPurchase": "Record Purchase",
+    "inventory.stockReport": "Stock Report",
     "inventory.currentStock": "Current Stock",
     "inventory.purchases": "Purchases",
 

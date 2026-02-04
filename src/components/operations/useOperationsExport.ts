@@ -60,16 +60,16 @@ export function useOperationsExport({
         : "";
       
       const inputsText = op.operation_inputs
-        .map(input => `${input.inventory_items.commercial_name}: ${input.quantity_used} ${input.inventory_items.use_unit}`)
+        .map(input => `${input.inventory_items?.commercial_name || "Unknown"}: ${input.quantity_used} ${input.inventory_items?.use_unit || ""}`)
         .join(", ");
 
       const row: Record<string, string | number> = {};
       if (isVisible("date")) row.date = format(parseDateLocal(op.operation_date), "dd/MM/yyyy");
-      if (isVisible("field")) row.field = op.fields.name;
-      if (isVisible("farm")) row.farm = op.fields.farms.name;
-      if (isVisible("operation")) row.operation = op.operation_types.name;
+      if (isVisible("field")) row.field = op.fields?.name || "";
+      if (isVisible("farm")) row.farm = op.fields?.farms?.name || "";
+      if (isVisible("operation")) row.operation = op.operation_types?.name || "";
       if (isVisible("tractor")) {
-        row.tractor = op.operation_types.is_mechanical 
+        row.tractor = op.operation_types?.is_mechanical 
           ? (op.fuel_equipment?.name || "") 
           : `${op.workers_count || 0} obreros`;
       }
@@ -163,16 +163,16 @@ export function useOperationsExport({
         : "";
       
       const inputsText = op.operation_inputs
-        .map(input => `${input.inventory_items.commercial_name}: ${input.quantity_used}`)
+        .map(input => `${input.inventory_items?.commercial_name || "Unknown"}: ${input.quantity_used}`)
         .join("; ");
 
       const row: string[] = [];
       if (isVisible("date")) row.push(format(parseDateLocal(op.operation_date), "dd/MM/yyyy"));
-      if (isVisible("field")) row.push(op.fields.name);
-      if (isVisible("farm")) row.push(op.fields.farms.name);
-      if (isVisible("operation")) row.push(op.operation_types.name);
+      if (isVisible("field")) row.push(op.fields?.name || "");
+      if (isVisible("farm")) row.push(op.fields?.farms?.name || "");
+      if (isVisible("operation")) row.push(op.operation_types?.name || "");
       if (isVisible("tractor")) {
-        row.push(op.operation_types.is_mechanical 
+        row.push(op.operation_types?.is_mechanical 
           ? (op.fuel_equipment?.name || "") 
           : `${op.workers_count || 0} obreros`);
       }

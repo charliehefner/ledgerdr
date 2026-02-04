@@ -73,9 +73,32 @@ const STANDARD_START = 7 * 60 + 30; // 7:30 AM in minutes
 const STANDARD_END = 16 * 60 + 30;  // 4:30 PM in minutes
 const STANDARD_HOURS_PER_DAY = 8;   // After lunch deduction
 
-// DR Labor Law rates (approximate, user should verify)
+// DR Labor Law rates (DGII 2024/2025)
 const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
-const ISR_EXEMPTION = 34685; // Monthly exemption (DOP)
+
+// ISR Progressive Tax Brackets (Annual Income - DOP)
+// Source: DGII / PWC Tax Summaries
+const ISR_BRACKETS = [
+  { min: 0, max: 416220, rate: 0, baseTax: 0 },
+  { min: 416220, max: 624329, rate: 0.15, baseTax: 0 },
+  { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
+  { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
+];
+
+/**
+ * Calculate annual ISR using Dominican Republic progressive tax brackets
+ */
+function calculateAnnualISR(annualIncome: number): number {
+  if (annualIncome <= ISR_BRACKETS[0].max) return 0;
+  
+  for (let i = ISR_BRACKETS.length - 1; i >= 0; i--) {
+    const bracket = ISR_BRACKETS[i];
+    if (annualIncome > bracket.min) {
+      return bracket.baseTax + (annualIncome - bracket.min) * bracket.rate;
+    }
+  }
+  return 0;
+}
 
 export function PayrollTimeGrid({
   periodId,
@@ -542,12 +565,16 @@ export function PayrollTimeGrid({
     // TSS (employee portion) - only on effective earnings
     const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
 
-    // ISR (simplified - monthly based, divided by 2) - only if working this period
+    // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
+    // Calculate based on projected annual income from effective monthly earnings
     let isr = 0;
-    if (effectiveBasePay > 0 && monthlySalary > ISR_EXEMPTION) {
-      // Prorate ISR based on worked portion of the period
+    if (effectiveBasePay > 0) {
+      // Project annual income based on effective earnings ratio
       const workedRatio = effectiveBasePay / biweeklySalary;
-      isr = ((monthlySalary - ISR_EXEMPTION) * 0.15) / 2 * workedRatio;
+      const projectedAnnualIncome = monthlySalary * 12 * workedRatio;
+      const annualISR = calculateAnnualISR(projectedAnnualIncome);
+      // Divide by 24 for bi-monthly withholding
+      isr = annualISR / 24;
     }
 
     // Absence deduction (prorated)

@@ -84,9 +84,32 @@ const STANDARD_START = 7 * 60 + 30;
 const STANDARD_END = 16 * 60 + 30;
 const STANDARD_HOURS_PER_DAY = 8;
 const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
-const ISR_EXEMPTION = 34685;
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
+
+// ISR Progressive Tax Brackets (Annual Income - DOP)
+// Source: DGII / PWC Tax Summaries
+const ISR_BRACKETS = [
+  { min: 0, max: 416220, rate: 0, baseTax: 0 },
+  { min: 416220, max: 624329, rate: 0.15, baseTax: 0 },
+  { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
+  { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
+];
+
+/**
+ * Calculate annual ISR using Dominican Republic progressive tax brackets
+ */
+function calculateAnnualISR(annualIncome: number): number {
+  if (annualIncome <= ISR_BRACKETS[0].max) return 0;
+  
+  for (let i = ISR_BRACKETS.length - 1; i >= 0; i--) {
+    const bracket = ISR_BRACKETS[i];
+    if (annualIncome > bracket.min) {
+      return bracket.baseTax + (annualIncome - bracket.min) * bracket.rate;
+    }
+  }
+  return 0;
+}
 
 export function PayrollSummary({
   periodId,
@@ -289,12 +312,16 @@ export function PayrollSummary({
 
     // Deductions - TSS and ISR only apply to effective earnings (not vacation pay)
     const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
+    
+    // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
     let isr = 0;
-    // Only calculate ISR if there are effective earnings this period
-    if (effectiveBasePay > 0 && employee.salary > ISR_EXEMPTION) {
-      // Prorate ISR based on worked portion of the period
+    if (effectiveBasePay > 0) {
+      // Project annual income based on effective earnings ratio
       const workedRatio = effectiveBasePay / biweeklySalary;
-      isr = ((employee.salary - ISR_EXEMPTION) * 0.15) / 2 * workedRatio;
+      const projectedAnnualIncome = employee.salary * 12 * workedRatio;
+      const annualISR = calculateAnnualISR(projectedAnnualIncome);
+      // Divide by 24 for bi-monthly withholding
+      isr = annualISR / 24;
     }
     
     const absenceDeduction = absenceDays * dailyRate;

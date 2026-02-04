@@ -30,22 +30,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user role from user_roles table
+  // Fetch user role from user_roles table with timeout
   // Returns null if fetch fails - caller must handle logout
   const fetchUserRole = async (userId: string): Promise<UserRole | null> => {
-    const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
-    
-    if (error) {
-      console.error('Error fetching user role:', error);
-      return null; // Signal failure - do not default to any role
-    }
-    
-    if (!data) {
-      console.error('No role found for user:', userId);
+    try {
+      // Add 5 second timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Role fetch timeout')), 5000)
+      );
+      
+      const fetchPromise = supabase.rpc('get_user_role', { _user_id: userId });
+      
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      
+      if (error) {
+        console.error('[Auth] Error fetching user role:', error);
+        return null;
+      }
+      
+      if (!data) {
+        console.error('[Auth] No role found for user:', userId);
+        return null;
+      }
+      
+      return data as UserRole;
+    } catch (err) {
+      console.error('[Auth] Role fetch failed:', err);
       return null;
     }
-    
-    return data as UserRole;
   };
 
   // Set up auth state listener BEFORE checking session

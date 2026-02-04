@@ -113,18 +113,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     // First set up the auth state change listener for ONGOING changes
+    // Use setTimeout to defer database calls out of the auth callback to avoid blocking
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
         console.log('[Auth] onAuthStateChange event:', event);
         if (!isMounted) return;
         
         setSession(currentSession);
         
         if (currentSession?.user) {
-          // Await role fetch to prevent rendering with undefined role
-          await setUserWithRole(currentSession.user);
+          // Defer the role fetch to avoid blocking the auth callback
+          setTimeout(async () => {
+            if (!isMounted) return;
+            await setUserWithRole(currentSession.user);
+            if (isMounted) setIsLoading(false);
+          }, 0);
         } else {
           setUser(null);
+          setIsLoading(false);
         }
       }
     );

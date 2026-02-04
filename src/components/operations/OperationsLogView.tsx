@@ -287,7 +287,7 @@ export function OperationsLogView() {
       }
       
       // Farm filter
-      if (filterFarm && op.fields.farm_id !== filterFarm) return false;
+      if (filterFarm && op.fields?.farm_id !== filterFarm) return false;
       
       // Field filter
       if (filterField && op.field_id !== filterField) return false;
@@ -319,8 +319,8 @@ export function OperationsLogView() {
             comparison = (a.operation_types?.name || "").localeCompare(b.operation_types?.name || "");
             break;
           case "tractor":
-            const aVal = a.operation_types.is_mechanical ? (a.fuel_equipment?.name || "") : String(a.workers_count || 0);
-            const bVal = b.operation_types.is_mechanical ? (b.fuel_equipment?.name || "") : String(b.workers_count || 0);
+            const aVal = a.operation_types?.is_mechanical ? (a.fuel_equipment?.name || "") : String(a.workers_count || 0);
+            const bVal = b.operation_types?.is_mechanical ? (b.fuel_equipment?.name || "") : String(b.workers_count || 0);
             comparison = aVal.localeCompare(bVal);
             break;
           case "driver":
@@ -333,7 +333,7 @@ export function OperationsLogView() {
             comparison = calculateHoursValue(a) - calculateHoursValue(b);
             break;
           case "hectares":
-            comparison = a.hectares_done - b.hectares_done;
+            comparison = (a.hectares_done ?? 0) - (b.hectares_done ?? 0);
             break;
         }
         return sortDirection === "asc" ? comparison : -comparison;
@@ -1372,15 +1372,15 @@ export function OperationsLogView() {
                   )}
                   {isVisible("tractor") && (
                     <TableCell>
-                      {op.operation_types.is_mechanical
+                      {op.operation_types?.is_mechanical
                         ? op.fuel_equipment?.name || "-"
-                        : `${op.workers_count} obreros`}
+                        : `${op.workers_count ?? 0} obreros`}
                     </TableCell>
                   )}
                   {isVisible("driver") && <TableCell>{op.driver || "-"}</TableCell>}
                   {isVisible("implement") && <TableCell>{op.implements?.name || "-"}</TableCell>}
                   {isVisible("hours") && (
-                    <TableCell className={cn("font-mono", op.operation_types.is_mechanical && op.end_hours == null && "text-warning")}>
+                    <TableCell className={cn("font-mono", op.operation_types?.is_mechanical && op.end_hours == null && "text-warning")}>
                       {calculateHoursDisplay(op)} {calculateHoursDisplay(op) !== "-" && "hrs"}
                     </TableCell>
                   )}

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, Printer } from "lucide-react";
+import { FileDown, Printer, RotateCcw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TankSizeInput } from "./TankSizeInput";
 import { FieldSelectionSection } from "./FieldSelectionSection";
@@ -156,6 +156,14 @@ export function HerbicideCalculation() {
     window.print();
   };
 
+  const handleClear = () => {
+    setSelectedFields([]);
+    setHerbicides([]);
+    setAdherents([]);
+    setConditioners([]);
+    setTankSize(800);
+  };
+
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Tank Size */}
@@ -211,6 +219,10 @@ export function HerbicideCalculation() {
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="h-4 w-4 mr-2" />
                 {t("herbicide.print")}
+              </Button>
+              <Button onClick={handleClear} variant="outline">
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {t("herbicide.clear")}
               </Button>
             </CardContent>
           </Card>

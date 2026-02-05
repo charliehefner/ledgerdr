@@ -4,16 +4,14 @@ import { InventoryList } from "@/components/inventory/InventoryList";
 import { InventoryItemDialog } from "@/components/inventory/InventoryItemDialog";
 import { PurchaseDialog } from "@/components/inventory/PurchaseDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, ShoppingCart, FileText } from "lucide-react";
+import { Plus, ShoppingCart } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useStockReport } from "@/components/inventory/useStockReport";
 
 export default function Inventory() {
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const { t } = useLanguage();
-  const { exportStockReport } = useStockReport();
 
   const handleEditItem = (itemId: string) => {
     setEditingItem(itemId);
@@ -36,13 +34,6 @@ export default function Inventory() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={exportStockReport}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              {t("inventory.stockReport")}
-            </Button>
             <Button
               variant="secondary"
               onClick={() => setIsPurchaseDialogOpen(true)}

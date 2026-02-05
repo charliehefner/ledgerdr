@@ -377,7 +377,7 @@ export function DailyEntryDialog({ open, onOpenChange, entry, contracts }: Daily
                   <FormField
                     control={form.control}
                     name={`line_items.${index}.amount`}
-                    rules={{ required: t("contracts.required"), min: 0 }}
+                    rules={{ required: t("contracts.required") }}
                     render={({ field }) => (
                       <FormItem>
                         {index === 0 && <FormLabel>{t("common.amount")}</FormLabel>}
@@ -385,6 +385,7 @@ export function DailyEntryDialog({ open, onOpenChange, entry, contracts }: Daily
                           <Input
                             type="number"
                             step="0.01"
+                            className={field.value < 0 ? "text-destructive" : ""}
                             {...field}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                           />
@@ -400,7 +401,9 @@ export function DailyEntryDialog({ open, onOpenChange, entry, contracts }: Daily
 
               {fields.length > 0 && (
                 <div className="text-right text-sm">
-                  {t("contracts.lineItemsSubtotal")}: <span className="font-mono">${lineItemsTotal.toLocaleString()}</span>
+                  {t("contracts.lineItemsSubtotal")}: <span className={`font-mono ${lineItemsTotal < 0 ? "text-destructive" : ""}`}>
+                    {lineItemsTotal < 0 ? `($${Math.abs(lineItemsTotal).toLocaleString()})` : `$${lineItemsTotal.toLocaleString()}`}
+                  </span>
                 </div>
               )}
             </div>
@@ -409,7 +412,9 @@ export function DailyEntryDialog({ open, onOpenChange, entry, contracts }: Daily
             <div className="border-t pt-4">
               <div className="flex justify-between items-center text-lg font-semibold">
                 <span>{t("contracts.totalCost")}:</span>
-                <span className="font-mono">${totalCost.toLocaleString()}</span>
+                <span className={`font-mono ${totalCost < 0 ? "text-destructive" : ""}`}>
+                  {totalCost < 0 ? `($${Math.abs(totalCost).toLocaleString()})` : `$${totalCost.toLocaleString()}`}
+                </span>
               </div>
             </div>
 

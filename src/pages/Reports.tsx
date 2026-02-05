@@ -43,29 +43,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { parseDateLocal } from "@/lib/dateUtils";
-import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { getDescription } from "@/lib/getDescription";
-
-const REPORT_COLUMNS: ColumnConfig[] = [
-  { key: "id", label: "ID", defaultVisible: false },
-  { key: "date", label: "Date", defaultVisible: true },
-  { key: "account", label: "Account", defaultVisible: true },
-  { key: "project", label: "Project", defaultVisible: true },
-  { key: "cbs", label: "CBS Code", defaultVisible: true },
-  { key: "purchaseDate", label: "Purchase Date", defaultVisible: false },
-  { key: "description", label: "Description", defaultVisible: true },
-  { key: "currency", label: "Currency", defaultVisible: true },
-  { key: "amount", label: "Amount", defaultVisible: true },
-  { key: "itbis", label: "ITBIS", defaultVisible: true },
-  { key: "payMethod", label: "Pay Method", defaultVisible: true },
-  { key: "document", label: "Document", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: true },
-  { key: "comments", label: "Comments", defaultVisible: false },
-  { key: "exchangeRate", label: "Ex. Rate", defaultVisible: true },
-  { key: "internal", label: "Internal", defaultVisible: true },
-  { key: "attach", label: "Attach", defaultVisible: true },
-];
+import { REPORT_COLUMNS } from "@/components/transactions/columnConfig";
 
 type SortKey = "id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "description" | "currency" | "amount" | "itbis" | "pay_method" | "document" | "name" | "exchange_rate" | "is_internal";
 type SortDirection = "asc" | "desc" | null;
@@ -596,7 +577,7 @@ export default function Reports() {
                         <div className="flex items-center">Project<SortIcon columnKey="project_code" /></div>
                       </TableHead>
                     )}
-                    {columnVisibility.isVisible("cbs") && (
+                    {columnVisibility.isVisible("cbsCode") && (
                       <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("cbs_code")}>
                         <div className="flex items-center">CBS Code<SortIcon columnKey="cbs_code" /></div>
                       </TableHead>
@@ -639,11 +620,6 @@ export default function Reports() {
                     {columnVisibility.isVisible("exchangeRate") && (
                       <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("exchange_rate")}>
                         <div className="flex items-center justify-end">Ex. Rate<SortIcon columnKey="exchange_rate" /></div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.isVisible("internal") && (
-                      <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("is_internal")}>
-                        <div className="flex items-center justify-center">Internal<SortIcon columnKey="is_internal" /></div>
                       </TableHead>
                     )}
                     {columnVisibility.isVisible("attach") && (
@@ -689,7 +665,7 @@ export default function Reports() {
                           {columnVisibility.isVisible("project") && (
                             <TableCell className="font-mono">{tx.project_code || "-"}</TableCell>
                           )}
-                          {columnVisibility.isVisible("cbs") && (
+                          {columnVisibility.isVisible("cbsCode") && (
                             <TableCell className="font-mono">{tx.cbs_code || "-"}</TableCell>
                           )}
                           {columnVisibility.isVisible("description") && (
@@ -718,11 +694,6 @@ export default function Reports() {
                           {columnVisibility.isVisible("exchangeRate") && (
                             <TableCell className="text-right font-mono">
                               {tx.exchange_rate || "-"}
-                            </TableCell>
-                          )}
-                          {columnVisibility.isVisible("internal") && (
-                            <TableCell className="text-center">
-                              {tx.is_internal ? "Yes" : "No"}
                             </TableCell>
                           )}
                           {columnVisibility.isVisible("attach") && (

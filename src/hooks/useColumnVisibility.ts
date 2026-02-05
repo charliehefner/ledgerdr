@@ -7,7 +7,7 @@ export interface ColumnConfig {
 }
 
 // Increment this version when column definitions change to reset user preferences
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 
 export function useColumnVisibility(
   tableId: string,

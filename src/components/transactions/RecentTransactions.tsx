@@ -16,28 +16,10 @@ import { getDescription } from '@/lib/getDescription';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { MultiAttachmentCell } from './MultiAttachmentCell';
 import { EditTransactionDialog } from '@/components/invoices/EditTransactionDialog';
-import { useColumnVisibility, ColumnConfig } from '@/hooks/useColumnVisibility';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { ColumnSelector } from '@/components/ui/column-selector';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-const RECENT_COLUMNS: ColumnConfig[] = [
-  { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "Date / Fecha", defaultVisible: true },
-  { key: "account", label: "Account / Cuenta", defaultVisible: true },
-  { key: "project", label: "Project / Proyecto", defaultVisible: false },
-  { key: "cbsCode", label: "CBS Code / Código CBS", defaultVisible: false },
-  { key: "purchaseDate", label: "Purchase Date / Fecha Compra", defaultVisible: false },
-  { key: "description", label: "Description / Descripción", defaultVisible: false },
-  { key: "currency", label: "Currency / Moneda", defaultVisible: true },
-  { key: "amount", label: "Amount / Monto", defaultVisible: true },
-  { key: "itbis", label: "ITBIS", defaultVisible: false },
-  { key: "payMethod", label: "Pay Method / Método Pago", defaultVisible: true },
-  { key: "document", label: "Document / Documento", defaultVisible: true },
-  { key: "name", label: "Name / Nombre", defaultVisible: false },
-  { key: "comments", label: "Comments / Comentarios", defaultVisible: false },
-  { key: "exchangeRate", label: "Exchange Rate / Tasa Cambio", defaultVisible: false },
-  { key: "attach", label: "Attachment / Adjunto", defaultVisible: true },
-];
+import { TRANSACTION_COLUMNS } from './columnConfig';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
@@ -49,7 +31,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { t, language } = useLanguage();
 
-  const columnVisibility = useColumnVisibility("recent-transactions", RECENT_COLUMNS);
+  const columnVisibility = useColumnVisibility("recent-transactions", TRANSACTION_COLUMNS);
 
   const handleAttachmentUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });

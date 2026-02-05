@@ -69,23 +69,51 @@ export function MultiAttachmentCell({
   // Memoize showCategories to prevent infinite re-renders
   const categoriesKey = showCategories.join(',');
   
-  // Fetch signed URLs for all attachments
+  // Fetch signed URLs for all attachments with error handling
   useEffect(() => {
+    let isMounted = true;
+    
     async function fetchSignedUrls() {
       setIsLoadingUrls(true);
       const urls: Record<AttachmentCategory, string | null> = { ncf: null, payment_receipt: null, quote: null };
       
-      for (const category of showCategories) {
-        if (attachments[category]) {
-          const url = await getSignedAttachmentUrl(attachments[category]!);
-          urls[category] = url;
+      try {
+        // Process each category in parallel with individual error handling
+        const promises = showCategories.map(async (category) => {
+          if (attachments[category]) {
+            try {
+              const url = await getSignedAttachmentUrl(attachments[category]!);
+              return { category, url };
+            } catch {
+              return { category, url: null };
+            }
+          }
+          return { category, url: null };
+        });
+        
+        const results = await Promise.all(promises);
+        
+        if (isMounted) {
+          results.forEach(({ category, url }) => {
+            urls[category] = url;
+          });
+          setSignedUrls(urls);
+        }
+      } catch (error) {
+        // Silently fail - just show no previews
+        console.warn('Failed to fetch signed URLs');
+      } finally {
+        if (isMounted) {
+          setIsLoadingUrls(false);
         }
       }
-      
-      setSignedUrls(urls);
-      setIsLoadingUrls(false);
     }
+    
     fetchSignedUrls();
+    
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attachments.ncf, attachments.payment_receipt, attachments.quote, categoriesKey]);
 

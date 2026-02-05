@@ -265,14 +265,18 @@ export function ContractDetailReport({
       const tableData = filteredEntries.map((entry) => {
         const lineItemsTotal = (entry.line_items || []).reduce((sum, item) => sum + item.amount, 0);
         const baseCost = entry.cost_override !== null ? entry.cost_override : entry.calculated_cost;
+        const finalCost = getFinalCost(entry);
+        
+        const formatAmount = (amount: number) => 
+          amount < 0 ? `($${Math.abs(amount).toLocaleString()})` : `$${amount.toLocaleString()}`;
         
         return [
           format(parseDateLocal(entry.entry_date), "dd/MM/yyyy"),
           entry.description,
           `${entry.units_charged.toLocaleString()} ${unitLabel}`,
           `$${baseCost.toLocaleString()}`,
-          lineItemsTotal > 0 ? `$${lineItemsTotal.toLocaleString()}` : "-",
-          `$${getFinalCost(entry).toLocaleString()}`,
+          lineItemsTotal !== 0 ? formatAmount(lineItemsTotal) : "-",
+          formatAmount(finalCost),
         ];
       });
       
@@ -509,7 +513,11 @@ export function ContractDetailReport({
                             {(entry.line_items?.length || 0) > 0 && (
                               <div className="text-xs text-muted-foreground mt-1">
                                 {entry.line_items?.map((item, i) => (
-                                  <div key={i}>+ {item.description}: ${item.amount.toLocaleString()}</div>
+                                  <div key={i} className={item.amount < 0 ? "text-destructive" : ""}>
+                                    + {item.description}: {item.amount < 0 
+                                      ? `($${Math.abs(item.amount).toLocaleString()})` 
+                                      : `$${item.amount.toLocaleString()}`}
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -526,8 +534,12 @@ export function ContractDetailReport({
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {lineItemsTotal > 0 ? `$${lineItemsTotal.toLocaleString()}` : "-"}
+                        <TableCell className={`text-right font-mono ${lineItemsTotal < 0 ? "text-destructive" : ""}`}>
+                          {lineItemsTotal !== 0 
+                            ? (lineItemsTotal < 0 
+                                ? `($${Math.abs(lineItemsTotal).toLocaleString()})` 
+                                : `$${lineItemsTotal.toLocaleString()}`)
+                            : "-"}
                         </TableCell>
                         <TableCell className="text-right font-mono font-semibold">
                           ${finalCost.toLocaleString()}

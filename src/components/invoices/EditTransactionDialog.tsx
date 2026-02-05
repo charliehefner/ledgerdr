@@ -118,8 +118,11 @@ export function EditTransactionDialog({
     try {
       await updateTransaction(String(transaction.id), { document: editedDocument });
       setOriginalDocument(editedDocument);
+      // Invalidate all transaction-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["allTransactions"] });
       toast.success("Documento # guardado exitosamente");
     } catch (error) {
       toast.error("Error al guardar Documento #");

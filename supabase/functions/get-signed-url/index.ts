@@ -24,27 +24,24 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Use service role client to verify the JWT token
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    // Create admin client with service role (bypasses RLS, validates tokens)
+    const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Extract token and verify user
+    // Extract token from header
     const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await adminSupabase.auth.getUser(token);
     
-    if (userError || !userData?.user) {
-      console.error('User auth error:', userError);
+    // Validate JWT by getting user - pass token explicitly
+    const { data: { user }, error: userError } = await adminSupabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('User auth error:', userError?.message || 'No user found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = userData.user.id;
+    const userId = user.id;
 
     // Check user has a valid role (any authenticated user with a role can view attachments)
     const { data: roleData } = await adminSupabase.rpc('get_user_role', { 

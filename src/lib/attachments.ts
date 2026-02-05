@@ -172,18 +172,26 @@ export async function getSignedAttachmentUrl(attachmentUrl: string): Promise<str
   const filePath = match[1];
 
   try {
+    // Get the current session to include auth token
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      console.error('No active session for signed URL request');
+      return null;
+    }
+
     const { data, error } = await supabase.functions.invoke('get-signed-url', {
       body: { filePath },
     });
 
     if (error) {
-      console.error('Error getting signed URL:', error);
+      // Don't spam console with auth errors - just return null silently
       return null;
     }
 
     return data?.signedUrl || null;
   } catch (error) {
-    console.error('Failed to get signed URL:', error);
+    // Silently fail to prevent screen freeze
     return null;
   }
 }

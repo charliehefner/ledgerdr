@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+
 import {
   Select,
   SelectContent,
@@ -58,7 +58,6 @@ const initialFormState = {
   rnc: '',
   comments: '',
   exchange_rate: '',
-  is_internal: false,
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -175,7 +174,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         rnc: form.rnc || undefined,
         comments: form.comments || undefined,
         exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
-        is_internal: form.is_internal,
+        is_internal: form.master_acct_code === '0000',
       });
 
       // Save all attachments to local database
@@ -501,17 +500,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
           </div>
 
-          {/* Internal Toggle & Submit */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_internal"
-                checked={form.is_internal}
-                onCheckedChange={(checked) => updateField('is_internal', checked)}
-              />
-              <Label htmlFor="is_internal">Transacción Interna</Label>
-            </div>
-
+          {/* Submit */}
+          <div className="flex justify-end pt-4 border-t">
             <Button type="submit" disabled={isSubmitting || !isValid()}>
               {isSubmitting ? 'Guardando...' : 'Guardar Transacción'}
             </Button>

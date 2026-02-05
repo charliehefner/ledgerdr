@@ -22,6 +22,9 @@ export function formatDateLocal(date: Date): string {
  * - parseDateLocal("2024-01-03") → local midnight → displays as Jan 3 ✅
  */
 export function parseDateLocal(dateString: string): Date {
-  const [year, month, day] = dateString.split('-').map(Number);
+  // Handle full ISO timestamps (e.g., "2024-01-03T12:00:00.000Z" or "2024-01-03 12:00:00+00")
+  // by extracting just the date portion
+  const datePart = dateString.split('T')[0].split(' ')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
   return new Date(year, month - 1, day);
 }

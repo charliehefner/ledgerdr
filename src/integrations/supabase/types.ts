@@ -1602,6 +1602,7 @@ export type Database = {
           description: string
           document: string | null
           id: string
+          is_internal: boolean
           is_void: boolean
           itbis: number | null
           legacy_id: number | null
@@ -1624,6 +1625,7 @@ export type Database = {
           description?: string
           document?: string | null
           id?: string
+          is_internal?: boolean
           is_void?: boolean
           itbis?: number | null
           legacy_id?: number | null
@@ -1646,6 +1648,7 @@ export type Database = {
           description?: string
           document?: string | null
           id?: string
+          is_internal?: boolean
           is_void?: boolean
           itbis?: number | null
           legacy_id?: number | null

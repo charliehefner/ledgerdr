@@ -107,7 +107,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     ...t,
     id: t.legacy_id?.toString() || t.id,
     currency: t.currency as 'DOP' | 'USD',
-    is_internal: false, // Default value for compatibility
+    is_internal: t.is_internal ?? false,
   }));
 }
 
@@ -139,6 +139,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       rnc: transaction.rnc || null,
       comments: transaction.comments || null,
       is_void: false,
+      is_internal: transaction.is_internal ?? false,
     })
     .select()
     .single();
@@ -152,7 +153,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
     ...data,
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
-    is_internal: false,
+    is_internal: data.is_internal ?? false,
   };
 }
 
@@ -179,7 +180,7 @@ export async function updateTransaction(id: string | number, transaction: Partia
     ...data,
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
-    is_internal: false,
+    is_internal: data.is_internal ?? false,
   };
 }
 
@@ -219,6 +220,6 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
     ...data,
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
-    is_internal: false,
+    is_internal: data.is_internal ?? false,
   };
 }

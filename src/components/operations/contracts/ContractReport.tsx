@@ -216,6 +216,10 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     filteredEntries.forEach((entry) => {
       const lineItemsTotal = (entry.line_items || []).reduce((sum, item) => sum + item.amount, 0);
       const baseCost = entry.cost_override !== null ? entry.cost_override : entry.calculated_cost;
+      const finalCost = getFinalCost(entry);
+      
+      const formatAmount = (amount: number) => 
+        amount < 0 ? `($${Math.abs(amount).toLocaleString()})` : `$${amount.toLocaleString()}`;
       
       // Main entry row
       tableData.push([
@@ -223,8 +227,8 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
         entry.description,
         `${entry.units_charged.toLocaleString()} ${UNIT_LABELS[selectedContract.unit_type]}`,
         `$${baseCost.toLocaleString()}`,
-        lineItemsTotal > 0 ? `$${lineItemsTotal.toLocaleString()}` : "-",
-        `$${getFinalCost(entry).toLocaleString()}`,
+        lineItemsTotal !== 0 ? formatAmount(lineItemsTotal) : "–",
+        formatAmount(finalCost),
       ]);
       
       // Line items as sub-rows
@@ -235,7 +239,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
             `  + ${item.description}`,
             "",
             "",
-            `$${item.amount.toLocaleString()}`,
+            formatAmount(item.amount),
             "",
           ]);
         });
@@ -243,12 +247,15 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     });
 
     // Add totals row
+    const formatTotalAmount = (amount: number) => 
+      amount < 0 ? `($${Math.abs(amount).toLocaleString()})` : `$${amount.toLocaleString()}`;
+    
     tableData.push([
       "TOTAL FACTURADO",
       "",
       `${totalUnits.toLocaleString()} ${UNIT_LABELS[selectedContract.unit_type]}`,
       `$${totalBaseCost.toLocaleString()}`,
-      totalLineItems > 0 ? `$${totalLineItems.toLocaleString()}` : "-",
+      totalLineItems !== 0 ? formatTotalAmount(totalLineItems) : "–",
       `$${totalInvoiced.toLocaleString()}`,
     ]);
 
@@ -504,7 +511,11 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                               {(entry.line_items?.length || 0) > 0 && (
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                                   {entry.line_items?.map((item, i) => (
-                                    <div key={i}>+ {item.description}: ${item.amount.toLocaleString()}</div>
+                                    <div key={i} className={item.amount < 0 ? "text-destructive" : ""}>
+                                      + {item.description}: {item.amount < 0 
+                                        ? `($${Math.abs(item.amount).toLocaleString()})` 
+                                        : `$${item.amount.toLocaleString()}`}
+                                    </div>
                                   ))}
                                 </div>
                               )}
@@ -521,8 +532,12 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {lineItemsTotal > 0 ? `$${lineItemsTotal.toLocaleString()}` : "-"}
+                          <TableCell className={`text-right font-mono ${lineItemsTotal < 0 ? "text-destructive" : ""}`}>
+                            {lineItemsTotal !== 0 
+                              ? (lineItemsTotal < 0 
+                                  ? `($${Math.abs(lineItemsTotal).toLocaleString()})` 
+                                  : `$${lineItemsTotal.toLocaleString()}`)
+                              : "–"}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
                             ${finalCost.toLocaleString()}
@@ -541,8 +556,12 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                       <TableCell className="text-right font-mono">
                         ${totalBaseCost.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {totalLineItems > 0 ? `$${totalLineItems.toLocaleString()}` : "-"}
+                      <TableCell className={`text-right font-mono ${totalLineItems < 0 ? "text-destructive" : ""}`}>
+                        {totalLineItems !== 0 
+                          ? (totalLineItems < 0 
+                              ? `($${Math.abs(totalLineItems).toLocaleString()})` 
+                              : `$${totalLineItems.toLocaleString()}`)
+                          : "–"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-lg">
                         ${totalInvoiced.toLocaleString()}

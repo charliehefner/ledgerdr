@@ -15,8 +15,8 @@ import {
   Project,
   CbsCode,
 } from '@/lib/api';
-import { saveAttachment } from '@/lib/attachments';
-import { AttachmentUpload } from './AttachmentUpload';
+import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
+import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,7 +59,11 @@ const initialFormState = {
   comments: '',
   exchange_rate: '',
   is_internal: false,
-  attachment_url: null as string | null,
+  attachments: {
+    ncf: null,
+    payment_receipt: null,
+    quote: null,
+  } as CategoryAttachments,
 };
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
@@ -174,9 +178,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         is_internal: form.is_internal,
       });
 
-      // If transaction was created and has an attachment, save it to local database
-      if (result.id && form.attachment_url) {
-        await saveAttachment(result.id, form.attachment_url);
+      // Save all attachments to local database
+      if (result.id) {
+        const attachmentCategories: AttachmentCategory[] = ['ncf', 'payment_receipt', 'quote'];
+        for (const category of attachmentCategories) {
+          if (form.attachments[category]) {
+            await saveAttachment(result.id, form.attachments[category]!, category);
+          }
+        }
         // Invalidate attachment queries
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
@@ -476,14 +485,16 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Adjunto</Label>
-              <div className="pt-1">
-                <AttachmentUpload
-                  attachmentUrl={form.attachment_url}
-                  onUpload={(url) => updateField('attachment_url', url)}
-                  onClear={() => updateField('attachment_url', null)}
-                />
-              </div>
+              <Label>Adjuntos (NCF, Comprobante, Cotización)</Label>
+              <MultiAttachmentUpload
+                attachments={form.attachments}
+                onUpload={(category, url) => 
+                  updateField('attachments', { ...form.attachments, [category]: url })
+                }
+                onClear={(category) => 
+                  updateField('attachments', { ...form.attachments, [category]: null })
+                }
+              />
               <p className="text-xs text-muted-foreground">
                 Subir recibo o factura (JPG, PNG, PDF, máx 5MB)
               </p>

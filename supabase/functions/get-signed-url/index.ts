@@ -43,12 +43,12 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
 
-    // Check user has a valid role
+    // Check user has a valid role (any authenticated user with a role can view attachments)
     const { data: roleData } = await supabase.rpc('get_user_role', { 
       _user_id: userId 
     });
     
-    if (!roleData || !['admin', 'accountant'].includes(roleData)) {
+    if (!roleData || !['admin', 'management', 'accountant', 'supervisor', 'viewer'].includes(roleData)) {
       return new Response(
         JSON.stringify({ error: 'Forbidden - no valid role' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

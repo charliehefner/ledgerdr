@@ -123,6 +123,7 @@ export function PaymentDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-contract-payments"] });
       queryClient.invalidateQueries({ queryKey: ["contract-payments-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["contract-report-payments"] });
       toast.success(payment ? t("contracts.paymentUpdated") : t("contracts.paymentCreated"));
       onOpenChange(false);
     },

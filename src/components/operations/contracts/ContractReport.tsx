@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -26,9 +28,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { ContractEntry, ServiceContract } from "../ContractedServicesView";
 import { format } from "date-fns";
 import { parseDateLocal } from "@/lib/dateUtils";
-import { Download, FileText } from "lucide-react";
+import { FileText, DollarSign } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ContractPayment } from "./PaymentDialog";
 
 interface ContractReportProps {
   open: boolean;
@@ -48,6 +51,23 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
   const [selectedContractId, setSelectedContractId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Fetch payments for selected contract
+  const { data: payments = [] } = useQuery({
+    queryKey: ["contract-report-payments", selectedContractId],
+    queryFn: async () => {
+      if (!selectedContractId) return [];
+      const { data, error } = await supabase
+        .from("service_contract_payments")
+        .select("*")
+        .eq("contract_id", selectedContractId)
+        .order("payment_date", { ascending: true });
+      if (error) throw error;
+      return data as ContractPayment[];
+    },
+    enabled: !!selectedContractId && open,
+    staleTime: 0,
+  });
 
   const selectedContract = contracts.find((c) => c.id === selectedContractId) || null;
 
@@ -78,6 +98,12 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     return true;
   }).sort((a, b) => parseDateLocal(a.entry_date).getTime() - parseDateLocal(b.entry_date).getTime());
 
+  const filteredPayments = payments.filter((payment) => {
+    if (startDate && payment.payment_date < startDate) return false;
+    if (endDate && payment.payment_date > endDate) return false;
+    return true;
+  });
+
   const getFinalCost = (entry: ContractEntry) => {
     const baseCost = entry.cost_override !== null ? entry.cost_override : entry.calculated_cost;
     const lineItemsTotal = (entry.line_items || []).reduce((sum, item) => sum + item.amount, 0);
@@ -91,7 +117,9 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
   const totalLineItems = filteredEntries.reduce((sum, e) => {
     return sum + (e.line_items || []).reduce((s, item) => s + item.amount, 0);
   }, 0);
-  const totalCost = filteredEntries.reduce((sum, e) => sum + getFinalCost(e), 0);
+  const totalInvoiced = filteredEntries.reduce((sum, e) => sum + getFinalCost(e), 0);
+  const totalPaid = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const balance = totalInvoiced - totalPaid;
 
   const handleExportPDF = () => {
     if (!selectedContract) return;
@@ -171,12 +199,12 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
 
     // Add totals row
     tableData.push([
-      "TOTAL",
+      "TOTAL FACTURADO",
       "",
       `${totalUnits.toLocaleString()} ${UNIT_LABELS[selectedContract.unit_type]}`,
       `$${totalBaseCost.toLocaleString()}`,
       totalLineItems > 0 ? `$${totalLineItems.toLocaleString()}` : "-",
-      `$${totalCost.toLocaleString()}`,
+      `$${totalInvoiced.toLocaleString()}`,
     ]);
 
     autoTable(doc, {
@@ -214,8 +242,78 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
       },
     });
 
+    let finalY = (doc as any).lastAutoTable.finalY || 200;
+
+    // Payments table if there are payments
+    if (filteredPayments.length > 0) {
+      finalY += 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text("Pagos Registrados", 14, finalY);
+      finalY += 5;
+
+      const paymentData = filteredPayments.map((payment) => [
+        format(parseDateLocal(payment.payment_date), "dd/MM/yyyy"),
+        payment.transaction_id,
+        `$${Number(payment.amount).toLocaleString()}`,
+        payment.notes || "",
+      ]);
+
+      // Add total paid row
+      paymentData.push([
+        "TOTAL PAGADO",
+        "",
+        `$${totalPaid.toLocaleString()}`,
+        "",
+      ]);
+
+      autoTable(doc, {
+        startY: finalY,
+        head: [["Fecha", "Transacción", "Monto", "Notas"]],
+        body: paymentData,
+        theme: "grid",
+        headStyles: { 
+          fillColor: [34, 197, 94],
+          fontSize: 10,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 9,
+        },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 35, halign: "right" },
+          3: { cellWidth: "auto" },
+        },
+        didParseCell: (data) => {
+          if (data.row.index === paymentData.length - 1) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [220, 252, 231];
+          }
+        },
+      });
+      
+      finalY = (doc as any).lastAutoTable.finalY || finalY + 30;
+    }
+
+    // Summary section
+    finalY += 10;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Facturado: $${totalInvoiced.toLocaleString()}`, 14, finalY);
+    finalY += 6;
+    doc.text(`Total Pagado: $${totalPaid.toLocaleString()}`, 14, finalY);
+    finalY += 6;
+    doc.setFontSize(12);
+    const balanceColor = balance > 0 ? [217, 119, 6] : balance < 0 ? [22, 163, 74] : [0, 0, 0];
+    doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2]);
+    doc.text(`Balance: $${balance.toLocaleString()}`, 14, finalY);
+
     // Footer with generation date
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    finalY += 15;
     doc.setFontSize(9);
     doc.setTextColor(128, 128, 128);
     doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, finalY);
@@ -319,8 +417,9 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
           </div>
         )}
 
-        {/* Report Table */}
+        {/* Report Tables */}
         {selectedContract && (
+          <>
           <div className="overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
@@ -401,7 +500,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                         {totalLineItems > 0 ? `$${totalLineItems.toLocaleString()}` : "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-lg">
-                        ${totalCost.toLocaleString()}
+                        ${totalInvoiced.toLocaleString()}
                       </TableCell>
                     </TableRow>
                   </>
@@ -409,6 +508,79 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
               </TableBody>
             </Table>
           </div>
+
+          {/* Payments Section */}
+          <div className="space-y-3">
+            <h4 className="font-semibold flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              {t("contracts.payments")}
+            </h4>
+            
+            <div className="overflow-x-auto border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>{t("contracts.transactionId")}</TableHead>
+                    <TableHead className="text-right">{t("common.amount")}</TableHead>
+                    <TableHead>{t("common.notes")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                        {t("contracts.noPayments")}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <>
+                      {filteredPayments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell className="font-mono">{payment.transaction_id}</TableCell>
+                          <TableCell className="text-right font-mono text-green-600 font-semibold">
+                            ${Number(payment.amount).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{payment.notes || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Total Paid Row */}
+                      <TableRow className="bg-green-50 dark:bg-green-950/20 font-semibold">
+                        <TableCell colSpan={2}>{t("contracts.totalPaid")}</TableCell>
+                        <TableCell className="text-right font-mono text-lg text-green-600">
+                          ${totalPaid.toLocaleString()}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Summary Section */}
+          <div className="border rounded-lg p-4 bg-muted/30 space-y-2">
+            <h4 className="font-semibold mb-3">{t("contracts.contractSummary")}</h4>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 bg-background rounded-lg border">
+                <div className="text-sm text-muted-foreground">{t("contracts.totalInvoiced")}</div>
+                <div className="text-xl font-bold font-mono">${totalInvoiced.toLocaleString()}</div>
+              </div>
+              <div className="p-3 bg-background rounded-lg border">
+                <div className="text-sm text-muted-foreground">{t("contracts.totalPaid")}</div>
+                <div className="text-xl font-bold font-mono text-green-600">${totalPaid.toLocaleString()}</div>
+              </div>
+              <div className="p-3 bg-background rounded-lg border">
+                <div className="text-sm text-muted-foreground">{t("contracts.balance")}</div>
+                <div className={`text-xl font-bold font-mono ${balance > 0 ? 'text-amber-600' : balance < 0 ? 'text-green-600' : ''}`}>
+                  ${balance.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

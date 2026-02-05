@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -22,16 +22,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContractEntry, ServiceContract } from "../ContractedServicesView";
 import { format } from "date-fns";
 import { parseDateLocal } from "@/lib/dateUtils";
-import { FileText, DollarSign } from "lucide-react";
+import { FileText, DollarSign, Pencil, Trash2, Plus } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { ContractPayment } from "./PaymentDialog";
+import { toast } from "sonner";
+import { ContractPayment, PaymentDialog } from "./PaymentDialog";
 
 interface ContractReportProps {
   open: boolean;
@@ -48,9 +60,12 @@ const UNIT_LABELS: Record<string, string> = {
 
 export function ContractReport({ open, onOpenChange, contracts, entries }: ContractReportProps) {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const [selectedContractId, setSelectedContractId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<ContractPayment | null>(null);
 
   // Fetch payments for selected contract
   const { data: payments = [] } = useQuery({
@@ -68,6 +83,36 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     enabled: !!selectedContractId && open,
     staleTime: 0,
   });
+
+  // Delete payment mutation
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("service_contract_payments")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contract-report-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["contract-payments-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["service-contract-payments"] });
+      toast.success(t("contracts.paymentDeleted"));
+    },
+    onError: () => {
+      toast.error(t("contracts.paymentDeleteError"));
+    },
+  });
+
+  const handleAddPayment = () => {
+    setEditingPayment(null);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleEditPayment = (payment: ContractPayment) => {
+    setEditingPayment(payment);
+    setPaymentDialogOpen(true);
+  };
 
   const selectedContract = contracts.find((c) => c.id === selectedContractId) || null;
 
@@ -511,10 +556,16 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
 
           {/* Payments Section */}
           <div className="space-y-3">
-            <h4 className="font-semibold flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              {t("contracts.payments")}
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                {t("contracts.payments")}
+              </h4>
+              <Button variant="outline" size="sm" onClick={handleAddPayment}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t("contracts.addPayment")}
+              </Button>
+            </div>
             
             <div className="overflow-x-auto border rounded-lg">
               <Table>
@@ -524,12 +575,13 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                     <TableHead>{t("contracts.transactionId")}</TableHead>
                     <TableHead className="text-right">{t("common.amount")}</TableHead>
                     <TableHead>{t("common.notes")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
                         {t("contracts.noPayments")}
                       </TableCell>
                     </TableRow>
@@ -539,19 +591,47 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                         <TableRow key={payment.id}>
                           <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
                           <TableCell className="font-mono">{payment.transaction_id}</TableCell>
-                          <TableCell className="text-right font-mono text-green-600 font-semibold">
+                          <TableCell className="text-right font-mono text-emerald-600 font-semibold">
                             ${Number(payment.amount).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{payment.notes || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleEditPayment(payment)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>{t("contracts.confirmDeletePayment")}</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {t("contracts.confirmDeletePaymentDesc")}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deletePaymentMutation.mutate(payment.id)}>
+                                      {t("common.delete")}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                       {/* Total Paid Row */}
-                      <TableRow className="bg-green-50 dark:bg-green-950/20 font-semibold">
+                      <TableRow className="bg-emerald-50 dark:bg-emerald-950/20 font-semibold">
                         <TableCell colSpan={2}>{t("contracts.totalPaid")}</TableCell>
-                        <TableCell className="text-right font-mono text-lg text-green-600">
+                        <TableCell className="text-right font-mono text-lg text-emerald-600">
                           ${totalPaid.toLocaleString()}
                         </TableCell>
-                        <TableCell></TableCell>
+                        <TableCell colSpan={2}></TableCell>
                       </TableRow>
                     </>
                   )}
@@ -570,11 +650,11 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
               </div>
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.totalPaid")}</div>
-                <div className="text-xl font-bold font-mono text-green-600">${totalPaid.toLocaleString()}</div>
+                <div className="text-xl font-bold font-mono text-emerald-600">${totalPaid.toLocaleString()}</div>
               </div>
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.balance")}</div>
-                <div className={`text-xl font-bold font-mono ${balance > 0 ? 'text-amber-600' : balance < 0 ? 'text-green-600' : ''}`}>
+                <div className={`text-xl font-bold font-mono ${balance > 0 ? 'text-amber-600' : balance < 0 ? 'text-emerald-600' : ''}`}>
                   ${balance.toLocaleString()}
                 </div>
               </div>
@@ -583,6 +663,15 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
           </>
         )}
       </DialogContent>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        payment={editingPayment}
+        contracts={selectedContract ? [selectedContract] : []}
+        preselectedContractId={selectedContractId}
+      />
     </Dialog>
   );
 }

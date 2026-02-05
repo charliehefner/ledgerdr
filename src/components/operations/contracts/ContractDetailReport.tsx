@@ -123,6 +123,7 @@ export function ContractDetailReport({
       return data as ContractPayment[];
     },
     enabled: !!contract && open,
+    staleTime: 0, // Always refetch when dialog opens
   });
 
   // Delete payment mutation

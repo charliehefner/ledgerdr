@@ -115,9 +115,20 @@ export function DailyEntriesList({ entries, isLoading, onEdit, onDelete }: Daily
                 </TableCell>
                 <TableCell className="text-right">
                   {(entry.line_items?.length || 0) > 0 ? (
-                    <Badge variant="outline">
-                      +${lineItemsTotal.toLocaleString()} ({entry.line_items?.length})
-                    </Badge>
+                    <div className="space-y-0.5">
+                      {entry.line_items?.map((item, i) => (
+                        <div key={i} className={`text-xs ${item.amount < 0 ? "text-destructive" : ""}`}>
+                          {item.description}: {item.amount < 0 
+                            ? `($${Math.abs(item.amount).toLocaleString()})` 
+                            : `$${item.amount.toLocaleString()}`}
+                        </div>
+                      ))}
+                      <div className={`text-xs font-medium border-t pt-0.5 ${lineItemsTotal < 0 ? "text-destructive" : ""}`}>
+                        {lineItemsTotal < 0 
+                          ? `($${Math.abs(lineItemsTotal).toLocaleString()})` 
+                          : `$${lineItemsTotal.toLocaleString()}`}
+                      </div>
+                    </div>
                   ) : (
                     "-"
                   )}

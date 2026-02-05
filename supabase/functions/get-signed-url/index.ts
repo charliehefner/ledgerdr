@@ -21,15 +21,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client and verify the user is authenticated
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Use service role client to verify the JWT token
+    const adminSupabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
-    // Extract token and verify user is authenticated
+    // Extract token and verify user
     const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const { data: userData, error: userError } = await adminSupabase.auth.getUser(token);
+    
     if (userError || !userData?.user) {
       console.error('User auth error:', userError);
       return new Response(
@@ -41,7 +47,7 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
 
     // Check user has a valid role (any authenticated user with a role can view attachments)
-    const { data: roleData } = await supabase.rpc('get_user_role', { 
+    const { data: roleData } = await adminSupabase.rpc('get_user_role', { 
       _user_id: userId 
     });
     
@@ -69,10 +75,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Use service role to create signed URL (since bucket is private)
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Create signed URL with 1 hour expiry
     const { data, error } = await adminSupabase.storage

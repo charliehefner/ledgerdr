@@ -539,7 +539,7 @@ export function ContractDetailReport({
                             ? (lineItemsTotal < 0 
                                 ? `($${Math.abs(lineItemsTotal).toLocaleString()})` 
                                 : `$${lineItemsTotal.toLocaleString()}`)
-                            : "-"}
+                            : "–"}
                         </TableCell>
                         <TableCell className="text-right font-mono font-semibold">
                           ${finalCost.toLocaleString()}

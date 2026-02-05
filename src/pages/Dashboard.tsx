@@ -16,51 +16,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 import { MultiAttachmentCell } from "@/components/transactions/MultiAttachmentCell";
 import { FiscalDocumentsReport } from "@/components/dashboard/FiscalDocumentsReport";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-// Column configs will use translation keys
-const PENDING_NCF_COLUMNS: ColumnConfig[] = [
-  { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "col.date", defaultVisible: true },
-  { key: "account", label: "col.account", defaultVisible: true },
-  { key: "project", label: "col.project", defaultVisible: false },
-  { key: "cbsCode", label: "col.cbsCode", defaultVisible: false },
-  { key: "purchaseDate", label: "col.purchaseDate", defaultVisible: false },
-  { key: "description", label: "common.description", defaultVisible: true },
-  { key: "currency", label: "col.currency", defaultVisible: true },
-  { key: "amount", label: "common.amount", defaultVisible: true },
-  { key: "itbis", label: "col.itbis", defaultVisible: false },
-  { key: "payMethod", label: "col.payMethod", defaultVisible: false },
-  { key: "document", label: "col.document", defaultVisible: true },
-  { key: "name", label: "common.name", defaultVisible: false },
-  { key: "comments", label: "col.comments", defaultVisible: false },
-  { key: "exchangeRate", label: "col.exchangeRate", defaultVisible: false },
-  { key: "attach", label: "col.attachment", defaultVisible: true },
-];
-
-const WITHOUT_PAYMENT_RECEIPT_COLUMNS: ColumnConfig[] = [
-  { key: "id", label: "ID", defaultVisible: true },
-  { key: "date", label: "col.date", defaultVisible: true },
-  { key: "account", label: "col.account", defaultVisible: true },
-  { key: "project", label: "col.project", defaultVisible: false },
-  { key: "cbsCode", label: "col.cbsCode", defaultVisible: false },
-  { key: "purchaseDate", label: "col.purchaseDate", defaultVisible: false },
-  { key: "description", label: "common.description", defaultVisible: true },
-  { key: "currency", label: "col.currency", defaultVisible: true },
-  { key: "amount", label: "common.amount", defaultVisible: true },
-  { key: "itbis", label: "col.itbis", defaultVisible: false },
-  { key: "payMethod", label: "col.payMethod", defaultVisible: false },
-  { key: "document", label: "col.document", defaultVisible: true },
-  { key: "name", label: "common.name", defaultVisible: false },
-  { key: "comments", label: "col.comments", defaultVisible: false },
-  { key: "exchangeRate", label: "col.exchangeRate", defaultVisible: false },
-  { key: "attach", label: "col.attachment", defaultVisible: true },
-];
+import { DASHBOARD_COLUMNS } from "@/components/transactions/columnConfig";
 
 // Helper to check if a transaction is Nomina (payroll)
 const isNominaTransaction = (tx: Transaction): boolean => {
@@ -75,8 +37,8 @@ export default function Dashboard() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { t, language } = useLanguage();
   
-  const pendingNcfColumns = useColumnVisibility("dashboard-pending-ncf", PENDING_NCF_COLUMNS);
-  const withoutPaymentReceiptColumns = useColumnVisibility("dashboard-without-payment-receipt", WITHOUT_PAYMENT_RECEIPT_COLUMNS);
+  const pendingNcfColumns = useColumnVisibility("dashboard-pending-ncf", DASHBOARD_COLUMNS);
+  const withoutPaymentReceiptColumns = useColumnVisibility("dashboard-without-payment-receipt", DASHBOARD_COLUMNS);
 
   // Fetch ALL transactions for pending document/attachment checks
   const { data: allTransactions = [], isLoading } = useQuery({

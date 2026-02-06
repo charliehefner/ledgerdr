@@ -138,17 +138,17 @@ export function UserManagement() {
 
   const handleUpdateRole = async (userId: string, newRole: AppRole) => {
     try {
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ role: newRole })
-        .eq("user_id", userId);
+      const { data, error } = await supabase.functions.invoke("update-user-role", {
+        body: { userId, role: newRole },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      toast.success("Role updated successfully");
+      toast.success("Rol actualizado exitosamente");
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
     } catch (error: any) {
-      toast.error(error.message || "Failed to update role");
+      toast.error(error.message || "Error al actualizar rol");
     }
   };
 

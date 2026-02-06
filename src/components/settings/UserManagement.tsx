@@ -58,25 +58,14 @@ export function UserManagement() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<AppRole>("accountant");
 
-  // Fetch users with their roles
+  // Fetch users with their roles via edge function (uses service role to get all users)
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users-with-roles"],
     queryFn: async () => {
-      // Get all user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
-
-      if (rolesError) throw rolesError;
-
-      // For each role, we need to get user info from auth
-      // Since we can't access auth.users directly from client, we'll use the role data
-      // The email will need to be fetched via admin API in edge function
-      const { data, error } = await supabase.functions.invoke("get-users", {
-        body: { userIds: roles.map((r) => r.user_id) },
-      });
+      const { data, error } = await supabase.functions.invoke("get-users");
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       return (data as UserWithRole[]) || [];
     },

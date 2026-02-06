@@ -25,8 +25,57 @@ export interface ExportData {
 }
 
 /**
+ * Check if File System Access API is supported
+ */
+function supportsFilePicker(): boolean {
+  return "showSaveFilePicker" in window;
+}
+
+/**
+ * Save file using File System Access API (Chrome/Edge) with fallback
+ */
+async function saveFileWithPicker(
+  blob: Blob,
+  suggestedName: string,
+  fileType: { description: string; accept: Record<string, string[]> }
+): Promise<boolean> {
+  if (supportsFilePicker()) {
+    try {
+      const handle = await (window as unknown as {
+        showSaveFilePicker: (options: {
+          suggestedName: string;
+          types: { description: string; accept: Record<string, string[]> }[];
+        }) => Promise<FileSystemFileHandle>;
+      }).showSaveFilePicker({
+        suggestedName,
+        types: [fileType],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (err) {
+      // User cancelled the dialog or other error
+      if ((err as Error).name === "AbortError") {
+        return false; // User cancelled
+      }
+      // Fall through to standard download
+    }
+  }
+
+  // Fallback: standard download
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = suggestedName;
+  link.click();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
+/**
  * Reusable hook for Excel and PDF exports.
- * Eliminates duplicate export logic across components.
+ * Uses File System Access API when available for save dialog.
  */
 export function useExport() {
   const { toast } = useToast();
@@ -80,22 +129,26 @@ export function useExport() {
         };
       }
 
-      // Generate and download
+      // Generate blob
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${config.filename}-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Exportación Exitosa",
-        description: `Se exportaron ${data.rows.length} registros a Excel.`,
+      
+      const filename = `${config.filename}-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+      
+      // Use save picker or fallback
+      const saved = await saveFileWithPicker(blob, filename, {
+        description: "Excel Workbook",
+        accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
       });
+
+      if (saved) {
+        toast({
+          title: "Exportación Exitosa",
+          description: `Se exportaron ${data.rows.length} registros a Excel.`,
+        });
+      }
     } catch (error) {
       console.error("Excel export error:", error);
       toast({
@@ -106,7 +159,7 @@ export function useExport() {
     }
   }, [toast]);
 
-  const exportToPDF = useCallback((
+  const exportToPDF = useCallback(async (
     data: ExportData,
     config: ExportConfig
   ) => {
@@ -177,13 +230,22 @@ export function useExport() {
         },
       });
 
-      // Save PDF
-      pdf.save(`${config.filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-
-      toast({
-        title: "Exportación Exitosa",
-        description: `Se exportaron ${data.rows.length} registros a PDF.`,
+      // Get PDF as blob
+      const pdfBlob = pdf.output("blob");
+      const filename = `${config.filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      
+      // Use save picker or fallback
+      const saved = await saveFileWithPicker(pdfBlob, filename, {
+        description: "PDF Document",
+        accept: { "application/pdf": [".pdf"] },
       });
+
+      if (saved) {
+        toast({
+          title: "Exportación Exitosa",
+          description: `Se exportaron ${data.rows.length} registros a PDF.`,
+        });
+      }
     } catch (error) {
       console.error("PDF export error:", error);
       toast({

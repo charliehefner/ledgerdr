@@ -14,6 +14,54 @@ interface UseDayLaborExportParams {
   weeklyTotal: number;
 }
 
+/**
+ * Check if File System Access API is supported
+ */
+function supportsFilePicker(): boolean {
+  return "showSaveFilePicker" in window;
+}
+
+/**
+ * Save file using File System Access API (Chrome/Edge) with fallback
+ */
+async function saveFileWithPicker(
+  blob: Blob,
+  suggestedName: string,
+  fileType: { description: string; accept: Record<string, string[]> }
+): Promise<boolean> {
+  if (supportsFilePicker()) {
+    try {
+      const handle = await (window as unknown as {
+        showSaveFilePicker: (options: {
+          suggestedName: string;
+          types: { description: string; accept: Record<string, string[]> }[];
+        }) => Promise<FileSystemFileHandle>;
+      }).showSaveFilePicker({
+        suggestedName,
+        types: [fileType],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        return false; // User cancelled
+      }
+      // Fall through to standard download
+    }
+  }
+
+  // Fallback: standard download
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = suggestedName;
+  link.click();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 export function useDayLaborExport({
   selectedFriday,
   weekStart,
@@ -22,7 +70,7 @@ export function useDayLaborExport({
   weeklyTotal,
 }: UseDayLaborExportParams) {
   
-  const generatePDF = useCallback(() => {
+  const generatePDF = useCallback(async () => {
     const doc = new jsPDF();
     const fridayStr = format(selectedFriday, "dd/MM/yyyy");
 
@@ -73,7 +121,13 @@ export function useDayLaborExport({
       headStyles: { fillColor: [59, 130, 246] },
     });
 
-    doc.save(`Resumen_Jornal_${format(selectedFriday, "yyyy-MM-dd")}.pdf`);
+    const pdfBlob = doc.output("blob");
+    const filename = `Resumen_Jornal_${format(selectedFriday, "yyyy-MM-dd")}.pdf`;
+    
+    await saveFileWithPicker(pdfBlob, filename, {
+      description: "PDF Document",
+      accept: { "application/pdf": [".pdf"] },
+    });
   }, [selectedFriday, weekStart, weekEnd, summaryByWorker, weeklyTotal]);
 
   return { generatePDF };

@@ -145,25 +145,25 @@ export function useInventoryExport({
     );
     doc.text(`Total Items: ${items.length}`, 14, 36);
 
-    // Get visible columns
+    // Get visible columns - use rowKey for data lookup, header for display
     const visibleColumns = [
-      { key: "commercial_name", header: "Commercial Name" },
-      { key: "molecule_name", header: "Molecule" },
-      { key: "function", header: "Function" },
-      { key: "stock", header: "Stock" },
-      { key: "amount_purchased", header: "Purchased" },
-      { key: "amount_used", header: "Used" },
-      { key: "suppliers", header: "Suppliers" },
-      { key: "documents", header: "Documents" },
-      { key: "co2_equivalent", header: "CO₂ eq." },
+      { key: "commercial_name", rowKey: "Commercial Name", header: "Commercial Name" },
+      { key: "molecule_name", rowKey: "Molecule Name", header: "Molecule" },
+      { key: "function", rowKey: "Function", header: "Function" },
+      { key: "stock", rowKey: "Stock", header: "Stock" },
+      { key: "amount_purchased", rowKey: "Amount Purchased", header: "Purchased" },
+      { key: "amount_used", rowKey: "Amount Used", header: "Used" },
+      { key: "suppliers", rowKey: "Suppliers", header: "Suppliers" },
+      { key: "documents", rowKey: "Documents", header: "Documents" },
+      { key: "co2_equivalent", rowKey: "CO₂ Equivalent", header: "CO₂ eq." },
     ].filter(col => isVisible(col.key));
 
     const headers = visibleColumns.map((col) => col.header);
 
-    // Build table data
+    // Build table data - use rowKey to lookup values from buildExportRow
     const tableData = items.map((item) => {
       const row = buildExportRow(item);
-      return headers.map((header) => String(row[header] || "-"));
+      return visibleColumns.map((col) => String(row[col.rowKey] || "-"));
     });
 
     autoTable(doc, {

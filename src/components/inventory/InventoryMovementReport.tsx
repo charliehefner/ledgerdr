@@ -52,6 +52,7 @@ interface ReportRow {
   purchaseValue: number;
   useUnits: number;
   useValue: number;
+  co2ePerUnit: number | null;
   co2e: number;
 }
 
@@ -198,6 +199,7 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
           purchaseValue: purchaseData.value,
           useUnits,
           useValue,
+          co2ePerUnit: item.co2_equivalent,
           co2e,
         };
       });
@@ -330,13 +332,14 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
                   <TableHead className="text-right">Purchase Value</TableHead>
                   <TableHead className="text-right">Use Units</TableHead>
                   <TableHead className="text-right">Use Value</TableHead>
+                  <TableHead className="text-right">CO₂-e/Unit</TableHead>
                   <TableHead className="text-right">CO₂-e (kg)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reportData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                       No movement data for the selected period
                     </TableCell>
                   </TableRow>
@@ -363,6 +366,9 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
                           {row.useValue > 0 ? formatCurrency(row.useValue) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
+                          {row.co2ePerUnit != null ? formatNumber(row.co2ePerUnit) : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
                           {row.co2e > 0 ? formatNumber(row.co2e) : "-"}
                         </TableCell>
                       </TableRow>
@@ -373,6 +379,7 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
                       <TableCell className="text-right">{formatCurrency(totals.purchaseValue)}</TableCell>
                       <TableCell className="text-right"></TableCell>
                       <TableCell className="text-right">{formatCurrency(totals.useValue)}</TableCell>
+                      <TableCell className="text-right"></TableCell>
                       <TableCell className="text-right">{formatNumber(totals.co2e)}</TableCell>
                     </TableRow>
                   </>

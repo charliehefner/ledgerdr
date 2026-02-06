@@ -17,6 +17,7 @@ interface ReportRow {
   purchaseValue: number;
   useUnits: number;
   useValue: number;
+  co2ePerUnit: number | null;
   co2e: number;
 }
 
@@ -88,6 +89,7 @@ export function useInventoryMovementExport({
         { key: "purchaseValue", header: "Compra (Valor)", width: 18 },
         { key: "useUnits", header: "Uso (Unidades)", width: 18 },
         { key: "useValue", header: "Uso (Valor)", width: 18 },
+        { key: "co2ePerUnit", header: "CO₂-e/Unidad", width: 15 },
         { key: "co2e", header: "CO₂-e (kg)", width: 15 },
       ];
 
@@ -102,6 +104,7 @@ export function useInventoryMovementExport({
         "Compra (Valor)",
         "Uso (Unidades)",
         "Uso (Valor)",
+        "CO₂-e/Unidad",
         "CO₂-e (kg)",
       ];
       headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -123,6 +126,7 @@ export function useInventoryMovementExport({
           purchaseValue: row.purchaseValue > 0 ? formatCurrency(row.purchaseValue) : "-",
           useUnits: row.useUnits > 0 ? `${formatNumber(row.useUnits)} ${row.use_unit}` : "-",
           useValue: row.useValue > 0 ? formatCurrency(row.useValue) : "-",
+          co2ePerUnit: row.co2ePerUnit != null ? formatNumber(row.co2ePerUnit) : "-",
           co2e: row.co2e > 0 ? formatNumber(row.co2e) : "-",
         });
       });
@@ -137,6 +141,7 @@ export function useInventoryMovementExport({
         purchaseValue: formatCurrency(totals.purchaseValue),
         useUnits: "",
         useValue: formatCurrency(totals.useValue),
+        co2ePerUnit: "",
         co2e: formatNumber(totals.co2e),
       }).number;
 
@@ -205,6 +210,7 @@ export function useInventoryMovementExport({
         "Compra ($)",
         "Uso (U)",
         "Uso ($)",
+        "CO₂-e/U",
         "CO₂-e",
       ];
 
@@ -218,6 +224,7 @@ export function useInventoryMovementExport({
         row.purchaseValue > 0 ? formatCurrency(row.purchaseValue) : "-",
         row.useUnits > 0 ? formatNumber(row.useUnits) : "-",
         row.useValue > 0 ? formatCurrency(row.useValue) : "-",
+        row.co2ePerUnit != null ? formatNumber(row.co2ePerUnit) : "-",
         row.co2e > 0 ? formatNumber(row.co2e) : "-",
       ]);
 
@@ -231,6 +238,7 @@ export function useInventoryMovementExport({
         formatCurrency(totals.purchaseValue),
         "",
         formatCurrency(totals.useValue),
+        "",
         formatNumber(totals.co2e),
       ]);
 
@@ -250,15 +258,16 @@ export function useInventoryMovementExport({
           }
         },
         columnStyles: {
-          0: { cellWidth: 35 },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 22 },
-          4: { cellWidth: 22 },
-          5: { cellWidth: 28 },
-          6: { cellWidth: 22 },
-          7: { cellWidth: 28 },
-          8: { cellWidth: 20 },
+          0: { cellWidth: 32 },
+          1: { cellWidth: 28 },
+          2: { cellWidth: 22 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 18 },
+          5: { cellWidth: 25 },
+          6: { cellWidth: 18 },
+          7: { cellWidth: 25 },
+          8: { cellWidth: 18 },
+          9: { cellWidth: 18 },
         },
       });
 

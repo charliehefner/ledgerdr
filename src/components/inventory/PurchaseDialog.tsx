@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Fuel } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ interface PurchaseDialogProps {
 
 const initialFormState = {
   item_id: "",
+  tank_id: "",
   purchase_date: new Date(),
   document_number: "",
   supplier: "",
@@ -59,11 +60,11 @@ export function PurchaseDialog({
   });
 
   const { data: items } = useQuery({
-    queryKey: ["inventoryItems"],
+    queryKey: ["inventoryItemsWithFunction"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
-        .select("id, commercial_name, use_unit")
+        .select("id, commercial_name, use_unit, function")
         .eq("is_active", true)
         .order("commercial_name");
       if (error) throw error;
@@ -71,7 +72,28 @@ export function PurchaseDialog({
     },
   });
 
+  const { data: tanks } = useQuery({
+    queryKey: ["fuelTanks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fuel_tanks")
+        .select("id, name, use_type, fuel_type, capacity_gallons, current_level_gallons")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const selectedItem = items?.find((i) => i.id === form.item_id);
+  const isFuelItem = selectedItem?.function === "fuel";
+
+  // Reset tank_id when switching away from fuel item
+  useEffect(() => {
+    if (!isFuelItem && form.tank_id) {
+      setForm((prev) => ({ ...prev, tank_id: "" }));
+    }
+  }, [isFuelItem, form.tank_id]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
@@ -79,6 +101,7 @@ export function PurchaseDialog({
       const unitPrice = parseFloat(data.unit_price);
       const packagingQuantity = parseFloat(data.packaging_quantity) || 1;
       const totalPrice = quantity * unitPrice;
+      const addedQuantity = quantity * packagingQuantity;
 
       // Insert purchase record
       const { error: purchaseError } = await supabase
@@ -98,31 +121,69 @@ export function PurchaseDialog({
 
       if (purchaseError) throw purchaseError;
 
-      // Update current_quantity in inventory_items
-      // Calculate how many use_units we're adding based on packaging
-      const { data: currentItem, error: fetchError } = await supabase
-        .from("inventory_items")
-        .select("current_quantity, use_unit")
-        .eq("id", data.item_id)
-        .maybeSingle();
+      // For fuel items, update the tank level (trigger will sync to inventory)
+      if (isFuelItem && data.tank_id) {
+        const { data: currentTank, error: tankFetchError } = await supabase
+          .from("fuel_tanks")
+          .select("current_level_gallons")
+          .eq("id", data.tank_id)
+          .maybeSingle();
 
-      if (fetchError) throw fetchError;
-      if (!currentItem) throw new Error("Inventory item not found");
+        if (tankFetchError) throw tankFetchError;
+        if (!currentTank) throw new Error("Tank not found");
 
-      // e.g., buying 5 packages of 20L each = 100L added
-      const addedQuantity = quantity * packagingQuantity;
-      const newQuantity = Number(currentItem.current_quantity) + addedQuantity;
+        const newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
 
-      const { error: updateError } = await supabase
-        .from("inventory_items")
-        .update({ current_quantity: newQuantity })
-        .eq("id", data.item_id);
+        const { error: tankUpdateError } = await supabase
+          .from("fuel_tanks")
+          .update({ current_level_gallons: newTankLevel })
+          .eq("id", data.tank_id);
 
-      if (updateError) throw updateError;
+        if (tankUpdateError) throw tankUpdateError;
+
+        // Also record a refill transaction for tank history
+        const { error: transactionError } = await supabase
+          .from("fuel_transactions")
+          .insert({
+            tank_id: data.tank_id,
+            transaction_type: "refill",
+            gallons: addedQuantity,
+            transaction_date: format(data.purchase_date, "yyyy-MM-dd"),
+            notes: data.document_number 
+              ? `Purchase: ${data.document_number}${data.supplier ? ` from ${data.supplier}` : ""}`
+              : data.supplier 
+                ? `Purchase from ${data.supplier}` 
+                : "Purchase refill",
+          });
+
+        if (transactionError) throw transactionError;
+      } else {
+        // For non-fuel items, update inventory directly
+        const { data: currentItem, error: fetchError } = await supabase
+          .from("inventory_items")
+          .select("current_quantity, use_unit")
+          .eq("id", data.item_id)
+          .maybeSingle();
+
+        if (fetchError) throw fetchError;
+        if (!currentItem) throw new Error("Inventory item not found");
+
+        const newQuantity = Number(currentItem.current_quantity) + addedQuantity;
+
+        const { error: updateError } = await supabase
+          .from("inventory_items")
+          .update({ current_quantity: newQuantity })
+          .eq("id", data.item_id);
+
+        if (updateError) throw updateError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
+      queryClient.invalidateQueries({ queryKey: ["inventoryItemsWithFunction"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryPurchases"] });
+      queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
+      queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
       toast.success("Purchase recorded successfully");
       onOpenChange(false);
       setForm(initialFormState);
@@ -136,6 +197,10 @@ export function PurchaseDialog({
     e.preventDefault();
     if (!form.item_id) {
       toast.error("Please select an item");
+      return;
+    }
+    if (isFuelItem && !form.tank_id) {
+      toast.error("Please select a tank for fuel purchase");
       return;
     }
     if (!form.quantity || parseFloat(form.quantity) <= 0) {
@@ -172,8 +237,12 @@ export function PurchaseDialog({
       ...prev,
       item_id: itemId,
       packaging_unit: item?.use_unit || "",
+      tank_id: "", // Reset tank when changing item
     }));
   };
+
+  // Get selected tank info for display
+  const selectedTank = tanks?.find((t) => t.id === form.tank_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,6 +267,36 @@ export function PurchaseDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Tank selector for fuel items */}
+          {isFuelItem && (
+            <div className="space-y-2">
+              <Label htmlFor="tank_id" className="flex items-center gap-2">
+                <Fuel className="h-4 w-4" />
+                Destination Tank *
+              </Label>
+              <Select 
+                value={form.tank_id} 
+                onValueChange={(value) => setForm({ ...form, tank_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a tank" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tanks?.map((tank) => (
+                    <SelectItem key={tank.id} value={tank.id}>
+                      {tank.name} ({tank.use_type}) - {tank.current_level_gallons.toLocaleString()}/{tank.capacity_gallons.toLocaleString()} gal
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedTank && (
+                <p className="text-xs text-muted-foreground">
+                  Tank will be updated and inventory will sync automatically
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -317,7 +416,9 @@ export function PurchaseDialog({
               </div>
               {form.packaging_quantity && selectedItem && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Stock Added:</span>
+                  <span className="text-muted-foreground">
+                    {isFuelItem ? "Gallons Added to Tank:" : "Stock Added:"}
+                  </span>
                   <span className="font-semibold">
                     {calculateStockAdded()} {selectedItem.use_unit}
                   </span>

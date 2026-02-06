@@ -21,10 +21,12 @@ interface PayrollData {
   regularHours: number;
   overtimeHours: number;
   holidayHours: number;
+  sundayHours: number;
   vacationDays: number;
   basePay: number;
   overtimePay: number;
   holidayPay: number;
+  sundayPay: number;
   benefits: EmployeeBenefit[];
   totalBenefits: number;
   tss: number;
@@ -124,6 +126,7 @@ function generateEmployeeReceipt(
       { label: "Salario Base (Quincenal)", value: data.basePay },
       { label: `Horas Extras (${data.overtimeHours.toFixed(1)} hrs)`, value: data.overtimePay },
       { label: `Bono Feriado (${data.holidayHours.toFixed(1)} hrs)`, value: data.holidayPay },
+      { label: `Bono Domingo (${data.sundayHours.toFixed(1)} hrs)`, value: data.sundayPay },
     ];
 
     // Add benefits

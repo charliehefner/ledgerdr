@@ -46,6 +46,7 @@ interface TimesheetEntry {
   end_time: string | null;
   is_absent: boolean;
   is_holiday: boolean;
+  is_sunday_work?: boolean;
 }
 
 interface EmployeeBenefit {
@@ -86,6 +87,7 @@ const STANDARD_HOURS_PER_DAY = 8;
 const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
+const SUNDAY_MULTIPLIER = 2.0; // 100% bonus for Sunday work per DR labor law
 
 // ISR Progressive Tax Brackets (Annual Income - DOP)
 // Source: DGII / PWC Tax Summaries
@@ -230,6 +232,7 @@ export function PayrollSummary({
     let regularHours = 0;
     let overtimeHours = 0;
     let holidayHours = 0;
+    let sundayHours = 0;
 
     entries.forEach((t) => {
       // Skip vacation days - they are paid separately
@@ -243,9 +246,18 @@ export function PayrollSummary({
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
         const end = parseTimeToMinutes(t.end_time);
+        const workDate = parseDateLocal(t.work_date);
+        const isSundayWork = isSunday(workDate);
 
         // Total hours worked this day (capped at standard)
         const totalDayHours = Math.min((end - start) / 60, STANDARD_HOURS_PER_DAY);
+        
+        // Sunday work gets 100% bonus (tracked separately)
+        if (isSundayWork) {
+          sundayHours += totalDayHours;
+          // Sunday hours don't count towards regular hours - they're bonus hours
+          return;
+        }
         
         // If this is a holiday, track those hours for bonus pay
         if (t.is_holiday) {
@@ -294,6 +306,8 @@ export function PayrollSummary({
     const overtimePay = overtimeHours * hourlyRate * OVERTIME_MULTIPLIER;
     // Holiday bonus: 100% extra on top of regular pay for hours worked on holidays
     const holidayPay = holidayHours * hourlyRate * (HOLIDAY_MULTIPLIER - 1); // -1 because base is already in basePay
+    // Sunday bonus: 100% extra for hours worked on Sundays per DR labor law
+    const sundayPay = sundayHours * hourlyRate * SUNDAY_MULTIPLIER; // Full 2x since Sunday hours aren't in regular
 
     // Benefits
     const employeeBenefits = benefits.filter((b) => b.employee_id === employeeId);
@@ -346,7 +360,7 @@ export function PayrollSummary({
     const loanDeduction = Math.round(employeeLoans.reduce((sum, l) => sum + l.payment_amount, 0) * 100) / 100;
 
     const totalDeductions = tss + isr + absenceDeduction + vacationDeduction + loanDeduction;
-    const grossPay = basePay + overtimePay + holidayPay + totalBenefits;
+    const grossPay = basePay + overtimePay + holidayPay + sundayPay + totalBenefits;
     const netPay = grossPay - totalDeductions;
 
     return {
@@ -354,10 +368,12 @@ export function PayrollSummary({
       regularHours,
       overtimeHours,
       holidayHours,
+      sundayHours,
       vacationDays,
       basePay,
       overtimePay,
       holidayPay,
+      sundayPay,
       benefits: employeeBenefits,
       totalBenefits,
       tss,
@@ -381,10 +397,12 @@ export function PayrollSummary({
       regularHours: acc.regularHours + p.regularHours,
       overtimeHours: acc.overtimeHours + p.overtimeHours,
       holidayHours: acc.holidayHours + p.holidayHours,
+      sundayHours: acc.sundayHours + p.sundayHours,
       vacationDays: acc.vacationDays + p.vacationDays,
       basePay: acc.basePay + p.basePay,
       overtimePay: acc.overtimePay + p.overtimePay,
       holidayPay: acc.holidayPay + p.holidayPay,
+      sundayPay: acc.sundayPay + p.sundayPay,
       totalBenefits: acc.totalBenefits + p.totalBenefits,
       tss: acc.tss + p.tss,
       isr: acc.isr + p.isr,
@@ -397,10 +415,12 @@ export function PayrollSummary({
       regularHours: 0,
       overtimeHours: 0,
       holidayHours: 0,
+      sundayHours: 0,
       vacationDays: 0,
       basePay: 0,
       overtimePay: 0,
       holidayPay: 0,
+      sundayPay: 0,
       totalBenefits: 0,
       tss: 0,
       isr: 0,
@@ -433,9 +453,11 @@ export function PayrollSummary({
         { header: "Hrs Reg", key: "regHours", width: 12 },
         { header: "Hrs Extra", key: "otHours", width: 12 },
         { header: "Hrs Fer", key: "holHours", width: 12 },
+        { header: "Hrs Dom", key: "sunHours", width: 12 },
         { header: "Salario Base", key: "basePay", width: 15 },
         { header: "Pago Extra", key: "otPay", width: 15 },
         { header: "Pago Feriado", key: "holPay", width: 15 },
+        { header: "Pago Domingo", key: "sunPay", width: 15 },
         { header: "Beneficios", key: "benefits", width: 15 },
         { header: "TSS", key: "tss", width: 12 },
         { header: "ISR", key: "isr", width: 12 },
@@ -464,9 +486,11 @@ export function PayrollSummary({
           regHours: p.regularHours.toFixed(1),
           otHours: p.overtimeHours.toFixed(1),
           holHours: p.holidayHours.toFixed(1),
+          sunHours: p.sundayHours.toFixed(1),
           basePay: p.basePay.toFixed(2),
           otPay: p.overtimePay.toFixed(2),
           holPay: p.holidayPay.toFixed(2),
+          sunPay: p.sundayPay.toFixed(2),
           benefits: p.totalBenefits.toFixed(2),
           tss: p.tss.toFixed(2),
           isr: p.isr.toFixed(2),
@@ -485,9 +509,11 @@ export function PayrollSummary({
         regHours: totals.regularHours.toFixed(1),
         otHours: totals.overtimeHours.toFixed(1),
         holHours: totals.holidayHours.toFixed(1),
+        sunHours: totals.sundayHours.toFixed(1),
         basePay: totals.basePay.toFixed(2),
         otPay: totals.overtimePay.toFixed(2),
         holPay: totals.holidayPay.toFixed(2),
+        sunPay: totals.sundayPay.toFixed(2),
         benefits: totals.totalBenefits.toFixed(2),
         tss: "",
         isr: "",

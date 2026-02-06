@@ -42,6 +42,7 @@ interface TimesheetEntry {
   end_time: string | null;
   is_absent: boolean;
   is_holiday: boolean;
+  is_sunday_work?: boolean; // Track Sunday work for 100% bonus
 }
 
 interface EmployeeBenefit {
@@ -469,20 +470,30 @@ export function PayrollTimeGrid({
     return hours * 60 + minutes;
   };
 
-  // Calculate hours: regular is within 7:30am-4:30pm, overtime is outside, holiday hours tracked separately
+  // Calculate hours: regular is within 7:30am-4:30pm, overtime is outside, holiday/Sunday hours tracked separately
   const calculateHoursForEmployee = (employeeId: string) => {
     const entries = timesheets.filter((t) => t.employee_id === employeeId);
     let regularHours = 0;
     let overtimeHours = 0;
     let holidayHours = 0;
+    let sundayHours = 0;
 
     entries.forEach((t) => {
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
         const end = parseTimeToMinutes(t.end_time);
+        const workDate = parseDateLocal(t.work_date);
+        const isSundayWork = isSunday(workDate);
         
         // Total hours worked this day (minus 1 hour lunch if full day)
         const totalDayHours = Math.min((end - start) / 60, STANDARD_HOURS_PER_DAY);
+        
+        // Sunday work gets 100% bonus (tracked separately from holidays)
+        if (isSundayWork) {
+          sundayHours += totalDayHours;
+          // Sunday hours don't count towards regular hours - they're bonus hours
+          return;
+        }
         
         // If this is a holiday, all hours get holiday pay bonus
         if (t.is_holiday) {
@@ -509,7 +520,7 @@ export function PayrollTimeGrid({
       }
     });
 
-    return { regularHours, overtimeHours, holidayHours, totalHours: regularHours + overtimeHours };
+    return { regularHours, overtimeHours, holidayHours, sundayHours, totalHours: regularHours + overtimeHours };
   };
 
   const getAbsenceDays = (employeeId: string) => {
@@ -695,6 +706,7 @@ export function PayrollTimeGrid({
             <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">Hrs</th>
             <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Extra</th>
             <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Fer</th>
+            <th className="text-center min-w-[60px] text-emerald-700 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Dom</th>
             {BENEFIT_TYPES.map((type) => (
               <th key={type} className="text-center min-w-[80px] text-green-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">
                 {type}
@@ -719,7 +731,7 @@ export function PayrollTimeGrid({
               </tr>
               
               {group.employees.map((employee, empIndex) => {
-                const { regularHours, overtimeHours, holidayHours } = calculateHoursForEmployee(employee.id);
+                const { regularHours, overtimeHours, holidayHours, sundayHours } = calculateHoursForEmployee(employee.id);
                 const deductions = calculateDeductions(employee.id);
                 const isLastInGroup = empIndex === group.employees.length - 1;
 
@@ -759,8 +771,10 @@ export function PayrollTimeGrid({
                           key={day.toISOString()}
                           className={cn(
                             "p-1 text-center border-r border-border/30 align-middle relative",
-                            // Sunday styling (only Sunday is non-working)
-                            sunday && "bg-muted/60",
+                            // Sunday with work = darker green for 100% bonus
+                            sunday && hasData && "bg-emerald-400 dark:bg-emerald-800",
+                            // Sunday without work = muted
+                            sunday && !hasData && "bg-muted/60",
                             // Status-based colors (priority order: vacation > holiday > absent > overtime > filled)
                             !sunday && isVacation && "bg-violet-300 dark:bg-violet-900",
                             !sunday && !isVacation && isHoliday && "bg-amber-300 dark:bg-amber-800",
@@ -789,6 +803,12 @@ export function PayrollTimeGrid({
                               <span className="text-red-700 dark:text-red-300 font-bold text-xs opacity-80">AUS</span>
                             </div>
                           )}
+                          {/* Sunday work indicator overlay */}
+                          {sunday && hasData && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="text-emerald-900 dark:text-emerald-200 font-bold text-xs opacity-60">DOM</span>
+                            </div>
+                          )}
                           <div className="flex flex-col gap-0.5">
                             {!isAbsent ? (
                               <>
@@ -805,7 +825,7 @@ export function PayrollTimeGrid({
                                   onChange={(val) =>
                                     handleTimeChange(employee.id, day, "end_time", val)
                                   }
-                                  defaultPeriod={endTimeDefaultPeriod}
+                                  defaultPeriod={sunday ? "PM" : endTimeDefaultPeriod}
                                   disabled={isVacation}
                                 />
                               </>
@@ -818,7 +838,7 @@ export function PayrollTimeGrid({
                                 AUSENTE
                               </button>
                             )}
-                            {/* Toggle absent button - only show when not vacation and not already absent */}
+                            {/* Toggle absent button - only show when not vacation and not already absent and not Sunday */}
                             {!isVacation && !isAbsent && !hasData && !sunday && (
                               <button
                                 onClick={() => toggleAbsentForDay(employee.id, day)}
@@ -840,6 +860,9 @@ export function PayrollTimeGrid({
                     </td>
                     <td className="text-center font-mono text-sm text-amber-600 p-4 align-middle">
                       {holidayHours > 0 ? holidayHours.toFixed(1) : "-"}
+                    </td>
+                    <td className="text-center font-mono text-sm text-emerald-700 p-4 align-middle">
+                      {sundayHours > 0 ? sundayHours.toFixed(1) : "-"}
                     </td>
                     {BENEFIT_TYPES.map((type) => (
                       <td key={type} className="p-1 align-middle">

@@ -636,9 +636,10 @@ export default function Reports() {
                     </TableRow>
                   ) : sortedTransactions.length > 0 ? (
                     sortedTransactions.map((tx, index) => {
-                      const missingDocument = !tx.document || tx.document.trim() === '';
-                      // Account 7010 (Nomina) doesn't require attachments
-                      const missingAttachment = tx.id && !hasAnyAttachment(String(tx.id)) && tx.master_acct_code !== '7010';
+                      // Internal transactions (0000) and Nomina (7010) are exempt from documentation requirements
+                      const isExempt = tx.is_internal || tx.master_acct_code === '0000' || tx.master_acct_code === '7010';
+                      const missingDocument = !isExempt && (!tx.document || tx.document.trim() === '');
+                      const missingAttachment = !isExempt && tx.id && !hasAnyAttachment(String(tx.id));
                       
                       // Amber for missing NCF, Rose for missing attachment (amber takes priority if both)
                       const rowClass = missingDocument 

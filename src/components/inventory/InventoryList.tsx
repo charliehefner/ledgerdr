@@ -492,25 +492,38 @@ export function InventoryList({ onEditItem }: InventoryListProps) {
                     )}
                     {isVisible("stock") && (
                       <TableCell>
-                        <button
-                          onClick={() =>
-                            setAdjustmentItem({
-                              id: item.id,
-                              commercial_name: item.commercial_name,
-                              current_quantity: Number(item.current_quantity),
-                              use_unit: item.use_unit,
-                            })
-                          }
-                          className={cn(
-                            "hover:underline cursor-pointer",
-                            Number(item.current_quantity) <= 0
-                              ? "text-destructive font-medium"
-                              : ""
-                          )}
-                          title="Click to adjust stock"
-                        >
-                          {formatStock(item)}
-                        </button>
+                        {item.function === "fuel" ? (
+                          <span
+                            className={cn(
+                              Number(item.current_quantity) <= 0
+                                ? "text-destructive font-medium"
+                                : ""
+                            )}
+                            title="Fuel stock is synced from tanks"
+                          >
+                            {formatStock(item)}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              setAdjustmentItem({
+                                id: item.id,
+                                commercial_name: item.commercial_name,
+                                current_quantity: Number(item.current_quantity),
+                                use_unit: item.use_unit,
+                              })
+                            }
+                            className={cn(
+                              "hover:underline cursor-pointer",
+                              Number(item.current_quantity) <= 0
+                                ? "text-destructive font-medium"
+                                : ""
+                            )}
+                            title="Click to adjust stock"
+                          >
+                            {formatStock(item)}
+                          </button>
+                        )}
                       </TableCell>
                     )}
                     {isVisible("amount_purchased") && (

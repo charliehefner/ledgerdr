@@ -22,16 +22,19 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    // Create admin client with service role (bypasses RLS, validates tokens)
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Extract token from header
     const token = authHeader.replace('Bearer ', '');
     
-    // Validate JWT by getting user - pass token explicitly
-    const { data: { user }, error: userError } = await adminSupabase.auth.getUser(token);
+    // Create client with auth header for JWT validation
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    
+    // Validate JWT by getting user - MUST pass token explicitly for Lovable Cloud
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
       console.error('User auth error:', userError?.message || 'No user found');
@@ -42,6 +45,9 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
+    
+    // Create admin client for service role operations
+    const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Check user has a valid role (any authenticated user with a role can view attachments)
     const { data: roleData } = await adminSupabase.rpc('get_user_role', { 

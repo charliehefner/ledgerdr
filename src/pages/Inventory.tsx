@@ -3,13 +3,15 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { InventoryList } from "@/components/inventory/InventoryList";
 import { InventoryItemDialog } from "@/components/inventory/InventoryItemDialog";
 import { PurchaseDialog } from "@/components/inventory/PurchaseDialog";
+import { InventoryMovementReport } from "@/components/inventory/InventoryMovementReport";
 import { Button } from "@/components/ui/button";
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus, ShoppingCart, Leaf } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Inventory() {
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
+  const [isMovementReportOpen, setIsMovementReportOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const { t } = useLanguage();
 
@@ -35,6 +37,13 @@ export default function Inventory() {
           </div>
           <div className="flex gap-2">
             <Button
+              variant="outline"
+              onClick={() => setIsMovementReportOpen(true)}
+            >
+              <Leaf className="mr-2 h-4 w-4" />
+              CO₂ Report
+            </Button>
+            <Button
               variant="secondary"
               onClick={() => setIsPurchaseDialogOpen(true)}
             >
@@ -59,6 +68,11 @@ export default function Inventory() {
         <PurchaseDialog
           open={isPurchaseDialogOpen}
           onOpenChange={setIsPurchaseDialogOpen}
+        />
+
+        <InventoryMovementReport
+          open={isMovementReportOpen}
+          onOpenChange={setIsMovementReportOpen}
         />
       </div>
     </MainLayout>

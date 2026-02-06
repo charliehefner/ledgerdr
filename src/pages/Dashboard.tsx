@@ -70,19 +70,17 @@ export default function Dashboard() {
     .filter(tx => !tx.is_internal)
     .filter(tx => !tx.document || tx.document.trim() === '');
 
-  // Filter: non-voided transactions without either NCF or payment_receipt attachment
-  // NCF is sufficient - payment receipt is optional (available on bank website)
+  // Filter: non-voided transactions without NCF attachment
   // Exclude Nomina transactions and internal transactions as they don't require attachments
-  const transactionsWithoutPaymentReceipt = allTransactions
+  const transactionsWithoutNcfAttachment = allTransactions
     .filter(tx => !tx.is_void && tx.id)
     .filter(tx => !isNominaTransaction(tx))
     .filter(tx => !tx.is_internal)
     .filter(tx => {
       const attachments = allAttachments[String(tx.id)];
-      // Transaction is resolved if it has EITHER an NCF or a payment_receipt
+      // Transaction is resolved if it has an NCF attachment
       const hasNcf = !!attachments?.ncf;
-      const hasPaymentReceipt = !!attachments?.payment_receipt;
-      return !hasNcf && !hasPaymentReceipt;
+      return !hasNcf;
     });
 
   const getAccountDescription = (code: string) => {
@@ -251,14 +249,14 @@ export default function Dashboard() {
                     {t("common.loading")}
                   </TableCell>
                 </TableRow>
-              ) : transactionsWithoutPaymentReceipt.length === 0 ? (
+              ) : transactionsWithoutNcfAttachment.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={visiblePaymentReceiptCount} className="text-center py-8 text-muted-foreground">
-                    {t("dashboard.allPaymentReceipts")}
+                    {t("dashboard.allNcfAttachments")}
                   </TableCell>
                 </TableRow>
               ) : (
-                transactionsWithoutPaymentReceipt.map((tx) => (
+                transactionsWithoutNcfAttachment.map((tx) => (
                   <TableRow 
                     key={tx.id}
                     className="cursor-pointer hover:bg-muted/50"

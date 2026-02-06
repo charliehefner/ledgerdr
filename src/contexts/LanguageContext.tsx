@@ -369,12 +369,12 @@ const translations: Record<Language, Record<string, string>> = {
     "fuel.endDate": "Fecha Fin",
 
     // Dashboard specific
-    "dashboard.pendingNcf": "Transacciones Pendientes de NCF",
-    "dashboard.pendingNcfSubtitle": "Falta número de comprobante fiscal",
-    "dashboard.noPaymentReceipt": "Sin Comprobante de Pago",
-    "dashboard.noPaymentReceiptSubtitle": "Falta comprobante de pago adjunto",
-    "dashboard.allDocsAttached": "Todas las transacciones tienen documentos adjuntos",
-    "dashboard.allPaymentReceipts": "Todas las transacciones tienen comprobante de pago",
+    "dashboard.pendingNcf": "Transacciones Pendiente Número NCF",
+    "dashboard.pendingNcfSubtitle": "Falta número de comprobante fiscal en campo Documento",
+    "dashboard.noPaymentReceipt": "Pendiente Adjunto NCF",
+    "dashboard.noPaymentReceiptSubtitle": "Falta documento NCF adjunto",
+    "dashboard.allDocsAttached": "Todas las transacciones tienen número NCF",
+    "dashboard.allNcfAttachments": "Todas las transacciones tienen NCF adjunto",
     
     // Attachment categories
     "attachment.ncf": "NCF",
@@ -862,12 +862,12 @@ const translations: Record<Language, Record<string, string>> = {
     "fuel.endDate": "End Date",
 
     // Dashboard specific
-    "dashboard.pendingNcf": "Transactions Pending NCF",
-    "dashboard.pendingNcfSubtitle": "Missing fiscal receipt number",
-    "dashboard.noPaymentReceipt": "Without Payment Receipt",
-    "dashboard.noPaymentReceiptSubtitle": "Missing payment receipt attachment",
-    "dashboard.allDocsAttached": "All transactions have documents attached",
-    "dashboard.allPaymentReceipts": "All transactions have payment receipts",
+    "dashboard.pendingNcf": "Transactions Pending NCF Number",
+    "dashboard.pendingNcfSubtitle": "Missing fiscal receipt number in Document field",
+    "dashboard.noPaymentReceipt": "Pending NCF Attachment",
+    "dashboard.noPaymentReceiptSubtitle": "Missing NCF document attachment",
+    "dashboard.allDocsAttached": "All transactions have NCF numbers",
+    "dashboard.allNcfAttachments": "All transactions have NCF attachments",
     
     // Attachment categories
     "attachment.ncf": "NCF",

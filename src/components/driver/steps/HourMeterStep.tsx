@@ -92,12 +92,25 @@ export function HourMeterStep({ data, onUpdate }: HourMeterStepProps) {
                   alt="Horómetro" 
                   className="w-full rounded-lg"
                 />
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Lectura detectada:</p>
-                  <p className="text-3xl font-bold text-primary">
-                    {data.hourMeterReading?.toLocaleString() || "—"} hrs
-                  </p>
+                
+                {/* Always show input field to enter/correct reading */}
+                <div className="space-y-2">
+                  <Label htmlFor="hour-meter-photo" className="text-center block">
+                    {data.hourMeterReading !== undefined 
+                      ? "Lectura detectada (corrija si es necesario):" 
+                      : "Ingrese la lectura manualmente:"}
+                  </Label>
+                  <Input
+                    id="hour-meter-photo"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="Ej: 1234.5"
+                    value={data.hourMeterReading ?? ""}
+                    onChange={(e) => handleManualInput(e.target.value)}
+                    className="text-xl h-14 text-center"
+                  />
                 </div>
+                
                 <Button 
                   variant="outline" 
                   className="w-full"

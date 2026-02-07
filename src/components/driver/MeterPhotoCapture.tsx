@@ -95,8 +95,8 @@ export function MeterPhotoCapture({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
-      <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <header className="flex-shrink-0 bg-white border-b shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -108,7 +108,7 @@ export function MeterPhotoCapture({
         </div>
       </header>
 
-      <main className="p-4 space-y-4">
+      <main className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Reference value */}
         <Card className="bg-muted/50">
           <CardContent className="p-3 text-center">
@@ -119,13 +119,13 @@ export function MeterPhotoCapture({
 
         {imageData ? (
           <div className="space-y-4">
-            {/* Image preview */}
+            {/* Image preview - constrained height */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
                 <img 
                   src={imageData} 
                   alt="Captura" 
-                  className="w-full"
+                  className="w-full max-h-48 object-contain"
                 />
               </CardContent>
             </Card>

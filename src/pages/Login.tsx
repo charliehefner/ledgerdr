@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock, Mail, User, Loader2 } from "lucide-react";
+import { getDefaultRouteForRole, UserRole } from "@/lib/permissions";
 import jordLogo from "@/assets/jord-logo.png";
 
 // Domain used for username-based accounts (must match edge function)
@@ -20,7 +21,7 @@ export default function Login() {
   const [isResetting, setIsResetting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
-  const { login } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   // Check if input looks like an email
@@ -40,17 +41,31 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    const loginEmail = getLoginEmail(identifier);
-    const result = await login(loginEmail, password);
-    
-    if (result.success) {
-      toast.success("Inicio de sesión exitoso");
-      navigate("/");
-    } else {
-      toast.error(result.error || "Usuario o contraseña inválidos");
+    try {
+      const loginEmail = getLoginEmail(identifier);
+      const result = await login(loginEmail, password);
+      
+      if (result.success) {
+        toast.success("Inicio de sesión exitoso");
+        // The navigation will happen via useEffect once user state updates
+      } else {
+        toast.error(result.error || "Usuario o contraseña inválidos");
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Error inesperado. Intente de nuevo.");
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
+
+  // Navigate to correct route based on role after login
+  useEffect(() => {
+    if (user && !isLoading) {
+      const defaultRoute = getDefaultRouteForRole(user.role);
+      navigate(defaultRoute);
+    }
+  }, [user, isLoading, navigate]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();

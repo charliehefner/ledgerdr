@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { QRScanner } from "../QRScanner";
+import { StepHeader } from "../StepHeader";
 import type { FuelingData } from "../FuelingWizard";
 
 interface TankStepProps {
@@ -74,6 +75,12 @@ export function TankStep({ data, onUpdate }: TankStepProps) {
 
   return (
     <div className="space-y-4">
+      {/* Large visual icon for non-readers */}
+      <StepHeader 
+        icon={<FuelIcon className="h-full w-full" />}
+        iconColor="text-blue-600"
+        iconBgColor="bg-blue-100"
+      />
       {/* Mode Toggle */}
       <div className="flex gap-2">
         <Button

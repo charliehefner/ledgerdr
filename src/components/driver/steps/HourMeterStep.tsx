@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Camera, Keyboard, AlertCircle } from "lucide-react";
+import { Camera, Keyboard, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MeterPhotoCapture } from "../MeterPhotoCapture";
+import { StepHeader } from "../StepHeader";
 import type { FuelingData } from "../FuelingWizard";
 
 interface HourMeterStepProps {
@@ -54,6 +55,12 @@ export function HourMeterStep({ data, onUpdate }: HourMeterStepProps) {
 
   return (
     <div className="space-y-4">
+      {/* Large visual icon for non-readers - Clock/gauge for hour meter */}
+      <StepHeader 
+        icon={<Clock className="h-full w-full" />}
+        iconColor="text-purple-600"
+        iconBgColor="bg-purple-100"
+      />
       {/* Current reading reference */}
       <Card className="bg-muted/50">
         <CardContent className="p-4">

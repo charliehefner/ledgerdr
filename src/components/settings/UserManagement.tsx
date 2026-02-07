@@ -36,7 +36,7 @@ import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions"
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 // All available roles for the select dropdowns
-const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "viewer"];
+const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
 
 interface UserWithRole {
   id: string;

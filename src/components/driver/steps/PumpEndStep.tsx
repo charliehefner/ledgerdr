@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Camera, Keyboard, AlertCircle } from "lucide-react";
+import { Camera, Keyboard, AlertCircle, Gauge, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MeterPhotoCapture } from "../MeterPhotoCapture";
+import { StepHeader } from "../StepHeader";
 import type { FuelingData } from "../FuelingWizard";
 
 interface PumpEndStepProps {
@@ -55,6 +56,13 @@ export function PumpEndStep({ data, onUpdate }: PumpEndStepProps) {
 
   return (
     <div className="space-y-4">
+      {/* Large visual icon for non-readers - Gauge on RIGHT for AFTER fueling */}
+      <StepHeader 
+        icon={<Gauge className="h-full w-full" />}
+        iconPosition="right"
+        iconColor="text-green-600"
+        iconBgColor="bg-green-100"
+      />
       {/* Start reading reference */}
       <Card className="bg-muted/50">
         <CardContent className="p-4">

@@ -1,5 +1,6 @@
-import { Tractor, Fuel, Clock, Gauge } from "lucide-react";
+import { Tractor, Fuel, Clock, Gauge, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StepHeader } from "../StepHeader";
 import type { FuelingData } from "../FuelingWizard";
 
 interface ReviewStepProps {
@@ -13,6 +14,13 @@ export function ReviewStep({ data }: ReviewStepProps) {
 
   return (
     <div className="space-y-4">
+      {/* Large checkmark icon - indicates ready to confirm */}
+      <StepHeader 
+        icon={<CheckCircle className="h-full w-full" />}
+        iconColor="text-primary"
+        iconBgColor="bg-primary/10"
+      />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">

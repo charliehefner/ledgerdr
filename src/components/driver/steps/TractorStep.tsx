@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tractor, QrCode, List, Camera, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { QRScanner } from "../QRScanner";
+import { StepHeader } from "../StepHeader";
 import type { FuelingData } from "../FuelingWizard";
 
 interface TractorStepProps {
@@ -74,6 +75,12 @@ export function TractorStep({ data, onUpdate }: TractorStepProps) {
 
   return (
     <div className="space-y-4">
+      {/* Large visual icon for non-readers */}
+      <StepHeader 
+        icon={<Tractor className="h-full w-full" />}
+        iconColor="text-amber-600"
+        iconBgColor="bg-amber-100"
+      />
       {/* Mode Toggle */}
       <div className="flex gap-2">
         <Button

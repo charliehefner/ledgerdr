@@ -118,6 +118,33 @@ export function useOfflineQueue() {
 
       if (error) throw error;
 
+      // Update the tractor's current_hour_meter to the new reading
+      const { error: tractorError } = await supabase
+        .from("fuel_equipment")
+        .update({ 
+          current_hour_meter: submission.hourMeterReading,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", submission.tractorId);
+
+      if (tractorError) {
+        console.error("[OfflineQueue] Failed to update tractor hour meter:", tractorError);
+        // Don't throw - the fuel transaction was successful
+      }
+
+      // Update the tank's last_pump_end_reading for validation
+      const { error: tankError } = await supabase
+        .from("fuel_tanks")
+        .update({ 
+          last_pump_end_reading: submission.pumpEndReading,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", submission.tankId);
+
+      if (tankError) {
+        console.error("[OfflineQueue] Failed to update tank pump reading:", tankError);
+      }
+
       // Success - remove from queue
       await db.delete("submissions", submission.id);
       setLastSyncTime(new Date());

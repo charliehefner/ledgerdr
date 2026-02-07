@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { TractorStep } from "./steps/TractorStep";
@@ -45,6 +46,7 @@ export function FuelingWizard({ onClose, onComplete }: FuelingWizardProps) {
   const [data, setData] = useState<Partial<FuelingData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addSubmission } = useOfflineQueue();
+  const queryClient = useQueryClient();
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
@@ -116,6 +118,10 @@ export function FuelingWizard({ onClose, onComplete }: FuelingWizardProps) {
         title: "Registro guardado",
         description: `${gallons.toFixed(1)} galones registrados`,
       });
+      
+      // Invalidate queries to ensure fresh data on next wizard open
+      await queryClient.invalidateQueries({ queryKey: ["tractors-driver"] });
+      await queryClient.invalidateQueries({ queryKey: ["tanks-driver"] });
       
       onComplete();
     } catch (error) {

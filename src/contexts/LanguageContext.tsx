@@ -365,6 +365,10 @@ const translations: Record<Language, Record<string, string>> = {
     "fuel.msg.transactionDeletedDesc": "La transacción ha sido eliminada.",
     "fuel.msg.validationError": "Error de Validación",
     "fuel.msg.fillRequired": "Complete todos los campos requeridos.",
+    "fuel.msg.pumpStartWarning": "Lectura de Bomba Incorrecta",
+    "fuel.msg.pumpStartMismatch": "Esperado:",
+    "fuel.msg.youEntered": "ingresó",
+    "fuel.msg.expectedPumpStart": "Esperado",
     "fuel.startDate": "Fecha Inicio",
     "fuel.endDate": "Fecha Fin",
 
@@ -858,6 +862,10 @@ const translations: Record<Language, Record<string, string>> = {
     "fuel.msg.transactionDeletedDesc": "The fuel transaction has been deleted.",
     "fuel.msg.validationError": "Validation Error",
     "fuel.msg.fillRequired": "Please fill in all required fields.",
+    "fuel.msg.pumpStartWarning": "Pump Reading Mismatch",
+    "fuel.msg.pumpStartMismatch": "Expected:",
+    "fuel.msg.youEntered": "you entered",
+    "fuel.msg.expectedPumpStart": "Expected",
     "fuel.startDate": "Start Date",
     "fuel.endDate": "End Date",
 

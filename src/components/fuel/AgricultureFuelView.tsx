@@ -64,6 +64,7 @@ interface FuelTank {
   id: string;
   name: string;
   current_level_gallons: number;
+  last_pump_end_reading: number | null;
 }
 
 interface FuelEquipment {
@@ -123,7 +124,7 @@ export function AgricultureFuelView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fuel_tanks")
-        .select("id, name, current_level_gallons")
+        .select("id, name, current_level_gallons, last_pump_end_reading")
         .eq("use_type", "agriculture")
         .eq("is_active", true)
         .order("name");
@@ -456,6 +457,21 @@ export function AgricultureFuelView() {
       });
       return;
     }
+    
+    // Check pump start validation (±0.2 tolerance)
+    const tank = tanks.find((t) => t.id === form.tank_id);
+    if (tank?.last_pump_end_reading !== null && tank?.last_pump_end_reading !== undefined) {
+      const diff = Math.abs(parseFloat(form.pump_start_reading) - tank.last_pump_end_reading);
+      if (diff > 0.2) {
+        toast({
+          title: t("fuel.msg.pumpStartWarning"),
+          description: `${t("fuel.msg.pumpStartMismatch")} ${tank.last_pump_end_reading.toFixed(1)}, ${t("fuel.msg.youEntered")} ${form.pump_start_reading}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     dispenseMutation.mutate(form);
   };
 
@@ -465,6 +481,14 @@ export function AgricultureFuelView() {
       : 0;
 
   const selectedTractor = tractors.find((t) => t.id === form.equipment_id);
+  const selectedTank = tanks.find((t) => t.id === form.tank_id);
+  
+  // Pump start validation: check if within ±0.2 of last pump end reading
+  const expectedPumpStart = selectedTank?.last_pump_end_reading;
+  const pumpStartDiff = expectedPumpStart !== null && expectedPumpStart !== undefined && form.pump_start_reading
+    ? Math.abs(parseFloat(form.pump_start_reading) - expectedPumpStart)
+    : null;
+  const pumpStartWarning = pumpStartDiff !== null && pumpStartDiff > 0.2;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -808,6 +832,14 @@ export function AgricultureFuelView() {
                   />
                 </div>
 
+                {/* Show expected pump start if tank has previous reading */}
+                {selectedTank?.last_pump_end_reading !== null && selectedTank?.last_pump_end_reading !== undefined && (
+                  <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                    <Fuel className="inline h-4 w-4 mr-1" />
+                    {t("fuel.msg.expectedPumpStart")}: {selectedTank.last_pump_end_reading.toFixed(1)}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>{t("fuel.form.pumpStart")} *</Label>
@@ -818,8 +850,14 @@ export function AgricultureFuelView() {
                       onChange={(e) =>
                         setForm({ ...form, pump_start_reading: e.target.value })
                       }
-                      placeholder="e.g., 5000"
+                      placeholder={expectedPumpStart?.toFixed(1) || "e.g., 5000"}
+                      className={pumpStartWarning ? "border-destructive" : ""}
                     />
+                    {pumpStartWarning && (
+                      <p className="text-xs text-destructive mt-1">
+                        ±0.2 {t("fuel.msg.expectedPumpStart").toLowerCase()}: {expectedPumpStart?.toFixed(1)}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>{t("fuel.form.pumpEnd")} *</Label>

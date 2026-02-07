@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -38,6 +39,7 @@ interface PurchaseDialogProps {
 const initialFormState = {
   item_id: "",
   tank_id: "",
+  reset_tank_gauge: false,
   purchase_date: new Date(),
   document_number: "",
   supplier: "",
@@ -123,16 +125,24 @@ export function PurchaseDialog({
 
       // For fuel items, update the tank level (trigger will sync to inventory)
       if (isFuelItem && data.tank_id) {
-        const { data: currentTank, error: tankFetchError } = await supabase
-          .from("fuel_tanks")
-          .select("current_level_gallons")
-          .eq("id", data.tank_id)
-          .maybeSingle();
+        let newTankLevel: number;
 
-        if (tankFetchError) throw tankFetchError;
-        if (!currentTank) throw new Error("Tank not found");
+        if (data.reset_tank_gauge) {
+          // Reset gauge to 0 before adding purchase - final level = purchase quantity only
+          newTankLevel = addedQuantity;
+        } else {
+          // Normal behavior - add to existing level
+          const { data: currentTank, error: tankFetchError } = await supabase
+            .from("fuel_tanks")
+            .select("current_level_gallons")
+            .eq("id", data.tank_id)
+            .maybeSingle();
 
-        const newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
+          if (tankFetchError) throw tankFetchError;
+          if (!currentTank) throw new Error("Tank not found");
+
+          newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
+        }
 
         const { error: tankUpdateError } = await supabase
           .from("fuel_tanks")
@@ -291,9 +301,31 @@ export function PurchaseDialog({
                 </SelectContent>
               </Select>
               {selectedTank && (
-                <p className="text-xs text-muted-foreground">
-                  Tank will be updated and inventory will sync automatically
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Tank will be updated and inventory will sync automatically
+                  </p>
+                  <div className="flex items-center space-x-2 p-2 rounded-md bg-muted/50">
+                    <Checkbox
+                      id="reset_tank_gauge"
+                      checked={form.reset_tank_gauge}
+                      onCheckedChange={(checked) =>
+                        setForm({ ...form, reset_tank_gauge: checked === true })
+                      }
+                    />
+                    <Label 
+                      htmlFor="reset_tank_gauge" 
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      Reset tank gauge to 0 before refill
+                    </Label>
+                  </div>
+                  {form.reset_tank_gauge && (
+                    <p className="text-xs text-destructive">
+                      Tank level will be set to {calculateStockAdded()} gal (ignoring current {selectedTank.current_level_gallons.toLocaleString()} gal)
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

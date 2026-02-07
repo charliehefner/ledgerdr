@@ -21,6 +21,7 @@ import Rainfall from "./pages/Rainfall";
 import Cronograma from "./pages/Cronograma";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
+import DriverPortal from "./pages/DriverPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/rainfall" element={<ProtectedRoute><Rainfall /></ProtectedRoute>} />
                 <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

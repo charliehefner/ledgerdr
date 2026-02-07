@@ -48,7 +48,7 @@ serve(async (req) => {
       actualEmail = email;
     }
 
-    const validRoles = ["admin", "management", "accountant", "supervisor", "viewer"];
+    const validRoles = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
     if (!validRoles.includes(role)) {
       throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
     }

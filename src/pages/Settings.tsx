@@ -22,7 +22,8 @@ import {
   Lock,
   MapPin,
   Settings2,
-  Users
+  Users,
+  QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ import { DatabaseBackup } from "@/components/settings/DatabaseBackup";
 import { ScheduledDeletions } from "@/components/settings/ScheduledDeletions";
 import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
+import { QRCodeManager } from "@/components/settings/QRCodeManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -93,6 +95,12 @@ export default function Settings() {
               <Settings2 className="h-4 w-4 mr-2" />
               {t("operations.operationTypes")}
             </TabsTrigger>
+            {canModifySettings && (
+              <TabsTrigger value="qr-codes">
+                <QrCode className="h-4 w-4 mr-2" />
+                Códigos QR
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="general" className="mt-6">
@@ -241,6 +249,12 @@ export default function Settings() {
               <OperationTypesView />
             </div>
           </TabsContent>
+
+          {canModifySettings && (
+            <TabsContent value="qr-codes" className="mt-6">
+              <QRCodeManager />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </MainLayout>

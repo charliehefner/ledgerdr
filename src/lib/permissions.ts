@@ -12,7 +12,7 @@
  * - viewer: Read-only access (limited sections)
  */
 
-export type UserRole = "admin" | "management" | "accountant" | "supervisor" | "viewer";
+export type UserRole = "admin" | "management" | "accountant" | "supervisor" | "viewer" | "driver";
 
 export type Section = 
   | "dashboard"
@@ -27,7 +27,8 @@ export type Section =
   | "herbicide"
   | "rainfall"
   | "cronograma"
-  | "settings";
+  | "settings"
+  | "driver-portal";
 
 // HR sub-tabs for granular access control
 export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-employee";
@@ -89,6 +90,7 @@ export const routeToSection: Record<string, Section> = {
   "/rainfall": "rainfall",
   "/cronograma": "cronograma",
   "/settings": "settings",
+  "/driver-portal": "driver-portal",
 };
 
 // Permission matrix: which roles can access which sections
@@ -106,10 +108,12 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   rainfall: ["admin", "management", "supervisor", "viewer"],
   cronograma: ["admin", "management", "supervisor", "viewer"],
   settings: ["admin"],
+  "driver-portal": ["driver"],
 };
 
 // Roles that have write access (can modify data) for each section
 // Viewer role is read-only for all sections they can access
+// Driver role can only write to driver-portal (fuel transactions)
 const writePermissions: Record<Section, UserRole[]> = {
   dashboard: ["admin", "management", "accountant"],
   transactions: ["admin", "management", "accountant"],
@@ -124,6 +128,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   rainfall: ["admin", "management", "supervisor"],
   cronograma: ["admin", "management", "supervisor"],
   settings: ["admin"],
+  "driver-portal": ["driver"],
 };
 
 /**
@@ -170,6 +175,8 @@ export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case "supervisor":
       return "/operations"; // Supervisors don't have dashboard access
+    case "driver":
+      return "/driver-portal"; // Drivers can only access driver portal
     default:
       return "/";
   }
@@ -193,6 +200,7 @@ export const roleDisplayNames: Record<UserRole, string> = {
   accountant: "Contador",
   supervisor: "Supervisor",
   viewer: "Visor",
+  driver: "Conductor",
 };
 
 /**
@@ -204,4 +212,5 @@ export const roleDescriptions: Record<UserRole, string> = {
   accountant: "Transacciones, facturas, reportes y recursos humanos",
   supervisor: "Inventario, combustible, equipos y operaciones",
   viewer: "Solo lectura en secciones asignadas",
+  driver: "Portal de combustible móvil para conductores",
 };

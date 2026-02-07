@@ -53,6 +53,7 @@ const sectionColors: Record<Section, string> = {
   rainfall: "bg-section-rainfall",
   cronograma: "",
   settings: "",
+  "driver-portal": "", // Not shown in sidebar - drivers have minimal UI
 };
 
 const navigation: NavItem[] = [

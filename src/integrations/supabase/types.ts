@@ -718,6 +718,7 @@ export type Database = {
           fuel_type: string
           id: string
           is_active: boolean
+          last_pump_end_reading: number | null
           name: string
           updated_at: string
           use_type: string
@@ -729,6 +730,7 @@ export type Database = {
           fuel_type?: string
           id?: string
           is_active?: boolean
+          last_pump_end_reading?: number | null
           name: string
           updated_at?: string
           use_type: string
@@ -740,6 +742,7 @@ export type Database = {
           fuel_type?: string
           id?: string
           is_active?: boolean
+          last_pump_end_reading?: number | null
           name?: string
           updated_at?: string
           use_type?: string
@@ -758,6 +761,8 @@ export type Database = {
           previous_hour_meter: number | null
           pump_end_reading: number | null
           pump_start_reading: number | null
+          submission_source: string | null
+          submitted_by: string | null
           tank_id: string
           transaction_date: string
           transaction_type: string
@@ -773,6 +778,8 @@ export type Database = {
           previous_hour_meter?: number | null
           pump_end_reading?: number | null
           pump_start_reading?: number | null
+          submission_source?: string | null
+          submitted_by?: string | null
           tank_id: string
           transaction_date?: string
           transaction_type: string
@@ -788,6 +795,8 @@ export type Database = {
           previous_hour_meter?: number | null
           pump_end_reading?: number | null
           pump_start_reading?: number | null
+          submission_source?: string | null
+          submitted_by?: string | null
           tank_id?: string
           transaction_date?: string
           transaction_type?: string
@@ -1163,6 +1172,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      pending_fuel_submissions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          fuel_transaction_id: string | null
+          id: string
+          photos: Json | null
+          submitted_at: string | null
+          submitted_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          fuel_transaction_id?: string | null
+          id?: string
+          photos?: Json | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          fuel_transaction_id?: string | null
+          id?: string
+          photos?: Json | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_fuel_submissions_fuel_transaction_id_fkey"
+            columns: ["fuel_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       period_employee_benefits: {
         Row: {

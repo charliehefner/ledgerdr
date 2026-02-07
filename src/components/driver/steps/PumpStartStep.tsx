@@ -1,0 +1,167 @@
+import { useState } from "react";
+import { Camera, Keyboard, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MeterPhotoCapture } from "../MeterPhotoCapture";
+import type { FuelingData } from "../FuelingWizard";
+
+interface PumpStartStepProps {
+  data: Partial<FuelingData>;
+  onUpdate: (data: Partial<FuelingData>) => void;
+}
+
+const TOLERANCE = 0.2; // ±0.2 gallons tolerance
+
+export function PumpStartStep({ data, onUpdate }: PumpStartStepProps) {
+  const [mode, setMode] = useState<"photo" | "manual">("photo");
+  const [showCamera, setShowCamera] = useState(false);
+
+  const expectedValue = data.expectedPumpStart || 0;
+  const difference = data.pumpStartReading !== undefined 
+    ? Math.abs(data.pumpStartReading - expectedValue) 
+    : null;
+  const isWithinTolerance = difference !== null && difference <= TOLERANCE;
+  const isOutOfTolerance = difference !== null && difference > TOLERANCE;
+
+  const handlePhotoCapture = async (imageData: string, extractedValue?: number) => {
+    onUpdate({
+      pumpStartPhoto: imageData,
+      pumpStartReading: extractedValue,
+    });
+    setShowCamera(false);
+  };
+
+  const handleManualInput = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      onUpdate({ pumpStartReading: numValue });
+    } else if (value === "") {
+      onUpdate({ pumpStartReading: undefined });
+    }
+  };
+
+  if (showCamera) {
+    return (
+      <MeterPhotoCapture
+        meterType="fuel_pump"
+        previousValue={expectedValue}
+        equipmentName={data.tankName || ""}
+        onCapture={handlePhotoCapture}
+        onClose={() => setShowCamera(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Expected reading reference */}
+      <Card className="bg-muted/50">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">Lectura esperada de la bomba</p>
+          <p className="text-2xl font-bold">{expectedValue.toLocaleString()} gal</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Tolerancia: ±{TOLERANCE} galones
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Mode Toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={mode === "photo" ? "default" : "outline"}
+          className="flex-1"
+          onClick={() => setMode("photo")}
+        >
+          <Camera className="mr-2 h-4 w-4" />
+          Foto
+        </Button>
+        <Button
+          variant={mode === "manual" ? "default" : "outline"}
+          className="flex-1"
+          onClick={() => setMode("manual")}
+        >
+          <Keyboard className="mr-2 h-4 w-4" />
+          Manual
+        </Button>
+      </div>
+
+      {mode === "photo" ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            {data.pumpStartPhoto ? (
+              <div className="w-full space-y-3">
+                <img 
+                  src={data.pumpStartPhoto} 
+                  alt="Bomba inicio" 
+                  className="w-full rounded-lg"
+                />
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Lectura detectada:</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {data.pumpStartReading?.toLocaleString() || "—"} gal
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowCamera(true)}
+                >
+                  Tomar otra foto
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="bg-primary/10 rounded-full p-6 mb-4">
+                  <Camera className="h-12 w-12 text-primary" />
+                </div>
+                <p className="text-center text-muted-foreground mb-4">
+                  Foto de la bomba ANTES de cargar
+                </p>
+                <Button onClick={() => setShowCamera(true)}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Abrir Cámara
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          <Label htmlFor="pump-start">Lectura inicial de la bomba (gal)</Label>
+          <Input
+            id="pump-start"
+            type="number"
+            inputMode="decimal"
+            placeholder="Ej: 5432.1"
+            value={data.pumpStartReading ?? ""}
+            onChange={(e) => handleManualInput(e.target.value)}
+            className="text-xl h-14 text-center"
+          />
+        </div>
+      )}
+
+      {/* Validation feedback */}
+      {isWithinTolerance && (
+        <Alert className="border-green-500 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            ✓ Lectura dentro de tolerancia ({difference?.toFixed(2)} gal de diferencia)
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isOutOfTolerance && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            La lectura difiere {difference?.toFixed(2)} gal del valor esperado ({expectedValue.toLocaleString()}).
+            Verifique que está en el tanque correcto.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}

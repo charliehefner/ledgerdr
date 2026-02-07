@@ -1189,6 +1189,51 @@ export function DatabaseBackup() {
     return data || [];
   };
 
+  // Fetch only NCF attachments for transactions
+  const fetchNCFAttachments = async () => {
+    const files: { name: string; data: Blob }[] = [];
+    
+    try {
+      // Get all NCF attachment records from database
+      const { data: ncfRecords, error } = await supabase
+        .from('transaction_attachments')
+        .select('attachment_url')
+        .eq('attachment_category', 'ncf');
+      
+      if (error || !ncfRecords) {
+        console.warn('Error fetching NCF records:', error?.message);
+        return files;
+      }
+      
+      // Extract file paths and download each
+      for (const record of ncfRecords) {
+        if (!record.attachment_url) continue;
+        
+        // Extract path from the stored URL (e.g., "transaction-attachments/receipts/filename.jpg")
+        const match = record.attachment_url.match(/transaction-attachments\/(.+)$/);
+        if (!match) continue;
+        
+        const filePath = match[1];
+        
+        try {
+          const { data, error: downloadError } = await supabase.storage
+            .from('transaction-attachments')
+            .download(filePath);
+          
+          if (data && !downloadError) {
+            files.push({ name: filePath, data });
+          }
+        } catch (e) {
+          console.warn(`Skipping NCF file ${filePath}:`, e);
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching NCF attachments:', e);
+    }
+    
+    return files;
+  };
+
   const fetchStorageFiles = async (bucketName: string) => {
     const files: { name: string; data: Blob }[] = [];
     
@@ -1323,11 +1368,13 @@ export function DatabaseBackup() {
         jsonFolder?.file(`${tableName}.json`, JSON.stringify(data, null, 2));
       }
 
-      // Step 3: Fetch attachments
+      // Step 3: Fetch attachments (NCF only for transactions)
       setCurrentStep(t("backup.downloadingAttachments"));
       const attachmentsFolder = zip.folder('attachments');
-      const transactionAttachments = await fetchStorageFiles('transaction-attachments');
-      for (const file of transactionAttachments) {
+      
+      // Only fetch NCF attachments for transactions
+      const ncfAttachments = await fetchNCFAttachments();
+      for (const file of ncfAttachments) {
         attachmentsFolder?.file(`transactions/${file.name}`, file.data);
       }
       
@@ -1350,7 +1397,7 @@ export function DatabaseBackup() {
         })),
         totalRows: Object.values(allData).reduce((sum, data) => sum + data.length, 0),
         attachments: {
-          transactions: transactionAttachments.length,
+          transactions: ncfAttachments.length,
           employees: employeeDocuments.length,
         },
         sqlFiles: [
@@ -1402,7 +1449,7 @@ export function DatabaseBackup() {
 |-------------|-------------|
 | \`backup.json\` | Complete data in JSON format |
 | \`tables/\` | Individual JSON files per table |
-| \`attachments/\` | All uploaded files (${transactionAttachments.length + employeeDocuments.length} files) |
+| \`attachments/\` | NCF attachments only (${ncfAttachments.length + employeeDocuments.length} files) |
 | \`metadata.json\` | Export summary and statistics |
 
 ---
@@ -1468,7 +1515,7 @@ If replacing Supabase Auth with SSO:
 
 - **Total Rows:** ${metadata.totalRows.toLocaleString()}
 - **Tables:** ${metadata.tables.length}
-- **Transaction Attachments:** ${transactionAttachments.length}
+- **NCF Attachments:** ${ncfAttachments.length}
 - **Employee Documents:** ${employeeDocuments.length}
 
 ---
@@ -1504,7 +1551,7 @@ If replacing Supabase Auth with SSO:
       URL.revokeObjectURL(url);
       
       setProgress(100);
-      const totalFiles = transactionAttachments.length + employeeDocuments.length;
+      const totalFiles = ncfAttachments.length + employeeDocuments.length;
       toast.success(
         t("backup.complete")
           .replace("{rows}", metadata.totalRows.toLocaleString(language === 'es' ? 'es-DO' : 'en-US'))

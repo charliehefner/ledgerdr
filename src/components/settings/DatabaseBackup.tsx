@@ -608,29 +608,60 @@ export function DatabaseBackup() {
   const fetchStorageFiles = async (bucketName: string) => {
     const files: { name: string; data: Blob }[] = [];
     
-    try {
-      const { data: fileList, error } = await supabase.storage
-        .from(bucketName)
-        .list('', { limit: 1000 });
+    // Recursive function to list all files including subdirectories
+    const listFilesRecursively = async (path: string): Promise<{ name: string; fullPath: string }[]> => {
+      const allFiles: { name: string; fullPath: string }[] = [];
       
-      if (error || !fileList) {
-        console.warn(`Error listing ${bucketName}:`, error?.message);
-        return files;
-      }
+      try {
+        const { data: items, error } = await supabase.storage
+          .from(bucketName)
+          .list(path, { limit: 1000 });
+        
+        if (error || !items) {
+          console.warn(`Error listing ${bucketName}/${path}:`, error?.message);
+          return allFiles;
+        }
 
-      for (const file of fileList) {
-        if (file.name) {
-          try {
-            const { data, error: downloadError } = await supabase.storage
-              .from(bucketName)
-              .download(file.name);
-            
-            if (data && !downloadError) {
-              files.push({ name: file.name, data });
-            }
-          } catch (e) {
-            console.warn(`Skipping file ${file.name}:`, e);
+        for (const item of items) {
+          if (!item.name) continue;
+          
+          const fullPath = path ? `${path}/${item.name}` : item.name;
+          
+          // Check if this is a folder (no metadata.size means it's a folder)
+          if (item.metadata === null || item.id === null) {
+            // It's a folder - recurse into it
+            const subFiles = await listFilesRecursively(fullPath);
+            allFiles.push(...subFiles);
+          } else {
+            // It's a file
+            allFiles.push({ name: item.name, fullPath });
           }
+        }
+      } catch (e) {
+        console.warn(`Error listing path ${path} in ${bucketName}:`, e);
+      }
+      
+      return allFiles;
+    };
+
+    try {
+      // Get all files recursively starting from root
+      const allFilesList = await listFilesRecursively('');
+      
+      // Download each file
+      for (const file of allFilesList) {
+        try {
+          const { data, error: downloadError } = await supabase.storage
+            .from(bucketName)
+            .download(file.fullPath);
+          
+          if (data && !downloadError) {
+            files.push({ name: file.fullPath, data });
+          } else if (downloadError) {
+            console.warn(`Error downloading ${file.fullPath}:`, downloadError.message);
+          }
+        } catch (e) {
+          console.warn(`Skipping file ${file.fullPath}:`, e);
         }
       }
     } catch (e) {

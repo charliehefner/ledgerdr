@@ -1761,7 +1761,13 @@ export type Database = {
       is_accountant_only: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "accountant" | "management" | "supervisor" | "viewer"
+      app_role:
+        | "admin"
+        | "accountant"
+        | "management"
+        | "supervisor"
+        | "viewer"
+        | "driver"
       inventory_function:
         | "fertilizer"
         | "fuel"
@@ -1901,7 +1907,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "accountant", "management", "supervisor", "viewer"],
+      app_role: [
+        "admin",
+        "accountant",
+        "management",
+        "supervisor",
+        "viewer",
+        "driver",
+      ],
       inventory_function: [
         "fertilizer",
         "fuel",

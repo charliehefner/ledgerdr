@@ -45,13 +45,10 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Owner user ID (cedenojord) - changes by this user won't be highlighted
-const SCHEDULE_OWNER_ID = "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80";
-
-// Admin user IDs (instructor) - changes by these users won't be highlighted
-const ADMIN_USER_IDS = [
-  "27ffb3e6-f18d-448d-8a4b-b5babf7f1b06",
-  "b2a33a75-b63c-48e1-a252-7ab843f559d5",
+// Users whose changes should NOT be highlighted (schedule owners)
+const EXCLUDED_EDITOR_IDS = [
+  "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80", // cedenojord - primary schedule owner
+  "7ce0dff1-c2b3-4506-b6eb-c61d9ca50121", // instructor - secondary schedule owner
 ];
 
 type CronogramaEntry = {
@@ -901,14 +898,10 @@ export function CronogramaGrid() {
   );
 }
 
-// Check if the updated_by is the schedule owner or an admin
-function isOwnerOrAdmin(updatedBy: string | null | undefined): boolean {
+// Check if the updated_by is an excluded editor (cedenojord or instructor)
+function isExcludedEditor(updatedBy: string | null | undefined): boolean {
   if (!updatedBy) return true; // No update info means no highlight
-  // Schedule owner (cedenojord)
-  if (updatedBy === SCHEDULE_OWNER_ID) return true;
-  // Admin users (instructor)
-  if (ADMIN_USER_IDS.includes(updatedBy)) return true;
-  return false;
+  return EXCLUDED_EDITOR_IDS.includes(updatedBy);
 }
 
 // Individual cell component
@@ -954,7 +947,7 @@ function CronogramaCell({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Determine if this cell was modified by someone other than owner/admin
-  const isModifiedByOther = entry?.updated_by ? !isOwnerOrAdmin(entry.updated_by) : false;
+  const isModifiedByOther = entry?.updated_by ? !isExcludedEditor(entry.updated_by) : false;
   const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
   const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
 

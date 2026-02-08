@@ -485,37 +485,32 @@ export function PayrollTimeGrid({
         const workDate = parseDateLocal(t.work_date);
         const isSundayWork = isSunday(workDate);
         
-        // Total hours worked this day (minus 1 hour lunch if full day)
-        const totalDayHours = Math.min((end - start) / 60, STANDARD_HOURS_PER_DAY);
+        // Calculate total hours worked this day
+        const totalDayHours = (end - start) / 60;
         
         // Sunday work gets 100% bonus (tracked separately from holidays)
+        // All Sunday hours get 2x rate, including overtime
         if (isSundayWork) {
           sundayHours += totalDayHours;
-          // Sunday hours don't count towards regular hours - they're bonus hours
           return;
         }
         
-        // If this is a holiday, all hours get holiday pay bonus
+        // If this is a holiday, all hours get holiday pay bonus (2x rate)
+        // Holiday overtime is also at holiday rate
         if (t.is_holiday) {
           holidayHours += totalDayHours;
         }
         
-        // Calculate regular hours (within standard window)
-        const regularStart = Math.max(start, STANDARD_START);
-        const regularEnd = Math.min(end, STANDARD_END);
-        
-        if (regularEnd > regularStart) {
-          // Cap at 8 hours (lunch deducted)
-          const rawRegular = (regularEnd - regularStart) / 60;
-          regularHours += Math.min(rawRegular, STANDARD_HOURS_PER_DAY);
-        }
-        
-        // Calculate overtime (before 7:30am or after 4:30pm)
-        if (start < STANDARD_START) {
-          overtimeHours += (STANDARD_START - start) / 60;
-        }
-        if (end > STANDARD_END) {
-          overtimeHours += (end - STANDARD_END) / 60;
+        // Overtime calculation: based on 8-hour day threshold (per DR labor law)
+        // Hours beyond 8 in a single day are overtime at 1.35x rate
+        // (Except Sunday/Holiday which maintain their own higher rate)
+        if (!t.is_holiday) {
+          if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
+            regularHours += totalDayHours;
+          } else {
+            regularHours += STANDARD_HOURS_PER_DAY;
+            overtimeHours += totalDayHours - STANDARD_HOURS_PER_DAY;
+          }
         }
       }
     });
@@ -557,6 +552,11 @@ export function PayrollTimeGrid({
     const monthlySalary = employee.salary;
     const dailyRate = employee.salary / 23.83; // DR average work days
 
+    // Get employee benefits (Teléfono, Gasolina, Bono) - these are taxable income per DGII
+    const empBenefits = employeeBenefits.filter((b) => b.employee_id === employeeId);
+    const totalBenefits = empBenefits.reduce((sum, b) => sum + b.amount, 0);
+    const monthlyBenefits = totalBenefits * 2; // Convert bi-weekly to monthly
+
     // Count vacation days and total working days for this period
     const totalWorkingDays = days.filter((day) => !isSunday(day)).length;
     const vacationDays = days.filter((day) => 
@@ -573,15 +573,18 @@ export function PayrollTimeGrid({
     // Employees on full vacation don't earn wages this period, so no TSS/ISR applies
     const effectiveBasePay = Math.max(0, biweeklySalary - vacationDeduction);
 
-    // TSS (employee portion) - only on effective earnings
-    const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
+    // TSS (employee portion) - applies to effective earnings + benefits
+    const tssBase = effectiveBasePay + totalBenefits;
+    const tss = tssBase * TSS_EMPLOYEE_RATE;
 
     // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
     // TSS contributions are pre-tax deductions that reduce the taxable base
+    // Benefits (Teléfono, Gasolina, Bono) are included in taxable income per DGII
+    // Formula: Monthly Taxable = (Salary + Benefits) - TSS
     let isr = 0;
-    if (effectiveBasePay > 0) {
-      // Calculate monthly taxable income (gross minus TSS)
-      const monthlyGross = monthlySalary;
+    if (effectiveBasePay > 0 || totalBenefits > 0) {
+      // Calculate monthly taxable income (salary + benefits - TSS)
+      const monthlyGross = monthlySalary + monthlyBenefits;
       const monthlyTSS = monthlyGross * TSS_EMPLOYEE_RATE;
       const monthlyTaxable = monthlyGross - monthlyTSS;
       
@@ -592,7 +595,7 @@ export function PayrollTimeGrid({
       const annualISR = calculateAnnualISR(annualTaxableIncome);
       
       // Prorate for this period based on worked ratio
-      const workedRatio = effectiveBasePay / biweeklySalary;
+      const workedRatio = (effectiveBasePay + totalBenefits) / (biweeklySalary + totalBenefits);
       isr = (annualISR / 24) * workedRatio;
     }
 

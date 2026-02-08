@@ -45,11 +45,13 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Users whose changes should NOT be highlighted (schedule owners)
-const EXCLUDED_EDITOR_IDS = [
-  "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80", // cedenojord - primary schedule owner
-  "7ce0dff1-c2b3-4506-b6eb-c61d9ca50121", // instructor - secondary schedule owner
-];
+// User IDs for highlight logic
+const CEDENOJORD_ID = "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80"; // Schedule owner
+const INSTRUCTOR_ID = "7ce0dff1-c2b3-4506-b6eb-c61d9ca50121"; // Never highlighted
+const SELF_EDIT_HIGHLIGHT_HOURS = 8; // Hours after creation before cedenojord edits are highlighted
+
+// Highlight types for visual differentiation
+type HighlightType = "other" | "self-edit" | null;
 
 type CronogramaEntry = {
   id: string;
@@ -64,6 +66,7 @@ type CronogramaEntry = {
   is_holiday: boolean;
   created_by: string | null;
   updated_by: string | null;
+  created_at: string;
   updated_at: string;
 };
 
@@ -898,10 +901,30 @@ export function CronogramaGrid() {
   );
 }
 
-// Check if the updated_by is an excluded editor (cedenojord or instructor)
-function isExcludedEditor(updatedBy: string | null | undefined): boolean {
-  if (!updatedBy) return true; // No update info means no highlight
-  return EXCLUDED_EDITOR_IDS.includes(updatedBy);
+/**
+ * Determine the highlight type for an entry based on who edited it and when.
+ * - null: No highlight (instructor edits, or cedenojord edits within 8 hours)
+ * - "other": Orange highlight (edits by anyone other than cedenojord/instructor)
+ * - "self-edit": Blue highlight (cedenojord edits 8+ hours after creation)
+ */
+function getHighlightType(entry?: CronogramaEntry): HighlightType {
+  if (!entry?.updated_by) return null; // No update info means no highlight
+  
+  // Instructor edits are never highlighted
+  if (entry.updated_by === INSTRUCTOR_ID) return null;
+  
+  // cedenojord edits: check time threshold
+  if (entry.updated_by === CEDENOJORD_ID) {
+    const createdAt = new Date(entry.created_at);
+    const updatedAt = new Date(entry.updated_at);
+    const hoursDiff = (updatedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    
+    // Only highlight if edit occurred 8+ hours after creation
+    return hoursDiff >= SELF_EDIT_HIGHLIGHT_HOURS ? "self-edit" : null;
+  }
+  
+  // Any other user's edits get highlighted
+  return "other";
 }
 
 // Individual cell component
@@ -946,10 +969,19 @@ function CronogramaCell({
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Determine if this cell was modified by someone other than owner/admin
-  const isModifiedByOther = entry?.updated_by ? !isExcludedEditor(entry.updated_by) : false;
+  // Determine the highlight type for this cell
+  const highlightType = getHighlightType(entry);
+  const isHighlighted = highlightType !== null;
   const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
   const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
+
+  // Ring/dot colors based on highlight type
+  const ringClass = highlightType === "self-edit" 
+    ? "ring-2 ring-inset ring-blue-400 dark:ring-blue-500" 
+    : "ring-2 ring-inset ring-orange-400 dark:ring-orange-500";
+  const dotClass = highlightType === "self-edit" 
+    ? "bg-blue-400" 
+    : "bg-orange-400";
 
   // Auto-resize textarea on initial load and when value changes
   const autoResize = useCallback(() => {
@@ -994,14 +1026,19 @@ function CronogramaCell({
 
   // Format tooltip text
   const getTooltipContent = () => {
-    if (!isModifiedByOther || !modifiedAt) return null;
+    if (!isHighlighted || !modifiedAt) return null;
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
     const userDisplay = modifierEmail || (language === "es" ? "Usuario desconocido" : "Unknown user");
     
+    // Add context about the type of modification
+    const modTypeLabel = highlightType === "self-edit"
+      ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")
+      : "";
+    
     return language === "es" 
-      ? `Modificado por: ${userDisplay}\n${dateStr}`
-      : `Modified by: ${userDisplay}\n${dateStr}`;
+      ? `Modificado por: ${userDisplay}${modTypeLabel}\n${dateStr}`
+      : `Modified by: ${userDisplay}${modTypeLabel}\n${dateStr}`;
   };
 
   if (isVacation) {
@@ -1040,15 +1077,15 @@ function CronogramaCell({
         "border border-border p-1 text-center min-w-[120px] align-top",
         "bg-amber-50 dark:bg-amber-900/20",
         isLastOfDay && "border-r-[3px]",
-        isModifiedByOther && "ring-2 ring-inset ring-orange-400 dark:ring-orange-500"
+        isHighlighted && ringClass
       )}>
-        {isModifiedByOther ? (
+        {isHighlighted ? (
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="relative">
                   {cellContent}
-                  <div className="absolute top-0 right-0 w-2 h-2 bg-orange-400 rounded-full" />
+                  <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent className="whitespace-pre-line text-xs">
@@ -1068,15 +1105,15 @@ function CronogramaCell({
       "border border-border p-1 min-w-[120px] align-top",
       dayShade ? "bg-primary/10" : "bg-background",
       isLastOfDay && "border-r-[3px]",
-      isModifiedByOther && "ring-2 ring-inset ring-orange-400 dark:ring-orange-500"
+      isHighlighted && ringClass
     )}>
-      {isModifiedByOther ? (
+      {isHighlighted ? (
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="relative">
                 {cellContent}
-                <div className="absolute top-0 right-0 w-2 h-2 bg-orange-400 rounded-full" />
+                <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
               </div>
             </TooltipTrigger>
             <TooltipContent className="whitespace-pre-line text-xs">

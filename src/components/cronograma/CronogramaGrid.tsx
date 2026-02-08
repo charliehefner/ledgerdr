@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, ClipboardPaste, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -34,9 +35,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+// Owner user ID (cedenojord) - changes by this user won't be highlighted
+const SCHEDULE_OWNER_ID = "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80";
+
+// Admin user IDs (instructor) - changes by these users won't be highlighted
+const ADMIN_USER_IDS = [
+  "27ffb3e6-f18d-448d-8a4b-b5babf7f1b06",
+  "b2a33a75-b63c-48e1-a252-7ab843f559d5",
+];
 
 type CronogramaEntry = {
   id: string;
@@ -49,6 +65,9 @@ type CronogramaEntry = {
   task: string | null;
   is_vacation: boolean;
   is_holiday: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  updated_at: string;
 };
 
 type WorkerRow = {
@@ -96,8 +115,30 @@ function isHoliday(dateStr: string): boolean {
   return HOLIDAYS_2025.includes(dateStr);
 }
 
+// Fetch user emails for tooltips
+async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> {
+  const uniqueIds = [...new Set(userIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return new Map();
+  
+  try {
+    const { data, error } = await supabase.functions.invoke("get-users", {
+      body: {},
+    });
+    if (error || !data?.users) return new Map();
+    
+    const emailMap = new Map<string, string>();
+    data.users.forEach((u: { id: string; email: string }) => {
+      emailMap.set(u.id, u.email);
+    });
+    return emailMap;
+  } catch {
+    return new Map();
+  }
+}
+
 export function CronogramaGrid() {
   const { language, t } = useLanguage();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const locale = language === "es" ? es : enUS;
   
@@ -185,6 +226,16 @@ export function CronogramaGrid() {
     },
   });
 
+  // Fetch user emails for displaying in tooltips
+  const { data: userEmailMap = new Map<string, string>() } = useQuery({
+    queryKey: ["user-emails-cronograma", entries.map(e => e.updated_by).filter(Boolean)],
+    queryFn: async () => {
+      const userIds = entries.map(e => e.updated_by).filter(Boolean) as string[];
+      return fetchUserEmails(userIds);
+    },
+    enabled: entries.length > 0,
+  });
+
   // Fetch week status
   const { data: weekStatus } = useQuery({
     queryKey: ["cronograma-week", weekEndingDate],
@@ -227,6 +278,8 @@ export function CronogramaGrid() {
       day_of_week: number;
       time_slot: "morning" | "afternoon";
     }) => {
+      const currentUserId = user?.id || null;
+      
       // Find existing entry
       const existing = entries.find(
         e => e.worker_name === entry.worker_name && 
@@ -237,13 +290,17 @@ export function CronogramaGrid() {
       if (existing) {
         const { error } = await supabase
           .from("cronograma_entries")
-          .update({ task: entry.task })
+          .update({ task: entry.task, updated_by: currentUserId })
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("cronograma_entries")
-          .insert(entry);
+          .insert({
+            ...entry,
+            created_by: currentUserId,
+            updated_by: currentUserId,
+          });
         if (error) throw error;
       }
     },
@@ -764,6 +821,9 @@ export function CronogramaGrid() {
                       const dayNum = dayIdx + 1;
                       const isOnVacation = worker.type === "employee" && worker.id && isEmployeeOnVacation(worker.id, day);
 
+                      const morningEntry = getEntryForCell(worker, dayNum, "morning");
+                      const afternoonEntry = getEntryForCell(worker, dayNum, "afternoon");
+
                       return (
                         <>
                           {/* Morning cell */}
@@ -783,6 +843,9 @@ export function CronogramaGrid() {
                             dayShade={dayIdx % 2 === 0}
                             isLastOfDay={false}
                             t={t}
+                            entry={morningEntry}
+                            userEmailMap={userEmailMap}
+                            language={language}
                           />
                           {/* Afternoon cell */}
                           <CronogramaCell
@@ -801,6 +864,9 @@ export function CronogramaGrid() {
                             dayShade={dayIdx % 2 === 0}
                             isLastOfDay={true}
                             t={t}
+                            entry={afternoonEntry}
+                            userEmailMap={userEmailMap}
+                            language={language}
                           />
                         </>
                       );
@@ -835,6 +901,16 @@ export function CronogramaGrid() {
   );
 }
 
+// Check if the updated_by is the schedule owner or an admin
+function isOwnerOrAdmin(updatedBy: string | null | undefined): boolean {
+  if (!updatedBy) return true; // No update info means no highlight
+  // Schedule owner (cedenojord)
+  if (updatedBy === SCHEDULE_OWNER_ID) return true;
+  // Admin users (instructor)
+  if (ADMIN_USER_IDS.includes(updatedBy)) return true;
+  return false;
+}
+
 // Individual cell component
 function CronogramaCell({
   worker,
@@ -851,6 +927,9 @@ function CronogramaCell({
   dayShade,
   isLastOfDay,
   t,
+  entry,
+  userEmailMap,
+  language,
 }: {
   worker: WorkerRow;
   dayOfWeek: number;
@@ -866,10 +945,18 @@ function CronogramaCell({
   dayShade: boolean;
   isLastOfDay: boolean;
   t: (key: string) => string;
+  entry?: CronogramaEntry;
+  userEmailMap: Map<string, string>;
+  language: string;
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Determine if this cell was modified by someone other than owner/admin
+  const isModifiedByOther = entry?.updated_by ? !isOwnerOrAdmin(entry.updated_by) : false;
+  const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
+  const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
 
   // Auto-resize textarea on initial load and when value changes
   const autoResize = useCallback(() => {
@@ -912,6 +999,18 @@ function CronogramaCell({
     }
   };
 
+  // Format tooltip text
+  const getTooltipContent = () => {
+    if (!isModifiedByOther || !modifiedAt) return null;
+    
+    const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
+    const userDisplay = modifierEmail || (language === "es" ? "Usuario desconocido" : "Unknown user");
+    
+    return language === "es" 
+      ? `Modificado por: ${userDisplay}\n${dateStr}`
+      : `Modified by: ${userDisplay}\n${dateStr}`;
+  };
+
   if (isVacation) {
     return (
       <td className={cn(
@@ -926,26 +1025,47 @@ function CronogramaCell({
     );
   }
 
+  const cellContent = (
+    <textarea
+      ref={textareaRef}
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      disabled={isDisabled}
+      className="w-full min-h-[28px] text-xs bg-transparent border-0 focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
+      placeholder="—"
+      rows={1}
+      onInput={autoResize}
+    />
+  );
+
   if (isHoliday) {
     return (
       <td className={cn(
         "border border-border p-1 text-center min-w-[120px] align-top",
         "bg-amber-50 dark:bg-amber-900/20",
-        isLastOfDay && "border-r-[3px]"
+        isLastOfDay && "border-r-[3px]",
+        isModifiedByOther && "ring-2 ring-inset ring-orange-400 dark:ring-orange-500"
       )}>
-        <textarea
-          ref={textareaRef}
-          value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          disabled={isDisabled}
-          className="w-full min-h-[28px] text-xs bg-transparent border-0 focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
-          placeholder="—"
-          rows={1}
-          onInput={autoResize}
-        />
+        {isModifiedByOther ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative">
+                  {cellContent}
+                  <div className="absolute top-0 right-0 w-2 h-2 bg-orange-400 rounded-full" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="whitespace-pre-line text-xs">
+                {getTooltipContent()}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          cellContent
+        )}
       </td>
     );
   }
@@ -954,21 +1074,26 @@ function CronogramaCell({
     <td className={cn(
       "border border-border p-1 min-w-[120px] align-top",
       dayShade ? "bg-primary/10" : "bg-background",
-      isLastOfDay && "border-r-[3px]"
+      isLastOfDay && "border-r-[3px]",
+      isModifiedByOther && "ring-2 ring-inset ring-orange-400 dark:ring-orange-500"
     )}>
-      <textarea
-        ref={textareaRef}
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        disabled={isDisabled}
-        className="w-full min-h-[28px] text-xs border-0 bg-transparent focus:ring-1 focus:ring-ring rounded resize-none overflow-hidden px-2 py-1"
-        placeholder="—"
-        rows={1}
-        onInput={autoResize}
-      />
+      {isModifiedByOther ? (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="relative">
+                {cellContent}
+                <div className="absolute top-0 right-0 w-2 h-2 bg-orange-400 rounded-full" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="whitespace-pre-line text-xs">
+              {getTooltipContent()}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        cellContent
+      )}
     </td>
   );
 }

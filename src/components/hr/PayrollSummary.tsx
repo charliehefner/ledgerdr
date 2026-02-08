@@ -84,6 +84,8 @@ const BENEFIT_TYPES = ["Teléfono", "Gasolina", "Bono"];
 const STANDARD_START = 7 * 60 + 30;
 const STANDARD_END = 16 * 60 + 30;
 const STANDARD_HOURS_PER_DAY = 8;
+const LUNCH_DEDUCTION_HOURS = 1; // 1 hour lunch break (implicit, not shown on timesheet)
+const LUNCH_THRESHOLD_HOURS = 5; // Deduct lunch if worked more than 5 clock hours
 const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
@@ -249,8 +251,11 @@ export function PayrollSummary({
         const workDate = parseDateLocal(t.work_date);
         const isSundayWork = isSunday(workDate);
 
-        // Calculate total hours worked this day
-        const totalDayHours = (end - start) / 60;
+        // Calculate total clock hours, then deduct lunch if applicable
+        const clockHours = (end - start) / 60;
+        const totalDayHours = clockHours > LUNCH_THRESHOLD_HOURS 
+          ? clockHours - LUNCH_DEDUCTION_HOURS 
+          : clockHours;
         
         // Sunday work gets 100% bonus (tracked separately)
         // Sunday overtime is also at Sunday rate (2x), not regular overtime rate

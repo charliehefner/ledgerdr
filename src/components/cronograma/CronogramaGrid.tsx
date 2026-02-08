@@ -124,10 +124,15 @@ async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> 
     const { data, error } = await supabase.functions.invoke("get-users", {
       body: {},
     });
-    if (error || !data?.users) return new Map();
+    
+    if (error) return new Map();
+    
+    // Handle both formats: array directly or wrapped in { users: [...] }
+    const users = Array.isArray(data) ? data : data?.users;
+    if (!users) return new Map();
     
     const emailMap = new Map<string, string>();
-    data.users.forEach((u: { id: string; email: string }) => {
+    users.forEach((u: { id: string; email: string }) => {
       emailMap.set(u.id, u.email);
     });
     return emailMap;

@@ -249,34 +249,32 @@ export function PayrollSummary({
         const workDate = parseDateLocal(t.work_date);
         const isSundayWork = isSunday(workDate);
 
-        // Total hours worked this day (capped at standard)
-        const totalDayHours = Math.min((end - start) / 60, STANDARD_HOURS_PER_DAY);
+        // Calculate total hours worked this day
+        const totalDayHours = (end - start) / 60;
         
         // Sunday work gets 100% bonus (tracked separately)
+        // Sunday overtime is also at Sunday rate (2x), not regular overtime rate
         if (isSundayWork) {
-          sundayHours += totalDayHours;
-          // Sunday hours don't count towards regular hours - they're bonus hours
+          sundayHours += totalDayHours; // All Sunday hours get 2x rate
           return;
         }
         
-        // If this is a holiday, track those hours for bonus pay
+        // If this is a holiday, all hours get holiday rate (2x)
+        // Holiday overtime is also at holiday rate (2x), not regular overtime rate
         if (t.is_holiday) {
-          holidayHours += totalDayHours;
+          holidayHours += totalDayHours; // All holiday hours get 2x rate
         }
 
-        const regularStart = Math.max(start, STANDARD_START);
-        const regularEnd = Math.min(end, STANDARD_END);
-
-        if (regularEnd > regularStart) {
-          const rawRegular = (regularEnd - regularStart) / 60;
-          regularHours += Math.min(rawRegular, STANDARD_HOURS_PER_DAY);
-        }
-
-        if (start < STANDARD_START) {
-          overtimeHours += (STANDARD_START - start) / 60;
-        }
-        if (end > STANDARD_END) {
-          overtimeHours += (end - STANDARD_END) / 60;
+        // Overtime calculation: based on 8-hour day threshold (not 44-hour week)
+        // Hours beyond 8 in a single day are overtime at 1.35x rate
+        // (Except Sunday/Holiday which maintain their own higher rate)
+        if (!t.is_holiday) {
+          if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
+            regularHours += totalDayHours;
+          } else {
+            regularHours += STANDARD_HOURS_PER_DAY;
+            overtimeHours += totalDayHours - STANDARD_HOURS_PER_DAY;
+          }
         }
       }
     });

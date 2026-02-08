@@ -86,6 +86,9 @@ const STANDARD_END = 16 * 60 + 30;
 const STANDARD_HOURS_PER_DAY = 8;
 const LUNCH_DEDUCTION_HOURS = 1; // 1 hour lunch break (implicit, not shown on timesheet)
 const LUNCH_THRESHOLD_HOURS = 5; // Deduct lunch if worked more than 5 clock hours
+const SATURDAY_NORMAL_END = 11 * 60 + 30; // 11:30 AM - end of normal Saturday hours
+const SATURDAY_NORMAL_HOURS = 4; // Normal Saturday: 7:30 AM to 11:30 AM
+const SATURDAY_LUNCH_THRESHOLD = 14 * 60; // 2:00 PM - if end time > this, deduct lunch
 const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
@@ -250,36 +253,59 @@ export function PayrollSummary({
         const end = parseTimeToMinutes(t.end_time);
         const workDate = parseDateLocal(t.work_date);
         const isSundayWork = isSunday(workDate);
+        const isSaturdayWork = workDate.getDay() === 6; // Saturday = 6
 
+        // Sunday work gets 100% bonus (tracked separately)
+        // Sunday overtime is also at Sunday rate (2x), not regular overtime rate
+        if (isSundayWork) {
+          // Calculate total clock hours, then deduct lunch if applicable
+          const clockHours = (end - start) / 60;
+          const totalDayHours = clockHours > LUNCH_THRESHOLD_HOURS 
+            ? clockHours - LUNCH_DEDUCTION_HOURS 
+            : clockHours;
+          sundayHours += totalDayHours; // All Sunday hours get 2x rate
+          return;
+        }
+
+        // Saturday: Normal hours 7:30-11:30 (4 hours), overtime after that
+        // Lunch deduction if end time > 14:00 (2:00 PM)
+        if (isSaturdayWork && !t.is_holiday) {
+          const clockHours = (end - start) / 60;
+          // Deduct lunch if end time is after 2:00 PM
+          const totalDayHours = end > SATURDAY_LUNCH_THRESHOLD 
+            ? clockHours - LUNCH_DEDUCTION_HOURS 
+            : clockHours;
+          
+          if (totalDayHours <= SATURDAY_NORMAL_HOURS) {
+            regularHours += totalDayHours;
+          } else {
+            regularHours += SATURDAY_NORMAL_HOURS;
+            overtimeHours += totalDayHours - SATURDAY_NORMAL_HOURS;
+          }
+          return;
+        }
+
+        // Weekdays (Mon-Fri) and Saturday holidays
         // Calculate total clock hours, then deduct lunch if applicable
         const clockHours = (end - start) / 60;
         const totalDayHours = clockHours > LUNCH_THRESHOLD_HOURS 
           ? clockHours - LUNCH_DEDUCTION_HOURS 
           : clockHours;
         
-        // Sunday work gets 100% bonus (tracked separately)
-        // Sunday overtime is also at Sunday rate (2x), not regular overtime rate
-        if (isSundayWork) {
-          sundayHours += totalDayHours; // All Sunday hours get 2x rate
-          return;
-        }
-        
         // If this is a holiday, all hours get holiday rate (2x)
         // Holiday overtime is also at holiday rate (2x), not regular overtime rate
         if (t.is_holiday) {
           holidayHours += totalDayHours; // All holiday hours get 2x rate
+          return;
         }
 
         // Overtime calculation: based on 8-hour day threshold (not 44-hour week)
         // Hours beyond 8 in a single day are overtime at 1.35x rate
-        // (Except Sunday/Holiday which maintain their own higher rate)
-        if (!t.is_holiday) {
-          if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
-            regularHours += totalDayHours;
-          } else {
-            regularHours += STANDARD_HOURS_PER_DAY;
-            overtimeHours += totalDayHours - STANDARD_HOURS_PER_DAY;
-          }
+        if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
+          regularHours += totalDayHours;
+        } else {
+          regularHours += STANDARD_HOURS_PER_DAY;
+          overtimeHours += totalDayHours - STANDARD_HOURS_PER_DAY;
         }
       }
     });

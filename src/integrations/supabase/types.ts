@@ -65,6 +65,7 @@ export type Database = {
       cronograma_entries: {
         Row: {
           created_at: string
+          created_by: string | null
           day_of_week: number
           id: string
           is_holiday: boolean | null
@@ -72,6 +73,7 @@ export type Database = {
           task: string | null
           time_slot: string
           updated_at: string
+          updated_by: string | null
           week_ending_date: string
           worker_id: string | null
           worker_name: string
@@ -79,6 +81,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           day_of_week: number
           id?: string
           is_holiday?: boolean | null
@@ -86,6 +89,7 @@ export type Database = {
           task?: string | null
           time_slot: string
           updated_at?: string
+          updated_by?: string | null
           week_ending_date: string
           worker_id?: string | null
           worker_name: string
@@ -93,6 +97,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           day_of_week?: number
           id?: string
           is_holiday?: boolean | null
@@ -100,6 +105,7 @@ export type Database = {
           task?: string | null
           time_slot?: string
           updated_at?: string
+          updated_by?: string | null
           week_ending_date?: string
           worker_id?: string | null
           worker_name?: string

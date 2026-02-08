@@ -27,7 +27,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify the user is authenticated and is an admin
+    // Verify the user is authenticated
     const {
       data: { user },
       error: userError,
@@ -36,15 +36,11 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
-    // Check if user is admin
+    // Check if user is admin - admins get full user list with roles
     const { data: isAdmin } = await userClient.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
     });
-
-    if (!isAdmin) {
-      throw new Error("Admin access required");
-    }
 
     // Use service role client to access auth.users
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -63,16 +59,26 @@ serve(async (req) => {
           data: { user: authUser },
         } = await adminClient.auth.admin.getUserById(role.user_id);
 
-        return {
-          id: role.user_id,
-          email: authUser?.email || "Unknown",
-          role: role.role,
-          created_at: role.created_at,
-        };
+        // For non-admins, return limited info (just id and email for display)
+        // For admins, return full info including role
+        if (isAdmin) {
+          return {
+            id: role.user_id,
+            email: authUser?.email || "Unknown",
+            role: role.role,
+            created_at: role.created_at,
+          };
+        } else {
+          return {
+            id: role.user_id,
+            email: authUser?.email || "Unknown",
+          };
+        }
       })
     );
 
-    return new Response(JSON.stringify(usersWithRoles), {
+    // Return wrapped in { users: [...] } for consistency
+    return new Response(JSON.stringify({ users: usersWithRoles }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {

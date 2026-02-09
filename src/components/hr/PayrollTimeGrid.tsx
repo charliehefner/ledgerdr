@@ -812,7 +812,11 @@ export function PayrollTimeGrid({
                       // Absent = has entry with is_absent flag AND not a holiday AND not vacation
                       // OR has entry with no times and is_absent is true
                       const isAbsent = !sunday && !isHoliday && !isVacation && entry?.is_absent && !hasData;
-                      const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
+                      const hasOvertime = hasData && entry?.end_time && (
+                        saturday
+                          ? parseTimeToMinutes(entry.end_time) > SATURDAY_NORMAL_END
+                          : parseTimeToMinutes(entry.end_time) > STANDARD_END
+                      );
                       
                       return (
                         <td

@@ -1,29 +1,16 @@
 
-# Fix: Saturday Overtime Highlighting in Payroll Time Grid
+
+# Fix Mobile Tank Level to 400.0 Gallons
 
 ## Problem
-The overtime cell highlighting (amber/orange background) uses the weekday threshold of 16:30 (4:30 PM) for all days. On Saturdays, overtime begins after 11:30 AM, but the visual indicator doesn't reflect this. The hours are **calculated correctly** -- only the cell color is wrong.
+The Mobile tank level was previously set to 288.3, then proposed at 389.3, but both incorrectly included pre-zeroing dispenses. The 10.7 gal dispense on Feb 6 occurred before the tank was zeroed and refilled with 500 gal, so it should not reduce the current volume.
 
-## Root Cause
-Line 815 in `PayrollTimeGrid.tsx`:
-```
-const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
-```
-This compares against `STANDARD_END` (16:30) regardless of day type. Saturday overtime starts at `SATURDAY_NORMAL_END` (11:30).
+## Correct Calculation
+- Tank zeroed, then refilled: **+500.0 gal**
+- Feb 7 dispense (only post-refill event): **-100.0 gal**
+- **Correct level: 400.0 gal**
 
 ## Fix
-**File:** `src/components/hr/PayrollTimeGrid.tsx`
+Update `current_level_gallons` for the Mobile tank in the `fuel_tanks` table to **400.0**.
 
-Update the `hasOvertime` calculation (around line 815) to check whether it's a Saturday and use the appropriate threshold:
-
-```typescript
-// Saturday: overtime if total hours > 4 (i.e., end time beyond 11:30 AM normal period)
-// Weekday: overtime if end time > 16:30
-const hasOvertime = hasData && entry?.end_time && (
-  saturday
-    ? parseTimeToMinutes(entry.end_time) > SATURDAY_NORMAL_END
-    : parseTimeToMinutes(entry.end_time) > STANDARD_END
-);
-```
-
-This is a one-line change. The `saturday` variable is already defined on line 805. No other files need modification.
+This is a one-time data correction. No code changes are needed.

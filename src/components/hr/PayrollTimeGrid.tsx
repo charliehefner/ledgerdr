@@ -291,12 +291,15 @@ export function PayrollTimeGrid({
           if (isDayHoliday(day)) continue;
 
           const dateStr = format(day, "yyyy-MM-dd");
+          // Saturday: 7:30-11:30 (4 hours), Weekdays: 7:30-16:30 (8 hours after lunch)
+          const isSaturdayDay = isSaturday(day);
+          
           entries.push({
             employee_id: employee.id,
             period_id: periodId,
             work_date: dateStr,
             start_time: "07:30",
-            end_time: "16:30",
+            end_time: isSaturdayDay ? "11:30" : "16:30",
             is_absent: false,
             is_holiday: false,
           });

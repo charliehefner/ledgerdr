@@ -7,6 +7,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function sanitizeError(error: Error): string {
+  console.error("Operation failed:", error);
+  const msg = error.message?.toLowerCase() || "";
+  if (msg.includes("unauthorized") || msg.includes("no authorization")) return "Unauthorized";
+  if (msg.includes("admin access")) return "Admin access required";
+  if (msg.includes("own account")) return "Cannot delete your own account";
+  if (msg.includes("pending deletion")) return "User already has a pending deletion";
+  if (msg.includes("not found")) return "User not found";
+  return "Operation failed. Please try again.";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,8 +33,14 @@ serve(async (req) => {
 
     const { userId, immediate } = await req.json();
 
-    if (!userId) {
-      throw new Error("User ID is required");
+    // Validate UUID
+    if (!userId || typeof userId !== "string" || !UUID_REGEX.test(userId)) {
+      throw new Error("Invalid user ID format");
+    }
+
+    // Validate immediate flag
+    if (immediate !== undefined && typeof immediate !== "boolean") {
+      throw new Error("Invalid immediate flag");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -102,7 +121,7 @@ serve(async (req) => {
       });
 
     if (scheduleError) {
-      throw new Error(scheduleError.message);
+      throw new Error("Failed to schedule deletion");
     }
 
     return new Response(
@@ -112,15 +131,14 @@ serve(async (req) => {
         execute_after: executeAfter.toISOString(),
         message: immediate 
           ? "User deletion scheduled for immediate processing"
-          : `User deletion scheduled for ${executeAfter.toLocaleDateString()}`
+          : `User deletion scheduled`
       }), 
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error: any) {
-    console.error("Error in delete-user:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: sanitizeError(error) }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

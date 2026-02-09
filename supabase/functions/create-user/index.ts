@@ -10,6 +10,20 @@ const corsHeaders = {
 // Domain used for username-based accounts (users without email)
 const USERNAME_EMAIL_DOMAIN = "internal.jord.local";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_ROLES = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
+
+function sanitizeError(error: Error): string {
+  console.error("Operation failed:", error);
+  const msg = error.message?.toLowerCase() || "";
+  if (msg.includes("already") || msg.includes("unique") || msg.includes("duplicate")) return "User already exists";
+  if (msg.includes("unauthorized") || msg.includes("no authorization")) return "Unauthorized";
+  if (msg.includes("admin access")) return "Admin access required";
+  if (msg.includes("invalid")) return "Invalid input provided";
+  return "Operation failed. Please try again.";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,15 +35,38 @@ serve(async (req) => {
       throw new Error("No authorization header");
     }
 
-    const { email, username, password, role } = await req.json();
+    const body = await req.json();
+    const { email, username, password, role } = body;
 
-    // Either email or username must be provided
+    // Validate: either email or username required
     if (!email && !username) {
       throw new Error("Email or username is required");
     }
 
-    if (!password || !role) {
-      throw new Error("Password and role are required");
+    // Validate email format if provided
+    if (email && (typeof email !== "string" || email.length > 255 || !EMAIL_REGEX.test(email))) {
+      throw new Error("Invalid email format");
+    }
+
+    // Validate username if provided
+    if (username && (typeof username !== "string" || username.length < 3 || username.length > 50)) {
+      throw new Error("Invalid username - must be 3-50 characters");
+    }
+
+    // Validate password
+    if (!password || typeof password !== "string") {
+      throw new Error("Password is required");
+    }
+    if (password.length < 8 || password.length > 128) {
+      throw new Error("Password must be 8-128 characters");
+    }
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(password)) {
+      throw new Error("Password must contain at least one letter and one number");
+    }
+
+    // Validate role
+    if (!role || typeof role !== "string" || !VALID_ROLES.includes(role)) {
+      throw new Error("Invalid role");
     }
 
     // Determine the actual email to use
@@ -39,18 +76,13 @@ serve(async (req) => {
     if (username && !email) {
       // Username-only account - create placeholder email
       const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (!sanitizedUsername) {
-        throw new Error("Invalid username - must contain at least one letter or number");
+      if (!sanitizedUsername || sanitizedUsername.length < 3) {
+        throw new Error("Invalid username - must contain at least 3 alphanumeric characters");
       }
       actualEmail = `${sanitizedUsername}@${USERNAME_EMAIL_DOMAIN}`;
       isUsernameAccount = true;
     } else {
       actualEmail = email;
-    }
-
-    const validRoles = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
-    if (!validRoles.includes(role)) {
-      throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -87,7 +119,7 @@ serve(async (req) => {
       await adminClient.auth.admin.createUser({
         email: actualEmail,
         password,
-        email_confirm: true, // Auto-confirm email
+        email_confirm: true,
         user_metadata: isUsernameAccount ? { 
           username: username,
           is_username_account: true 
@@ -111,7 +143,7 @@ serve(async (req) => {
     if (roleError) {
       // Rollback: delete the user if role assignment fails
       await adminClient.auth.admin.deleteUser(newUser.user.id);
-      throw new Error(`Failed to assign role: ${roleError.message}`);
+      throw new Error("Failed to assign role");
     }
 
     return new Response(
@@ -129,8 +161,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Error in create-user:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: sanitizeError(error) }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

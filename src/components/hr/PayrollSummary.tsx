@@ -81,6 +81,8 @@ interface PayrollSummaryProps {
 }
 
 const BENEFIT_TYPES = ["Teléfono", "Gasolina", "Bono"];
+// Positions exempt from overtime pay (fixed salary regardless of hours)
+const OVERTIME_EXEMPT_POSITIONS = ["Gerencia"];
 const STANDARD_START = 7 * 60 + 30;
 const STANDARD_END = 16 * 60 + 30;
 const STANDARD_HOURS_PER_DAY = 8;
@@ -233,6 +235,8 @@ export function PayrollSummary({
     const employee = employees.find((e) => e.id === employeeId);
     if (!employee) return null;
 
+    const isOvertimeExempt = OVERTIME_EXEMPT_POSITIONS.includes(employee.position);
+
     const entries = timesheets.filter((t) => t.employee_id === employeeId);
     let regularHours = 0;
     let overtimeHours = 0;
@@ -269,6 +273,7 @@ export function PayrollSummary({
 
         // Saturday: Normal hours 7:30-11:30 (4 hours), overtime after that
         // Lunch deduction if end time > 14:00 (2:00 PM)
+        // Gerencia employees are exempt from overtime
         if (isSaturdayWork && !t.is_holiday) {
           const clockHours = (end - start) / 60;
           // Deduct lunch if end time is after 2:00 PM
@@ -276,7 +281,9 @@ export function PayrollSummary({
             ? clockHours - LUNCH_DEDUCTION_HOURS 
             : clockHours;
           
-          if (totalDayHours <= SATURDAY_NORMAL_HOURS) {
+          if (isOvertimeExempt) {
+            regularHours += totalDayHours;
+          } else if (totalDayHours <= SATURDAY_NORMAL_HOURS) {
             regularHours += totalDayHours;
           } else {
             regularHours += SATURDAY_NORMAL_HOURS;
@@ -301,7 +308,10 @@ export function PayrollSummary({
 
         // Overtime calculation: based on 8-hour day threshold (not 44-hour week)
         // Hours beyond 8 in a single day are overtime at 1.35x rate
-        if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
+        // Gerencia employees are exempt - all hours count as regular
+        if (isOvertimeExempt) {
+          regularHours += totalDayHours;
+        } else if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
           regularHours += totalDayHours;
         } else {
           regularHours += STANDARD_HOURS_PER_DAY;

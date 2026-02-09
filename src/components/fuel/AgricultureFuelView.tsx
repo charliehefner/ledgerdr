@@ -76,15 +76,16 @@ interface FuelEquipment {
 interface FuelTransaction {
   id: string;
   tank_id: string;
-  equipment_id: string;
+  equipment_id: string | null;
+  transaction_type: string;
   transaction_date: string;
   gallons: number;
-  pump_start_reading: number;
-  pump_end_reading: number;
-  hour_meter_reading: number;
+  pump_start_reading: number | null;
+  pump_end_reading: number | null;
+  hour_meter_reading: number | null;
   notes: string | null;
   fuel_tanks: { name: string };
-  fuel_equipment: { name: string };
+  fuel_equipment: { name: string } | null;
 }
 
 export function AgricultureFuelView() {
@@ -157,10 +158,10 @@ export function AgricultureFuelView() {
         .select(`
           *,
           fuel_tanks!inner(name, use_type),
-          fuel_equipment!inner(name, equipment_type)
+          fuel_equipment(name, equipment_type)
         `)
         .eq("fuel_tanks.use_type", "agriculture")
-        .eq("transaction_type", "dispense")
+        .in("transaction_type", ["dispense", "refill"])
         .order("transaction_date", { ascending: false });
       if (error) throw error;
       return data as FuelTransaction[];
@@ -549,7 +550,15 @@ export function AgricultureFuelView() {
   }, [filteredTransactions, sortField, sortDirection]);
 
   const totalGallons = useMemo(() => {
-    return sortedTransactions.reduce((sum, tx) => sum + tx.gallons, 0);
+    return sortedTransactions
+      .filter(tx => tx.transaction_type === "dispense")
+      .reduce((sum, tx) => sum + tx.gallons, 0);
+  }, [sortedTransactions]);
+
+  const totalRefills = useMemo(() => {
+    return sortedTransactions
+      .filter(tx => tx.transaction_type === "refill")
+      .reduce((sum, tx) => sum + tx.gallons, 0);
   }, [sortedTransactions]);
 
   const exportToExcel = async () => {
@@ -905,7 +914,8 @@ export function AgricultureFuelView() {
       {/* Summary */}
       {sortedTransactions.length > 0 && (
         <div className="text-sm text-muted-foreground">
-          Showing {sortedTransactions.length} records | Total: <span className="font-semibold text-foreground">{totalGallons.toFixed(1)} gallons</span>
+          Showing {sortedTransactions.length} records | Dispatched: <span className="font-semibold text-destructive">-{totalGallons.toFixed(1)} gal</span>
+          {totalRefills > 0 && <> | Purchased: <span className="font-semibold text-green-600 dark:text-green-400">+{totalRefills.toFixed(1)} gal</span></>}
         </div>
       )}
 
@@ -1004,20 +1014,25 @@ export function AgricultureFuelView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedTransactions.map((tx) => (
-              <TableRow key={tx.id}>
+            {sortedTransactions.map((tx) => {
+              const isRefill = tx.transaction_type === "refill";
+              return (
+              <TableRow key={tx.id} className={isRefill ? "bg-green-50 dark:bg-green-950/20" : ""}>
                 <TableCell>
                   {format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell>{tx.fuel_tanks.name}</TableCell>
-                <TableCell>{tx.fuel_equipment.name}</TableCell>
-                <TableCell>{tx.hour_meter_reading} hrs</TableCell>
-                <TableCell>{tx.pump_start_reading}</TableCell>
-                <TableCell>{tx.pump_end_reading}</TableCell>
-                <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
+                <TableCell>{tx.fuel_equipment?.name || (isRefill ? "— Purchase —" : "-")}</TableCell>
+                <TableCell>{tx.hour_meter_reading != null ? `${tx.hour_meter_reading} hrs` : "-"}</TableCell>
+                <TableCell>{tx.pump_start_reading != null ? tx.pump_start_reading : "-"}</TableCell>
+                <TableCell>{tx.pump_end_reading != null ? tx.pump_end_reading : "-"}</TableCell>
+                <TableCell className={cn("font-medium", isRefill ? "text-green-600 dark:text-green-400" : "text-destructive")}>
+                  {isRefill ? `+${tx.gallons.toFixed(1)}` : `-${tx.gallons.toFixed(1)}`} gal
+                </TableCell>
                 <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
                 {isAdmin && (
                   <TableCell>
+                    {!isRefill && (
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
@@ -1036,10 +1051,12 @@ export function AgricultureFuelView() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                    )}
                   </TableCell>
                 )}
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}

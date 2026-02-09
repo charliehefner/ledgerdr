@@ -5,8 +5,10 @@ import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Download, Lock, Loader2, FileText } from "lucide-react";
+import { Download, Lock, Loader2, FileText, FileSpreadsheet } from "lucide-react";
 import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { createTransaction } from "@/lib/api";
 import { generatePayrollReceiptsZip } from "@/lib/payrollReceipts";
 import {
@@ -19,6 +21,12 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -589,6 +597,86 @@ export function PayrollSummary({
     }
   };
 
+  // Export to PDF
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF({ orientation: "landscape" });
+      
+      // Title
+      doc.setFontSize(16);
+      doc.text("Reporte de Nómina", 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`, 14, 22);
+
+      // Table data
+      const headers = [
+        "Nombre", "Hrs Reg", "Hrs Extra", "Hrs Fer", "Hrs Dom",
+        "Salario Base", "Pago Extra", "Pago Fer", "Pago Dom",
+        "Beneficios", "Préstamo", "TSS", "ISR", "Pago Neto"
+      ];
+
+      const rows = payrollData.map((p) => [
+        p.employee.name,
+        p.regularHours.toFixed(1),
+        p.overtimeHours.toFixed(1),
+        p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-",
+        p.sundayHours > 0 ? p.sundayHours.toFixed(1) : "-",
+        formatCurrency(p.basePay),
+        formatCurrency(p.overtimePay),
+        p.holidayPay > 0 ? formatCurrency(p.holidayPay) : "-",
+        p.sundayPay > 0 ? formatCurrency(p.sundayPay) : "-",
+        formatCurrency(p.totalBenefits),
+        p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-",
+        formatCurrency(p.tss),
+        p.isr > 0 ? formatCurrency(p.isr) : "-",
+        formatCurrency(p.netPay),
+      ]);
+
+      // Add totals row
+      rows.push([
+        "TOTALES",
+        totals.regularHours.toFixed(1),
+        totals.overtimeHours.toFixed(1),
+        totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-",
+        totals.sundayHours > 0 ? totals.sundayHours.toFixed(1) : "-",
+        formatCurrency(totals.basePay),
+        formatCurrency(totals.overtimePay),
+        totals.holidayPay > 0 ? formatCurrency(totals.holidayPay) : "-",
+        totals.sundayPay > 0 ? formatCurrency(totals.sundayPay) : "-",
+        formatCurrency(totals.totalBenefits),
+        totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-",
+        formatCurrency(totals.tss),
+        totals.isr > 0 ? formatCurrency(totals.isr) : "-",
+        formatCurrency(totals.netPay),
+      ]);
+
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        startY: 28,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 111, 92], textColor: 255, fontStyle: "bold" },
+        footStyles: { fillColor: [226, 239, 218], textColor: 0, fontStyle: "bold" },
+        didParseCell: (data) => {
+          // Style the totals row
+          if (data.row.index === rows.length - 1) {
+            data.cell.styles.fillColor = [226, 239, 218];
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+      });
+
+      doc.save(`Nomina_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.pdf`);
+      toast.success("Reporte PDF exportado");
+    } catch (error) {
+      toast.error("Error al exportar PDF");
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Generate PDF receipts
   const handleGenerateReceipts = async () => {
     setIsGeneratingReceipts(true);
@@ -667,18 +755,31 @@ export function PayrollSummary({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Resumen de Nómina</h3>
         <div className="flex items-center gap-2">
-          <Button
-            variant="excel"
-            onClick={handleExport}
-            disabled={isExporting || payrollData.length === 0}
-          >
-            {isExporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Exportar Excel
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={isExporting || payrollData.length === 0}
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-popover">
+              <DropdownMenuItem onClick={handleExport} className="text-excel">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Exportar a Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Exportar a PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="outline"
             onClick={handleGenerateReceipts}

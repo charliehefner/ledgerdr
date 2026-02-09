@@ -8,7 +8,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, FileSpreadsheet, Search, ChevronDown } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, FileText, Search, ChevronDown, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -333,6 +341,36 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     URL.revokeObjectURL(url);
   };
 
+  const exportToPDF = () => {
+    if (usageData.length === 0) return;
+    const doc = new jsPDF({ orientation: "landscape" });
+    const unit = selectedInputDetails?.use_unit || "units";
+    doc.setFontSize(14);
+    doc.text(`Reporte de Uso: ${selectedInputDetails?.commercial_name || "Todos"}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
+
+    autoTable(doc, {
+      head: [["Fecha", "Finca", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, "Tractor/Operador"]],
+      body: usageData.map((row) => [
+        format(parseDateLocal(row.date), "dd/MM/yyyy"),
+        row.farmName,
+        row.fieldName,
+        row.amount.toFixed(2),
+        row.hectares.toFixed(2),
+        row.amountPerHectare.toFixed(2),
+        row.tractor,
+      ]),
+      startY: 28,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+      foot: [["TOTALES", "", "", totals.totalAmount.toFixed(2), totals.totalHectares.toFixed(2), totals.avgPerHectare.toFixed(2), ""]],
+      footStyles: { fontStyle: "bold" },
+    });
+
+    doc.save(`Uso_Insumo_${selectedInputDetails?.commercial_name || "report"}_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -475,12 +513,27 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
               Generar Reporte
             </Button>
 
-            {/* Export Button */}
+            {/* Export */}
             {usageData.length > 0 && (
-              <Button variant="excel" onClick={exportToExcel}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Exportar Excel
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-popover">
+                  <DropdownMenuItem onClick={exportToExcel} className="text-excel">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Exportar a Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPDF}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar a PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </CardContent>

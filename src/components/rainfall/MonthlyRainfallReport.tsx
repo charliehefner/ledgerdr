@@ -5,7 +5,15 @@ import { parseDateLocal } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, BarChart3 } from "lucide-react";
+import { Download, BarChart3, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ExcelJS from "exceljs";
 
@@ -156,6 +164,36 @@ export function MonthlyRainfallReport({ records }: MonthlyRainfallReportProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const title = language === "en" ? "Monthly Rainfall Summary" : "Resumen Mensual de Lluvia";
+    doc.setFontSize(14);
+    doc.text(`${title} - ${selectedYear}`, 14, 15);
+
+    const body: string[][] = [];
+    for (let month = 0; month < 12; month++) {
+      body.push([
+        monthNames[month],
+        monthlyData[month].solar.toString(),
+        monthlyData[month].caoba.toString(),
+        monthlyData[month].palmarito.toString(),
+        monthlyData[month].virgencita.toString(),
+      ]);
+    }
+
+    autoTable(doc, {
+      head: [[language === "en" ? "Month" : "Mes", "Solar (mm)", "Caoba (mm)", "Palmarito (mm)", "Virgencita (mm)"]],
+      body,
+      startY: 22,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [141, 168, 195] },
+      foot: [["TOTAL", yearlyTotals.solar.toString(), yearlyTotals.caoba.toString(), yearlyTotals.palmarito.toString(), yearlyTotals.virgencita.toString()]],
+      footStyles: { fontStyle: "bold" },
+    });
+
+    doc.save(`lluvia_mensual_${selectedYear}.pdf`);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -182,10 +220,25 @@ export function MonthlyRainfallReport({ records }: MonthlyRainfallReportProps) {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="excel" size="sm" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" />
-              Excel
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  {language === "en" ? "Export" : "Exportar"}
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover">
+                <DropdownMenuItem onClick={handleExportExcel} className="text-excel">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {language === "en" ? "Export to Excel" : "Exportar a Excel"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {language === "en" ? "Export to PDF" : "Exportar a PDF"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardHeader>

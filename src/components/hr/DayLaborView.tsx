@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Pencil, FileSpreadsheet, FileText, Download, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ExcelJS from "exceljs";
 import { toast } from "@/hooks/use-toast";
 import { createTransaction } from "@/lib/api";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -258,6 +265,55 @@ export function DayLaborView() {
     doc.save(`Resumen_Jornal_${format(selectedFriday, "yyyy-MM-dd")}.pdf`);
   };
 
+  // Generate Excel - Summary by Worker
+  const generateExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Resumen Jornal");
+    const fridayStr = format(selectedFriday, "dd/MM/yyyy");
+
+    worksheet.mergeCells("A1:D1");
+    worksheet.getCell("A1").value = `Resumen Jornal - Semana ${fridayStr}`;
+    worksheet.getCell("A1").font = { bold: true, size: 14 };
+    worksheet.mergeCells("A2:D2");
+    worksheet.getCell("A2").value = `Período: ${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`;
+    worksheet.addRow([]);
+
+    const headerRow = worksheet.addRow(["Fecha", "Descripción", "Nombre", "Monto"]);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+    });
+
+    summaryByWorker.forEach((group) => {
+      group.entries.forEach((entry, idx) => {
+        worksheet.addRow([
+          format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
+          entry.operation_description,
+          idx === 0 ? group.name : "",
+          Number(entry.amount),
+        ]);
+      });
+      const subRow = worksheet.addRow(["", "", `Subtotal ${group.name}:`, group.subtotal]);
+      subRow.eachCell((cell) => { cell.font = { bold: true }; });
+    });
+
+    worksheet.addRow([]);
+    const totalRow = worksheet.addRow(["", "", "TOTAL:", weeklyTotal]);
+    totalRow.eachCell((cell) => { cell.font = { bold: true }; });
+
+    worksheet.getColumn(4).numFmt = "#,##0.00";
+    worksheet.columns.forEach((col) => { col.width = 20; });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Resumen_Jornal_${format(selectedFriday, "yyyy-MM-dd")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Close week mutation
   const closeWeek = useMutation({
     mutationFn: async () => {
@@ -405,10 +461,25 @@ export function DayLaborView() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button variant="outline" onClick={generatePDF} disabled={entries.length === 0}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Exportar PDF
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={entries.length === 0}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-popover">
+                  <DropdownMenuItem onClick={generateExcel} className="text-excel">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Exportar a Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={generatePDF}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar a PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>

@@ -27,11 +27,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Fuel, Zap } from "lucide-react";
+import { Plus, Fuel, Zap, Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface FuelTank {
   id: string;
@@ -268,6 +277,73 @@ export function IndustryFuelView() {
 
   const selectedGenerator = generators.find((g) => g.id === readingForm.equipment_id);
 
+  const exportToExcel = async () => {
+    if (transactions.length === 0) return;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Generator Usage");
+
+    worksheet.mergeCells("A1:G1");
+    worksheet.getCell("A1").value = "Generator Usage Log";
+    worksheet.getCell("A1").font = { bold: true, size: 14 };
+    worksheet.addRow([]);
+
+    const headerRow = worksheet.addRow(["Date", "Type", "Tank", "Generator", "Hour Meter", "Gallons", "Efficiency", "Notes"]);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+    });
+
+    transactions.forEach((tx) => {
+      worksheet.addRow([
+        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        tx.transaction_type === "refill" ? "Refill" : "Usage",
+        tx.fuel_tanks.name,
+        tx.fuel_equipment?.name || "-",
+        tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-",
+        tx.gallons.toFixed(1),
+        tx.gallons_per_hour ? `${tx.gallons_per_hour.toFixed(2)} gal/hr` : "-",
+        tx.notes || "-",
+      ]);
+    });
+
+    worksheet.columns.forEach((col) => { col.width = 16; });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Generator_Usage_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    if (transactions.length === 0) return;
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text("Generator Usage Log", 14, 15);
+
+    autoTable(doc, {
+      head: [["Date", "Type", "Tank", "Generator", "Hour Meter", "Gallons", "Efficiency", "Notes"]],
+      body: transactions.map((tx) => [
+        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        tx.transaction_type === "refill" ? "Refill" : "Usage",
+        tx.fuel_tanks.name,
+        tx.fuel_equipment?.name || "-",
+        tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-",
+        tx.gallons.toFixed(1),
+        tx.gallons_per_hour ? `${tx.gallons_per_hour.toFixed(2)} gal/hr` : "-",
+        tx.notes || "-",
+      ]),
+      startY: 22,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`Generator_Usage_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
@@ -310,6 +386,25 @@ export function IndustryFuelView() {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Generator Usage Log</h2>
         <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={transactions.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-popover">
+              <DropdownMenuItem onClick={exportToExcel} className="text-excel">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export to Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export to PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Dialog open={isRefillDialogOpen} onOpenChange={setIsRefillDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">

@@ -7,7 +7,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, FileSpreadsheet, Search, AlertTriangle } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, FileText, Search, AlertTriangle, Download, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfDay, endOfDay, isWithinInterval, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -364,6 +372,40 @@ export function FieldProgressReport() {
     URL.revokeObjectURL(url);
   };
 
+  const exportToPDF = () => {
+    if (fieldProgressData.length === 0) return;
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text(`Reporte de Progreso: ${getOperationTypeName()}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
+
+    const totalDone = fieldProgressData.reduce((sum, f) => sum + f.hectaresDone, 0);
+    const totalArea = fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0);
+    const totalRemaining = fieldProgressData.reduce((sum, f) => sum + f.hectaresRemaining, 0);
+
+    autoTable(doc, {
+      head: [["Finca", "Campo", "Tipo Operación", "Ha Totales", "Ha Realizadas", "Ha Pendientes", "% Completado", "Insumos"]],
+      body: fieldProgressData.map((field) => [
+        field.farmName,
+        field.fieldName,
+        field.operationTypeName,
+        field.totalHectares.toFixed(1),
+        field.hectaresDone.toFixed(1),
+        field.hectaresRemaining.toFixed(1),
+        `${field.percentComplete.toFixed(1)}%`,
+        field.inputs.map((i) => `${i.name}: ${i.quantity.toFixed(2)} ${i.unit}`).join("; ") || "-",
+      ]),
+      startY: 28,
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [59, 130, 246] },
+      foot: [["TOTALES", "", "", totalArea.toFixed(1), totalDone.toFixed(1), totalRemaining.toFixed(1), totalArea > 0 ? `${((totalDone / totalArea) * 100).toFixed(1)}%` : "0%", ""]],
+      footStyles: { fontStyle: "bold" },
+    });
+
+    doc.save(`Progreso_Campos_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -472,12 +514,27 @@ export function FieldProgressReport() {
               Generar Reporte
             </Button>
 
-            {/* Export Button */}
+            {/* Export */}
             {fieldProgressData.length > 0 && (
-              <Button variant="excel" onClick={exportToExcel}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Exportar Excel
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-popover">
+                  <DropdownMenuItem onClick={exportToExcel} className="text-excel">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Exportar a Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPDF}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar a PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </CardContent>

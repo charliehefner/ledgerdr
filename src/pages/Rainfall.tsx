@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Download, Save, Loader2, CloudRain, BarChart3, Table as TableIcon } from "lucide-react";
+import { CalendarIcon, Download, Save, Loader2, CloudRain, BarChart3, Table as TableIcon, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -239,6 +247,46 @@ export default function Rainfall() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const title = language === "en" ? "Rainfall Report" : "Reporte de Pluviometría";
+    doc.setFontSize(14);
+    doc.text(`${title} - ${format(fromDate, "dd/MM/yyyy")} a ${format(toDate, "dd/MM/yyyy")}`, 14, 15);
+
+    const body = allDates.map((date) => {
+      const record = getRecordForDate(date);
+      return [
+        format(date, "dd/MM/yyyy"),
+        (record?.solar || 0).toString(),
+        (record?.caoba || 0).toString(),
+        (record?.palmarito || 0).toString(),
+        (record?.virgencita || 0).toString(),
+      ];
+    });
+
+    const pdfTotals = records.reduce(
+      (acc, r) => ({
+        solar: acc.solar + (r.solar || 0),
+        caoba: acc.caoba + (r.caoba || 0),
+        palmarito: acc.palmarito + (r.palmarito || 0),
+        virgencita: acc.virgencita + (r.virgencita || 0),
+      }),
+      { solar: 0, caoba: 0, palmarito: 0, virgencita: 0 }
+    );
+
+    autoTable(doc, {
+      head: [[language === "en" ? "Date" : "Fecha", "Solar (mm)", "Caoba (mm)", "Palmarito (mm)", "Virgencita (mm)"]],
+      body,
+      startY: 22,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [141, 168, 195] },
+      foot: [["TOTAL", pdfTotals.solar.toString(), pdfTotals.caoba.toString(), pdfTotals.palmarito.toString(), pdfTotals.virgencita.toString()]],
+      footStyles: { fontStyle: "bold" },
+    });
+
+    doc.save(`pluviometria_${format(fromDate, "yyyy-MM-dd")}_${format(toDate, "yyyy-MM-dd")}.pdf`);
+  };
+
   const hasChanges = Array.from(editableRecords.values()).some((r) => r.isDirty);
 
   // Calculate totals for display
@@ -335,10 +383,25 @@ export default function Rainfall() {
                           {t("common.save")}
                         </Button>
                       )}
-                      <Button variant="outline" onClick={handleExportExcel}>
-                        <Download className="h-4 w-4 mr-2" />
-                        {language === "en" ? "Export Excel" : "Exportar Excel"}
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline">
+                            <Download className="h-4 w-4 mr-2" />
+                            {language === "en" ? "Export" : "Exportar"}
+                            <ChevronDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-popover">
+                          <DropdownMenuItem onClick={handleExportExcel} className="text-excel">
+                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                            {language === "en" ? "Export to Excel" : "Exportar a Excel"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleExportPDF}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            {language === "en" ? "Export to PDF" : "Exportar a PDF"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardContent>

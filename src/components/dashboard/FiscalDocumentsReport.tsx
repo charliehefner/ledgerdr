@@ -3,7 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
-import { FileText, Download, Calendar, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { FileText, Download, Calendar, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, FileSpreadsheet } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -203,6 +211,37 @@ export function FiscalDocumentsReport() {
     toast.success("Reporte exportado exitosamente");
   };
 
+  const handleExportPDF = () => {
+    if (fiscalTransactions.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text(`Comprobantes Fiscales (E31/B01) - ${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`, 14, 15);
+
+    autoTable(doc, {
+      head: [["ID", "Fecha", "Moneda", "Monto", "ITBIS", "Método Pago", "Documento", "Nombre", "RNC"]],
+      body: fiscalTransactions.map((tx) => [
+        tx.legacy_id || "-",
+        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        tx.currency,
+        tx.amount.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        (tx.itbis || 0).toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        tx.pay_method || "-",
+        tx.document || "-",
+        tx.name || "-",
+        tx.rnc || "-",
+      ]),
+      startY: 22,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`comprobantes_fiscales_${format(startDate, "yyyyMMdd")}_${format(endDate, "yyyyMMdd")}.pdf`);
+    toast.success("PDF exportado exitosamente");
+  };
+
   return (
     <Card className="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30 border-blue-200 dark:border-blue-800 w-fit">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -273,15 +312,25 @@ export function FiscalDocumentsReport() {
                 </Popover>
               </div>
 
-              <Button
-                variant="excel"
-                onClick={handleExport}
-                disabled={fiscalTransactions.length === 0}
-                className="ml-auto"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Exportar Excel
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={fiscalTransactions.length === 0} className="ml-auto">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-popover">
+                  <DropdownMenuItem onClick={handleExport} className="text-excel">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Exportar a Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPDF}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar a PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Summary Cards */}

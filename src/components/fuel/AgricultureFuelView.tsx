@@ -44,7 +44,13 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText, Pencil, Trash2, History, Gauge } from "lucide-react";
+import { Plus, Fuel, Tractor, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, FileSpreadsheet, FileText, Pencil, Trash2, History, Gauge, Download, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -760,15 +766,26 @@ export function AgricultureFuelView() {
             </PopoverContent>
           </Popover>
 
-          {/* Export Buttons */}
-          <Button variant="excel" size="sm" onClick={exportToExcel} disabled={sortedTransactions.length === 0}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToPDF} disabled={sortedTransactions.length === 0}>
-            <FileText className="mr-2 h-4 w-4" />
-            PDF
-          </Button>
+          {/* Export */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={sortedTransactions.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-popover">
+              <DropdownMenuItem onClick={exportToExcel} className="text-excel">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Exportar a Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Exportar a PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Record Fueling */}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

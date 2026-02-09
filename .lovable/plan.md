@@ -1,42 +1,29 @@
 
-# Plan: Add Sunday Pay Columns to Payroll Summary Table
+# Fix: Saturday Overtime Highlighting in Payroll Time Grid
 
-## Overview
-The Sunday hours and pay are calculated correctly and exported to Excel, but the columns are missing from the **Resumen de Nómina** (Payroll Summary) table in the UI. We need to add these columns to match the Time Grid ("Hoja de Tiempo") which already shows Sunday hours.
+## Problem
+The overtime cell highlighting (amber/orange background) uses the weekday threshold of 16:30 (4:30 PM) for all days. On Saturdays, overtime begins after 11:30 AM, but the visual indicator doesn't reflect this. The hours are **calculated correctly** -- only the cell color is wrong.
 
-## Changes Required
+## Root Cause
+Line 815 in `PayrollTimeGrid.tsx`:
+```
+const hasOvertime = hasData && entry?.end_time && parseTimeToMinutes(entry.end_time) > STANDARD_END;
+```
+This compares against `STANDARD_END` (16:30) regardless of day type. Saturday overtime starts at `SATURDAY_NORMAL_END` (11:30).
 
-### File: `src/components/hr/PayrollSummary.tsx`
+## Fix
+**File:** `src/components/hr/PayrollTimeGrid.tsx`
 
-**1. Add Sunday Hours Column Header (after Holiday Hours)**
-- Add a new `<TableHead>` for "Hrs Dom" with emerald-700 color styling (matching the Time Grid)
+Update the `hasOvertime` calculation (around line 815) to check whether it's a Saturday and use the appropriate threshold:
 
-**2. Add Sunday Pay Column Header (after Holiday Pay)**
-- Add a new `<TableHead>` for "Pago Dom" with emerald-700 color styling
+```typescript
+// Saturday: overtime if total hours > 4 (i.e., end time beyond 11:30 AM normal period)
+// Weekday: overtime if end time > 16:30
+const hasOvertime = hasData && entry?.end_time && (
+  saturday
+    ? parseTimeToMinutes(entry.end_time) > SATURDAY_NORMAL_END
+    : parseTimeToMinutes(entry.end_time) > STANDARD_END
+);
+```
 
-**3. Add Sunday Hours Data Cells (employee rows)**
-- Display `p.sundayHours` in the employee row, showing "-" when zero
-
-**4. Add Sunday Pay Data Cells (employee rows)**
-- Display `p.sundayPay` formatted as currency, showing "-" when zero
-
-**5. Add Sunday Totals (footer row)**
-- Display `totals.sundayHours` and `totals.sundayPay` in the footer totals
-
-## Updated Column Order
-| Empleado | Pago Neto | Hrs Reg | Hrs Extra | Hrs Fer | **Hrs Dom** | Salario Base | Pago Extra | Pago Fer | **Pago Dom** | Beneficios | Préstamo | TSS | ISR |
-
----
-
-## Technical Details
-
-The data is already available in the `payrollData` array and `totals` object:
-- `p.sundayHours` / `totals.sundayHours` - already calculated
-- `p.sundayPay` / `totals.sundayPay` - already calculated
-
-No calculation logic changes needed—this is purely a UI display fix.
-
-## Styling
-- Color: `text-emerald-700` (matching the "Dom" column in PayrollTimeGrid)
-- Format: Hours as `X.X`, Pay as currency with `formatCurrency()`
-- Show "-" when value is 0 (consistent with Holiday columns)
+This is a one-line change. The `saturday` variable is already defined on line 805. No other files need modification.

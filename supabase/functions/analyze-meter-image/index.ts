@@ -19,6 +19,9 @@ interface AnalyzeResponse {
   validationResult: "valid" | "below_previous" | "unrealistic_jump";
 }
 
+const VALID_METER_TYPES = ["hour_meter", "fuel_pump"];
+const MAX_IMAGE_LENGTH = 10 * 1024 * 1024; // ~10MB base64
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -26,18 +29,50 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { image, meterType, previousValue, equipmentName } = await req.json() as AnalyzeRequest;
+    const body = await req.json();
+    const { image, meterType, previousValue, equipmentName } = body as AnalyzeRequest;
 
-    if (!image) {
+    // Validate image
+    if (!image || typeof image !== "string") {
       return new Response(
         JSON.stringify({ error: "No image provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (image.length > MAX_IMAGE_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: "Image too large" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate meterType
+    if (!meterType || !VALID_METER_TYPES.includes(meterType)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid meter type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate previousValue
+    if (previousValue === undefined || typeof previousValue !== "number" || previousValue < 0 || previousValue > 999999) {
+      return new Response(
+        JSON.stringify({ error: "Invalid previous value" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate equipmentName
+    if (!equipmentName || typeof equipmentName !== "string" || equipmentName.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Invalid equipment name" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
+      throw new Error("AI service not configured");
     }
 
     // Prepare the prompt based on meter type
@@ -46,7 +81,7 @@ Deno.serve(async (req) => {
 
     const prompt = `You are analyzing a photo of a ${meterTypeLabel} on agricultural equipment.
 
-Equipment: ${equipmentName}
+Equipment: ${equipmentName.substring(0, 100)}
 Previous reading: ${previousValue} ${unitLabel}
 
 TASK: Extract the numeric reading displayed on the meter.
@@ -98,9 +133,8 @@ Do not include any text outside the JSON object.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", errorText);
-      throw new Error(`AI API returned ${response.status}`);
+      console.error("AI API error:", response.status);
+      throw new Error("AI service unavailable");
     }
 
     const data = await response.json();
@@ -147,7 +181,7 @@ Do not include any text outside the JSON object.`;
     console.error("Error analyzing meter image:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: "Analysis failed",
         extractedValue: null,
         confidence: "low",
         validationResult: "valid"

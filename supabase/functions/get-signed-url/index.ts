@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const MAX_PATH_LENGTH = 500;
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -56,7 +58,7 @@ Deno.serve(async (req) => {
     
     if (!roleData || !['admin', 'management', 'accountant', 'supervisor', 'viewer'].includes(roleData)) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden - no valid role' }),
+        JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -67,6 +69,14 @@ Deno.serve(async (req) => {
     if (!filePath || typeof filePath !== 'string') {
       return new Response(
         JSON.stringify({ error: 'File path is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Max path length check
+    if (filePath.length > MAX_PATH_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid file path' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

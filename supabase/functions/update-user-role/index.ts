@@ -7,6 +7,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VALID_ROLES = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
+
+function sanitizeError(error: Error): string {
+  console.error("Operation failed:", error);
+  const msg = error.message?.toLowerCase() || "";
+  if (msg.includes("unauthorized") || msg.includes("no authorization")) return "Unauthorized";
+  if (msg.includes("admin access")) return "Admin access required";
+  if (msg.includes("own role")) return "Cannot change your own role";
+  return "Operation failed. Please try again.";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,13 +32,14 @@ serve(async (req) => {
 
     const { userId, role } = await req.json();
 
-    if (!userId || !role) {
-      throw new Error("User ID and role are required");
+    // Validate UUID
+    if (!userId || typeof userId !== "string" || !UUID_REGEX.test(userId)) {
+      throw new Error("Invalid user ID format");
     }
 
-    const validRoles = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
-    if (!validRoles.includes(role)) {
-      throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
+    // Validate role
+    if (!role || typeof role !== "string" || !VALID_ROLES.includes(role)) {
+      throw new Error("Invalid role");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -69,7 +82,7 @@ serve(async (req) => {
       .eq("user_id", userId);
 
     if (updateError) {
-      throw new Error(updateError.message);
+      throw new Error("Failed to update role");
     }
 
     return new Response(
@@ -83,8 +96,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Error in update-user-role:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: sanitizeError(error) }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

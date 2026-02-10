@@ -706,6 +706,9 @@ export function AgricultureFuelView() {
               <div className="text-2xl font-bold">
                 {(tank.current_level_gallons ?? 0).toLocaleString()} gal
               </div>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                Pump: {(tank.last_pump_end_reading ?? 0).toLocaleString()} gal
+              </p>
             </CardContent>
           </Card>
         ))}

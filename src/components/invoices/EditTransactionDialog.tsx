@@ -41,6 +41,8 @@ export function EditTransactionDialog({
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   const [editedDocument, setEditedDocument] = useState("");
   const [originalDocument, setOriginalDocument] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
+  const [originalDescription, setOriginalDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     transaction_date: "",
@@ -93,6 +95,9 @@ export function EditTransactionDialog({
       });
       setEditedDocument(docValue);
       setOriginalDocument(docValue);
+      const descValue = transaction.description || "";
+      setEditedDescription(descValue);
+      setOriginalDescription(descValue);
     }
   }, [transaction, open]);
 
@@ -112,26 +117,29 @@ export function EditTransactionDialog({
     },
   });
 
-  const handleSaveDocument = async () => {
+  const handleSaveChanges = async () => {
     if (!transaction?.id) return;
     setIsSaving(true);
     try {
-      await updateTransaction(String(transaction.id), { document: editedDocument });
+      const updates: Record<string, string> = {};
+      if (editedDocument !== originalDocument) updates.document = editedDocument;
+      if (editedDescription !== originalDescription) updates.description = editedDescription;
+      await updateTransaction(String(transaction.id), updates);
       setOriginalDocument(editedDocument);
-      // Invalidate all transaction-related queries to ensure UI updates everywhere
+      setOriginalDescription(editedDescription);
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["allTransactions"] });
-      toast.success("Documento # guardado exitosamente");
+      toast.success("Cambios guardados exitosamente");
     } catch (error) {
-      toast.error("Error al guardar Documento #");
+      toast.error("Error al guardar cambios");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const hasDocumentChanges = editedDocument !== originalDocument;
+  const hasChanges = editedDocument !== originalDocument || editedDescription !== originalDescription;
 
   if (!transaction) return null;
 
@@ -226,13 +234,13 @@ export function EditTransactionDialog({
               </div>
             </div>
 
-            {/* Description */}
+            {/* Description - EDITABLE */}
             <div className="space-y-2">
               <Label>Descripción</Label>
               <Input
-                value={formData.description}
-                readOnly
-                className="bg-muted"
+                value={editedDescription}
+                onChange={(e) => setEditedDescription(e.target.value)}
+                placeholder="Descripción"
               />
             </div>
 
@@ -270,8 +278,8 @@ export function EditTransactionDialog({
                 <Button
                   type="button"
                   size="sm"
-                  onClick={handleSaveDocument}
-                  disabled={!hasDocumentChanges || isSaving}
+                  onClick={handleSaveChanges}
+                  disabled={!hasChanges || isSaving}
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -280,7 +288,7 @@ export function EditTransactionDialog({
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Este campo puede actualizarse después de guardar</p>
+              <p className="text-xs text-muted-foreground">Documento y Descripción pueden actualizarse después de guardar</p>
             </div>
 
             {/* Comments */}

@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Users, UserPlus, Loader2, Trash2, Mail, User } from "lucide-react";
+import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions";
@@ -54,9 +54,14 @@ export function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [useUsername, setUseUsername] = useState(false);
-  const [newUserIdentifier, setNewUserIdentifier] = useState(""); // email or username
+  const [newUserIdentifier, setNewUserIdentifier] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<AppRole>("accountant");
+
+  // Reset password state
+  const [resetPasswordUser, setResetPasswordUser] = useState<UserWithRole | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
   // Fetch users with their roles via edge function (uses service role to get all users)
   const { data: users = [], isLoading } = useQuery({
@@ -142,18 +147,37 @@ export function UserManagement() {
   };
 
   const handleUpdateRole = async (userId: string, newRole: AppRole) => {
+    // ... keep existing code
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !resetPassword) return;
+
+    if (resetPassword.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(resetPassword)) {
+      toast.error("La contraseña debe contener al menos una letra y un número");
+      return;
+    }
+
+    setIsResetting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("update-user-role", {
-        body: { userId, role: newRole },
+      const { data, error } = await supabase.functions.invoke("reset-user-password", {
+        body: { userId: resetPasswordUser.id, newPassword: resetPassword },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success("Rol actualizado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast.success("Contraseña actualizada exitosamente");
+      setResetPasswordUser(null);
+      setResetPassword("");
     } catch (error: any) {
-      toast.error(error.message || "Error al actualizar rol");
+      toast.error(error.message || "Error al actualizar contraseña");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -344,20 +368,82 @@ export function UserManagement() {
                   {new Date(user.created_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDeleteUser(user.id, user.email)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                      onClick={() => {
+                        setResetPasswordUser(user);
+                        setResetPassword("");
+                      }}
+                      title="Restablecer contraseña"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteUser(user.id, user.email)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetPasswordUser} onOpenChange={(open) => { if (!open) { setResetPasswordUser(null); setResetPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restablecer Contraseña</DialogTitle>
+            <DialogDescription>
+              Asignar nueva contraseña para{" "}
+              <strong>
+                {resetPasswordUser && isUsernameAccount(resetPasswordUser.email)
+                  ? extractUsername(resetPasswordUser.email)
+                  : resetPasswordUser?.email}
+              </strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-password">Nueva Contraseña</Label>
+              <Input
+                id="reset-password"
+                type="password"
+                placeholder="Mínimo 8 caracteres (letras y números)"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setResetPasswordUser(null); setResetPassword(""); }}
+              disabled={isResetting}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleResetPassword} disabled={isResetting}>
+              {isResetting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                "Actualizar Contraseña"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

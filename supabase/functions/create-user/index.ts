@@ -17,6 +17,7 @@ const VALID_ROLES = ["admin", "management", "accountant", "supervisor", "viewer"
 function sanitizeError(error: Error): string {
   console.error("Operation failed:", error);
   const msg = error.message?.toLowerCase() || "";
+  if (msg.includes("password")) return error.message;
   if (msg.includes("already") || msg.includes("unique") || msg.includes("duplicate")) return "User already exists";
   if (msg.includes("unauthorized") || msg.includes("no authorization")) return "Unauthorized";
   if (msg.includes("admin access")) return "Admin access required";

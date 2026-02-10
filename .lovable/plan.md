@@ -1,16 +1,43 @@
 
 
-## Add CBS Prefix "15" for Oil and Grease
+## Add Date Range Preset Dropdown to Purchase Totals Table
 
-**What changes:** Update the Oil and Grease entry in the `accountCbsPairs` array in `src/pages/Reports.tsx` to include CBS prefix "15", matching the pattern already used by the other three categories.
+### Problem
+The Purchase Totals by Account & CBS table currently sums all transactions loaded (up to the row limit), with no independent date restriction. As more transactions accumulate, totals grow indefinitely and become less useful.
 
-**Technical detail:**
-- In `src/pages/Reports.tsx`, locate the Oil and Grease entry in `accountCbsPairs` and change its `cbs` value from `""` to `"15"`.
-- This will cause the existing OR filter logic to also capture any transaction whose `cbs_code` starts with "15", in addition to those with master accounts 4050/4060.
+### Solution
+Add a dropdown selector directly inside the Purchase Totals card header with these preset options:
+- **Current Month** (Mes Actual) -- default
+- **Past Month** (Mes Anterior)
+- **Year to Date** (Ano en Curso)
+- **Prior Year** (Ano Anterior)
 
-**Result — all four categories will be:**
-- Agrochemicals: CBS "13" OR Account 4030
-- Diesel: CBS "14" OR Account 4040
-- Fertilizer: CBS "12" OR Accounts 4080/4082
-- Oil and Grease: CBS "15" OR Accounts 4050/4060
+### How It Works
+1. A new state variable `purchaseTotalsPeriod` will default to `"current_month"`.
+2. A `Select` dropdown will be placed in the `CardHeader` next to the title.
+3. The `accountCbsTotals` calculation will apply its own date filter on `nonVoidedTransactions` (independent of the main table filters) based on the selected period, then apply the existing account/CBS matching logic.
+4. Date boundaries will be computed dynamically based on `new Date()` (e.g., current month = first day of current month through today).
 
+### Technical Details
+
+**File: `src/pages/Reports.tsx`**
+
+- Add state: `const [purchaseTotalsPeriod, setPurchaseTotalsPeriod] = useState("current_month");`
+- Add a `useMemo` that computes start/end dates from the period selection.
+- Change `accountCbsTotals` to filter from `nonVoidedTransactions` (not the already-filtered `transactions`) using the period dates, then apply the account/CBS filter.
+- Update the `CardHeader` to include a `Select` dropdown beside the title, styled inline.
+
+**Period date logic:**
+- Current Month: Jan 1 of current month through today
+- Past Month: first day of previous month through last day of previous month
+- YTD: Jan 1 of current year through today
+- Prior Year: Jan 1 of previous year through Dec 31 of previous year
+
+**UI layout for the card header:**
+```text
++-----------------------------------------------------+
+| Purchase Totals by Account & CBS   [Mes Actual v]   |
++-----------------------------------------------------+
+| Account / CBS Pair  | Transactions | DOP    | USD   |
+| ...                                                  |
+```

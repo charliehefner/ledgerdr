@@ -61,6 +61,7 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
+  const [purchaseTotalsPeriod, setPurchaseTotalsPeriod] = useState("current_month");
 
   const columnVisibility = useColumnVisibility("reports-table", REPORT_COLUMNS);
 
@@ -226,11 +227,33 @@ export default function Reports() {
     { label: "Oil and Grease", accounts: ["4050", "4060"], cbs: "15" },
   ];
 
+  const purchaseTotalsDates = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    switch (purchaseTotalsPeriod) {
+      case "past_month": {
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0, 23, 59, 59, 999);
+        return { start, end };
+      }
+      case "ytd":
+        return { start: new Date(year, 0, 1), end: now };
+      case "prior_year":
+        return { start: new Date(year - 1, 0, 1), end: new Date(year - 1, 11, 31, 23, 59, 59, 999) };
+      case "current_month":
+      default:
+        return { start: new Date(year, month, 1), end: now };
+    }
+  }, [purchaseTotalsPeriod]);
+
   const accountCbsTotals = accountCbsPairs.map(pair => {
-    const matchingTx = transactions.filter(tx => 
-      (tx.master_acct_code && pair.accounts.includes(tx.master_acct_code)) ||
-      (tx.cbs_code?.startsWith(pair.cbs))
-    );
+    const matchingTx = nonVoidedTransactions.filter(tx => {
+      const txDate = parseDateLocal(tx.transaction_date);
+      if (txDate < purchaseTotalsDates.start || txDate > purchaseTotalsDates.end) return false;
+      return (tx.master_acct_code && pair.accounts.includes(tx.master_acct_code)) ||
+        (tx.cbs_code?.startsWith(pair.cbs));
+    });
     const totalDOP = matchingTx
       .filter(tx => tx.currency === "DOP")
       .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
@@ -396,8 +419,19 @@ export default function Reports() {
       <div className="space-y-6 animate-fade-in">
         {/* Account/CBS Pair Totals */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Purchase Totals by Account & CBS</CardTitle>
+            <Select value={purchaseTotalsPeriod} onValueChange={setPurchaseTotalsPeriod}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover">
+                <SelectItem value="current_month">Mes Actual</SelectItem>
+                <SelectItem value="past_month">Mes Anterior</SelectItem>
+                <SelectItem value="ytd">Año en Curso</SelectItem>
+                <SelectItem value="prior_year">Año Anterior</SelectItem>
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent>
             <Table>

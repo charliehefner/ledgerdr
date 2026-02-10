@@ -229,8 +229,7 @@ export default function Reports() {
   const accountCbsTotals = accountCbsPairs.map(pair => {
     const matchingTx = transactions.filter(tx => 
       tx.master_acct_code && 
-      pair.accounts.includes(tx.master_acct_code) && 
-      tx.cbs_code?.startsWith(pair.cbs)
+      pair.accounts.includes(tx.master_acct_code)
     );
     const totalDOP = matchingTx
       .filter(tx => tx.currency === "DOP")

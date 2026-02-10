@@ -77,8 +77,13 @@ export function UserManagement() {
       return;
     }
 
-    if (newUserPassword.length < 6) {
-      toast.error("La contraseña debe tener al menos 6 caracteres");
+    if (newUserPassword.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(newUserPassword)) {
+      toast.error("La contraseña debe contener al menos una letra y un número");
       return;
     }
 
@@ -232,7 +237,7 @@ export function UserManagement() {
                 <Input
                   id="new-password"
                   type="password"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres (letras y números)"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
                 />

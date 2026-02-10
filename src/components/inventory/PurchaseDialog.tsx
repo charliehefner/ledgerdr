@@ -79,7 +79,7 @@ export function PurchaseDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fuel_tanks")
-        .select("id, name, use_type, fuel_type, capacity_gallons, current_level_gallons")
+        .select("id, name, use_type, fuel_type, capacity_gallons, current_level_gallons, last_pump_end_reading")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -126,27 +126,37 @@ export function PurchaseDialog({
       // For fuel items, update the tank level (trigger will sync to inventory)
       if (isFuelItem && data.tank_id) {
         let newTankLevel: number;
+        let newPumpReading: number;
+
+        // Fetch current tank state including pump reading
+        const { data: currentTank, error: tankFetchError } = await supabase
+          .from("fuel_tanks")
+          .select("current_level_gallons, last_pump_end_reading")
+          .eq("id", data.tank_id)
+          .maybeSingle();
+
+        if (tankFetchError) throw tankFetchError;
+        if (!currentTank) throw new Error("Tank not found");
+
+        const oldPumpReading = currentTank.last_pump_end_reading ?? 0;
 
         if (data.reset_tank_gauge) {
-          // Reset gauge to 0 before adding purchase - final level = purchase quantity only
+          // Reset: tank is full, pump reading goes to 0
           newTankLevel = addedQuantity;
+          newPumpReading = 0;
         } else {
-          // Normal behavior - add to existing level
-          const { data: currentTank, error: tankFetchError } = await supabase
-            .from("fuel_tanks")
-            .select("current_level_gallons")
-            .eq("id", data.tank_id)
-            .maybeSingle();
-
-          if (tankFetchError) throw tankFetchError;
-          if (!currentTank) throw new Error("Tank not found");
-
+          // Normal refill: add to level, subtract from pump reading
+          // Pump reading decreases because adding fuel "rewinds" the counter
           newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
+          newPumpReading = Math.max(0, oldPumpReading - addedQuantity);
         }
 
         const { error: tankUpdateError } = await supabase
           .from("fuel_tanks")
-          .update({ current_level_gallons: newTankLevel })
+          .update({ 
+            current_level_gallons: newTankLevel,
+            last_pump_end_reading: newPumpReading,
+          })
           .eq("id", data.tank_id);
 
         if (tankUpdateError) throw tankUpdateError;
@@ -317,12 +327,12 @@ export function PurchaseDialog({
                       htmlFor="reset_tank_gauge" 
                       className="text-sm font-normal cursor-pointer"
                     >
-                      Reset tank gauge to 0 before refill
+                      Reset tank gauge (tank full, pump reading → 0)
                     </Label>
                   </div>
                   {form.reset_tank_gauge && (
                     <p className="text-xs text-destructive">
-                      Tank level will be set to {calculateStockAdded()} gal (ignoring current {selectedTank.current_level_gallons.toLocaleString()} gal)
+                      Tank level will be set to {calculateStockAdded()} gal and pump reading will reset to 0 (ignoring current {selectedTank.current_level_gallons.toLocaleString()} gal)
                     </p>
                   )}
                 </div>

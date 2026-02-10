@@ -19,8 +19,15 @@ const TOLERANCE = 0.2; // ±0.2 gallons tolerance
 export function PumpStartStep({ data, onUpdate }: PumpStartStepProps) {
   const [mode, setMode] = useState<"photo" | "manual">("photo");
   const [showCamera, setShowCamera] = useState(false);
+  const [hasPreFilled, setHasPreFilled] = useState(false);
 
   const expectedValue = data.expectedPumpStart || 0;
+
+  // Pre-fill pumpStartReading with expected value on first load
+  if (!hasPreFilled && data.pumpStartReading === undefined && expectedValue > 0) {
+    setHasPreFilled(true);
+    onUpdate({ pumpStartReading: expectedValue });
+  }
   const difference = data.pumpStartReading !== undefined 
     ? Math.abs(data.pumpStartReading - expectedValue) 
     : null;

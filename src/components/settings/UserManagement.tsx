@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound } from "lucide-react";
+import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions";
@@ -62,6 +62,7 @@ export function UserManagement() {
   const [resetPasswordUser, setResetPasswordUser] = useState<UserWithRole | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   // Fetch users with their roles via edge function (uses service role to get all users)
   const { data: users = [], isLoading } = useQuery({
@@ -398,7 +399,7 @@ export function UserManagement() {
       )}
 
       {/* Reset Password Dialog */}
-      <Dialog open={!!resetPasswordUser} onOpenChange={(open) => { if (!open) { setResetPasswordUser(null); setResetPassword(""); } }}>
+      <Dialog open={!!resetPasswordUser} onOpenChange={(open) => { if (!open) { setResetPasswordUser(null); setResetPassword(""); setShowResetPassword(false); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Restablecer Contraseña</DialogTitle>
@@ -414,13 +415,26 @@ export function UserManagement() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reset-password">Nueva Contraseña</Label>
-              <Input
-                id="reset-password"
-                type="password"
-                placeholder="Mínimo 8 caracteres (letras y números)"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="reset-password"
+                  type={showResetPassword ? "text" : "password"}
+                  placeholder="Mínimo 8 caracteres (letras y números)"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowResetPassword(!showResetPassword)}
+                  tabIndex={-1}
+                >
+                  {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>

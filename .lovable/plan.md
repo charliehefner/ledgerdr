@@ -1,16 +1,25 @@
 
 
-# Fix Mobile Tank Level to 400.0 Gallons
+## Fix: Password Validation Sync (Forward-Only)
 
-## Problem
-The Mobile tank level was previously set to 288.3, then proposed at 389.3, but both incorrectly included pre-zeroing dispenses. The 10.7 gal dispense on Feb 6 occurred before the tank was zeroed and refilled with 500 gal, so it should not reduce the current volume.
+Existing users with letter-only passwords are unaffected. Password validation only executes during user creation and password reset -- never retroactively against stored credentials.
 
-## Correct Calculation
-- Tank zeroed, then refilled: **+500.0 gal**
-- Feb 7 dispense (only post-refill event): **-100.0 gal**
-- **Correct level: 400.0 gal**
+### Changes
 
-## Fix
-Update `current_level_gallons` for the Mobile tank in the `fuel_tanks` table to **400.0**.
+**1. `src/components/settings/UserManagement.tsx`**
+- Update client-side validation from `length >= 6` to match edge function rules:
+  - Minimum 8 characters
+  - At least one letter and one number
+- Show clear error toast in Spanish before the request is sent, e.g.:
+  - "La contrasena debe tener al menos 8 caracteres"
+  - "La contrasena debe contener al menos una letra y un numero"
 
-This is a one-time data correction. No code changes are needed.
+**2. `supabase/functions/create-user/index.ts`**
+- Update `sanitizeError` to pass through password-related error messages instead of masking them as "Operation failed"
+- Add condition: if error message contains "password" (case-insensitive), return the original message
+
+### What stays the same
+- Existing users log in with their current passwords without issue
+- Password reset flow (handled by the auth system) has its own separate validation
+- No database changes needed
+

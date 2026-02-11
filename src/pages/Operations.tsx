@@ -5,6 +5,7 @@ import { OperationsLogView } from "@/components/operations/OperationsLogView";
 import { FieldProgressReport } from "@/components/operations/FieldProgressReport";
 import { InputUsageReport } from "@/components/operations/InputUsageReport";
 import { ContractedServicesView } from "@/components/operations/ContractedServicesView";
+import { FieldsMapView } from "@/components/operations/FieldsMapView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Operations() {
@@ -48,6 +49,11 @@ export default function Operations() {
               value: "input-usage",
               label: t("operations.inputUsage"),
               content: <InputUsageReport initialInputId={initialInputId} />,
+            },
+            {
+              value: "map",
+              label: "Map",
+              content: <FieldsMapView />,
             },
           ],
         },

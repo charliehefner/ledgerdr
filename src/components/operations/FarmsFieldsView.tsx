@@ -34,8 +34,9 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Plus, Pencil, MapPin, Layers } from "lucide-react";
+import { Plus, Pencil, MapPin, Layers, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { KMLImportDialog } from "./KMLImportDialog";
 
 interface Farm {
   id: string;
@@ -55,6 +56,7 @@ interface Field {
 export function FarmsFieldsView() {
   const [isFarmDialogOpen, setIsFarmDialogOpen] = useState(false);
   const [isFieldDialogOpen, setIsFieldDialogOpen] = useState(false);
+  const [isKMLDialogOpen, setIsKMLDialogOpen] = useState(false);
   const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
   const [editingField, setEditingField] = useState<Field | null>(null);
   const [farmForm, setFarmForm] = useState({ name: "" });
@@ -230,6 +232,10 @@ export function FarmsFieldsView() {
     <div className="space-y-6">
       {/* Header with Add buttons */}
       <div className="flex flex-wrap gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={() => setIsKMLDialogOpen(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Import Boundaries
+        </Button>
         <Dialog open={isFarmDialogOpen} onOpenChange={setIsFarmDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
@@ -403,6 +409,8 @@ export function FarmsFieldsView() {
       <div className="text-sm text-muted-foreground">
         Total: {farms?.length || 0} farms, {fields?.length || 0} fields
       </div>
+
+      <KMLImportDialog open={isKMLDialogOpen} onOpenChange={setIsKMLDialogOpen} />
     </div>
   );
 }

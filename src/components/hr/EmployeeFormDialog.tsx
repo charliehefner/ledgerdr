@@ -32,12 +32,12 @@ import {
 import { UserPlus, Save } from "lucide-react";
 import { EmployeeLoansSection } from "./EmployeeLoansSection";
 
-const POSITIONS = ["Obrero", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
+const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
 const employeeSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").max(200),
   cedula: z.string().min(1, "La cédula es requerida").max(20),
-  position: z.enum(POSITIONS).default("Obrero"),
+  position: z.enum(POSITIONS).default("Servicios Generales"),
   bank: z.string().optional(),
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
@@ -83,7 +83,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     defaultValues: {
       name: "",
       cedula: "",
-      position: "Obrero",
+      position: "Servicios Generales",
       bank: "",
       bank_account_number: "",
       date_of_birth: "",
@@ -117,7 +117,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       form.reset({
         name: employee.name,
         cedula: employee.cedula,
-        position: (employee.position as typeof POSITIONS[number]) || "Obrero",
+        position: (POSITIONS.includes(employee.position as typeof POSITIONS[number]) ? employee.position : "Servicios Generales") as typeof POSITIONS[number],
         bank: employee.bank || "",
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
@@ -132,7 +132,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       form.reset({
         name: "",
         cedula: "",
-        position: "Obrero",
+        position: "Servicios Generales",
         bank: "",
         bank_account_number: "",
         date_of_birth: "",

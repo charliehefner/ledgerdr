@@ -108,8 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // First set up the auth state change listener for ONGOING changes
-    // Use setTimeout to defer database calls out of the auth callback to avoid blocking
+    // Listener for ONGOING auth changes (does NOT control isLoading)
+    // This fires on login/logout/token refresh - we only update session/user state
+    // but do NOT force logout on role fetch failure here (login() handles that)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('[Auth] onAuthStateChange event:', event);
@@ -118,11 +119,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(currentSession);
         
         if (currentSession?.user) {
-          // Defer the role fetch to avoid blocking the auth callback
+          // Defer role fetch - fire and forget, don't force logout on failure
           setTimeout(async () => {
             if (!isMounted) return;
-            await setUserWithRole(currentSession.user);
-            if (isMounted) setIsLoading(false);
+            try {
+              const role = await fetchUserRole(currentSession.user.id);
+              if (role && isMounted) {
+                setUser({
+                  id: currentSession.user.id,
+                  email: currentSession.user.email || '',
+                  role,
+                });
+              }
+            } catch (err) {
+              console.error('[Auth] onAuthStateChange role fetch error (non-fatal):', err);
+            }
           }, 0);
         } else {
           setUser(null);

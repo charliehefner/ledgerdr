@@ -197,10 +197,7 @@ export function KMLImportDialog({ open, onOpenChange }: KMLImportDialogProps) {
                       <TableCell>{m.field?.farm_name || "—"}</TableCell>
                       <TableCell>
                         {m.field ? (
-                          <Badge
-                            variant="default"
-                            className="bg-green-600 text-white"
-                          >
+                          <Badge variant="default">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Matched
                           </Badge>

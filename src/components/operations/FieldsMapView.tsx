@@ -33,9 +33,9 @@ export function FieldsMapView() {
   const { data: fields, isLoading } = useQuery({
     queryKey: ["fields-with-boundaries"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_fields_with_boundaries");
+      const { data, error } = await (supabase.rpc as any)("get_fields_with_boundaries");
       if (error) throw error;
-      return data as FieldWithBoundary[];
+      return (data ?? []) as FieldWithBoundary[];
     },
   });
 

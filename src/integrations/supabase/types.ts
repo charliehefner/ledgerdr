@@ -1799,6 +1799,17 @@ export type Database = {
       }
     }
     Functions: {
+      get_fields_with_boundaries: {
+        Args: never
+        Returns: {
+          boundary: Json
+          farm_id: string
+          farm_name: string
+          hectares: number
+          id: string
+          name: string
+        }[]
+      }
       get_hours_until_maintenance: {
         Args: { p_tractor_id: string }
         Returns: number

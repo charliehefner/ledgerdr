@@ -9,6 +9,8 @@ import { Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { TimeInput } from "./TimeInput";
 
@@ -46,6 +48,7 @@ interface TimesheetEntry {
   is_absent: boolean;
   is_holiday: boolean;
   is_sunday_work?: boolean; // Track Sunday work for 100% bonus
+  notes?: string | null;
 }
 
 interface EmployeeBenefit {
@@ -184,11 +187,12 @@ export function PayrollTimeGrid({
             employee_id: entry.employee_id,
             period_id: entry.period_id,
             work_date: entry.work_date,
-          start_time: entry.start_time,
-          end_time: entry.end_time,
-          is_absent: entry.is_absent,
-          is_holiday: entry.is_holiday ?? false,
-        },
+            start_time: entry.start_time,
+            end_time: entry.end_time,
+            is_absent: entry.is_absent,
+            is_holiday: entry.is_holiday ?? false,
+            notes: entry.notes ?? null,
+          },
           {
             onConflict: "employee_id,work_date",
             ignoreDuplicates: false,
@@ -681,6 +685,77 @@ export function PayrollTimeGrid({
     return groups;
   }, [employees]);
 
+  // Save note for a specific day/employee
+  const saveNote = (employeeId: string, date: Date, note: string) => {
+    if (!periodId) return;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const existing = getTimesheetEntry(employeeId, date);
+    const entry: TimesheetEntry = existing
+      ? { ...existing, notes: note || null }
+      : {
+          employee_id: employeeId,
+          period_id: periodId,
+          work_date: dateStr,
+          start_time: null,
+          end_time: null,
+          is_absent: false,
+          is_holiday: false,
+          notes: note || null,
+        };
+    saveTimesheet.mutate(entry);
+  };
+
+  // Inline NoteButton component
+  const NoteButton = ({ employeeId, date }: { employeeId: string; date: Date }) => {
+    const entry = getTimesheetEntry(employeeId, date);
+    const hasNote = !!(entry?.notes && entry.notes.trim());
+    const [noteText, setNoteText] = useState(entry?.notes || "");
+    const [open, setOpen] = useState(false);
+
+    // Sync local state when popover opens
+    const handleOpenChange = (isOpen: boolean) => {
+      if (isOpen) {
+        setNoteText(entry?.notes || "");
+      }
+      setOpen(isOpen);
+    };
+
+    return (
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            className={cn(
+              "absolute top-0.5 right-0.5 w-2 h-2 rounded-full cursor-pointer z-10 transition-colors",
+              hasNote
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-green-500 hover:bg-green-600 opacity-40 hover:opacity-100"
+            )}
+            title={hasNote ? "Ver nota" : "Agregar nota"}
+          />
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2" side="top" align="end">
+          <Textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={3}
+            className="text-xs min-h-[60px] resize-none"
+            placeholder="Nota del día..."
+          />
+          <Button
+            size="sm"
+            className="w-full mt-1 h-6 text-xs"
+            onClick={() => {
+              saveNote(employeeId, date, noteText);
+              setOpen(false);
+            }}
+          >
+            Guardar
+          </Button>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
   if (!periodId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -837,6 +912,7 @@ export function PayrollTimeGrid({
                             !sunday && !hasData && !isAbsent && !isHoliday && !isVacation && index % 2 === 1 && "bg-muted/30"
                           )}
                         >
+                          <NoteButton employeeId={employee.id} date={day} />
                           {/* Vacation indicator overlay */}
                           {isVacation && !sunday && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

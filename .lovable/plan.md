@@ -1,36 +1,48 @@
 
 
-## Add Day Comment Buttons to Payroll Time Grid
+## Improve Payroll Receipts: Loan Details + Greyscale
 
-### What It Does
-Adds a tiny dot-sized button in the corner of each day cell in the Hoja de Tiempo. Clicking it opens a small popover for entering/viewing a note for that employee on that day.
+### 1. Loan Line Items with Details
 
-### Visual Design
-- A small circular dot (8x8px) positioned in the top-right corner of each day cell
-- **Green dot** = no comment (or empty)
-- **Red dot** = comment exists
-- Clicking the dot opens a Popover with a small textarea (3 rows) and a Save button
-- Minimal footprint -- does not affect existing cell layout
+**Current state:** The receipt shows a single line "Prestamo" with the total deduction amount. The `PayrollData` interface only has `loanDeduction: number` -- no detail about individual loans.
 
-### Technical Details
+**Change:** Replace the single loan line with one line per active loan showing: `"Prestamo de $XX,XXX, parcela X de Y"`
 
-**No database migration needed** -- the `employee_timesheets` table already has a `notes` column (nullable text).
+**Files to change:**
 
-**File: `src/components/hr/PayrollTimeGrid.tsx`**
+**`src/lib/payrollReceipts.ts`**
+- Add a `LoanDetail` interface: `{ loan_amount: number; payment_amount: number; payment_number: number; total_payments: number }`
+- Add `loanDetails: LoanDetail[]` to the `PayrollData` interface (keeping `loanDeduction` for the total)
+- In the deductions section, replace the single "Prestamo" line with a loop over `loanDetails`, rendering each as:
+  `Prestamo de RD$15,000, parcela 3 de 6 .......... RD$2,500.00`
 
-1. Import `Popover`, `PopoverTrigger`, `PopoverContent` from `@/components/ui/popover` and `Textarea` from `@/components/ui/textarea`.
-2. Add the `notes` field to the `TimesheetEntry` interface.
-3. Include `notes` in the upsert mutation so notes are saved alongside time entries.
-4. Create a small `NoteButton` inline component that:
-   - Renders an 8x8 colored dot (green if no note, red if note exists) absolutely positioned in top-right of cell
-   - On click, opens a Popover with a Textarea pre-filled with existing note
-   - Has a small "Guardar" button to save
-   - Saves by upserting the timesheet entry with the updated `notes` field
-5. Place the `NoteButton` inside each day cell `<td>`, visible for all days (including Sundays).
+**`src/components/hr/PayrollSummary.tsx`**
+- When building the payroll data array, also include `total_payments` in the loan query (need to compute it from `loan_amount / payment_amount`)
+- For each employee, map their active loans into `loanDetails` with the current payment number (`total_payments - remaining_payments + 1`) and total payments
+- Pass `loanDetails` alongside the existing `loanDeduction` total
 
-### User Experience
-- Dots are unobtrusive and don't interfere with time entry
-- Hover shows cursor pointer
-- Red dots make it instantly obvious which days have notes
-- Notes persist per employee per day
+### 2. Convert to Greyscale (Ink-Saving)
+
+**Current state:** The receipt uses colored fills:
+- Earnings header: green `(232, 245, 233)`
+- Deductions header: red `(255, 235, 238)`
+- Net pay box: blue `(33, 150, 243)` with white text
+- Colored separator lines (green, red)
+- Employee box: light grey (already fine)
+
+**Change:** Replace all colors with greyscale tones:
+- Earnings header: light grey `(235, 235, 235)`
+- Deductions header: light grey `(235, 235, 235)`
+- Net pay box: dark grey `(80, 80, 80)` with white text
+- Separator lines: medium grey `(150, 150, 150)`
+- Keep employee details box as-is (already light grey)
+
+This preserves visual hierarchy while using minimal ink.
+
+### Summary of Changes
+
+| File | Change |
+|------|--------|
+| `src/lib/payrollReceipts.ts` | Add `LoanDetail` interface, update `PayrollData`, render per-loan lines, convert all colors to greyscale |
+| `src/components/hr/PayrollSummary.tsx` | Compute `loanDetails` array with payment numbers and pass to receipt data |
 

@@ -1,23 +1,46 @@
 
 
-## Fix Login Hang After Successful Authentication
+## Proactive Bug Scan Results
 
-### Root Cause
-In `src/pages/Login.tsx`, the `handleSubmit` function sets the component's local `isLoading` state to `true` at the start of login. On the **success** path, it never sets it back to `false`. The navigation `useEffect` depends on `!isLoading`, so it never fires -- the spinner stays forever.
+I scanned all loading-state patterns across the app. Here is what I found:
 
-### Fix
+### Files Checked
+| File | Pattern | Verdict |
+|------|---------|---------|
+| `AISearchBar.tsx` | try/catch/**finally** | Safe |
+| `Login.tsx` | try/catch with reset in all branches | Safe (just fixed) |
+| `Rainfall.tsx` | try/catch/**finally** | Safe |
+| `EditTransactionDialog.tsx` | try/catch/**finally** | Safe |
+| **`ResetPassword.tsx`** | **No try/catch** | **Bug** |
 
-**File: `src/pages/Login.tsx`** (1 line change)
+### Bug: `ResetPassword.tsx` - Missing try/catch
 
-In `handleSubmit`, after `toast.success(...)`, add `setIsLoading(false)` so the `useEffect` can trigger navigation:
+The `handleSubmit` function calls `await supabase.auth.updateUser()` without a `try/catch`. If that call throws (network error, timeout, etc.), the `setIsLoading(false)` on line 58 will never run, leaving the button permanently disabled/loading.
 
-```typescript
-if (result.success) {
-  toast.success("Inicio de sesión exitoso");
-  setIsLoading(false); // <-- ADD THIS LINE
-  // Navigation happens via useEffect once user state updates
-} else {
+**Fix:** Wrap the async call in try/catch/finally:
+
+```text
+Before (current):
+  setIsLoading(true);
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) { ... } else { ... }
+  setIsLoading(false);
+
+After (safe):
+  setIsLoading(true);
+  try {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) { toast.error(...) } else { toast.success(...); navigate(...) }
+  } catch (err) {
+    toast.error("Error inesperado. Intente de nuevo.");
+  } finally {
+    setIsLoading(false);  // Always runs
+  }
 ```
 
-That's it -- a one-line fix.
+### Bonus: Harden Login.tsx
 
+While Login.tsx is now safe, it uses `setIsLoading(false)` in three separate branches instead of a single `finally`. Refactoring to use `finally` would make it more resilient to future changes.
+
+### Summary
+Only **1 real bug** found (`ResetPassword.tsx`), plus **1 minor improvement** (`Login.tsx` finally block). The rest of the app follows proper patterns.

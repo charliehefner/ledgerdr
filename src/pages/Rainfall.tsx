@@ -436,9 +436,13 @@ export default function Rainfall() {
                           const dateStr = format(date, "yyyy-MM-dd");
                           const record = getRecordForDate(date);
                           const editable = editableRecords.get(dateStr);
+                          const hasRainfall = LOCATIONS.some((loc) => {
+                            const val = editable ? parseFloat(editable[loc]) : (record?.[loc] || 0);
+                            return val > 0;
+                          });
 
                           return (
-                            <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-warning/10")}>
+                            <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-warning/10", !editable?.isDirty && hasRainfall && "bg-blue-50 dark:bg-blue-950/30")}>
                               <td className="p-4 align-middle font-medium">
                                 {format(date, "dd MMM yyyy", { locale: dateLocale })}
                               </td>

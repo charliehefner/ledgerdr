@@ -76,6 +76,7 @@ interface EmployeeLoan {
   loan_amount: number;
   payment_amount: number;
   remaining_payments: number;
+  number_of_payments: number;
   is_active: boolean;
 }
 
@@ -202,7 +203,7 @@ export function PayrollSummary({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employee_loans")
-        .select("id, employee_id, loan_amount, payment_amount, remaining_payments, is_active")
+        .select("id, employee_id, loan_amount, payment_amount, remaining_payments, number_of_payments, is_active")
         .eq("is_active", true)
         .gt("remaining_payments", 0);
       if (error) throw error;
@@ -406,6 +407,14 @@ export function PayrollSummary({
     const employeeLoans = loans.filter((l) => l.employee_id === employeeId);
     const loanDeduction = Math.round(employeeLoans.reduce((sum, l) => sum + l.payment_amount, 0) * 100) / 100;
 
+    // Build loan details for receipts
+    const loanDetails = employeeLoans.map((l) => ({
+      loan_amount: l.loan_amount,
+      payment_amount: l.payment_amount,
+      payment_number: l.number_of_payments - l.remaining_payments + 1,
+      total_payments: l.number_of_payments,
+    }));
+
     const totalDeductions = tss + isr + absenceDeduction + vacationDeduction + loanDeduction;
     const grossPay = basePay + overtimePay + holidayPay + sundayPay + totalBenefits;
     const netPay = grossPay - totalDeductions;
@@ -428,6 +437,7 @@ export function PayrollSummary({
       absenceDeduction,
       vacationDeduction,
       loanDeduction,
+      loanDetails,
       totalDeductions,
       grossPay,
       netPay,

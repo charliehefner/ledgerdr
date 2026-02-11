@@ -9,6 +9,13 @@ interface EmployeeBenefit {
   amount: number;
 }
 
+interface LoanDetail {
+  loan_amount: number;
+  payment_amount: number;
+  payment_number: number;
+  total_payments: number;
+}
+
 interface PayrollData {
   employee: {
     id: string;
@@ -34,6 +41,7 @@ interface PayrollData {
   absenceDeduction: number;
   vacationDeduction: number;
   loanDeduction: number;
+  loanDetails: LoanDetail[];
   totalDeductions: number;
   grossPay: number;
   netPay: number;
@@ -115,7 +123,7 @@ function generateEmployeeReceipt(
     const rightX = leftX + colWidth + 10;
 
     // EARNINGS Column
-    doc.setFillColor(232, 245, 233); // Light green
+    doc.setFillColor(235, 235, 235); // Light grey
     doc.roundedRect(leftX, y, colWidth, 8, 1, 1, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -147,7 +155,7 @@ function generateEmployeeReceipt(
 
     // Gross total
     earningsY += 2;
-    doc.setDrawColor(76, 175, 80);
+    doc.setDrawColor(150, 150, 150);
     doc.line(leftX + 3, earningsY, leftX + colWidth - 3, earningsY);
     earningsY += 5;
     doc.setFont("helvetica", "bold");
@@ -156,7 +164,7 @@ function generateEmployeeReceipt(
 
     // DEDUCTIONS Column
     let dedY = y - 10;
-    doc.setFillColor(255, 235, 238); // Light red
+    doc.setFillColor(235, 235, 235); // Light grey
     doc.roundedRect(rightX, dedY, colWidth, 8, 1, 1, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -168,7 +176,6 @@ function generateEmployeeReceipt(
       { label: "ISR", value: data.isr },
       { label: `Ausencias`, value: data.absenceDeduction },
       { label: `Vacaciones (${data.vacationDays} días)`, value: data.vacationDeduction },
-      { label: `Préstamo`, value: data.loanDeduction },
     ];
 
     doc.setFont("helvetica", "normal");
@@ -181,9 +188,24 @@ function generateEmployeeReceipt(
       }
     });
 
+    // Render individual loan lines with details
+    if (data.loanDetails && data.loanDetails.length > 0) {
+      data.loanDetails.forEach((loan) => {
+        const loanLabel = `Préstamo de ${formatCurrency(loan.loan_amount)}, parcela ${loan.payment_number} de ${loan.total_payments}`;
+        doc.text(loanLabel, rightX + 3, dedY);
+        doc.text(formatCurrency(loan.payment_amount), rightX + colWidth - 3, dedY, { align: "right" });
+        dedY += 5;
+      });
+    } else if (data.loanDeduction > 0) {
+      // Fallback: single line if no details provided
+      doc.text("Préstamo", rightX + 3, dedY);
+      doc.text(formatCurrency(data.loanDeduction), rightX + colWidth - 3, dedY, { align: "right" });
+      dedY += 5;
+    }
+
     // Deductions total
     dedY += 2;
-    doc.setDrawColor(244, 67, 54);
+    doc.setDrawColor(150, 150, 150);
     doc.line(rightX + 3, dedY, rightX + colWidth - 3, dedY);
     dedY += 5;
     doc.setFont("helvetica", "bold");
@@ -194,7 +216,7 @@ function generateEmployeeReceipt(
     const maxY = Math.max(earningsY, dedY);
     const netPayY = maxY + 10;
 
-    doc.setFillColor(33, 150, 243); // Blue
+    doc.setFillColor(80, 80, 80); // Dark grey
     doc.roundedRect(15, netPayY, pageWidth - 30, 12, 2, 2, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);

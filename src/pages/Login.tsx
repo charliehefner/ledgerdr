@@ -47,7 +47,7 @@ export default function Login() {
       
       if (result.success) {
         toast.success("Inicio de sesión exitoso");
-        // The navigation will happen via useEffect once user state updates
+        setIsLoading(false);
       } else {
         toast.error(result.error || "Usuario o contraseña inválidos");
         setIsLoading(false);

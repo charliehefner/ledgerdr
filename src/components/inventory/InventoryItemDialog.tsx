@@ -75,7 +75,7 @@ export function InventoryItemDialog({
         .from("inventory_items")
         .select("*")
         .eq("id", editingItemId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

@@ -34,7 +34,7 @@ export function PurchaseHistoryDialog({
         .from("inventory_items")
         .select("commercial_name")
         .eq("id", itemId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

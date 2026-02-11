@@ -63,6 +63,7 @@ export function UserManagement() {
   const [resetPassword, setResetPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Fetch users with their roles via edge function (uses service role to get all users)
   const { data: users = [], isLoading } = useQuery({
@@ -128,6 +129,7 @@ export function UserManagement() {
       return;
     }
 
+    setDeletingUserId(userId);
     try {
       const { data, error } = await supabase.functions.invoke("delete-user", {
         body: { userId },
@@ -144,6 +146,8 @@ export function UserManagement() {
       queryClient.invalidateQueries({ queryKey: ["scheduled-deletions"] });
     } catch (error: any) {
       toast.error(error.message || "Error al programar eliminación");
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -387,8 +391,13 @@ export function UserManagement() {
                       size="icon"
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => handleDeleteUser(user.id, user.email)}
+                      disabled={deletingUserId === user.id}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {deletingUserId === user.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </TableCell>

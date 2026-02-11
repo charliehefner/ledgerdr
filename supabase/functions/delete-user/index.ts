@@ -99,7 +99,7 @@ serve(async (req) => {
       .eq("user_id", userId)
       .eq("is_cancelled", false)
       .is("executed_at", null)
-      .single();
+      .maybeSingle();
 
     if (existingDeletion) {
       throw new Error("User already has a pending deletion scheduled");

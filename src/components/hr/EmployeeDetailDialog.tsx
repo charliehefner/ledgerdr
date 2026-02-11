@@ -84,7 +84,7 @@ export function EmployeeDetailDialog({
         .from("employees_safe")
         .select("*")
         .eq("id", employeeId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

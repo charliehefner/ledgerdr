@@ -29,7 +29,7 @@ const OVERTIME_EXEMPT_POSITIONS = ["Gerencia"];
 
 // Position display order for grouping (field workers first, management last)
 const POSITION_ORDER = [
-  "Obrero",
+  "Servicios Generales",
   "Volteador",
   "Sereno",
   "Tractorista",

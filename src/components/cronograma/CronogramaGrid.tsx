@@ -161,7 +161,7 @@ export function CronogramaGrid() {
   // Position priority for Cronograma ordering
   const positionPriority: Record<string, number> = {
     'Tractorista': 1,
-    'Obrero': 2,
+    'Servicios Generales': 2,
     'Volteador': 3,
     'Sereno': 4,
     'Supervisor': 5,

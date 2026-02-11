@@ -629,6 +629,7 @@ export type Database = {
       }
       fields: {
         Row: {
+          boundary: unknown
           created_at: string
           farm_id: string
           hectares: number | null
@@ -638,6 +639,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          boundary?: unknown
           created_at?: string
           farm_id: string
           hectares?: number | null
@@ -647,6 +649,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          boundary?: unknown
           created_at?: string
           farm_id?: string
           hectares?: number | null
@@ -1812,6 +1815,10 @@ export type Database = {
         Returns: boolean
       }
       is_accountant_only: { Args: never; Returns: boolean }
+      upsert_field_boundary: {
+        Args: { p_field_id: string; p_geojson: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

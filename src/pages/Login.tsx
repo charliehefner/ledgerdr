@@ -47,14 +47,13 @@ export default function Login() {
       
       if (result.success) {
         toast.success("Inicio de sesión exitoso");
-        setIsLoading(false);
       } else {
         toast.error(result.error || "Usuario o contraseña inválidos");
-        setIsLoading(false);
       }
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Error inesperado. Intente de nuevo.");
+    } finally {
       setIsLoading(false);
     }
   };

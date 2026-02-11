@@ -8,7 +8,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const MAPBOX_TOKEN =
-  "pk.eyJ1IjoibWFyY29zZ29kb3kiLCJhIjoiY21icTlkcGFjMTFyMzJxcTRjMDlucTY3ZCJ9.WQ4cSPqO3K9v3FswOWvJOQ";
+  "pk.eyJ1IjoiY2hhcmxlc2hlZm5lcmpvcmQiLCJhIjoiY21saWx4YjJyMDRtZDNmb3B5dzZwenBxZiJ9.k8mtyT5Xip_xmjOv0sN8WQ";
 
 const FARM_COLORS = [
   "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",

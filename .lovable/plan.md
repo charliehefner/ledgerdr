@@ -1,56 +1,72 @@
 
 
-## Proactive Weak Spot Scan - Full Results
-
-I scanned the entire codebase for patterns that could cause crashes, hangs, or silent failures. Here are the findings:
-
----
-
-### 1. `.single()` used where `.maybeSingle()` is safer (Crash Risk)
-
-Using `.single()` on SELECT queries throws an error if zero rows are returned. For INSERT/UPDATE `.select().single()` this is fine (you just created/updated the row). But for pure lookups, if the row doesn't exist, the app crashes.
-
-| File | Line | Risk | Recommendation |
-|------|------|------|----------------|
-| `delete-user/index.ts` | ~102 | `scheduled_user_deletions` lookup with `.single()` | Switch to `.maybeSingle()` -- no pending deletion is a valid state |
-| `EmployeeFormDialog.tsx` | ~107 | Employee lookup by ID with `.single()` | Switch to `.maybeSingle()` -- defensive if employee was just deleted |
-| `EmployeeDetailDialog.tsx` | ~87 | Employee lookup by ID with `.single()` | Switch to `.maybeSingle()` |
-| `PurchaseHistoryDialog.tsx` | ~37 | Inventory item lookup by ID with `.single()` | Switch to `.maybeSingle()` |
-| `InventoryItemDialog.tsx` | ~78 | Inventory item lookup by ID with `.single()` | Switch to `.maybeSingle()` |
-
-**Note:** `.single()` in `api.ts` and `OperationsLogView.tsx` after INSERT/UPDATE is correct and does not need changing.
-
----
-
-### 2. `handleDeleteUser` has no loading state (Minor UX)
-
-In `UserManagement.tsx`, `handleDeleteUser` (line 125) does not set any loading/disabled state. If the network is slow, users can click "Delete" multiple times, potentially scheduling duplicate deletions. The edge function guards against this, but the UX should prevent double-clicks.
-
-**Fix:** Add a `deletingUserId` state and disable the delete button while the request is in flight.
-
----
-
-### 3. `handleUpdateRole` -- implementation hidden, needs verification
-
-The function at line 150 shows `// ... keep existing code`. It should be verified to have proper try/catch and error handling.
-
----
+## Implement KML/KMZ Field Boundary Import with Mapbox Satellite Map
 
 ### Summary
 
-| Category | Count | Severity |
-|----------|-------|----------|
-| `.single()` should be `.maybeSingle()` | 5 | Medium -- can crash queries |
-| Missing loading guard on delete | 1 | Low -- UX double-click |
-| Total fixes | 6 | |
+Add the ability to upload KML/KMZ files containing field boundaries, store them as PostGIS geometries linked to existing fields, and visualize them on an interactive Mapbox satellite map. Since you will ensure names match between the file and database beforehand, the matching will be straightforward exact-match by name.
 
-All other major patterns (isMounted guards, try/catch/finally, attachment signed URLs) are already implemented correctly across the codebase.
+### Steps
 
----
+**1. Database Migrations (2)**
 
-### Technical Implementation
+- Enable the PostGIS extension: `CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;`
+- Add a `boundary` column to the `fields` table: `geometry(MultiPolygon, 4326)` with a spatial index (`GIST`)
 
-1. **5 files**: Replace `.single()` with `.maybeSingle()` on SELECT-only queries and add null-checks where needed
-2. **UserManagement.tsx**: Add `deletingUserId` state to prevent double-click on user deletion
-3. **Verify** `handleUpdateRole` has proper error handling (will read the actual content during implementation)
+**2. New Edge Function: `import-field-boundaries`**
+
+- Receives an array of `{ field_id, geojson }` pairs
+- Requires authentication
+- Upserts each field's `boundary` column using `ST_GeomFromGeoJSON()` via a raw RPC or direct SQL function
+- A small database function `upsert_field_boundary(field_id uuid, geojson text)` will handle the PostGIS conversion server-side
+
+**3. New File: `src/components/operations/kmlParser.ts`**
+
+- Utility that accepts a File (`.kml` or `.kmz`)
+- Uses `JSZip` (already installed) to unzip KMZ files
+- Parses KML XML with browser `DOMParser`
+- Extracts each `Placemark` name and its polygon coordinates
+- Returns an array of `{ name, geojson }` objects
+
+**4. New File: `src/components/operations/KMLImportDialog.tsx`**
+
+- Dialog with file upload (accepts `.kml`, `.kmz`)
+- After parsing, shows a preview table: Placemark Name | Matched Field | Farm | Status
+- Matching logic: exact case-insensitive name match against existing fields
+- Unmatched placemarks shown with a warning (user can skip them)
+- "Import" button sends matched boundaries to the edge function
+- Success toast with count of imported boundaries
+
+**5. Modified: `src/components/operations/FarmsFieldsView.tsx`**
+
+- Add an "Import Boundaries" button next to the existing Add Farm / Add Field buttons
+- Show a small map pin icon next to fields that already have a boundary stored
+
+**6. New File: `src/components/operations/FieldsMapView.tsx`**
+
+- Mapbox GL JS map component using `mapbox://styles/mapbox/satellite-streets-v12` base layer
+- Fetches all fields with boundaries from the database
+- Renders each field boundary as a filled polygon, color-coded by farm
+- Click a polygon to see a popup with field name, farm, and hectares
+- Auto-fits map bounds to show all imported boundaries
+- Style toggle button to switch between satellite and streets view
+
+**7. Modified: `src/pages/Operations.tsx`**
+
+- Add a "Map" tab in the right-aligned tab group, rendering `FieldsMapView`
+
+**8. New Dependency**
+
+- `mapbox-gl` (and its CSS import for map controls)
+
+**9. Edge Function Config**
+
+- Add `[functions.import-field-boundaries]` with `verify_jwt = false` to `supabase/config.toml` (auth validated in code)
+
+### Technical Notes
+
+- The Mapbox public token `pk.eyJ1Ijo...` will be stored as a constant in `FieldsMapView.tsx`
+- `boundary` uses `MultiPolygon` type to handle both simple and multi-part polygons from KML
+- The database function `upsert_field_boundary` avoids raw SQL in the edge function -- it's a parameterized PL/pgSQL function that only accepts a UUID and a GeoJSON text string
+- RLS on the `fields` table already governs access; the edge function authenticates the user before processing
 

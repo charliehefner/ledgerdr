@@ -46,16 +46,21 @@ export default function ResetPassword() {
     
     setIsLoading(true);
     
-    const { error } = await supabase.auth.updateUser({ password });
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Password updated successfully!");
-      navigate("/login");
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Password updated successfully!");
+        navigate("/login");
+      }
+    } catch (err) {
+      console.error("Password reset error:", err);
+      toast.error("Error inesperado. Intente de nuevo.");
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   if (!isValidSession) {

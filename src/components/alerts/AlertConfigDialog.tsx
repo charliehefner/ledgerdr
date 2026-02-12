@@ -13,7 +13,6 @@ const ALERT_LABELS: Record<string, { name: string; unit: string | null }> = {
   fuel_tank_low: { name: "Tanque de combustible bajo", unit: "%" },
   maintenance_due: { name: "Mantenimiento preventivo", unit: "horas" },
   inventory_low: { name: "Inventario bajo", unit: null },
-  followup_inputs_missing: { name: "Insumos faltantes (Seguimientos)", unit: null },
   overdue_followups: { name: "Seguimientos vencidos", unit: null },
 };
 

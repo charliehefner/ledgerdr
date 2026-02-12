@@ -249,18 +249,65 @@ export function useInventoryAlerts(configs: AlertConfig[] | undefined) {
   return { alerts, isLoading };
 }
 
-// ─── OPERATIONS ALERTS ────────────────────────────────────
+// ─── OPERATIONS ALERTS (Seguimientos vencidos) ────────────
 export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
-  // For now, this is a placeholder — overdue followups would require
-  // checking cronograma_entries against operation_followups
-  const isLoading = false;
+  const entriesQuery = useQuery({
+    queryKey: ["alert-overdue-followups"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cronograma_entries")
+        .select("id, worker_name, task, week_ending_date, day_of_week, time_slot, source_operation_id")
+        .not("source_operation_id", "is", null);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!configs,
+  });
+
+  const weeksQuery = useQuery({
+    queryKey: ["alert-cronograma-weeks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cronograma_weeks")
+        .select("week_ending_date, is_closed");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!configs,
+  });
+
+  const isLoading = entriesQuery.isLoading || weeksQuery.isLoading;
   const alerts: AlertItem[] = [];
 
-  if (!configs) return { alerts, isLoading };
+  if (!configs || !entriesQuery.data || !weeksQuery.data) return { alerts, isLoading };
 
   const followupConfig = getConfig(configs, "overdue_followups");
   if (!followupConfig?.is_active) return { alerts, isLoading };
 
-  // Overdue followups logic can be expanded when needed
+  const closedWeeks = new Set(
+    weeksQuery.data.filter((w) => w.is_closed).map((w) => w.week_ending_date)
+  );
+
+  const today = new Date();
+
+  for (const entry of entriesQuery.data) {
+    // Week is closed → assume work was completed
+    if (closedWeeks.has(entry.week_ending_date)) continue;
+
+    // Compute the actual scheduled date from week_ending_date (Saturday) and day_of_week (0=Mon..5=Sat)
+    const weekEnd = new Date(entry.week_ending_date);
+    const scheduledDate = addDays(weekEnd, entry.day_of_week - 5); // Sat=0 offset, Mon=-5
+
+    if (isBefore(scheduledDate, today)) {
+      const daysOverdue = differenceInDays(today, scheduledDate);
+      alerts.push({
+        severity: daysOverdue > 7 ? "urgent" : "warning",
+        title: `Seguimiento vencido — ${entry.task || "Sin descripción"}`,
+        detail: `${entry.worker_name} · ${format(scheduledDate, "dd/MM/yyyy")} (${entry.time_slot}) · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""} de atraso`,
+      });
+    }
+  }
+
+  alerts.sort((a, b) => (a.severity === "urgent" ? -1 : 1));
   return { alerts, isLoading };
 }

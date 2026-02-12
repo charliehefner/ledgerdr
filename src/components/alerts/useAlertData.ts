@@ -298,12 +298,22 @@ export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
     const weekEnd = new Date(entry.week_ending_date);
     const scheduledDate = addDays(weekEnd, entry.day_of_week - 5); // Sat=0 offset, Mon=-5
 
-    if (isBefore(scheduledDate, today)) {
-      const daysOverdue = differenceInDays(today, scheduledDate);
+    const daysUntil = differenceInDays(scheduledDate, today);
+
+    if (daysUntil < 0) {
+      // Past due → red/urgent
+      const daysOverdue = Math.abs(daysUntil);
       alerts.push({
-        severity: daysOverdue > 7 ? "urgent" : "warning",
+        severity: "urgent",
         title: `Seguimiento vencido — ${entry.task || "Sin descripción"}`,
         detail: `${entry.worker_name} · ${format(scheduledDate, "dd/MM/yyyy")} (${entry.time_slot}) · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""} de atraso`,
+      });
+    } else if (daysUntil <= 5) {
+      // Within 5 days → yellow/warning
+      alerts.push({
+        severity: "warning",
+        title: `Seguimiento próximo — ${entry.task || "Sin descripción"}`,
+        detail: `${entry.worker_name} · ${format(scheduledDate, "dd/MM/yyyy")} (${entry.time_slot}) · en ${daysUntil} día${daysUntil !== 1 ? "s" : ""}`,
       });
     }
   }

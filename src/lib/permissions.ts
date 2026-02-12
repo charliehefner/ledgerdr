@@ -109,7 +109,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   herbicide: ["admin", "management", "supervisor", "viewer"],
   rainfall: ["admin", "management", "supervisor", "viewer"],
   cronograma: ["admin", "management", "supervisor", "viewer"],
-  alerts: ["admin", "management"],
+  alerts: ["admin", "management", "supervisor"],
   settings: ["admin"],
   "driver-portal": ["driver"],
 };
@@ -130,7 +130,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   herbicide: ["admin", "management", "supervisor"],
   rainfall: ["admin", "management", "supervisor"],
   cronograma: ["admin", "management", "supervisor"],
-  alerts: ["admin", "management"],
+  alerts: ["admin", "management", "supervisor"],
   settings: ["admin"],
   "driver-portal": ["driver"],
 };

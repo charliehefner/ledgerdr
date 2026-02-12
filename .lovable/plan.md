@@ -1,53 +1,74 @@
 
 
-## Field Aging Gradient on Map
+## Auto-Insert Follow-Up Operations into the Schedule
 
 ### What it does
-Adds an "aging mode" to the Map tab that colors each field boundary based on how many days have passed since the last operation of a selected type. This replaces the default farm-based color scheme when activated.
+When an operation is logged (e.g., "Retapado" on field CY03), the system automatically creates a follow-up entry in the Cronograma (e.g., "Herbicida - CY03") on the correct future date, placed on a designated tractor driver's row. If that slot is already occupied, it shifts to the next available morning/afternoon slot on the same or following days.
 
-### Controls (above the map, alongside the existing Satellite/Streets toggle)
-- **Operation Type dropdown** -- select which operation type to measure aging from (e.g., "Siembra", "Corte de semilla"). When set to "None" (default), the map uses the existing farm-based coloring.
-- **Two threshold inputs** (Green/Yellow boundary and Yellow/Red boundary) -- e.g., Green up to 30 days, Yellow up to 90 days, Red beyond 90 days. Users can adjust these freely.
-- **A simple legend** showing the three color bands and the "light grey = no record" indicator.
+### Configuration
 
-### Color scheme
-- **Green** (#22c55e): 0 days up to Threshold 1
-- **Yellow/Amber** (#eab308): Threshold 1 up to Threshold 2
-- **Red** (#ef4444): Beyond Threshold 2
-- **Light grey** (#d1d5db): Field has no operations of the selected type at all
+A new database table `operation_followups` stores the rules:
 
-### Popup enhancement
-When aging mode is active, clicking a field shows the existing info (name, farm, area) plus "Last [Operation Type]: X days ago (YYYY-MM-DD)" or "No record".
+| trigger_operation_type_id | followup_text | days_offset | default_driver_id |
+|---|---|---|---|
+| Retapado | Herbicida - {field} | 3 | (selected driver) |
+| Cosecha | Fertilización - {field} | 45 | (selected driver) |
+
+A simple management UI in **Settings** allows adding/editing/removing follow-up rules with:
+- Trigger operation type (dropdown)
+- Follow-up task text (with `{field}` placeholder)
+- Days offset (number input)
+- Default driver (dropdown of Tractorista employees)
+
+### Slot placement logic
+
+1. Calculate target date = operation_date + days_offset
+2. Determine the week (Saturday) the target date falls in
+3. Determine the day_of_week (1=Mon ... 6=Sat)
+4. Try to place in the **morning** slot for the designated driver on that day
+5. If occupied, try **afternoon**
+6. If both occupied, move to the next day's morning, then afternoon, etc.
+7. Stop searching after 3 days of overflow (flag the user with a toast warning if no slot found)
+
+### Trigger point
+
+When saving a new operation in `OperationsLogView`, after the successful insert:
+- Check if the operation_type_id matches any rule in `operation_followups`
+- If yes, run the slot-finding algorithm and insert a `cronograma_entries` row
+- Show a toast: "Follow-up scheduled: Herbicida - CY03 on Wed 19/2 (AM) for Edy Rodriguez"
+
+### Stability considerations
+
+- **No data loss risk**: follow-ups only INSERT new cronograma entries; they never overwrite existing ones
+- **Idempotent**: if the same operation is edited (not re-created), no duplicate follow-ups are generated. A `source_operation_id` column on `cronograma_entries` tracks which operation triggered it, preventing duplicates.
+- **Closed weeks**: if the target week is already closed, the follow-up is skipped with a warning toast
+- **Defensive**: all slot-finding is bounded (max 3 days overflow), so it cannot loop infinitely
 
 ### Technical Details
 
-**File: `src/components/operations/FieldsMapView.tsx`**
+**New table: `operation_followups`**
+```sql
+CREATE TABLE operation_followups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trigger_operation_type_id UUID NOT NULL REFERENCES operation_types(id),
+  followup_text TEXT NOT NULL,
+  days_offset INTEGER NOT NULL DEFAULT 3,
+  default_driver_id UUID REFERENCES employees(id),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
 
-1. **New state variables:**
-   - `agingOperationTypeId` (string | null) -- selected operation type for aging
-   - `thresholdGreen` (number, default 30) -- days boundary for green-to-yellow
-   - `thresholdRed` (number, default 90) -- days boundary for yellow-to-red
+**Alter `cronograma_entries`** -- add tracking column:
+```sql
+ALTER TABLE cronograma_entries 
+  ADD COLUMN source_operation_id UUID REFERENCES operations(id);
+```
 
-2. **New data queries:**
-   - Fetch `operation_types` (id, name) for the dropdown -- reuse existing pattern from OperationsLogView
-   - When an operation type is selected, fetch operations filtered by that type: query `operations` table selecting `field_id, operation_date` where `operation_type_id = selected`, ordered by `operation_date DESC`. Group client-side to find the most recent date per field_id.
+**New files:**
+- `src/components/settings/FollowUpRulesManager.tsx` -- CRUD UI for rules (added as a section in Settings page)
+- `src/lib/scheduleFollowUp.ts` -- pure logic: given a target date and driver name, query existing cronograma entries for that week, find first available slot, insert
 
-3. **Aging calculation (client-side):**
-   - Build a `Map<field_id, number>` of days since last operation (using `differenceInDays` from date-fns)
-   - Fields not present in the map get `null` (no record = light grey)
-
-4. **GeoJSON color assignment:**
-   - When aging mode is OFF: use existing `farmColorMap` logic (no change)
-   - When aging mode is ON: assign each feature's `color` property based on its aging value and the two thresholds. Store `days_since` and `last_date` in feature properties for popup use.
-
-5. **UI controls layout:**
-   - Wrap existing toggle button in a flex row
-   - Add a Select dropdown for operation type (left side)
-   - When an operation type is selected, show two small number inputs for thresholds (labeled "Verde hasta" and "Rojo desde") and the legend
-   - All controls use existing shadcn/ui components (Select, Input) with `size="sm"`
-
-6. **Map layer update:**
-   - The existing `useEffect` already re-renders when dependencies change. Adding `agingOperationTypeId`, thresholds, and the aging data to the dependency array will trigger a map rebuild with updated colors.
-
-**No database changes required** -- all data already exists in the `operations` table.
-
+**Modified files:**
+- `src/components/operations/OperationsLogView.tsx` -- after successful operation insert, call `scheduleFollowUp()` if a matching rule exists
+- `src/pages/Settings.tsx` -- add the Follow-Up Rules section

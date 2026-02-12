@@ -70,6 +70,7 @@ export type Database = {
           id: string
           is_holiday: boolean | null
           is_vacation: boolean | null
+          source_operation_id: string | null
           task: string | null
           time_slot: string
           updated_at: string
@@ -86,6 +87,7 @@ export type Database = {
           id?: string
           is_holiday?: boolean | null
           is_vacation?: boolean | null
+          source_operation_id?: string | null
           task?: string | null
           time_slot: string
           updated_at?: string
@@ -102,6 +104,7 @@ export type Database = {
           id?: string
           is_holiday?: boolean | null
           is_vacation?: boolean | null
+          source_operation_id?: string | null
           task?: string | null
           time_slot?: string
           updated_at?: string
@@ -111,7 +114,15 @@ export type Database = {
           worker_name?: string
           worker_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cronograma_entries_source_operation_id_fkey"
+            columns: ["source_operation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cronograma_weeks: {
         Row: {
@@ -1008,6 +1019,58 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      operation_followups: {
+        Row: {
+          created_at: string | null
+          days_offset: number
+          default_driver_id: string | null
+          followup_text: string
+          id: string
+          is_active: boolean
+          trigger_operation_type_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          days_offset?: number
+          default_driver_id?: string | null
+          followup_text: string
+          id?: string
+          is_active?: boolean
+          trigger_operation_type_id: string
+        }
+        Update: {
+          created_at?: string | null
+          days_offset?: number
+          default_driver_id?: string | null
+          followup_text?: string
+          id?: string
+          is_active?: boolean
+          trigger_operation_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_followups_default_driver_id_fkey"
+            columns: ["default_driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operation_followups_default_driver_id_fkey"
+            columns: ["default_driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operation_followups_trigger_operation_type_id_fkey"
+            columns: ["trigger_operation_type_id"]
+            isOneToOne: false
+            referencedRelation: "operation_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operation_inputs: {
         Row: {

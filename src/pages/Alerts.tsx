@@ -72,12 +72,6 @@ export default function Alerts() {
               ))}
             </AlertSector>
 
-            <AlertSector title="Operaciones" alertCount={operations.alerts.length}>
-              {operations.alerts.map((a, i) => (
-                <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
-              ))}
-            </AlertSector>
-
             <AlertSector title="Equipos" alertCount={equipment.alerts.length}>
               {equipment.alerts.map((a, i) => (
                 <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
@@ -92,6 +86,12 @@ export default function Alerts() {
 
             <AlertSector title="Inventario" alertCount={inventory.alerts.length}>
               {inventory.alerts.map((a, i) => (
+                <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
+              ))}
+            </AlertSector>
+
+            <AlertSector title="Operaciones" alertCount={operations.alerts.length}>
+              {operations.alerts.map((a, i) => (
                 <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
               ))}
             </AlertSector>

@@ -32,37 +32,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Fetch user role using security definer function (bypasses RLS)
   // Returns null if fetch fails - caller must handle logout
-  const fetchUserRole = async (userId: string): Promise<UserRole | null> => {
-    try {
-      console.log('[Auth] Starting role fetch for:', userId);
-      
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
-        setTimeout(() => reject(new Error('Role fetch timeout after 10s')), 10000)
-      );
-      
-      // Use the security definer function which bypasses RLS
-      const rpcPromise = supabase.rpc('get_user_role', { _user_id: userId });
-      
-      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
-      
-      console.log('[Auth] Role RPC result:', { data, error });
-      
-      if (error) {
-        console.error('[Auth] Error fetching user role:', error);
+  const fetchUserRole = async (userId: string, retries = 3): Promise<UserRole | null> => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`[Auth] Role fetch attempt ${attempt}/${retries} for:`, userId);
+        
+        // Generous timeout for poor connections (25s)
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+          setTimeout(() => reject(new Error('Role fetch timeout after 25s')), 25000)
+        );
+        
+        const rpcPromise = supabase.rpc('get_user_role', { _user_id: userId });
+        
+        const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
+        
+        console.log('[Auth] Role RPC result:', { data, error });
+        
+        if (error) {
+          console.error('[Auth] Error fetching user role:', error);
+          if (attempt < retries) {
+            // Exponential backoff: 2s, 4s
+            await new Promise(r => setTimeout(r, 2000 * attempt));
+            continue;
+          }
+          return null;
+        }
+        
+        if (!data) {
+          console.error('[Auth] No role found for user:', userId);
+          return null;
+        }
+        
+        return data as UserRole;
+      } catch (err) {
+        console.error(`[Auth] Role fetch attempt ${attempt} failed:`, err);
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+          continue;
+        }
         return null;
       }
-      
-      if (!data) {
-        console.error('[Auth] No role found for user:', userId);
-        return null;
-      }
-      
-      return data as UserRole;
-    } catch (err) {
-      console.error('[Auth] Role fetch failed:', err);
-      return null;
     }
+    return null;
   };
 
   // Set up auth state listener BEFORE checking session

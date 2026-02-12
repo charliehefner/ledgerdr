@@ -25,7 +25,23 @@ import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 15000),
+      staleTime: 5 * 60 * 1000, // 5 min - reduce refetches on slow connections
+      gcTime: 30 * 60 * 1000, // 30 min - keep cache longer
+      refetchOnWindowFocus: false, // avoid refetch storms on tab switch
+      networkMode: 'offlineFirst', // use cache when offline
+    },
+    mutations: {
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 10000),
+      networkMode: 'offlineFirst',
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

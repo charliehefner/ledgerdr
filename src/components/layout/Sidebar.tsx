@@ -11,6 +11,7 @@ import {
   Activity,
   Tractor,
   CloudRain,
+  Bell,
   PanelLeftClose,
   PanelLeft,
   Menu,
@@ -52,12 +53,14 @@ const sectionColors: Record<Section, string> = {
   herbicide: "bg-section-operations",
   rainfall: "bg-section-rainfall",
   cronograma: "",
+  alerts: "",
   settings: "",
   "driver-portal": "", // Not shown in sidebar - drivers have minimal UI
 };
 
 const navigation: NavItem[] = [
   { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
+  { nameKey: "nav.alerts", href: "/alerts", icon: Bell, section: "alerts" },
   { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
   { nameKey: "nav.reports", href: "/reports", icon: BarChart3, section: "reports" },
   { nameKey: "nav.hr", href: "/hr", icon: Users, section: "hr" },

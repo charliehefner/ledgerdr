@@ -26,6 +26,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.operations": "Operaciones",
     "nav.rainfall": "Pluviometría",
     "nav.settings": "Configuración",
+    "nav.alerts": "Alertas",
     
     // Sidebar sections
     "sidebar.menu": "Menú",
@@ -523,6 +524,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.operations": "Operations",
     "nav.rainfall": "Rainfall",
     "nav.settings": "Settings",
+    "nav.alerts": "Alerts",
     
     // Sidebar sections
     "sidebar.menu": "Menu",

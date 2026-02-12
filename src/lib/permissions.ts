@@ -27,6 +27,7 @@ export type Section =
   | "herbicide"
   | "rainfall"
   | "cronograma"
+  | "alerts"
   | "settings"
   | "driver-portal";
 
@@ -89,6 +90,7 @@ export const routeToSection: Record<string, Section> = {
   "/herbicide": "herbicide",
   "/rainfall": "rainfall",
   "/cronograma": "cronograma",
+  "/alerts": "alerts",
   "/settings": "settings",
   "/driver-portal": "driver-portal",
 };
@@ -107,6 +109,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   herbicide: ["admin", "management", "supervisor", "viewer"],
   rainfall: ["admin", "management", "supervisor", "viewer"],
   cronograma: ["admin", "management", "supervisor", "viewer"],
+  alerts: ["admin", "management"],
   settings: ["admin"],
   "driver-portal": ["driver"],
 };
@@ -127,6 +130,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   herbicide: ["admin", "management", "supervisor"],
   rainfall: ["admin", "management", "supervisor"],
   cronograma: ["admin", "management", "supervisor"],
+  alerts: ["admin", "management"],
   settings: ["admin"],
   "driver-portal": ["driver"],
 };

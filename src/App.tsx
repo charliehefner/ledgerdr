@@ -19,6 +19,7 @@ import Operations from "./pages/Operations";
 import Herbicide from "./pages/Herbicide";
 import Rainfall from "./pages/Rainfall";
 import Cronograma from "./pages/Cronograma";
+import Alerts from "./pages/Alerts";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/herbicide" element={<ProtectedRoute><Herbicide /></ProtectedRoute>} />
                 <Route path="/rainfall" element={<ProtectedRoute><Rainfall /></ProtectedRoute>} />
                 <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
+                <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />

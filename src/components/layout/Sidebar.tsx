@@ -59,8 +59,8 @@ const sectionColors: Record<Section, string> = {
 };
 
 const navigation: NavItem[] = [
-  { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
   { nameKey: "nav.alerts", href: "/alerts", icon: Bell, section: "alerts" },
+  { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
   { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
   { nameKey: "nav.reports", href: "/reports", icon: BarChart3, section: "reports" },
   { nameKey: "nav.hr", href: "/hr", icon: Users, section: "hr" },

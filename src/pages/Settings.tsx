@@ -34,6 +34,7 @@ import { ScheduledDeletions } from "@/components/settings/ScheduledDeletions";
 import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { QRCodeManager } from "@/components/settings/QRCodeManager";
+import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -99,6 +100,12 @@ export default function Settings() {
               <TabsTrigger value="qr-codes">
                 <QrCode className="h-4 w-4 mr-2" />
                 Códigos QR
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="followups">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Seguimientos
               </TabsTrigger>
             )}
           </TabsList>
@@ -253,6 +260,14 @@ export default function Settings() {
           {canModifySettings && (
             <TabsContent value="qr-codes" className="mt-6">
               <QRCodeManager />
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="followups" className="mt-6">
+              <div className="max-w-4xl">
+                <FollowUpRulesManager />
+              </div>
             </TabsContent>
           )}
         </Tabs>

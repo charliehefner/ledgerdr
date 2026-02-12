@@ -76,6 +76,7 @@ import {
   checkMaintenanceOverdue, checkHourMeterGap, isMissingClosingData 
 } from "./utils";
 import { useOperationsExport } from "./useOperationsExport";
+import { scheduleFollowUp } from "@/lib/scheduleFollowUp";
 
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -412,7 +413,7 @@ export function OperationsLogView() {
   };
 
   const mutation = useMutation({
-    mutationFn: async (data: typeof form) => {
+    mutationFn: async (data: typeof form): Promise<{ followUpMessage?: string }> => {
       const record = {
         operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
@@ -434,6 +435,24 @@ export function OperationsLogView() {
         .single();
       
       if (opError) throw opError;
+
+      // Schedule follow-up if matching rule exists
+      let followUpMessage: string | undefined;
+      try {
+        const field = fields?.find(f => f.id === data.field_id);
+        const fieldName = field?.name || "";
+        const result = await scheduleFollowUp(
+          operation.id,
+          formatDateLocal(data.operation_date),
+          fieldName,
+          data.operation_type_id
+        );
+        if (result) {
+          followUpMessage = result.message;
+        }
+      } catch (e) {
+        console.warn("Follow-up scheduling failed:", e);
+      }
 
       // Insert inputs and deduct from inventory
       if (inputs.length > 0) {
@@ -463,14 +482,25 @@ export function OperationsLogView() {
           }
         }
       }
+
+      return { followUpMessage };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
+      queryClient.invalidateQueries({ queryKey: ["cronograma-entries"] });
       toast({
         title: "Operación registrada",
         description: "La operación de campo ha sido registrada y el inventario actualizado.",
       });
+      if (result?.followUpMessage) {
+        setTimeout(() => {
+          toast({
+            title: "📅 Seguimiento programado",
+            description: result.followUpMessage,
+          });
+        }, 500);
+      }
       handleCloseDialog();
     },
     onError: (error) => {

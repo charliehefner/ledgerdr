@@ -1,112 +1,134 @@
 
+# Servicios Module for Human Resources
 
-## Internal Message Board -- Smart Alerts Dashboard
+## Overview
+Add a new "Servicios" category to the HR module for managing service providers (welders, mechanics, etc.) who are paid directly for their services. This includes a provider registry ("Prestadores"), individual service tracking with partial-fill warnings, and receipt generation on close with ledger integration.
 
-### What it does
-A single-page alerts dashboard accessible only to Admin and Gerencia roles, shown as a new sidebar item ("Alertas") near the top of the navigation. The page displays all alerts on one scrollable view, grouped into five labeled sectors -- no tabs to click through.
+## Open Design Decisions (from analysis)
 
-Each sector (HR, Operaciones, Equipos, Combustible, Inventario) shows its alerts as color-coded cards (red = urgent, yellow = warning, blue = info). If a sector has no active alerts, it shows a green "all clear" message.
+- **Currency placement**: Plan places currency on each service entry (not on the provider profile) so the same provider can invoice in DOP or USD. The provider profile keeps bank details only.
+- **Completeness rule**: A service is "incomplete" (amber + triangle icon) if it is missing any of: master_acct_code, description, or amount.
+- **Date**: Each service entry will have a `service_date` field (defaults to today).
+- **Provider history**: The Prestadores dialog will show a history table of past services for the selected provider.
 
-An admin-only configuration section (accessible from the page itself or from Settings) lets admins enable/disable specific alert types and adjust thresholds.
+## Database Changes
 
-### Alert Types (Starting Set)
+### New Tables
 
-**HR**
-- Upcoming vacations (employee vacation due within 30 days, computed from last vacation end_date + 1 year, or date_of_hire + 1 year if no vacation record)
-- Overdue vacations (past the due date)
+**`service_providers`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | default gen_random_uuid() |
+| name | text NOT NULL | |
+| cedula | text UNIQUE NOT NULL | |
+| bank | text | nullable |
+| bank_account_type | text | 'savings' or 'current' |
+| currency | text | 'DOP' or 'USD' (bank currency) |
+| bank_account_number | text | |
+| is_active | boolean | default true |
+| created_at / updated_at | timestamptz | auto |
 
-**Operaciones**
-- Overdue follow-ups from Seguimientos that failed to schedule (no slot found)
+**`service_entries`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| provider_id | uuid FK -> service_providers | NOT NULL |
+| service_date | date | default CURRENT_DATE |
+| master_acct_code | text | nullable (incomplete if missing) |
+| description | text | nullable (incomplete if missing) |
+| amount | numeric | nullable (incomplete if missing) |
+| currency | text | 'DOP' or 'USD', default 'DOP' |
+| comments | text | nullable |
+| is_closed | boolean | default false |
+| created_at / updated_at | timestamptz | auto |
 
-**Equipos**
-- Preventive maintenance due within X hours (default 20) -- computed from fuel_equipment.current_hour_meter, maintenance_interval_hours, and last tractor_maintenance.hour_meter_reading
-- Overdue maintenance (hours remaining is negative)
+RLS policies mirror existing HR tables (authenticated users with role-based checks).
 
-**Combustible**
-- Diesel tank below X% capacity (default 10%) -- computed from fuel_tanks.current_level_gallons / capacity_gallons
+## UI Layout (Tab Structure)
 
-**Inventario**
-- Low stock items below a configurable minimum quantity per item
-- Inputs needed for upcoming Seguimientos but not available in inventory
-
-### Page Layout
-
+Current HR tabs layout:
 ```text
-+------------------------------------------+
-|  Alertas Internas          [Configurar]  |
-+------------------------------------------+
-|                                          |
-|  --- RECURSOS HUMANOS (2 alertas) ---    |
-|  [!] Vacaciones vencidas - Juan Perez    |
-|  [!] Vacaciones próximas - Maria Lopez   |
-|                                          |
-|  --- OPERACIONES (0 alertas) ---         |
-|  All clear                               |
-|                                          |
-|  --- EQUIPOS (1 alerta) ---             |
-|  [!] Mantenimiento próximo - JD 6110B    |
-|                                          |
-|  --- COMBUSTIBLE (1 alerta) ---          |
-|  [!!] Tanque Diesel A al 8% capacidad    |
-|                                          |
-|  --- INVENTARIO (0 alertas) ---          |
-|  All clear                               |
-+------------------------------------------+
+Left group:  [Nomina] [Jornales] [Servicios]
+Right group: [Jornaleros] [Prestadores] [Empleados]
 ```
 
-### Configuration
+- **Servicios** tab goes beside Jornales (left group)
+- **Prestadores** tab goes beside Jornaleros (right group)
 
-A dialog or collapsible section on the Alerts page (admin-only) allows toggling each alert type on/off and adjusting thresholds:
+## Components to Create
 
-| Alert Type | Default Threshold | Adjustable |
-|---|---|---|
-| Vacation upcoming | 30 days | Yes |
-| Fuel tank low | 10% | Yes |
-| Maintenance due | 20 hours | Yes |
-| Inventory low | Per-item minimum_stock | Yes (per item) |
-| Seguimiento inputs missing | On/Off | Toggle only |
-| Overdue follow-ups | On/Off | Toggle only |
+### 1. `src/components/hr/ServiceProvidersView.tsx` (Prestadores tab)
+- Mirrors `JornalerosView.tsx` structure
+- Registry table: Name, Cedula, Bank, Account Type, Currency, Account #, Status
+- Add/Edit dialog with fields:
+  - Name (required), Cedula (required, unique)
+  - Bank (dropdown: Popular, BHD, Reservas, Santa Cruz, Scotiabank, etc.)
+  - Account Type (toggle: Ahorros / Corriente)
+  - Currency (toggle: DOP / USD)
+  - Account Number
+- Active/inactive toggle for soft delete
+- Clicking a provider shows historical services in the dialog
 
-### Stability
+### 2. `src/components/hr/ServicesView.tsx` (Servicios tab)
+- Shows open (unclosed) services by default
+- "Agregar Servicio" button opens add dialog
+- Service list table columns: Provider Name, Date, Account, Description, Amount, Status
+- Incomplete rows highlighted amber with AlertTriangle icon (same pattern as Operations)
+- Each row has Edit and Close actions
+- **Add/Edit Service Dialog**:
+  - Provider (dropdown from active service_providers, required)
+  - Service Date (default today)
+  - Master Account (dropdown from accounts table)
+  - Description
+  - Amount
+  - Currency (DOP/USD)
+  - Comments
+- **Close Service**:
+  - Confirmation dialog
+  - Validates service is complete (all fields filled)
+  - Generates PDF receipt
+  - Creates transaction in ledger (master_acct_code from service, no pay_method, no document)
+  - Marks is_closed = true
 
-- **Zero risk to existing features**: all alert computation is read-only queries against existing tables
-- **No background jobs**: alerts are computed on page load using React Query
-- **Isolated**: new page, new route, no modifications to existing business logic
-- **Small database footprint**: one new config table, one optional column
+### 3. Receipt PDF Generation
+- Greyscale design (matching payroll receipt style)
+- Content:
+  - Provider name and cedula
+  - Description of service
+  - Amount in numbers and written out in Spanish words
+  - Signature box with name and cedula line
+- Requires a `numberToSpanishWords()` utility function
 
----
+## Permissions
 
-### Technical Details
+Add new HR tabs to permissions system:
 
-**Database changes:**
+| Tab | Read Access | Write Access |
+|-----|------------|--------------|
+| servicios | admin, management, accountant, supervisor | admin, management, accountant |
+| prestadores | admin, management, accountant, supervisor | admin, management, accountant, supervisor |
 
-1. New table `alert_configurations`:
-   - id (uuid PK)
-   - alert_type (text, unique) -- e.g. 'fuel_tank_low', 'maintenance_due', 'vacation_upcoming', 'inventory_low', 'followup_inputs_missing', 'overdue_followups'
-   - is_active (boolean, default true)
-   - threshold_value (numeric, nullable)
-   - created_at, updated_at (timestamptz)
-   - RLS: read for authenticated, write for admin/management
+## Files Modified
 
-2. Add `minimum_stock` column (numeric, nullable) to `inventory_items` for per-item low-stock thresholds.
+- `src/lib/permissions.ts` -- add "servicios" and "prestadores" to HrTab type and permission maps
+- `src/pages/HumanResources.tsx` -- add Servicios and Prestadores tabs
+- `src/types/index.ts` -- add ServiceProvider and ServiceEntry types
 
-**New files:**
+## Files Created
 
-1. `src/pages/Alerts.tsx` -- Main page with all five sectors rendered vertically. Uses multiple useQuery hooks to fetch data from employees, employee_vacations, fuel_tanks, fuel_equipment, tractor_maintenance, inventory_items, and operation_followups. Computes alert conditions in-memory.
+- `src/components/hr/ServiceProvidersView.tsx` -- Prestadores registry
+- `src/components/hr/ServicesView.tsx` -- Services management
+- `src/lib/numberToWords.ts` -- Spanish number-to-words utility for receipts
 
-2. `src/components/alerts/AlertCard.tsx` -- Reusable alert card component with severity styling (red/yellow/blue border + icon).
+## Transaction Integration
 
-3. `src/components/alerts/AlertSector.tsx` -- Section wrapper with header showing sector name and alert count.
-
-4. `src/components/alerts/useAlertData.ts` -- Custom hook containing all the query and computation logic for each alert category.
-
-5. `src/components/alerts/AlertConfigDialog.tsx` -- Admin-only dialog to manage which alerts are active and their thresholds.
-
-**Modified files:**
-
-1. `src/lib/permissions.ts` -- Add "alerts" to Section type, grant access to admin and management roles only.
-
-2. `src/components/layout/Sidebar.tsx` -- Add "Alertas" nav item with Bell icon, placed after Dashboard.
-
-3. `src/App.tsx` -- Add /alerts route wrapped in ProtectedRoute.
-
+When closing a service:
+- Calls `createTransaction()` with:
+  - `master_acct_code`: from the service entry
+  - `description`: "Servicio: {description} - {provider name}"
+  - `currency`: from the service entry
+  - `amount`: from the service entry
+  - `pay_method`: null (to be filled later)
+  - `document`: null (open for NCF later)
+  - `comments`: null (open for addition later)
+  - `is_internal`: false

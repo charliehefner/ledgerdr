@@ -1,26 +1,37 @@
 
 
-## Switch Map Base Layer to Esri World Imagery
+## Auto-Update Hectares on Boundary Import
 
-Esri World Imagery tiles are freely available without API keys. The change is straightforward — replace the Mapbox raster style URLs with Esri's tile endpoint as a raster source, while keeping all existing functionality (field boundaries, popups, aging mode, labels, style toggle).
+### Change
+
+Update the `upsert_field_boundary` database function to automatically recalculate the field's hectares from the imported geometry using PostGIS spatial functions.
 
 ### Technical Details
 
-**File: `src/components/operations/FieldsMapView.tsx`**
+**Database migration** -- Replace the existing `upsert_field_boundary` function with:
 
-1. Replace the Mapbox style URLs with a blank Mapbox style that uses Esri World Imagery as a raster tile source:
-   - Satellite mode: Use `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` as a raster tile layer
-   - Streets mode: Keep the existing `mapbox://styles/mapbox/streets-v12` (no change needed for streets)
+```sql
+CREATE OR REPLACE FUNCTION public.upsert_field_boundary(p_field_id uuid, p_geojson text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions'
+AS $$
+BEGIN
+  UPDATE public.fields
+  SET boundary = ST_Multi(ST_GeomFromGeoJSON(p_geojson)),
+      hectares = ROUND((ST_Area(ST_Transform(ST_Multi(ST_GeomFromGeoJSON(p_geojson)), 32619)) / 10000)::numeric, 2),
+      updated_at = now()
+  WHERE id = p_field_id;
+END;
+$$;
+```
 
-2. For satellite mode, initialize the map with an empty Mapbox style object and inject the Esri raster source and layer on load, before adding the fields GeoJSON layers on top.
+- Uses `ST_Transform` to project into UTM zone 19N (EPSG:32619) for accurate area measurement in the Dominican Republic
+- `ST_Area` returns square meters, divided by 10,000 to convert to hectares, rounded to 2 decimal places
+- No frontend changes needed -- hectares are already displayed in field lists, map popups, and reports
 
-3. All existing features remain unchanged:
-   - Farm color-coding and field boundaries
-   - Aging gradient visualization
-   - Interactive popups
-   - Label rendering
-   - Satellite/Streets toggle
-   - Zoom-to-bounds behavior
+### What Is Not Affected
 
-No new API keys, secrets, or dependencies are required. The Mapbox token is still needed for the streets style and the GL JS renderer itself.
-
+- Past operations retain their own `hectares_done` values
+- Fields that are not re-imported keep their manually entered hectares

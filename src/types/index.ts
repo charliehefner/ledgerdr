@@ -172,6 +172,29 @@ export interface DayLaborEntry {
   is_closed: boolean;
 }
 
+export interface ServiceProvider {
+  id: string;
+  name: string;
+  cedula: string;
+  bank: string | null;
+  bank_account_type: string | null;
+  currency: string | null;
+  bank_account_number: string | null;
+  is_active: boolean;
+}
+
+export interface ServiceEntry {
+  id: string;
+  provider_id: string;
+  service_date: string;
+  master_acct_code: string | null;
+  description: string | null;
+  amount: number | null;
+  currency: string;
+  comments: string | null;
+  is_closed: boolean;
+}
+
 export interface PayrollPeriod {
   id: string;
   start_date: string;

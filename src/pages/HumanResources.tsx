@@ -5,6 +5,8 @@ import { EmployeeFormDialog } from "@/components/hr/EmployeeFormDialog";
 import { PayrollView } from "@/components/hr/PayrollView";
 import { DayLaborView } from "@/components/hr/DayLaborView";
 import { JornalerosView } from "@/components/hr/JornalerosView";
+import { ServicesView } from "@/components/hr/ServicesView";
+import { ServiceProvidersView } from "@/components/hr/ServiceProvidersView";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessHrTab, getDefaultHrTabForRole, HrTab } from "@/lib/permissions";
@@ -67,6 +69,13 @@ export default function HumanResources() {
       content: <DayLaborView />,
     });
   }
+  if (canAccessTab("servicios")) {
+    mainTabs.push({
+      value: "servicios",
+      label: "Servicios",
+      content: <ServicesView />,
+    });
+  }
 
   const rightTabs = [];
   if (canAccessTab("jornaleros")) {
@@ -74,6 +83,13 @@ export default function HumanResources() {
       value: "jornaleros",
       label: "Jornaleros",
       content: <JornalerosView />,
+    });
+  }
+  if (canAccessTab("prestadores")) {
+    rightTabs.push({
+      value: "prestadores",
+      label: "Prestadores",
+      content: <ServiceProvidersView />,
     });
   }
   if (canAccessTab("employees")) {

@@ -1649,6 +1649,95 @@ export type Database = {
           },
         ]
       }
+      service_entries: {
+        Row: {
+          amount: number | null
+          comments: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          is_closed: boolean
+          master_acct_code: string | null
+          provider_id: string
+          service_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          comments?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_closed?: boolean
+          master_acct_code?: string | null
+          provider_id: string
+          service_date?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          comments?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_closed?: boolean
+          master_acct_code?: string | null
+          provider_id?: string
+          service_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_entries_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_providers: {
+        Row: {
+          bank: string | null
+          bank_account_number: string | null
+          bank_account_type: string | null
+          cedula: string
+          created_at: string
+          currency: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bank?: string | null
+          bank_account_number?: string | null
+          bank_account_type?: string | null
+          cedula: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bank?: string | null
+          bank_account_number?: string | null
+          bank_account_type?: string | null
+          cedula?: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tractor_maintenance: {
         Row: {
           created_at: string

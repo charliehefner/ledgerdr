@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_configurations: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          threshold_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          threshold_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          threshold_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cbs_codes: {
         Row: {
           code: string
@@ -890,6 +917,7 @@ export type Database = {
           function: Database["public"]["Enums"]["inventory_function"]
           id: string
           is_active: boolean
+          minimum_stock: number | null
           molecule_name: string | null
           normal_dose_per_ha: number | null
           price_per_purchase_unit: number
@@ -909,6 +937,7 @@ export type Database = {
           function?: Database["public"]["Enums"]["inventory_function"]
           id?: string
           is_active?: boolean
+          minimum_stock?: number | null
           molecule_name?: string | null
           normal_dose_per_ha?: number | null
           price_per_purchase_unit?: number
@@ -928,6 +957,7 @@ export type Database = {
           function?: Database["public"]["Enums"]["inventory_function"]
           id?: string
           is_active?: boolean
+          minimum_stock?: number | null
           molecule_name?: string | null
           normal_dose_per_ha?: number | null
           price_per_purchase_unit?: number

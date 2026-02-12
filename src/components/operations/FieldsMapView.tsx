@@ -111,11 +111,34 @@ export function FieldsMapView() {
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
+    const esriSatelliteStyle: mapboxgl.StyleSpecification = {
+      version: 8,
+      sources: {
+        "esri-world-imagery": {
+          type: "raster",
+          tiles: [
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          ],
+          tileSize: 256,
+          attribution: "Esri, Maxar, Earthstar Geographics",
+        },
+      },
+      layers: [
+        {
+          id: "esri-imagery",
+          type: "raster",
+          source: "esri-world-imagery",
+          minzoom: 0,
+          maxzoom: 22,
+        },
+      ],
+    };
+
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style:
         style === "satellite"
-          ? "mapbox://styles/mapbox/satellite-streets-v12"
+          ? esriSatelliteStyle
           : "mapbox://styles/mapbox/streets-v12",
       center: [-70.0, 18.8],
       zoom: 10,

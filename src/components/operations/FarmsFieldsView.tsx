@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Plus, Pencil, MapPin, Layers, Upload } from "lucide-react";
+import { Plus, Pencil, MapPin, Layers, Upload, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { KMLImportDialog } from "./KMLImportDialog";
 
@@ -50,6 +50,7 @@ interface Field {
   farm_id: string;
   hectares: number | null;
   is_active: boolean;
+  boundary: unknown;
   farms: { name: string };
 }
 
@@ -92,6 +93,25 @@ export function FarmsFieldsView() {
         .order("name");
       if (error) throw error;
       return data as Field[];
+    },
+  });
+
+  // Remove boundary mutation
+  const removeBoundaryMutation = useMutation({
+    mutationFn: async (fieldId: string) => {
+      const { error } = await supabase
+        .from("fields")
+        .update({ boundary: null } as any)
+        .eq("id", fieldId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fields"] });
+      queryClient.invalidateQueries({ queryKey: ["fields-with-boundaries"] });
+      toast({ title: "Boundary removed", description: "The field boundary has been cleared." });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -367,11 +387,12 @@ export function FarmsFieldsView() {
                   </div>
                 ) : (
                   <Table>
-                    <TableHeader>
+                     <TableHeader>
                       <TableRow>
                         <TableHead>Field Name</TableHead>
                         <TableHead>Hectares</TableHead>
                         <TableHead className="w-[60px]">Edit</TableHead>
+                        <TableHead className="w-[120px]">Boundary</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -393,6 +414,22 @@ export function FarmsFieldsView() {
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
+                          </TableCell>
+                          <TableCell>
+                            {field.boundary ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-destructive hover:text-destructive"
+                                onClick={() => removeBoundaryMutation.mutate(field.id)}
+                                disabled={removeBoundaryMutation.isPending}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Remove
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

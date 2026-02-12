@@ -49,7 +49,7 @@ const hrTabPermissions: Record<HrTab, UserRole[]> = {
 const hrTabWritePermissions: Record<HrTab, UserRole[]> = {
   payroll: ["admin", "management", "accountant"],
   "day-labor": ["admin", "management", "accountant", "supervisor"],
-  servicios: ["admin", "management", "accountant"],
+  servicios: ["admin", "management", "accountant", "supervisor"],
   jornaleros: ["admin", "management", "accountant", "supervisor"],
   prestadores: ["admin", "management", "accountant", "supervisor"],
   employees: ["admin", "management", "accountant"],

@@ -378,6 +378,7 @@ export function PayrollSummary({
     // Step 1: TSS applies ONLY to salary (not benefits)
     // TSS is calculated on the full biweekly salary (vacation pay is still paid, so TSS still applies)
     const tss = basePay * TSS_EMPLOYEE_RATE;
+    console.log(`[TSS DEBUG] ${employee.name}: basePay=${basePay}, effectiveBasePay=${effectiveBasePay}, tss=${tss}, rate=${TSS_EMPLOYEE_RATE}`);
     
     // Step 2: ISR base = (salary - TSS) + benefits
     // Per accountant: first deduct TSS from salary, then add benefits, then calculate ISR

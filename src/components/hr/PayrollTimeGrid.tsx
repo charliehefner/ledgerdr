@@ -34,7 +34,6 @@ const POSITION_ORDER = [
   "Sereno",
   "Tractorista",
   "Supervisor",
-  "Administrativa", 
   "Gerencia",
 ];
 
@@ -679,7 +678,7 @@ export function PayrollTimeGrid({
       (e) => !POSITION_ORDER.includes(e.position)
     );
     if (otherEmployees.length > 0) {
-      groups.push({ position: "Otros", employees: otherEmployees });
+      groups.push({ position: "Servicios Generales", employees: otherEmployees });
     }
     
     return groups;

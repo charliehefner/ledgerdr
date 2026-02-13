@@ -34,6 +34,7 @@ const POSITION_ORDER = [
   "Sereno",
   "Tractorista",
   "Supervisor",
+  "Administrativa",
   "Gerencia",
 ];
 

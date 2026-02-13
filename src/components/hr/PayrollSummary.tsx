@@ -372,23 +372,19 @@ export function PayrollSummary({
     // Employees on full vacation don't earn wages this period, so no TSS/ISR applies
     const effectiveBasePay = Math.max(0, basePay - vacationDeduction);
 
-    // Benefits are taxable income - include in TSS and ISR calculations
-    // Monthly benefits (same each period, so use directly)
+    // Benefits are taxable income for ISR but NOT for TSS
     const monthlyBenefits = totalBenefits * 2; // Convert bi-weekly to monthly
 
-    // Deductions - TSS applies to effective earnings + benefits
-    const tssBase = effectiveBasePay + totalBenefits;
-    const tss = tssBase * TSS_EMPLOYEE_RATE;
+    // Step 1: TSS applies ONLY to salary (not benefits)
+    const tss = effectiveBasePay * TSS_EMPLOYEE_RATE;
     
-    // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
-    // TSS contributions are pre-tax deductions that reduce the taxable base
-    // Benefits (Teléfono, Gasolina, Bono) are included in taxable income per DGII
+    // Step 2: ISR base = (salary - TSS) + benefits
+    // Per accountant: first deduct TSS from salary, then add benefits, then calculate ISR
     let isr = 0;
     if (effectiveBasePay > 0 || totalBenefits > 0) {
-      // Calculate monthly taxable income (salary + benefits - TSS)
-      const monthlyGross = employee.salary + monthlyBenefits;
-      const monthlyTSS = monthlyGross * TSS_EMPLOYEE_RATE;
-      const monthlyTaxable = monthlyGross - monthlyTSS;
+      // Monthly: salary - TSS on salary + benefits
+      const monthlyTSS = employee.salary * TSS_EMPLOYEE_RATE;
+      const monthlyTaxable = employee.salary - monthlyTSS + monthlyBenefits;
       
       // Project to annual taxable income
       const annualTaxableIncome = monthlyTaxable * 12;
@@ -397,8 +393,8 @@ export function PayrollSummary({
       const annualISR = calculateAnnualISR(annualTaxableIncome);
       
       // Prorate for this period based on worked ratio
-      const workedRatio = (effectiveBasePay + totalBenefits) / (biweeklySalary + totalBenefits);
-      isr = (annualISR / 24) * workedRatio;
+      const workedRatio = effectiveBasePay / biweeklySalary;
+      isr = (annualISR / 24) * Math.min(workedRatio, 1);
     }
     
     const absenceDeduction = absenceDays * dailyRate;

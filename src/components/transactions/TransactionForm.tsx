@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -17,6 +17,7 @@ import {
 } from '@/lib/api';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
+import { NameAutocomplete } from './NameAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,6 +90,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryKey: ['existingTransactions'],
     queryFn: () => fetchRecentTransactions(500),
   });
+
+  const uniqueNames = useMemo(() => {
+    const names = new Set<string>();
+    existingTransactions.forEach(tx => {
+      if (tx.name?.trim()) names.add(tx.name.trim());
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [existingTransactions]);
 
   const requires1180Fields = form.master_acct_code === '1180';
 
@@ -452,12 +461,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label>Nombre</Label>
-              <Input
+              <NameAutocomplete
                 value={form.name}
-                onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Proveedor/Beneficiario"
+                onChange={(value) => updateField('name', value)}
+                suggestions={uniqueNames}
               />
             </div>
 

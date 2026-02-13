@@ -622,9 +622,9 @@ export function PayrollTimeGrid({
     // Employees on full vacation don't earn wages this period, so no TSS/ISR applies
     const effectiveBasePay = Math.max(0, biweeklySalary - vacationDeduction);
 
-    // TSS (employee portion) - applies to effective earnings + benefits
-    const tssBase = effectiveBasePay + totalBenefits;
-    const tss = tssBase * TSS_EMPLOYEE_RATE;
+    // TSS (employee portion) - applies to full biweekly salary (vacation pay is still paid)
+    // Benefits are NOT included in TSS base per DR labor law
+    const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
 
     // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
     // TSS contributions are pre-tax deductions that reduce the taxable base

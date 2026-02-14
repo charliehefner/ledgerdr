@@ -1,37 +1,41 @@
 
 
-## Auto-Update Hectares on Boundary Import
+# Fullscreen Map Toggle
 
-### Change
+## What Changes
 
-Update the `upsert_field_boundary` database function to automatically recalculate the field's hectares from the imported geometry using PostGIS spatial functions.
+When viewing the **Map** tab, an **expand button** will appear that hides the page header (title/subtitle) and tab bar, allowing the map to fill nearly the entire screen. A **collapse button** on the map controls will restore the normal layout.
 
-### Technical Details
+## How It Works
 
-**Database migration** -- Replace the existing `upsert_field_boundary` function with:
+1. **FieldsMapView** gets a new `expanded` state and an expand/collapse toggle button (using the `Maximize2` / `Minimize2` icons from lucide) placed alongside the existing satellite/streets toggle in `MapAgingControls`.
 
-```sql
-CREATE OR REPLACE FUNCTION public.upsert_field_boundary(p_field_id uuid, p_geojson text)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'extensions'
-AS $$
-BEGIN
-  UPDATE public.fields
-  SET boundary = ST_Multi(ST_GeomFromGeoJSON(p_geojson)),
-      hectares = ROUND((ST_Area(ST_Transform(ST_Multi(ST_GeomFromGeoJSON(p_geojson)), 32619)) / 10000)::numeric, 2),
-      updated_at = now()
-  WHERE id = p_field_id;
-END;
-$$;
-```
+2. When expanded:
+   - The map container height changes from `70vh` to `calc(100vh - 2rem)` (nearly full screen)
+   - The parent layout hides the page header and tab bar using a callback
 
-- Uses `ST_Transform` to project into UTM zone 19N (EPSG:32619) for accurate area measurement in the Dominican Republic
-- `ST_Area` returns square meters, divided by 10,000 to convert to hectares, rounded to 2 decimal places
-- No frontend changes needed -- hectares are already displayed in field lists, map popups, and reports
+3. **TabbedPageLayout** gets an optional `hideChrome` prop. When `true`, the `<header>` and `<TabsList>` are hidden (via `className="hidden"`), leaving only the tab content visible.
 
-### What Is Not Affected
+4. **Operations page** passes the expand state down: the Map tab content receives an `onExpandToggle` callback, and Operations holds the `expanded` state, passing `hideChrome={expanded}` to `TabbedPageLayout`.
 
-- Past operations retain their own `hectares_done` values
-- Fields that are not re-imported keep their manually entered hectares
+## Technical Details
+
+### File: `src/components/layout/TabbedPageLayout.tsx`
+- Add optional `hideChrome?: boolean` prop
+- Conditionally apply `hidden` class to the `<header>` and `<TabsList>` when `hideChrome` is true
+
+### File: `src/pages/Operations.tsx`
+- Add `const [mapExpanded, setMapExpanded] = useState(false)` state
+- Pass `hideChrome={mapExpanded}` to `TabbedPageLayout`
+- Pass `expanded` and `onExpandToggle` props to `FieldsMapView`
+- Reset `mapExpanded` to `false` when switching away from the "map" tab
+
+### File: `src/components/operations/FieldsMapView.tsx`
+- Accept `expanded?: boolean` and `onExpandToggle?: () => void` props
+- Pass `expanded` and `onExpandToggle` to `MapAgingControls`
+- Change map container height: `expanded ? "calc(100vh - 4rem)" : "70vh"`
+
+### File: `src/components/operations/MapAgingControls.tsx`
+- Accept `expanded?: boolean` and `onExpandToggle?: () => void` props
+- Add an expand/collapse icon button next to the satellite/streets toggle using `Maximize2` (expand) and `Minimize2` (collapse) icons
+

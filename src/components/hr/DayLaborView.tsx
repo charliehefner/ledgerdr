@@ -329,7 +329,7 @@ export function DayLaborView() {
       const fridayStr = format(selectedFriday, "dd/MM/yyyy");
       await createTransaction({
         transaction_date: formatDateLocal(selectedFriday),
-        master_acct_code: "7010",
+        master_acct_code: "7690",
         description: `Jornales Semana ${fridayStr}`,
         currency: "DOP",
         amount: weeklyTotal,

@@ -670,7 +670,7 @@ export default function Reports() {
                   ) : sortedTransactions.length > 0 ? (
                     sortedTransactions.map((tx, index) => {
                       // Internal transactions (0000) and Nomina (7010) are exempt from documentation requirements
-                      const isExempt = tx.is_internal || tx.master_acct_code === '0000' || tx.master_acct_code === '7010';
+                      const isExempt = tx.is_internal || tx.master_acct_code === '0000' || tx.master_acct_code === '7010' || tx.master_acct_code === '7690';
                       const missingDocument = !isExempt && (!tx.document || tx.document.trim() === '');
                       const missingAttachment = !isExempt && tx.id && !hasAnyAttachment(String(tx.id));
                       

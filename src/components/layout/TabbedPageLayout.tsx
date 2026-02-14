@@ -21,6 +21,7 @@ interface TabbedPageLayoutProps {
   onTabChange: (value: string) => void;
   tabGroups: TabGroup[];
   actions?: ReactNode;
+  hideChrome?: boolean;
 }
 
 /**
@@ -34,19 +35,20 @@ export function TabbedPageLayout({
   onTabChange,
   tabGroups,
   actions,
+  hideChrome,
 }: TabbedPageLayoutProps) {
   const hasMultipleGroups = tabGroups.length > 1;
 
   return (
     <MainLayout>
       <div className="space-y-6" role="main" aria-label={title}>
-        <header>
+        <header className={hideChrome ? "hidden" : ""}>
           <h1 className="text-3xl font-bold text-foreground">{title}</h1>
           {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
         </header>
 
         <Tabs value={activeTab} onValueChange={onTabChange}>
-          <TabsList className={hasMultipleGroups ? "w-full justify-between" : ""}>
+          <TabsList className={`${hasMultipleGroups ? "w-full justify-between" : ""} ${hideChrome ? "hidden" : ""}`}>
             {tabGroups.map((group, groupIndex) => (
               <div
                 key={groupIndex}

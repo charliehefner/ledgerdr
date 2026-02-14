@@ -38,7 +38,12 @@ function getAgingColor(daysSince: number | null, tGreen: number, tRed: number) {
   return AGING_RED;
 }
 
-export function FieldsMapView() {
+interface FieldsMapViewProps {
+  expanded?: boolean;
+  onExpandToggle?: () => void;
+}
+
+export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [style, setStyle] = useState<"satellite" | "streets">("satellite");
@@ -290,11 +295,13 @@ export function FieldsMapView() {
         onThresholdGreenChange={setThresholdGreen}
         thresholdRed={thresholdRed}
         onThresholdRedChange={setThresholdRed}
+        expanded={expanded}
+        onExpandToggle={onExpandToggle}
       />
       <div
         ref={mapContainer}
         className="w-full rounded-lg border"
-        style={{ height: "70vh" }}
+        style={{ height: expanded ? "calc(100vh - 4rem)" : "70vh" }}
       />
     </div>
   );

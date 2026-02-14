@@ -15,13 +15,20 @@ export default function Operations() {
   const { t } = useLanguage();
   
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [mapExpanded, setMapExpanded] = useState(false);
+
+  const handleTabChange = (tab: string) => {
+    if (tab !== "map") setMapExpanded(false);
+    setActiveTab(tab);
+  };
 
   return (
     <TabbedPageLayout
       title={t("page.operations.title")}
       subtitle={t("page.operations.subtitle")}
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
+      hideChrome={mapExpanded}
       tabGroups={[
         {
           tabs: [
@@ -53,7 +60,7 @@ export default function Operations() {
             {
               value: "map",
               label: "Map",
-              content: <FieldsMapView />,
+              content: <FieldsMapView expanded={mapExpanded} onExpandToggle={() => setMapExpanded((v) => !v)} />,
             },
           ],
         },

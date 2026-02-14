@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Satellite, Layers } from "lucide-react";
+import { Satellite, Layers, Maximize2, Minimize2 } from "lucide-react";
 
 interface MapAgingControlsProps {
   style: "satellite" | "streets";
@@ -20,6 +20,8 @@ interface MapAgingControlsProps {
   onThresholdGreenChange: (v: number) => void;
   thresholdRed: number;
   onThresholdRedChange: (v: number) => void;
+  expanded?: boolean;
+  onExpandToggle?: () => void;
 }
 
 export function MapAgingControls({
@@ -31,6 +33,8 @@ export function MapAgingControls({
   onThresholdGreenChange,
   thresholdRed,
   onThresholdRedChange,
+  expanded,
+  onExpandToggle,
 }: MapAgingControlsProps) {
   const { data: operationTypes } = useQuery({
     queryKey: ["operation-types-for-aging"],
@@ -115,23 +119,35 @@ export function MapAgingControls({
         </>
       )}
 
-      {/* Style toggle – pushed to right */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="ml-auto"
-        onClick={onStyleToggle}
-      >
-        {style === "satellite" ? (
-          <>
-            <Layers className="h-4 w-4 mr-2" /> Streets
-          </>
-        ) : (
-          <>
-            <Satellite className="h-4 w-4 mr-2" /> Satellite
-          </>
+      {/* Style toggle & expand – pushed to right */}
+      <div className="flex items-center gap-2 ml-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onStyleToggle}
+        >
+          {style === "satellite" ? (
+            <>
+              <Layers className="h-4 w-4 mr-2" /> Streets
+            </>
+          ) : (
+            <>
+              <Satellite className="h-4 w-4 mr-2" /> Satellite
+            </>
+          )}
+        </Button>
+        {onExpandToggle && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={onExpandToggle}
+            title={expanded ? "Minimizar" : "Pantalla completa"}
+          >
+            {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
         )}
-      </Button>
+      </div>
     </div>
   );
 }

@@ -216,7 +216,7 @@ function generateEmployeeReceipt(
     const maxY = Math.max(earningsY, dedY);
     const netPayY = maxY + 10;
 
-    doc.setFillColor(80, 80, 80); // Dark grey
+    doc.setFillColor(160, 160, 160); // Light grey to save ink
     doc.roundedRect(15, netPayY, pageWidth - 30, 12, 2, 2, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);

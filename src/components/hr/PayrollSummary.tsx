@@ -415,7 +415,9 @@ export function PayrollSummary({
 
     const totalDeductions = tss + isr + absenceDeduction + vacationDeduction + loanDeduction;
     const grossPay = basePay + overtimePay + holidayPay + sundayPay + totalBenefits;
-    const netPay = grossPay - totalDeductions;
+    const netPayRaw = grossPay - totalDeductions;
+    // Round up to next multiple of 5
+    const netPay = Math.ceil(netPayRaw / 5) * 5;
 
     return {
       employee,

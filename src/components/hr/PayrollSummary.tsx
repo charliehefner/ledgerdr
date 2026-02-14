@@ -505,23 +505,19 @@ export function PayrollSummary({
       // Header
       sheet.columns = [
         { header: "Nombre", key: "name", width: 25 },
-        { header: "Banco", key: "bank", width: 15 },
-        { header: "Núm. Cuenta", key: "account", width: 20 },
-        { header: "Hrs Reg", key: "regHours", width: 12 },
-        { header: "Hrs Extra", key: "otHours", width: 12 },
-        { header: "Hrs Fer", key: "holHours", width: 12 },
-        { header: "Hrs Dom", key: "sunHours", width: 12 },
         { header: "Salario Base", key: "basePay", width: 15 },
-        { header: "Pago Extra", key: "otPay", width: 15 },
-        { header: "Pago Feriado", key: "holPay", width: 15 },
-        { header: "Pago Domingo", key: "sunPay", width: 15 },
+        { header: "Pago Neto", key: "netPay", width: 15 },
         { header: "Beneficios", key: "benefits", width: 15 },
+        { header: "Préstamo", key: "loan", width: 12 },
         { header: "TSS", key: "tss", width: 12 },
         { header: "ISR", key: "isr", width: 12 },
-        { header: "Ausencias", key: "absences", width: 12 },
-        { header: "Préstamo", key: "loan", width: 12 },
-        { header: "Total Deducciones", key: "totalDed", width: 18 },
-        { header: "Pago Neto", key: "netPay", width: 15 },
+        { header: "Hrs Reg", key: "regHours", width: 12 },
+        { header: "Hrs Extra", key: "otHours", width: 12 },
+        { header: "Pago Extra", key: "otPay", width: 15 },
+        { header: "Hrs Fer", key: "holHours", width: 12 },
+        { header: "Pago Fer", key: "holPay", width: 15 },
+        { header: "Hrs Dom", key: "sunHours", width: 12 },
+        { header: "Pago Dom", key: "sunPay", width: 15 },
       ];
 
       // Style header
@@ -534,50 +530,45 @@ export function PayrollSummary({
       };
       headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
 
+      const fmtExcel = (v: number) => v > 0 ? v.toFixed(2) : "-";
+      const fmtHrs = (v: number) => v > 0 ? v.toFixed(1) : "-";
+
       // Data rows
       payrollData.forEach((p) => {
         sheet.addRow({
           name: p.employee.name,
-          bank: p.employee.bank || "-",
-          account: p.employee.bank_account_number || "-",
-          regHours: p.regularHours.toFixed(1),
-          otHours: p.overtimeHours.toFixed(1),
-          holHours: p.holidayHours.toFixed(1),
-          sunHours: p.sundayHours.toFixed(1),
           basePay: p.basePay.toFixed(2),
-          otPay: p.overtimePay.toFixed(2),
-          holPay: p.holidayPay.toFixed(2),
-          sunPay: p.sundayPay.toFixed(2),
-          benefits: p.totalBenefits.toFixed(2),
-          tss: p.tss.toFixed(2),
-          isr: p.isr.toFixed(2),
-          absences: p.absenceDeduction.toFixed(2),
-          loan: p.loanDeduction.toFixed(2),
-          totalDed: p.totalDeductions.toFixed(2),
           netPay: p.netPay.toFixed(2),
+          benefits: fmtExcel(p.totalBenefits),
+          loan: fmtExcel(p.loanDeduction),
+          tss: fmtExcel(p.tss),
+          isr: fmtExcel(p.isr),
+          regHours: fmtHrs(p.regularHours),
+          otHours: fmtHrs(p.overtimeHours),
+          otPay: fmtExcel(p.overtimePay),
+          holHours: fmtHrs(p.holidayHours),
+          holPay: fmtExcel(p.holidayPay),
+          sunHours: fmtHrs(p.sundayHours),
+          sunPay: fmtExcel(p.sundayPay),
         });
       });
 
       // Totals row
       const totalsRow = sheet.addRow({
         name: "TOTALES",
-        bank: "",
-        account: "",
-        regHours: totals.regularHours.toFixed(1),
-        otHours: totals.overtimeHours.toFixed(1),
-        holHours: totals.holidayHours.toFixed(1),
-        sunHours: totals.sundayHours.toFixed(1),
         basePay: totals.basePay.toFixed(2),
-        otPay: totals.overtimePay.toFixed(2),
-        holPay: totals.holidayPay.toFixed(2),
-        sunPay: totals.sundayPay.toFixed(2),
-        benefits: totals.totalBenefits.toFixed(2),
-        tss: "",
-        isr: "",
-        absences: "",
-        loan: totals.loanDeduction.toFixed(2),
-        totalDed: totals.totalDeductions.toFixed(2),
         netPay: totals.netPay.toFixed(2),
+        benefits: fmtExcel(totals.totalBenefits),
+        loan: fmtExcel(totals.loanDeduction),
+        tss: fmtExcel(totals.tss),
+        isr: fmtExcel(totals.isr),
+        regHours: fmtHrs(totals.regularHours),
+        otHours: fmtHrs(totals.overtimeHours),
+        otPay: fmtExcel(totals.overtimePay),
+        holHours: fmtHrs(totals.holidayHours),
+        holPay: fmtExcel(totals.holidayPay),
+        sunHours: fmtHrs(totals.sundayHours),
+        sunPay: fmtExcel(totals.sundayPay),
       });
       totalsRow.font = { bold: true };
       totalsRow.fill = {
@@ -621,44 +612,49 @@ export function PayrollSummary({
 
       // Table data
       const headers = [
-        "Nombre", "Hrs Reg", "Hrs Extra", "Hrs Fer", "Hrs Dom",
-        "Salario Base", "Pago Extra", "Pago Fer", "Pago Dom",
-        "Beneficios", "Préstamo", "TSS", "ISR", "Pago Neto"
+        "Nombre", "Salario Base", "Pago Neto", "Beneficios", "Préstamo",
+        "TSS", "ISR", "Hrs Reg", "Hrs Extra", "Pago Extra",
+        "Hrs Fer", "Pago Fer", "Hrs Dom", "Pago Dom"
       ];
+
+      const fmtV = (v: number, isCurrency = false) => {
+        if (v <= 0) return "-";
+        return isCurrency ? formatCurrency(v) : v.toFixed(1);
+      };
 
       const rows = payrollData.map((p) => [
         p.employee.name,
-        p.regularHours.toFixed(1),
-        p.overtimeHours.toFixed(1),
-        p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-",
-        p.sundayHours > 0 ? p.sundayHours.toFixed(1) : "-",
         formatCurrency(p.basePay),
-        formatCurrency(p.overtimePay),
-        p.holidayPay > 0 ? formatCurrency(p.holidayPay) : "-",
-        p.sundayPay > 0 ? formatCurrency(p.sundayPay) : "-",
-        formatCurrency(p.totalBenefits),
-        p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-",
-        formatCurrency(p.tss),
-        p.isr > 0 ? formatCurrency(p.isr) : "-",
         formatCurrency(p.netPay),
+        fmtV(p.totalBenefits, true),
+        fmtV(p.loanDeduction, true),
+        fmtV(p.tss, true),
+        fmtV(p.isr, true),
+        fmtV(p.regularHours),
+        fmtV(p.overtimeHours),
+        fmtV(p.overtimePay, true),
+        fmtV(p.holidayHours),
+        fmtV(p.holidayPay, true),
+        fmtV(p.sundayHours),
+        fmtV(p.sundayPay, true),
       ]);
 
       // Add totals row
       rows.push([
         "TOTALES",
-        totals.regularHours.toFixed(1),
-        totals.overtimeHours.toFixed(1),
-        totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-",
-        totals.sundayHours > 0 ? totals.sundayHours.toFixed(1) : "-",
         formatCurrency(totals.basePay),
-        formatCurrency(totals.overtimePay),
-        totals.holidayPay > 0 ? formatCurrency(totals.holidayPay) : "-",
-        totals.sundayPay > 0 ? formatCurrency(totals.sundayPay) : "-",
-        formatCurrency(totals.totalBenefits),
-        totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-",
-        formatCurrency(totals.tss),
-        totals.isr > 0 ? formatCurrency(totals.isr) : "-",
         formatCurrency(totals.netPay),
+        fmtV(totals.totalBenefits, true),
+        fmtV(totals.loanDeduction, true),
+        fmtV(totals.tss, true),
+        fmtV(totals.isr, true),
+        fmtV(totals.regularHours),
+        fmtV(totals.overtimeHours),
+        fmtV(totals.overtimePay, true),
+        fmtV(totals.holidayHours),
+        fmtV(totals.holidayPay, true),
+        fmtV(totals.sundayHours),
+        fmtV(totals.sundayPay, true),
       ]);
 
       autoTable(doc, {

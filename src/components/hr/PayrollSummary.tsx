@@ -817,53 +817,32 @@ export function PayrollSummary({
           <TableHeader>
             <TableRow>
               <TableHead className="whitespace-nowrap">Empleado</TableHead>
-              <TableHead className="text-right font-bold whitespace-nowrap">Pago Neto</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Hrs Reg</TableHead>
-              <TableHead className="text-right text-orange-600 whitespace-nowrap">Hrs Extra</TableHead>
-              <TableHead className="text-right text-amber-600 whitespace-nowrap">Hrs Fer</TableHead>
-              <TableHead className="text-right text-emerald-700 whitespace-nowrap">Hrs Dom</TableHead>
               <TableHead className="text-right whitespace-nowrap">Salario Base</TableHead>
-              <TableHead className="text-right text-orange-600 whitespace-nowrap">Pago Extra</TableHead>
-              <TableHead className="text-right text-amber-600 whitespace-nowrap">Pago Fer</TableHead>
-              <TableHead className="text-right text-emerald-700 whitespace-nowrap">Pago Dom</TableHead>
-              <TableHead className="text-right text-green-600 whitespace-nowrap">Beneficios</TableHead>
+              <TableHead className="text-right font-bold whitespace-nowrap">Pago Neto</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Beneficios</TableHead>
               <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">TSS</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">ISR</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Hrs Reg</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-green-50">Hrs Extra</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-green-50">Pago Extra</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-emerald-50">Hrs Fer</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-emerald-50">Pago Fer</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-teal-50">Hrs Dom</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-teal-50">Pago Dom</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {payrollData.map((p) => (
               <TableRow key={p.employee.id}>
                 <TableCell className="font-medium">{p.employee.name}</TableCell>
+                <TableCell className="text-right font-mono">
+                  {formatCurrency(p.basePay)}
+                </TableCell>
                 <TableCell className="text-right font-mono font-bold text-primary">
                   {formatCurrency(p.netPay)}
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {p.regularHours.toFixed(1)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-orange-600">
-                  {p.overtimeHours.toFixed(1)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-amber-600">
-                  {p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-emerald-700">
-                  {p.sundayHours > 0 ? p.sundayHours.toFixed(1) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {formatCurrency(p.basePay)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-orange-600">
-                  {formatCurrency(p.overtimePay)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-amber-600">
-                  {p.holidayPay > 0 ? formatCurrency(p.holidayPay) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-emerald-700">
-                  {p.sundayPay > 0 ? formatCurrency(p.sundayPay) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-green-600">
                   {formatCurrency(p.totalBenefits)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-purple-600">
@@ -875,40 +854,40 @@ export function PayrollSummary({
                 <TableCell className="text-right font-mono text-red-600">
                   {p.isr > 0 ? formatCurrency(p.isr) : "-"}
                 </TableCell>
+                <TableCell className="text-right font-mono">
+                  {p.regularHours.toFixed(1)}
+                </TableCell>
+                <TableCell className="text-right font-mono bg-green-50">
+                  {p.overtimeHours.toFixed(1)}
+                </TableCell>
+                <TableCell className="text-right font-mono bg-green-50">
+                  {formatCurrency(p.overtimePay)}
+                </TableCell>
+                <TableCell className="text-right font-mono bg-emerald-50">
+                  {p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-"}
+                </TableCell>
+                <TableCell className="text-right font-mono bg-emerald-50">
+                  {p.holidayPay > 0 ? formatCurrency(p.holidayPay) : "-"}
+                </TableCell>
+                <TableCell className="text-right font-mono bg-teal-50">
+                  {p.sundayHours > 0 ? p.sundayHours.toFixed(1) : "-"}
+                </TableCell>
+                <TableCell className="text-right font-mono bg-teal-50">
+                  {p.sundayPay > 0 ? formatCurrency(p.sundayPay) : "-"}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/50 font-bold">
               <TableCell>TOTALES</TableCell>
+              <TableCell className="text-right font-mono">
+                {formatCurrency(totals.basePay)}
+              </TableCell>
               <TableCell className="text-right font-mono font-bold text-primary">
                 {formatCurrency(totals.netPay)}
               </TableCell>
               <TableCell className="text-right font-mono">
-                {totals.regularHours.toFixed(1)}
-              </TableCell>
-              <TableCell className="text-right font-mono text-orange-600">
-                {totals.overtimeHours.toFixed(1)}
-              </TableCell>
-              <TableCell className="text-right font-mono text-amber-600">
-                {totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono text-emerald-700">
-                {totals.sundayHours > 0 ? totals.sundayHours.toFixed(1) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono">
-                {formatCurrency(totals.basePay)}
-              </TableCell>
-              <TableCell className="text-right font-mono text-orange-600">
-                {formatCurrency(totals.overtimePay)}
-              </TableCell>
-              <TableCell className="text-right font-mono text-amber-600">
-                {totals.holidayPay > 0 ? formatCurrency(totals.holidayPay) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono text-emerald-700">
-                {totals.sundayPay > 0 ? formatCurrency(totals.sundayPay) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono text-green-600">
                 {formatCurrency(totals.totalBenefits)}
               </TableCell>
               <TableCell className="text-right font-mono text-purple-600">
@@ -919,6 +898,27 @@ export function PayrollSummary({
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {totals.isr > 0 ? formatCurrency(totals.isr) : "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {totals.regularHours.toFixed(1)}
+              </TableCell>
+              <TableCell className="text-right font-mono bg-green-50">
+                {totals.overtimeHours.toFixed(1)}
+              </TableCell>
+              <TableCell className="text-right font-mono bg-green-50">
+                {formatCurrency(totals.overtimePay)}
+              </TableCell>
+              <TableCell className="text-right font-mono bg-emerald-50">
+                {totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono bg-emerald-50">
+                {totals.holidayPay > 0 ? formatCurrency(totals.holidayPay) : "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono bg-teal-50">
+                {totals.sundayHours > 0 ? totals.sundayHours.toFixed(1) : "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono bg-teal-50">
+                {totals.sundayPay > 0 ? formatCurrency(totals.sundayPay) : "-"}
               </TableCell>
             </TableRow>
           </TableFooter>

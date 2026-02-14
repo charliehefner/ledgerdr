@@ -843,25 +843,25 @@ export function PayrollSummary({
                   {formatCurrency(p.netPay)}
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {formatCurrency(p.totalBenefits)}
+                  {p.totalBenefits > 0 ? formatCurrency(p.totalBenefits) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-purple-600">
                   {p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
-                  {formatCurrency(p.tss)}
+                  {p.tss > 0 ? formatCurrency(p.tss) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
                   {p.isr > 0 ? formatCurrency(p.isr) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {p.regularHours.toFixed(1)}
+                  {p.regularHours > 0 ? p.regularHours.toFixed(1) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono bg-green-50">
-                  {p.overtimeHours.toFixed(1)}
+                  {p.overtimeHours > 0 ? p.overtimeHours.toFixed(1) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono bg-green-50">
-                  {formatCurrency(p.overtimePay)}
+                  {p.overtimePay > 0 ? formatCurrency(p.overtimePay) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono bg-amber-50">
                   {p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-"}
@@ -888,25 +888,25 @@ export function PayrollSummary({
                 {formatCurrency(totals.netPay)}
               </TableCell>
               <TableCell className="text-right font-mono">
-                {formatCurrency(totals.totalBenefits)}
+                {totals.totalBenefits > 0 ? formatCurrency(totals.totalBenefits) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-purple-600">
                 {totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
-                {formatCurrency(totals.tss)}
+                {totals.tss > 0 ? formatCurrency(totals.tss) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {totals.isr > 0 ? formatCurrency(totals.isr) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono">
-                {totals.regularHours.toFixed(1)}
+                {totals.regularHours > 0 ? totals.regularHours.toFixed(1) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono bg-green-50">
-                {totals.overtimeHours.toFixed(1)}
+                {totals.overtimeHours > 0 ? totals.overtimeHours.toFixed(1) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono bg-green-50">
-                {formatCurrency(totals.overtimePay)}
+                {totals.overtimePay > 0 ? formatCurrency(totals.overtimePay) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono bg-amber-50">
                 {totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-"}

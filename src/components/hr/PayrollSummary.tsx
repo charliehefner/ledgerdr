@@ -406,10 +406,15 @@ export function PayrollSummary({
     const loanDeduction = Math.round(employeeLoans.reduce((sum, l) => sum + l.payment_amount, 0) * 100) / 100;
 
     // Build loan details for receipts
+    // If period is closed, remaining_payments was already decremented, so payment_number = total - remaining
+    // If period is open, remaining_payments is pre-decrement, so payment_number = total - remaining + 1
+    const periodClosed = periodStatus === "closed";
     const loanDetails = employeeLoans.map((l) => ({
       loan_amount: l.loan_amount,
       payment_amount: l.payment_amount,
-      payment_number: l.number_of_payments - l.remaining_payments + 1,
+      payment_number: periodClosed
+        ? l.number_of_payments - l.remaining_payments
+        : l.number_of_payments - l.remaining_payments + 1,
       total_payments: l.number_of_payments,
     }));
 

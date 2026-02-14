@@ -826,10 +826,10 @@ export function PayrollSummary({
               <TableHead className="text-right whitespace-nowrap">Hrs Reg</TableHead>
               <TableHead className="text-right whitespace-nowrap bg-green-50">Hrs Extra</TableHead>
               <TableHead className="text-right whitespace-nowrap bg-green-50">Pago Extra</TableHead>
-              <TableHead className="text-right whitespace-nowrap bg-emerald-50">Hrs Fer</TableHead>
-              <TableHead className="text-right whitespace-nowrap bg-emerald-50">Pago Fer</TableHead>
-              <TableHead className="text-right whitespace-nowrap bg-teal-50">Hrs Dom</TableHead>
-              <TableHead className="text-right whitespace-nowrap bg-teal-50">Pago Dom</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-amber-50">Hrs Fer</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-amber-50">Pago Fer</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-sky-50">Hrs Dom</TableHead>
+              <TableHead className="text-right whitespace-nowrap bg-sky-50">Pago Dom</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -863,16 +863,16 @@ export function PayrollSummary({
                 <TableCell className="text-right font-mono bg-green-50">
                   {formatCurrency(p.overtimePay)}
                 </TableCell>
-                <TableCell className="text-right font-mono bg-emerald-50">
+                <TableCell className="text-right font-mono bg-amber-50">
                   {p.holidayHours > 0 ? p.holidayHours.toFixed(1) : "-"}
                 </TableCell>
-                <TableCell className="text-right font-mono bg-emerald-50">
+                <TableCell className="text-right font-mono bg-amber-50">
                   {p.holidayPay > 0 ? formatCurrency(p.holidayPay) : "-"}
                 </TableCell>
-                <TableCell className="text-right font-mono bg-teal-50">
+                <TableCell className="text-right font-mono bg-sky-50">
                   {p.sundayHours > 0 ? p.sundayHours.toFixed(1) : "-"}
                 </TableCell>
-                <TableCell className="text-right font-mono bg-teal-50">
+                <TableCell className="text-right font-mono bg-sky-50">
                   {p.sundayPay > 0 ? formatCurrency(p.sundayPay) : "-"}
                 </TableCell>
               </TableRow>
@@ -908,16 +908,16 @@ export function PayrollSummary({
               <TableCell className="text-right font-mono bg-green-50">
                 {formatCurrency(totals.overtimePay)}
               </TableCell>
-              <TableCell className="text-right font-mono bg-emerald-50">
+              <TableCell className="text-right font-mono bg-amber-50">
                 {totals.holidayHours > 0 ? totals.holidayHours.toFixed(1) : "-"}
               </TableCell>
-              <TableCell className="text-right font-mono bg-emerald-50">
+              <TableCell className="text-right font-mono bg-amber-50">
                 {totals.holidayPay > 0 ? formatCurrency(totals.holidayPay) : "-"}
               </TableCell>
-              <TableCell className="text-right font-mono bg-teal-50">
+              <TableCell className="text-right font-mono bg-sky-50">
                 {totals.sundayHours > 0 ? totals.sundayHours.toFixed(1) : "-"}
               </TableCell>
-              <TableCell className="text-right font-mono bg-teal-50">
+              <TableCell className="text-right font-mono bg-sky-50">
                 {totals.sundayPay > 0 ? formatCurrency(totals.sundayPay) : "-"}
               </TableCell>
             </TableRow>

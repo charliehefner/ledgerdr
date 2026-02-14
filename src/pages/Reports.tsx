@@ -276,6 +276,31 @@ export default function Reports() {
     return `${day}/${month}/${year}`;
   };
 
+  // Column export config: maps column keys to header labels, widths, and data extractors
+  const columnExportMap: Record<string, { header: string; width: number; getValue: (tx: Transaction) => string | number }> = {
+    id: { header: "ID", width: 12, getValue: (tx) => tx.id || "-" },
+    date: { header: "Date", width: 15, getValue: (tx) => formatExcelDate(tx.transaction_date) },
+    account: { header: "Account", width: 15, getValue: (tx) => tx.master_acct_code || "-" },
+    project: { header: "Project", width: 15, getValue: (tx) => tx.project_code || "-" },
+    cbsCode: { header: "CBS Code", width: 15, getValue: (tx) => tx.cbs_code || "-" },
+    description: { header: "Description", width: 30, getValue: (tx) => tx.description || "-" },
+    currency: { header: "Currency", width: 10, getValue: (tx) => tx.currency },
+    amount: { header: "Amount", width: 15, getValue: (tx) => tx.amount },
+    itbis: { header: "ITBIS", width: 12, getValue: (tx) => tx.itbis || "" },
+    payMethod: { header: "Pay Method", width: 18, getValue: (tx) => tx.pay_method || "-" },
+    document: { header: "Document", width: 15, getValue: (tx) => tx.document || "-" },
+    name: { header: "Name", width: 20, getValue: (tx) => tx.name || "-" },
+    exchangeRate: { header: "Exchange Rate", width: 15, getValue: (tx) => tx.exchange_rate || "-" },
+  };
+
+  // Get exportable visible columns (exclude "attach" which can't be exported)
+  const getExportColumns = () => {
+    return columnVisibility.visibleColumns
+      .filter(col => col.key !== "attach" && col.key !== "purchaseDate")
+      .map(col => ({ key: col.key, ...columnExportMap[col.key] }))
+      .filter(col => col.header); // only those with a mapping
+  };
+
   const exportToExcel = async () => {
     if (sortedTransactions.length === 0) {
       toast.error("No transactions to export");
@@ -283,47 +308,34 @@ export default function Reports() {
     }
 
     try {
+      const exportCols = getExportColumns();
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Transactions");
 
-      // Define columns with headers and widths
-      worksheet.columns = [
-        { header: "Date", key: "date", width: 15 },
-        { header: "Account", key: "account", width: 15 },
-        { header: "Project", key: "project", width: 15 },
-        { header: "CBS Code", key: "cbsCode", width: 15 },
-        { header: "Description", key: "description", width: 30 },
-        { header: "Currency", key: "currency", width: 10 },
-        { header: "Amount", key: "amount", width: 15 },
-        { header: "ITBIS", key: "itbis", width: 12 },
-        { header: "Payment Method", key: "payMethod", width: 18 },
-        { header: "Document", key: "document", width: 15 },
-        { header: "Name", key: "name", width: 20 },
-        { header: "Exchange Rate", key: "exchangeRate", width: 15 },
-        { header: "Internal", key: "internal", width: 10 },
-      ];
+      // Define columns matching visible column order
+      worksheet.columns = exportCols.map(col => ({
+        header: col.header,
+        key: col.key,
+        width: col.width,
+      }));
 
       // Add data rows
       sortedTransactions.forEach(tx => {
-        worksheet.addRow({
-          date: formatExcelDate(tx.transaction_date),
-          account: tx.master_acct_code,
-          project: tx.project_code || "",
-          cbsCode: tx.cbs_code || "",
-          description: tx.description,
-          currency: tx.currency,
-          amount: tx.amount,
-          itbis: tx.itbis || "",
-          payMethod: tx.pay_method || "",
-          document: tx.document || "",
-          name: tx.name || "",
-          exchangeRate: tx.exchange_rate || "",
-          internal: tx.is_internal ? "Yes" : "No",
+        const row: Record<string, string | number> = {};
+        exportCols.forEach(col => {
+          row[col.key] = col.getValue(tx);
         });
+        worksheet.addRow(row);
       });
 
       // Style header row
       worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4F81BD" },
+      };
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
       // Generate file and trigger download
       const buffer = await workbook.xlsx.writeBuffer();
@@ -331,7 +343,11 @@ export default function Reports() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `transactions_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const dateSuffix = [
+        startDate ? format(startDate, "yyyy-MM-dd") : null,
+        endDate ? format(endDate, "yyyy-MM-dd") : null,
+      ].filter(Boolean).join("_to_");
+      link.download = `transactions_report_${dateSuffix || format(new Date(), "yyyy-MM-dd")}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
       
@@ -348,6 +364,7 @@ export default function Reports() {
       return;
     }
 
+    const exportCols = getExportColumns();
     const doc = new jsPDF({ orientation: 'landscape' });
     
     // Title
@@ -355,35 +372,47 @@ export default function Reports() {
     doc.text("Transaction Report", 14, 22);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-    doc.text(`Total Transactions: ${sortedTransactions.length}`, 14, 36);
+    
+    let yPos = 36;
+    // Show active filters
+    const filterParts: string[] = [];
+    if (startDate) filterParts.push(`From: ${format(startDate, "dd/MM/yyyy")}`);
+    if (endDate) filterParts.push(`To: ${format(endDate, "dd/MM/yyyy")}`);
+    if (accountFilter !== "all") filterParts.push(`Account: ${accountFilter}`);
+    if (currencyFilter !== "all") filterParts.push(`Currency: ${currencyFilter}`);
+    if (filterParts.length > 0) {
+      doc.text(`Filters: ${filterParts.join(" | ")}`, 14, yPos);
+      yPos += 6;
+    }
+    
+    doc.text(`Total Transactions: ${sortedTransactions.length}`, 14, yPos);
+    yPos += 6;
 
     // Summary by currency
-    let yPos = 44;
     Object.entries(totalsByCurrency).forEach(([currency, total]) => {
       doc.text(`Total ${currency}: ${formatCurrency(total, currency)}`, 14, yPos);
       yPos += 6;
     });
 
-    // Table
-    const tableData = sortedTransactions.map(tx => [
-      formatExcelDate(tx.transaction_date),
-      tx.master_acct_code,
-      tx.description?.substring(0, 30) || "",
-      tx.currency,
-      tx.amount.toFixed(2),
-      tx.itbis?.toFixed(2) || "-",
-      tx.pay_method || "-",
-    ]);
+    // Table using visible columns in order
+    const headers = exportCols.map(col => col.header);
+    const tableData = sortedTransactions.map(tx =>
+      exportCols.map(col => String(col.getValue(tx)))
+    );
 
     autoTable(doc, {
-      head: [["Date", "Account", "Description", "Currency", "Amount", "ITBIS", "Pay Method"]],
+      head: [headers],
       body: tableData,
       startY: yPos + 4,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [30, 58, 138] },
     });
 
-    doc.save(`transactions_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    const dateSuffix = [
+      startDate ? format(startDate, "yyyy-MM-dd") : null,
+      endDate ? format(endDate, "yyyy-MM-dd") : null,
+    ].filter(Boolean).join("_to_");
+    doc.save(`transactions_report_${dateSuffix || format(new Date(), "yyyy-MM-dd")}.pdf`);
     toast.success("PDF report exported successfully");
   };
 

@@ -185,36 +185,42 @@ export function FieldHistoryPanel({
 
                 {metrics && (
                   <div className="mt-1.5 pt-1.5 border-t border-dashed text-xs text-muted-foreground space-y-0.5">
-                    <div className="flex justify-between">
-                      <span>Viaje:</span>
-                      <span className="font-medium text-foreground">{formatDuration(metrics.travelMinutes)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>En campo:</span>
-                      <span className="font-medium text-foreground">{formatDuration(metrics.fieldMinutes)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tiempo muerto:</span>
-                      <span className="font-medium text-foreground">{formatDuration(metrics.downtimeMinutes)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Ha/hora en campo:</span>
-                      <span className="font-medium text-foreground">
-                        {(() => {
-                          const fieldHours = metrics.fieldMinutes > 0
-                            ? metrics.fieldMinutes / 60
-                            : (op.start_hours != null && op.end_hours != null && op.end_hours > op.start_hours)
-                              ? op.end_hours - op.start_hours
-                              : 0;
-                          return fieldHours > 0 && op.hectares_done != null
-                            ? `${(op.hectares_done / fieldHours).toFixed(2)} ha/h`
-                            : "— ha/h";
-                        })()}
-                        {metrics.fieldMinutes === 0 && op.start_hours != null && op.end_hours != null && (
-                          <span className="text-muted-foreground text-[10px] ml-1">(horímetro)</span>
+                    {metrics.fieldMinutes > 0 ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Viaje:</span>
+                          <span className="font-medium text-foreground">{formatDuration(metrics.travelMinutes)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>En campo:</span>
+                          <span className="font-medium text-foreground">{formatDuration(metrics.fieldMinutes)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tiempo muerto:</span>
+                          <span className="font-medium text-foreground">{formatDuration(metrics.downtimeMinutes)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Ha/hora en campo:</span>
+                          <span className="font-medium text-foreground">
+                            {op.hectares_done != null
+                              ? `${(op.hectares_done / (metrics.fieldMinutes / 60)).toFixed(2)} ha/h`
+                              : "— ha/h"}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground italic">Sin datos GPS dentro del campo</p>
+                        {op.hectares_done != null && op.start_hours != null && op.end_hours != null && op.end_hours > op.start_hours && (
+                          <div className="flex justify-between">
+                            <span>Ha/hora <span className="text-[10px]">(horímetro)</span>:</span>
+                            <span className="font-medium text-foreground">
+                              {(op.hectares_done / (op.end_hours - op.start_hours)).toFixed(2)} ha/h
+                            </span>
+                          </div>
                         )}
-                      </span>
-                    </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

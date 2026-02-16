@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     }
 
     const gpsHeaders = {
-      Authorization: gpsApiKey,
+      Authorization: `Bearer ${gpsApiKey}`,
       Accept: "application/json",
     };
 

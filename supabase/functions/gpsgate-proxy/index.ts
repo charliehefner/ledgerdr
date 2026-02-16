@@ -102,12 +102,54 @@ Deno.serve(async (req) => {
     }
 
     if (action === "live-positions") {
+      // Fetch all user statuses from GPSGate
       const res = await fetch(
         `${GPSGATE_BASE}/applications/${APP_ID}/usersstatus`,
         { headers: gpsHeaders }
       );
-      const data = await res.json();
-      return new Response(JSON.stringify(data), {
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("GPSGate live-positions error:", res.status, errText);
+        return new Response(
+          JSON.stringify({ error: `GPSGate API returned ${res.status}` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const allStatuses = await res.json();
+
+      // Get linked tractors from fuel_equipment
+      const { data: tractors } = await serviceClient
+        .from("fuel_equipment")
+        .select("id, name, gpsgate_user_id")
+        .eq("equipment_type", "tractor")
+        .eq("is_active", true)
+        .not("gpsgate_user_id", "is", null);
+
+      const gpsIdToTractor = new Map<number, { id: string; name: string }>();
+      (tractors ?? []).forEach((t: any) => {
+        gpsIdToTractor.set(t.gpsgate_user_id, { id: t.id, name: t.name });
+      });
+
+      // Filter to only linked tractors with valid positions
+      const positions = (allStatuses as any[])
+        .filter((s: any) => gpsIdToTractor.has(s.id) && s.position?.latitude !== 0 && s.position?.longitude !== 0)
+        .map((s: any) => {
+          const tractor = gpsIdToTractor.get(s.id)!;
+          const engineOn = s.variables?.find((v: any) => v.name === "Engine on")?.value === "True";
+          const speed = s.velocity?.groundSpeed ?? 0;
+          return {
+            tractorId: tractor.id,
+            tractorName: tractor.name,
+            gpsName: s.name,
+            lat: s.position.latitude,
+            lng: s.position.longitude,
+            speed,
+            engineOn,
+            lastUpdate: s.utc,
+          };
+        });
+
+      return new Response(JSON.stringify(positions), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

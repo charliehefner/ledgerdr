@@ -198,8 +198,12 @@ export function FieldHistoryPanel({
                       <span className="font-medium text-foreground">{formatDuration(metrics.downtimeMinutes)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Vel. promedio:</span>
-                      <span className="font-medium text-foreground">{metrics.avgSpeedKmh} km/h</span>
+                      <span>Ha/hora en campo:</span>
+                      <span className="font-medium text-foreground">
+                        {metrics.fieldMinutes > 0 && op.hectares_done != null
+                          ? (op.hectares_done / (metrics.fieldMinutes / 60)).toFixed(2)
+                          : "—"} ha/h
+                      </span>
                     </div>
                   </div>
                 )}

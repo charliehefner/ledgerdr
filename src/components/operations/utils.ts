@@ -82,3 +82,141 @@ export function isMissingClosingData(op: Operation): boolean {
   // For non-mechanical: no strict closure requirements
   return op.operation_types.is_mechanical ? (op.end_hours == null) : false;
 }
+
+/**
+ * GPS Track Point for metrics calculation
+ */
+export interface GPSTrackPoint {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  speed?: number;
+}
+
+/**
+ * Result of GPS field metrics computation
+ */
+export interface FieldMetrics {
+  travelMinutes: number;
+  fieldMinutes: number;
+  downtimeMinutes: number;
+  avgSpeedKmh: number;
+}
+
+/**
+ * Ray-casting point-in-polygon test
+ */
+export function pointInPolygon(lat: number, lng: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const intersect = (yi > lat) !== (yj > lat) &&
+      lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * Check if a point is inside a GeoJSON Polygon or MultiPolygon geometry
+ */
+function isInsideGeometry(lat: number, lng: number, geometry: any): boolean {
+  if (!geometry) return false;
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.some((ring: number[][]) => pointInPolygon(lat, lng, ring));
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.some((polygon: number[][][]) =>
+      polygon.some((ring: number[][]) => pointInPolygon(lat, lng, ring))
+    );
+  }
+  return false;
+}
+
+/**
+ * Compute GPS-derived field metrics from track points and field boundary.
+ * 
+ * - travelMinutes: time from first point of day to first point inside field
+ * - fieldMinutes: time from first to last in-field point
+ * - downtimeMinutes: sum of intervals where in-field speed < 0.5 km/h
+ * - avgSpeedKmh: mean speed of in-field points where speed >= 0.5 km/h
+ */
+export function computeFieldMetrics(
+  points: GPSTrackPoint[],
+  fieldBoundary: any
+): FieldMetrics {
+  if (!points.length || !fieldBoundary) {
+    return { travelMinutes: 0, fieldMinutes: 0, downtimeMinutes: 0, avgSpeedKmh: 0 };
+  }
+
+  // Sort by timestamp
+  const sorted = [...points].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  const SPEED_THRESHOLD = 0.5; // km/h
+
+  let firstInFieldIdx = -1;
+  let lastInFieldIdx = -1;
+  let downtimeMs = 0;
+  const movingSpeeds: number[] = [];
+
+  // Tag each point as in-field or not
+  const inField: boolean[] = sorted.map((pt) =>
+    isInsideGeometry(pt.lat, pt.lng, fieldBoundary)
+  );
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (inField[i]) {
+      if (firstInFieldIdx === -1) firstInFieldIdx = i;
+      lastInFieldIdx = i;
+
+      const speed = sorted[i].speed ?? 0;
+      if (speed >= SPEED_THRESHOLD) {
+        movingSpeeds.push(speed);
+      }
+    }
+  }
+
+  // Calculate downtime: consecutive in-field points where speed < threshold
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (inField[i] && inField[i + 1]) {
+      const speed = sorted[i].speed ?? 0;
+      if (speed < SPEED_THRESHOLD) {
+        const dt =
+          new Date(sorted[i + 1].timestamp).getTime() -
+          new Date(sorted[i].timestamp).getTime();
+        downtimeMs += dt;
+      }
+    }
+  }
+
+  // Travel time: first point of day -> first in-field point
+  let travelMs = 0;
+  if (firstInFieldIdx > 0) {
+    travelMs =
+      new Date(sorted[firstInFieldIdx].timestamp).getTime() -
+      new Date(sorted[0].timestamp).getTime();
+  }
+
+  // Field time: first in-field -> last in-field
+  let fieldMs = 0;
+  if (firstInFieldIdx >= 0 && lastInFieldIdx >= 0) {
+    fieldMs =
+      new Date(sorted[lastInFieldIdx].timestamp).getTime() -
+      new Date(sorted[firstInFieldIdx].timestamp).getTime();
+  }
+
+  const avgSpeed =
+    movingSpeeds.length > 0
+      ? movingSpeeds.reduce((a, b) => a + b, 0) / movingSpeeds.length
+      : 0;
+
+  return {
+    travelMinutes: Math.round(travelMs / 60000),
+    fieldMinutes: Math.round(fieldMs / 60000),
+    downtimeMinutes: Math.round(downtimeMs / 60000),
+    avgSpeedKmh: Math.round(avgSpeed * 10) / 10,
+  };
+}

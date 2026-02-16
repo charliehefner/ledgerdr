@@ -718,6 +718,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
             fieldName={selectedField.name}
             farmName={selectedField.farmName}
             hectares={selectedField.hectares}
+            fieldBoundary={fields?.find((f) => f.id === selectedField.id)?.boundary}
             onClose={() => setSelectedField(null)}
           />
         )}

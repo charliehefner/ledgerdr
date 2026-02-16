@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getSignedAttachmentUrl, AttachmentCategory } from '@/lib/attachments';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { generateAttachmentFileName } from '@/lib/attachmentNaming';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,8 +86,8 @@ export function MultiAttachmentUpload({ attachments, onUpload, onClear }: MultiA
     setIsUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = generateAttachmentFileName(fileExt, category);
       const filePath = `receipts/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -231,7 +232,7 @@ export function MultiAttachmentUpload({ attachments, onUpload, onClear }: MultiA
       const response = await fetch(capturedImage);
       const blob = await response.blob();
       
-      const fileName = `${imageName || 'receipt'}-${Date.now()}.jpg`;
+      const fileName = generateAttachmentFileName('jpg', uploadCategory);
       const file = new File([blob], fileName, { type: 'image/jpeg' });
       
       const filePath = `receipts/${fileName}`;

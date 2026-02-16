@@ -3,6 +3,7 @@ import { Paperclip, X, FileImage, Loader2, Camera, Video, XCircle, SwitchCamera 
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { getSignedAttachmentUrl } from '@/lib/attachments';
+import { generateAttachmentFileName } from '@/lib/attachmentNaming';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -100,8 +101,8 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
     setIsUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = generateAttachmentFileName(fileExt);
       const filePath = `receipts/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -244,7 +245,7 @@ export function AttachmentUpload({ onUpload, attachmentUrl, onClear }: Attachmen
       const response = await fetch(capturedImage);
       const blob = await response.blob();
       
-      const fileName = `${imageName || 'receipt'}-${Date.now()}.jpg`;
+      const fileName = generateAttachmentFileName('jpg');
       const file = new File([blob], fileName, { type: 'image/jpeg' });
       
       const filePath = `receipts/${fileName}`;

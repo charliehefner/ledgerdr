@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { generateAttachmentFileName } from '@/lib/attachmentNaming';
 
 interface MultiAttachmentCellProps {
   transactionId: string | number;
@@ -139,8 +140,8 @@ export function MultiAttachmentCell({
     setIsUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${category}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = generateAttachmentFileName(fileExt, category, transactionId);
       const filePath = `receipts/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -228,7 +229,7 @@ export function MultiAttachmentCell({
     try {
       const response = await fetch(capturedImage);
       const blob = await response.blob();
-      const fileName = `${imageName || cameraCategory}-${Date.now()}.jpg`;
+      const fileName = generateAttachmentFileName('jpg', cameraCategory, transactionId);
       const file = new File([blob], fileName, { type: 'image/jpeg' });
       
       await uploadFile(file, cameraCategory);

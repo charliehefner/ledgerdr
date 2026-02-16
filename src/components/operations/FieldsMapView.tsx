@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Map as MapIcon } from "lucide-react";
 import { differenceInDays } from "date-fns";
+import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MapAgingControls } from "./MapAgingControls";
+import { TrackHistoryControls } from "./TrackHistoryControls";
+import { TrackLegend } from "./TrackLegend";
 
 const MAPBOX_TOKEN =
   "pk.eyJ1IjoiY2hhcmxlc2hlZm5lcmpvcmQiLCJhIjoiY21saWx4YjJyMDRtZDNmb3B5dzZwenBxZiJ9.k8mtyT5Xip_xmjOv0sN8WQ";
@@ -16,6 +19,13 @@ const FARM_COLORS = [
   "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4",
   "#469990", "#dcbeff", "#9A6324", "#fffac8", "#800000",
 ];
+
+const IMPLEMENT_COLORS = [
+  "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
+  "#42d4f4", "#f032e6", "#bfef45", "#469990", "#9A6324",
+];
+
+const UNMATCHED_COLOR = "#999999";
 
 const AGING_GREEN = "#22c55e";
 const AGING_YELLOW = "#eab308";
@@ -31,11 +41,133 @@ interface FieldWithBoundary {
   boundary: any;
 }
 
+interface TrackPoint {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  speed?: number;
+}
+
+interface OperationRecord {
+  operation_date: string;
+  implement_id: string | null;
+  start_hours: number | null;
+  end_hours: number | null;
+  hectares_done: number | null;
+  operation_type_id: string;
+  implements: { name: string } | null;
+  operation_types: { name: string } | null;
+}
+
+interface TrackData {
+  tracks: TrackPoint[] | TrackPoint[][];
+  operations: OperationRecord[];
+}
+
+interface LegendItem {
+  name: string;
+  color: string;
+}
+
 function getAgingColor(daysSince: number | null, tGreen: number, tRed: number) {
   if (daysSince === null) return AGING_GREY;
   if (daysSince <= tGreen) return AGING_GREEN;
   if (daysSince <= tRed) return AGING_YELLOW;
   return AGING_RED;
+}
+
+/** Flatten GPSGate tracks (may be array of arrays or flat array) */
+function flattenTrackPoints(tracks: TrackPoint[] | TrackPoint[][]): TrackPoint[] {
+  if (!tracks || !Array.isArray(tracks)) return [];
+  if (tracks.length === 0) return [];
+  // If first element has lat, it's a flat array
+  if ((tracks[0] as TrackPoint).lat !== undefined) return tracks as TrackPoint[];
+  // Otherwise it's array of arrays
+  return (tracks as TrackPoint[][]).flat();
+}
+
+/** Build colored segments by matching GPS points to operations by date */
+function buildColoredSegments(
+  points: TrackPoint[],
+  operations: OperationRecord[]
+): { segments: { points: [number, number][]; implementName: string; color: string; opName: string; date: string; hectares: number | null }[]; legend: LegendItem[] } {
+  if (points.length === 0) return { segments: [], legend: [] };
+
+  // Build implement color map
+  const implementNames = new Set<string>();
+  operations.forEach((op) => {
+    if (op.implements?.name) implementNames.add(op.implements.name);
+  });
+  const implementColorMap = new Map<string, string>();
+  const legendItems: LegendItem[] = [];
+  let colorIdx = 0;
+  implementNames.forEach((name) => {
+    const color = IMPLEMENT_COLORS[colorIdx % IMPLEMENT_COLORS.length];
+    implementColorMap.set(name, color);
+    legendItems.push({ name, color });
+    colorIdx++;
+  });
+
+  // Build date->operation map (first implement per date wins for simplicity)
+  const dateOpMap = new Map<string, OperationRecord>();
+  operations.forEach((op) => {
+    const dateKey = op.operation_date.split("T")[0];
+    if (!dateOpMap.has(dateKey)) {
+      dateOpMap.set(dateKey, op);
+    }
+  });
+
+  // Group points by date and match to implements
+  const segments: { points: [number, number][]; implementName: string; color: string; opName: string; date: string; hectares: number | null }[] = [];
+  let currentSegmentPoints: [number, number][] = [];
+  let currentImplName = "";
+  let currentColor = UNMATCHED_COLOR;
+  let currentOpName = "";
+  let currentDate = "";
+  let currentHectares: number | null = null;
+
+  const flushSegment = () => {
+    if (currentSegmentPoints.length >= 2) {
+      segments.push({
+        points: [...currentSegmentPoints],
+        implementName: currentImplName,
+        color: currentColor,
+        opName: currentOpName,
+        date: currentDate,
+        hectares: currentHectares,
+      });
+    }
+    currentSegmentPoints = [];
+  };
+
+  points.forEach((pt) => {
+    const pointDate = pt.timestamp?.split("T")[0] ?? "";
+    const op = dateOpMap.get(pointDate);
+    const implName = op?.implements?.name ?? "";
+    const color = implName ? (implementColorMap.get(implName) ?? UNMATCHED_COLOR) : UNMATCHED_COLOR;
+
+    if (implName !== currentImplName) {
+      // Add last point of previous segment as first point of new for continuity
+      const lastPt = currentSegmentPoints[currentSegmentPoints.length - 1];
+      flushSegment();
+      currentImplName = implName;
+      currentColor = color;
+      currentOpName = op?.operation_types?.name ?? "";
+      currentDate = pointDate;
+      currentHectares = op?.hectares_done ?? null;
+      if (lastPt) currentSegmentPoints.push(lastPt);
+    }
+
+    currentSegmentPoints.push([pt.lng, pt.lat]);
+  });
+  flushSegment();
+
+  // Add unmatched to legend if present
+  if (segments.some((s) => s.color === UNMATCHED_COLOR)) {
+    legendItems.push({ name: "Sin implemento", color: UNMATCHED_COLOR });
+  }
+
+  return { segments, legend: legendItems };
 }
 
 interface FieldsMapViewProps {
@@ -52,6 +184,11 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
   const [agingOperationTypeId, setAgingOperationTypeId] = useState<string | null>(null);
   const [thresholdGreen, setThresholdGreen] = useState(30);
   const [thresholdRed, setThresholdRed] = useState(90);
+
+  // Track history state
+  const [trackLoading, setTrackLoading] = useState(false);
+  const [trackData, setTrackData] = useState<TrackData | null>(null);
+  const [trackLegend, setTrackLegend] = useState<LegendItem[]>([]);
 
   const { data: fields, isLoading } = useQuery({
     queryKey: ["fields-with-boundaries"],
@@ -77,7 +214,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
     },
   });
 
-  // Build aging map: field_id -> { daysSince, lastDate }
+  // Build aging map
   const agingMap = useMemo(() => {
     if (!agingOperationTypeId || !agingOps) return null;
     const map = new Map<string, { daysSince: number; lastDate: string }>();
@@ -95,7 +232,6 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
     return map;
   }, [agingOperationTypeId, agingOps]);
 
-  // Fetch operation type name for popup
   const { data: selectedOpType } = useQuery({
     queryKey: ["op-type-name", agingOperationTypeId],
     enabled: !!agingOperationTypeId,
@@ -110,6 +246,90 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
   });
 
   const fieldsWithBoundary = fields?.filter((f) => f.boundary) || [];
+
+  // Load GPS tracks
+  const handleLoadTracks = useCallback(
+    async (tractorId: string, dateFrom: string, dateTo: string) => {
+      // Deactivate aging mode when loading tracks
+      setAgingOperationTypeId(null);
+      setTrackLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("gpsgate-proxy", {
+          body: null,
+          headers: {},
+          method: "GET",
+        });
+
+        // Use fetch directly since supabase.functions.invoke doesn't support query params well
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+
+        const res = await fetch(
+          `${supabaseUrl}/functions/v1/gpsgate-proxy?action=tracks&tractorId=${tractorId}&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Error ${res.status}`);
+        }
+
+        const result: TrackData = await res.json();
+        setTrackData(result);
+
+        const flatPoints = flattenTrackPoints(result.tracks);
+        if (flatPoints.length === 0) {
+          toast.info("No se encontraron puntos GPS en el rango seleccionado");
+          setTrackData(null);
+          setTrackLegend([]);
+          return;
+        }
+
+        const { legend } = buildColoredSegments(flatPoints, result.operations);
+        setTrackLegend(legend);
+        toast.success(`${flatPoints.length} puntos GPS cargados`);
+      } catch (err: any) {
+        console.error("Track load error:", err);
+        toast.error(err.message || "Error al cargar recorrido GPS");
+        setTrackData(null);
+        setTrackLegend([]);
+      } finally {
+        setTrackLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleClearTracks = useCallback(() => {
+    setTrackData(null);
+    setTrackLegend([]);
+  }, []);
+
+  // Deactivate aging when tracks are active
+  const handleAgingChange = useCallback(
+    (id: string | null) => {
+      if (id) {
+        setTrackData(null);
+        setTrackLegend([]);
+      }
+      setAgingOperationTypeId(id);
+    },
+    []
+  );
+
+  // Build track segments for rendering
+  const trackSegments = useMemo(() => {
+    if (!trackData) return null;
+    const flatPoints = flattenTrackPoints(trackData.tracks);
+    if (flatPoints.length === 0) return null;
+    return buildColoredSegments(flatPoints, trackData.operations);
+  }, [trackData]);
 
   useEffect(() => {
     if (!mapContainer.current || fieldsWithBoundary.length === 0) return;
@@ -160,6 +380,9 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
       });
 
       const isAgingMode = !!agingMap;
+      const isTrackMode = !!trackSegments;
+      // In track mode, reduce field opacity
+      const fieldFillOpacity = isTrackMode ? 0.15 : 0.35;
 
       const features = fieldsWithBoundary.map((field) => {
         const aging = agingMap?.get(field.id) ?? null;
@@ -198,7 +421,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         source: "fields",
         paint: {
           "fill-color": ["get", "color"],
-          "fill-opacity": 0.35,
+          "fill-opacity": fieldFillOpacity,
         },
       });
 
@@ -228,6 +451,79 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         },
       });
 
+      // Add track layers if available
+      if (trackSegments && trackSegments.segments.length > 0) {
+        const trackBounds = new mapboxgl.LngLatBounds();
+
+        trackSegments.segments.forEach((seg, idx) => {
+          const sourceId = `track-seg-${idx}`;
+          const layerId = `track-line-${idx}`;
+
+          const lineGeoJson: GeoJSON.Feature = {
+            type: "Feature",
+            properties: {
+              implement: seg.implementName || "Sin implemento",
+              operation: seg.opName,
+              date: seg.date,
+              hectares: seg.hectares,
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: seg.points,
+            },
+          };
+
+          map.addSource(sourceId, { type: "geojson", data: lineGeoJson });
+
+          const isUnmatched = seg.color === UNMATCHED_COLOR;
+
+          map.addLayer({
+            id: layerId,
+            type: "line",
+            source: sourceId,
+            paint: {
+              "line-color": seg.color,
+              "line-width": 3,
+              "line-opacity": 0.9,
+              ...(isUnmatched ? { "line-dasharray": [2, 4] } : {}),
+            } as any,
+          });
+
+          // Add click handler for track segments
+          map.on("click", layerId, (e) => {
+            const props = e.features?.[0]?.properties;
+            if (!props) return;
+            const ha = props.hectares ? `${props.hectares} ha` : "—";
+            new mapboxgl.Popup()
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="color:#000">
+                  <strong>${props.implement}</strong><br/>
+                  Operación: ${props.operation || "—"}<br/>
+                  Fecha: ${props.date || "—"}<br/>
+                  Hectáreas: ${ha}
+                </div>`
+              )
+              .addTo(map);
+          });
+
+          map.on("mouseenter", layerId, () => {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", layerId, () => {
+            map.getCanvas().style.cursor = "";
+          });
+
+          seg.points.forEach((p) => trackBounds.extend(p as [number, number]));
+        });
+
+        // Fit to track bounds
+        if (!trackBounds.isEmpty()) {
+          map.fitBounds(trackBounds, { padding: 80 });
+        }
+      }
+
+      // Field click handler
       map.on("click", "fields-fill", (e) => {
         const props = e.features?.[0]?.properties;
         if (!props) return;
@@ -256,19 +552,22 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         map.getCanvas().style.cursor = "";
       });
 
-      const bounds = new mapboxgl.LngLatBounds();
-      features.forEach((f) => {
-        const coords = f.geometry.coordinates.flat(2) as [number, number][];
-        coords.forEach((c) => bounds.extend(c));
-      });
-      map.fitBounds(bounds, { padding: 60 });
+      // Fit to field bounds if no tracks
+      if (!trackSegments || trackSegments.segments.length === 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        features.forEach((f) => {
+          const coords = f.geometry.coordinates.flat(2) as [number, number][];
+          coords.forEach((c) => bounds.extend(c));
+        });
+        map.fitBounds(bounds, { padding: 60 });
+      }
     });
 
     return () => {
       map.remove();
       mapRef.current = null;
     };
-  }, [fieldsWithBoundary, style, agingMap, thresholdGreen, thresholdRed, selectedOpType]);
+  }, [fieldsWithBoundary, style, agingMap, thresholdGreen, thresholdRed, selectedOpType, trackSegments]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading map data...</div>;
@@ -290,7 +589,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         style={style}
         onStyleToggle={() => setStyle((s) => (s === "satellite" ? "streets" : "satellite"))}
         agingOperationTypeId={agingOperationTypeId}
-        onAgingOperationTypeChange={setAgingOperationTypeId}
+        onAgingOperationTypeChange={handleAgingChange}
         thresholdGreen={thresholdGreen}
         onThresholdGreenChange={setThresholdGreen}
         thresholdRed={thresholdRed}
@@ -298,11 +597,20 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         expanded={expanded}
         onExpandToggle={onExpandToggle}
       />
-      <div
-        ref={mapContainer}
-        className="w-full rounded-lg border"
-        style={{ height: expanded ? "calc(100vh - 4rem)" : "70vh" }}
+      <TrackHistoryControls
+        onLoadTracks={handleLoadTracks}
+        onClearTracks={handleClearTracks}
+        isLoading={trackLoading}
+        hasActiveTracks={!!trackData}
       />
+      <div className="relative">
+        <div
+          ref={mapContainer}
+          className="w-full rounded-lg border"
+          style={{ height: expanded ? "calc(100vh - 4rem)" : "70vh" }}
+        />
+        <TrackLegend items={trackLegend} />
+      </div>
     </div>
   );
 }

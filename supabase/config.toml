@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.ocr-receipt]
 verify_jwt = false
+
+[functions.gpsgate-proxy]
+verify_jwt = false

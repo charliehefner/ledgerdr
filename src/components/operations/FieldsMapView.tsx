@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Map as MapIcon, Radio } from "lucide-react";
+import { Map as MapIcon } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
@@ -344,97 +344,82 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
     return buildColoredSegments(flatPoints, trackData.operations);
   }, [trackData]);
 
-  // Render live position markers on the map
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // Clear existing markers
+  // Helper to render live markers on a given map
+  const renderLiveMarkers = useCallback((map: mapboxgl.Map, positions: LivePosition[] | null) => {
     liveMarkersRef.current.forEach((m) => m.remove());
     liveMarkersRef.current = [];
 
-    if (!livePositions || livePositions.length === 0) return;
+    if (!positions || positions.length === 0) return;
 
-    // Wait for map to be loaded
-    const addMarkers = () => {
-      livePositions.forEach((pos) => {
-        const isMoving = pos.speed > 0.5;
-        const dotColor = pos.engineOn ? (isMoving ? "#22c55e" : "#eab308") : "#94a3b8";
+    positions.forEach((pos) => {
+      const isMoving = pos.speed > 0.5;
+      const dotColor = pos.engineOn ? (isMoving ? "#22c55e" : "#eab308") : "#94a3b8";
 
-        const el = document.createElement("div");
-        el.style.display = "flex";
-        el.style.flexDirection = "column";
-        el.style.alignItems = "center";
-        el.style.pointerEvents = "auto";
-        el.style.cursor = "pointer";
+      const el = document.createElement("div");
+      el.style.display = "flex";
+      el.style.flexDirection = "column";
+      el.style.alignItems = "center";
+      el.style.pointerEvents = "auto";
+      el.style.cursor = "pointer";
 
-        // Name label
-        const label = document.createElement("div");
-        label.textContent = pos.tractorName;
-        label.style.cssText = `
-          font-size: 11px; font-weight: 700; color: #fff;
-          background: rgba(0,0,0,0.75); padding: 2px 6px;
-          border-radius: 4px; white-space: nowrap; margin-bottom: 4px;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-        `;
-        el.appendChild(label);
+      const label = document.createElement("div");
+      label.textContent = pos.tractorName;
+      label.style.cssText = `
+        font-size: 12px; font-weight: 700; color: #fff;
+        background: rgba(0,0,0,0.8); padding: 2px 8px;
+        border-radius: 4px; white-space: nowrap; margin-bottom: 4px;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      `;
+      el.appendChild(label);
 
-        // Dot
-        const dot = document.createElement("div");
-        dot.style.cssText = `
-          width: 16px; height: 16px; border-radius: 50%;
-          background: ${dotColor}; border: 3px solid #fff;
-          box-shadow: 0 0 8px rgba(0,0,0,0.4);
-        `;
-        if (isMoving) {
-          dot.style.animation = "pulse 1.5s infinite";
-        }
-        el.appendChild(dot);
-
-        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-          .setLngLat([pos.lng, pos.lat])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25 }).setHTML(
-              `<div style="color:#000">
-                <strong>${pos.tractorName}</strong><br/>
-                GPS: ${pos.gpsName}<br/>
-                Motor: ${pos.engineOn ? "Encendido" : "Apagado"}<br/>
-                Vel: ${pos.speed.toFixed(1)} km/h<br/>
-                Últ. dato: ${pos.lastUpdate ? new Date(pos.lastUpdate).toLocaleString() : "—"}
-              </div>`
-            )
-          )
-          .addTo(map);
-
-        liveMarkersRef.current.push(marker);
-      });
-
-      // Fit to markers if no tracks/aging active
-      if (!trackSegments && livePositions.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        livePositions.forEach((p) => bounds.extend([p.lng, p.lat]));
-        // Also include field bounds
-        fieldsWithBoundary.forEach((f) => {
-          const coords = f.boundary?.coordinates?.flat(2) as [number, number][] | undefined;
-          coords?.forEach((c) => bounds.extend(c));
-        });
-        if (!bounds.isEmpty()) {
-          map.fitBounds(bounds, { padding: 60 });
-        }
+      const dot = document.createElement("div");
+      dot.style.cssText = `
+        width: 18px; height: 18px; border-radius: 50%;
+        background: ${dotColor}; border: 3px solid #fff;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      `;
+      if (isMoving) {
+        dot.style.animation = "pulse 1.5s infinite";
       }
-    };
+      el.appendChild(dot);
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([pos.lng, pos.lat])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25 }).setHTML(
+            `<div style="color:#000">
+              <strong>${pos.tractorName}</strong><br/>
+              GPS: ${pos.gpsName}<br/>
+              Motor: ${pos.engineOn ? "Encendido" : "Apagado"}<br/>
+              Vel: ${pos.speed.toFixed(1)} km/h<br/>
+              Últ. dato: ${pos.lastUpdate ? new Date(pos.lastUpdate).toLocaleString() : "—"}
+            </div>`
+          )
+        )
+        .addTo(map);
+
+      liveMarkersRef.current.push(marker);
+    });
+  }, []);
+
+  // Re-render live markers whenever positions change on the current map
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !livePositions) return;
+
+    const doRender = () => renderLiveMarkers(map, livePositions);
 
     if (map.loaded()) {
-      addMarkers();
+      doRender();
     } else {
-      map.on("load", addMarkers);
+      map.once("load", doRender);
     }
 
     return () => {
       liveMarkersRef.current.forEach((m) => m.remove());
       liveMarkersRef.current = [];
     };
-  }, [livePositions, fieldsWithBoundary, trackSegments]);
+  }, [livePositions, renderLiveMarkers]);
 
   useEffect(() => {
     if (!mapContainer.current || fieldsWithBoundary.length === 0) return;
@@ -665,15 +650,21 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
           const coords = f.geometry.coordinates.flat(2) as [number, number][];
           coords.forEach((c) => bounds.extend(c));
         });
+        if (livePositions && livePositions.length > 0) {
+          livePositions.forEach((p) => bounds.extend([p.lng, p.lat]));
+        }
         map.fitBounds(bounds, { padding: 60 });
       }
+
+      // Re-add live markers after map recreation
+      renderLiveMarkers(map, livePositions);
     });
 
     return () => {
       map.remove();
       mapRef.current = null;
     };
-  }, [fieldsWithBoundary, style, agingMap, thresholdGreen, thresholdRed, selectedOpType, trackSegments]);
+  }, [fieldsWithBoundary, style, agingMap, thresholdGreen, thresholdRed, selectedOpType, trackSegments, livePositions, renderLiveMarkers]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading map data...</div>;
@@ -709,15 +700,11 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         isLoading={trackLoading}
         hasActiveTracks={!!trackData}
       />
-      <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-card">
-        <Radio className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">GPS en Vivo</span>
-        <LivePositionsControl
-          onPositionsLoaded={handlePositionsLoaded}
-          onClear={handleClearPositions}
-          isActive={!!livePositions}
-        />
-      </div>
+      <LivePositionsControl
+        onPositionsLoaded={handlePositionsLoaded}
+        onClear={handleClearPositions}
+        isActive={!!livePositions}
+      />
       <div className="relative">
         <style>{`
           @keyframes pulse {

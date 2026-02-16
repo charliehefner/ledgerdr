@@ -200,9 +200,19 @@ export function FieldHistoryPanel({
                     <div className="flex justify-between">
                       <span>Ha/hora en campo:</span>
                       <span className="font-medium text-foreground">
-                        {metrics.fieldMinutes > 0 && op.hectares_done != null
-                          ? (op.hectares_done / (metrics.fieldMinutes / 60)).toFixed(2)
-                          : "—"} ha/h
+                        {(() => {
+                          const fieldHours = metrics.fieldMinutes > 0
+                            ? metrics.fieldMinutes / 60
+                            : (op.start_hours != null && op.end_hours != null && op.end_hours > op.start_hours)
+                              ? op.end_hours - op.start_hours
+                              : 0;
+                          return fieldHours > 0 && op.hectares_done != null
+                            ? `${(op.hectares_done / fieldHours).toFixed(2)} ha/h`
+                            : "— ha/h";
+                        })()}
+                        {metrics.fieldMinutes === 0 && op.start_hours != null && op.end_hours != null && (
+                          <span className="text-muted-foreground text-[10px] ml-1">(horímetro)</span>
+                        )}
                       </span>
                     </div>
                   </div>

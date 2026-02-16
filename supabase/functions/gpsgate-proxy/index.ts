@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
     const gpsApiKey = Deno.env.get("GPSGATE_API_KEY");
+    console.log("GPSGATE_API_KEY length:", gpsApiKey?.length, "starts with:", gpsApiKey?.substring(0, 5));
     if (!gpsApiKey) {
       return new Response(
         JSON.stringify({ error: "GPSGate API key not configured" }),

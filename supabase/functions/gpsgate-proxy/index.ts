@@ -204,10 +204,20 @@ Deno.serve(async (req) => {
       }
 
       const gpsUserId = tractor.gpsgate_user_id;
-      const trackUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users/${gpsUserId}/tracks?from=${encodeURIComponent(dateFrom)}&to=${encodeURIComponent(dateTo)}`;
+      const trackUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users/${gpsUserId}/tracks?DateFrom=${encodeURIComponent(dateFrom)}&DateTo=${encodeURIComponent(dateTo)}`;
+      console.log("Fetching tracks from:", trackUrl);
 
       const res = await fetch(trackUrl, { headers: gpsHeaders });
-      const data = await res.json();
+      const rawText = await res.text();
+      console.log("GPSGate tracks response status:", res.status, "body length:", rawText.length, "preview:", rawText.substring(0, 300));
+      
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        console.error("Failed to parse GPSGate tracks response:", rawText.substring(0, 500));
+        data = [];
+      }
 
       // Also fetch operations for this tractor in the date range for implement matching
       const { data: operations } = await serviceClient

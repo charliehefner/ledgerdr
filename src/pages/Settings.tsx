@@ -24,7 +24,8 @@ import {
   Settings2,
   Users,
   QrCode,
-  Store
+  Store,
+  Satellite
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,7 @@ import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { QRCodeManager } from "@/components/settings/QRCodeManager";
 import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager";
 import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
+import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -114,6 +116,12 @@ export default function Settings() {
               <TabsTrigger value="vendor-rules">
                 <Store className="h-4 w-4 mr-2" />
                 Reglas Proveedor
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="gps">
+                <Satellite className="h-4 w-4 mr-2" />
+                GPS
               </TabsTrigger>
             )}
           </TabsList>
@@ -283,6 +291,14 @@ export default function Settings() {
             <TabsContent value="vendor-rules" className="mt-6">
               <div className="max-w-4xl">
                 <VendorAccountRules />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="gps" className="mt-6">
+              <div className="max-w-4xl">
+                <GPSLinkingManager />
               </div>
             </TabsContent>
           )}

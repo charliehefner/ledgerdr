@@ -135,9 +135,23 @@ function isInsideGeometry(lat: number, lng: number, geometry: any): boolean {
 }
 
 /**
+ * Haversine distance between two points in meters
+ */
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
  * Compute GPS-derived field metrics from track points and field boundary.
  * 
- * - travelMinutes: time from first point of day to first point inside field
+ * - travelMinutes: time from first significant movement (>250m from origin) to first point inside field
  * - fieldMinutes: time from first to last in-field point
  * - downtimeMinutes: sum of intervals where in-field speed < 0.5 km/h
  * - avgSpeedKmh: mean speed of in-field points where speed >= 0.5 km/h
@@ -156,6 +170,17 @@ export function computeFieldMetrics(
   );
 
   const SPEED_THRESHOLD = 0.5; // km/h
+  const MOVE_THRESHOLD_M = 250; // meters from origin to count as "started moving"
+
+  // Find start-of-day index: first point that is >250m from the very first point
+  const origin = sorted[0];
+  let dayStartIdx = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    if (haversineMeters(origin.lat, origin.lng, sorted[i].lat, sorted[i].lng) > MOVE_THRESHOLD_M) {
+      dayStartIdx = i;
+      break;
+    }
+  }
 
   let firstInFieldIdx = -1;
   let lastInFieldIdx = -1;
@@ -192,12 +217,12 @@ export function computeFieldMetrics(
     }
   }
 
-  // Travel time: first point of day -> first in-field point
+  // Travel time: first significant movement -> first in-field point
   let travelMs = 0;
-  if (firstInFieldIdx > 0) {
+  if (firstInFieldIdx > dayStartIdx) {
     travelMs =
       new Date(sorted[firstInFieldIdx].timestamp).getTime() -
-      new Date(sorted[0].timestamp).getTime();
+      new Date(sorted[dayStartIdx].timestamp).getTime();
   }
 
   // Field time: first in-field -> last in-field

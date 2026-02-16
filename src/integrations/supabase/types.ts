@@ -712,6 +712,7 @@ export type Database = {
           created_at: string
           current_hour_meter: number
           equipment_type: string
+          gpsgate_user_id: number | null
           hp: number | null
           id: string
           is_active: boolean
@@ -728,6 +729,7 @@ export type Database = {
           created_at?: string
           current_hour_meter?: number
           equipment_type: string
+          gpsgate_user_id?: number | null
           hp?: number | null
           id?: string
           is_active?: boolean
@@ -744,6 +746,7 @@ export type Database = {
           created_at?: string
           current_hour_meter?: number
           equipment_type?: string
+          gpsgate_user_id?: number | null
           hp?: number | null
           id?: string
           is_active?: boolean
@@ -878,6 +881,7 @@ export type Database = {
           purchase_price: number | null
           serial_number: string | null
           updated_at: string
+          working_width_m: number | null
         }
         Insert: {
           brand?: string | null
@@ -891,6 +895,7 @@ export type Database = {
           purchase_price?: number | null
           serial_number?: string | null
           updated_at?: string
+          working_width_m?: number | null
         }
         Update: {
           brand?: string | null
@@ -904,6 +909,7 @@ export type Database = {
           purchase_price?: number | null
           serial_number?: string | null
           updated_at?: string
+          working_width_m?: number | null
         }
         Relationships: []
       }

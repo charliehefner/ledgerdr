@@ -31,7 +31,8 @@ export function GPSLinkingManager() {
   const [gpsAssets, setGpsAssets] = useState<GpsAsset[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(false);
 
-  // Fetch tractors
+  // Fetch tractors (exclude non-GPS equipment like Contrato, Drone)
+  const NON_GPS_NAMES = ["Contrato", "Drone"];
   const { data: tractors, isLoading } = useQuery({
     queryKey: ["tractors-for-gps-linking"],
     queryFn: async () => {
@@ -42,7 +43,8 @@ export function GPSLinkingManager() {
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
-      return data;
+      // Filter out non-GPS equipment
+      return (data ?? []).filter((t) => !NON_GPS_NAMES.includes(t.name));
     },
   });
 

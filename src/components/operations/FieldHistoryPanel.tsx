@@ -188,10 +188,6 @@ export function FieldHistoryPanel({
                     {metrics.fieldMinutes > 0 ? (
                       <>
                         <div className="flex justify-between">
-                          <span>Viaje:</span>
-                          <span className="font-medium text-foreground">{formatDuration(metrics.travelMinutes)}</span>
-                        </div>
-                        <div className="flex justify-between">
                           <span>En campo:</span>
                           <span className="font-medium text-foreground">{formatDuration(metrics.fieldMinutes)}</span>
                         </div>

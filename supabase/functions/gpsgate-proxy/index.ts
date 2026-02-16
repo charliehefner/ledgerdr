@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     };
 
     if (action === "list-assets") {
-      const gpsUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users`;
+      const gpsUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users?FromIndex=0&PageSize=1000&Kind=Asset`;
       console.log("Fetching GPS assets from:", gpsUrl);
       const res = await fetch(gpsUrl, { headers: gpsHeaders });
       console.log("GPS response status:", res.status);

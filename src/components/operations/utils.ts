@@ -217,12 +217,26 @@ export function computeFieldMetrics(
     }
   }
 
-  // Travel time: first significant movement -> first in-field point
+  // Travel time: approach to field — find the last point where tractor was >500m
+  // from the field boundary before entering, then measure from the first point
+  // that is within 500m to the first in-field point (i.e. final approach)
   let travelMs = 0;
-  if (firstInFieldIdx > dayStartIdx) {
+  if (firstInFieldIdx > 0) {
+    const APPROACH_THRESHOLD_M = 500;
+    const firstInFieldPt = sorted[firstInFieldIdx];
+    // Walk backwards from firstInFieldIdx to find when the tractor started approaching
+    let approachIdx = firstInFieldIdx;
+    for (let i = firstInFieldIdx - 1; i >= 0; i--) {
+      const dist = haversineMeters(sorted[i].lat, sorted[i].lng, firstInFieldPt.lat, firstInFieldPt.lng);
+      if (dist > APPROACH_THRESHOLD_M) {
+        approachIdx = i + 1;
+        break;
+      }
+      approachIdx = i;
+    }
     travelMs =
       new Date(sorted[firstInFieldIdx].timestamp).getTime() -
-      new Date(sorted[dayStartIdx].timestamp).getTime();
+      new Date(sorted[approachIdx].timestamp).getTime();
   }
 
   // Field time: first in-field -> last in-field

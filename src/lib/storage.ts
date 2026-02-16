@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { generateAttachmentFileName } from '@/lib/attachmentNaming';
+import type { AttachmentCategory } from '@/lib/attachments';
 
 /**
  * Gets a signed URL for a file in the private transaction-attachments bucket.
@@ -38,9 +40,13 @@ export async function getSignedUrl(attachmentUrl: string): Promise<string | null
  * Uploads a file to the transaction-attachments bucket.
  * Returns the file path (not the signed URL) for storage in the database.
  */
-export async function uploadAttachment(file: File): Promise<{ filePath: string; error?: string } | null> {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+export async function uploadAttachment(
+  file: File,
+  category: AttachmentCategory = 'payment_receipt',
+  transactionId?: string | number
+): Promise<{ filePath: string; error?: string } | null> {
+  const fileExt = file.name.split('.').pop() || 'jpg';
+  const fileName = generateAttachmentFileName(fileExt, category, transactionId);
   const filePath = `receipts/${fileName}`;
 
   const { error: uploadError } = await supabase.storage

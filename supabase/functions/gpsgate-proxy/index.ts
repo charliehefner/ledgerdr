@@ -234,7 +234,15 @@ Deno.serve(async (req) => {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      const data = allPoints;
+      // Normalize GPSGate format to {lat, lng, timestamp, speed}
+      const data = allPoints
+        .filter((p: any) => p.position?.latitude && p.position?.longitude)
+        .map((p: any) => ({
+          lat: p.position.latitude,
+          lng: p.position.longitude,
+          timestamp: p.utc || p.serverUtc || "",
+          speed: p.velocity?.groundSpeed ?? 0,
+        }));
 
       // Also fetch operations for this tractor in the date range for implement matching
       const { data: operations } = await serviceClient

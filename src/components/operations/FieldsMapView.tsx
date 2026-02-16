@@ -11,6 +11,7 @@ import { MapAgingControls } from "./MapAgingControls";
 import { TrackHistoryControls } from "./TrackHistoryControls";
 import { TrackLegend } from "./TrackLegend";
 import { LivePositionsControl, type LivePosition } from "./LivePositionsControl";
+import { FieldHistoryPanel } from "./FieldHistoryPanel";
 
 const MAPBOX_TOKEN =
   "pk.eyJ1IjoiY2hhcmxlc2hlZm5lcmpvcmQiLCJhIjoiY21saWx4YjJyMDRtZDNmb3B5dzZwenBxZiJ9.k8mtyT5Xip_xmjOv0sN8WQ";
@@ -192,6 +193,12 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
   const [trackLegend, setTrackLegend] = useState<LegendItem[]>([]);
   const [livePositions, setLivePositions] = useState<LivePosition[] | null>(null);
   const liveMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const [selectedField, setSelectedField] = useState<{
+    id: string;
+    name: string;
+    farmName: string;
+    hectares: number | null;
+  } | null>(null);
   const { data: fields, isLoading } = useQuery({
     queryKey: ["fields-with-boundaries"],
     queryFn: async () => {
@@ -611,26 +618,16 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         }
       }
 
-      // Field click handler
+      // Field click handler – open side panel
       map.on("click", "fields-fill", (e) => {
         const props = e.features?.[0]?.properties;
         if (!props) return;
-        const ha = props.hectares ? `${props.hectares} ha` : "—";
-        let agingHtml = "";
-        if (props.is_aging) {
-          if (props.days_since !== null && props.days_since !== undefined && props.last_date) {
-            const dateStr = String(props.last_date).split("T")[0];
-            agingHtml = `<br/><strong>${props.op_type_name}:</strong> hace ${props.days_since} días (${dateStr})`;
-          } else {
-            agingHtml = `<br/><strong>${props.op_type_name}:</strong> Sin registro`;
-          }
-        }
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(
-            `<div style="color:#000"><strong>${props.name}</strong><br/>Finca: ${props.farm_name}<br/>Área: ${ha}${agingHtml}</div>`
-          )
-          .addTo(map);
+        setSelectedField({
+          id: props.id,
+          name: props.name,
+          farmName: props.farm_name,
+          hectares: props.hectares ?? null,
+        });
       });
 
       map.on("mouseenter", "fields-fill", () => {
@@ -715,6 +712,15 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
           style={{ height: expanded ? "calc(100vh - 4rem)" : "70vh" }}
         />
         <TrackLegend items={trackLegend} />
+        {selectedField && (
+          <FieldHistoryPanel
+            fieldId={selectedField.id}
+            fieldName={selectedField.name}
+            farmName={selectedField.farmName}
+            hectares={selectedField.hectares}
+            onClose={() => setSelectedField(null)}
+          />
+        )}
       </div>
     </div>
   );

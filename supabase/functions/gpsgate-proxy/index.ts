@@ -31,17 +31,15 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const {
-      data: { user },
-      error: userError,
-    } = await userClient.auth.getUser(token);
-    if (userError || !user) {
-      console.error("Auth error:", userError?.message);
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth claims error:", claimsError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const userId = claimsData.claims.sub as string;
 
     // Check role
     const serviceClient = createClient(
@@ -51,7 +49,7 @@ Deno.serve(async (req) => {
     const { data: roleData } = await serviceClient
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     const allowedRoles = ["admin", "management", "supervisor"];
@@ -85,8 +83,19 @@ Deno.serve(async (req) => {
       console.log("Fetching GPS assets from:", gpsUrl);
       const res = await fetch(gpsUrl, { headers: gpsHeaders });
       console.log("GPS response status:", res.status);
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("GPSGate API error:", res.status, errText);
+        return new Response(
+          JSON.stringify({ error: `GPSGate API returned ${res.status}: ${errText}` }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
       const data = await res.json();
-      console.log("GPS response data type:", typeof data, Array.isArray(data) ? `array(${data.length})` : "");
+      console.log("GPS assets count:", Array.isArray(data) ? data.length : "not array");
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

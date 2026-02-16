@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.import-field-boundaries]
 verify_jwt = false
+
+[functions.ocr-receipt]
+verify_jwt = false

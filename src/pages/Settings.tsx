@@ -23,7 +23,8 @@ import {
   MapPin,
   Settings2,
   Users,
-  QrCode
+  QrCode,
+  Store
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,7 @@ import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { QRCodeManager } from "@/components/settings/QRCodeManager";
 import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager";
+import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -106,6 +108,12 @@ export default function Settings() {
               <TabsTrigger value="followups">
                 <Settings2 className="h-4 w-4 mr-2" />
                 Seguimientos
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="vendor-rules">
+                <Store className="h-4 w-4 mr-2" />
+                Reglas Proveedor
               </TabsTrigger>
             )}
           </TabsList>
@@ -267,6 +275,14 @@ export default function Settings() {
             <TabsContent value="followups" className="mt-6">
               <div className="max-w-4xl">
                 <FollowUpRulesManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="vendor-rules" className="mt-6">
+              <div className="max-w-4xl">
+                <VendorAccountRules />
               </div>
             </TabsContent>
           )}

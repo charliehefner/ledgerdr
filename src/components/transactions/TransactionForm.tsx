@@ -15,9 +15,11 @@ import {
   Project,
   CbsCode,
 } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { NameAutocomplete } from './NameAutocomplete';
+import { ScanReceiptButton, OcrResult } from './ScanReceiptButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,6 +91,19 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const { data: existingTransactions = [] } = useQuery({
     queryKey: ['existingTransactions'],
     queryFn: () => fetchRecentTransactions(500),
+  });
+
+  // Fetch vendor rules for auto-fill
+  const { data: vendorRules = [] } = useQuery({
+    queryKey: ['vendorRules'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendor_account_rules')
+        .select('*')
+        .order('vendor_name');
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const uniqueNames = useMemo(() => {
@@ -223,16 +238,61 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         if (matchingTx?.rnc && !prev.rnc) {
           updated.rnc = matchingTx.rnc;
         }
+
+        // Auto-fill from vendor rules
+        const upperName = value.trim().toUpperCase();
+        const rule = vendorRules.find(
+          (r: any) => upperName.includes(r.vendor_name) || r.vendor_name.includes(upperName)
+        );
+        if (rule) {
+          if (!prev.master_acct_code) updated.master_acct_code = rule.master_acct_code;
+          if (!prev.project_code && rule.project_code) updated.project_code = rule.project_code;
+          if (!prev.cbs_code && rule.cbs_code) updated.cbs_code = rule.cbs_code;
+          if (!prev.description && rule.description_template) updated.description = rule.description_template;
+        }
       }
       
       return updated;
     });
   };
 
+  const handleOcrResult = (result: OcrResult) => {
+    setForm(prev => {
+      const updated = { ...prev };
+      // Only fill empty fields
+      if (result.vendor_name && !prev.name) updated.name = result.vendor_name;
+      if (result.rnc && !prev.rnc) updated.rnc = result.rnc;
+      if (result.date && !prev.transaction_date) {
+        updated.transaction_date = new Date(result.date + 'T12:00:00');
+      }
+      if (result.amount != null && !prev.amount) updated.amount = result.amount.toString();
+      if (result.itbis != null && !prev.itbis) updated.itbis = result.itbis.toString();
+      if (result.document && !prev.document) updated.document = result.document;
+      if (result.pay_method && !prev.pay_method) updated.pay_method = result.pay_method;
+
+      // Apply vendor rules if name was filled
+      if (result.vendor_name) {
+        const upperName = result.vendor_name.trim().toUpperCase();
+        const rule = vendorRules.find(
+          (r: any) => upperName.includes(r.vendor_name) || r.vendor_name.includes(upperName)
+        );
+        if (rule) {
+          if (!prev.master_acct_code) updated.master_acct_code = rule.master_acct_code;
+          if (!prev.project_code && rule.project_code) updated.project_code = rule.project_code;
+          if (!prev.cbs_code && rule.cbs_code) updated.cbs_code = rule.cbs_code;
+          if (!prev.description && rule.description_template) updated.description = rule.description_template;
+        }
+      }
+
+      return updated;
+    });
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>Nueva Transacción</CardTitle>
+        <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">

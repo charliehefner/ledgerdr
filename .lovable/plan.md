@@ -1,17 +1,23 @@
 
 
-## Update GPSGate API Key
+## Fix: Map Label Error
 
-### What needs to happen
+The error `"text-field" requires a style "glyphs" property` occurs because the satellite map uses a custom ESRI style that doesn't include a font (glyphs) source. Text labels need fonts to render, and unlike the Mapbox streets style which includes them automatically, custom styles must declare them explicitly.
 
-1. **Update the secret** `GPSGATE_API_KEY` with the new value: `v2:MDAwMDAxNTk3Mzo5NzU3YjU5MzViMDg5OGE4MWY1Zg==`
+### What will change
 
-2. **Redeploy** the `gpsgate-proxy` edge function so it picks up the new secret value.
+**File: `src/components/operations/FieldsMapView.tsx`**
 
-3. **Test** the "Cargar Dispositivos" button in Settings > GPS to confirm the 401 error is resolved and devices load correctly.
+Add a `glyphs` property to the `esriSatelliteStyle` object pointing to Mapbox's hosted fonts:
 
-### Technical Notes
+```typescript
+const esriSatelliteStyle: mapboxgl.StyleSpecification = {
+  version: 8,
+  glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+  sources: { ... },
+  layers: [ ... ],
+};
+```
 
-- The edge function sends the key directly as the `Authorization` header value to GPSGate. Some APIs expect a prefix like `Bearer` or `Basic`. If the raw value still returns 401, we may need to try `Bearer v2:MDAwMDAxNTk3Mzo5NzU3YjU5MzViMDg5OGE4MWY1Zg==` instead.
-- No code changes are needed -- only a secret update and redeployment.
+This is a one-line addition. No other changes needed -- the streets style already includes glyphs by default, so only the satellite/ESRI custom style is affected.
 

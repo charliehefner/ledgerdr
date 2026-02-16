@@ -338,6 +338,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
 
     const esriSatelliteStyle: mapboxgl.StyleSpecification = {
       version: 8,
+      glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
       sources: {
         "esri-world-imagery": {
           type: "raster",

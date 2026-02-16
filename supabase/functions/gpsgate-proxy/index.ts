@@ -204,20 +204,37 @@ Deno.serve(async (req) => {
       }
 
       const gpsUserId = tractor.gpsgate_user_id;
-      const trackUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users/${gpsUserId}/tracks?DateFrom=${encodeURIComponent(dateFrom)}&DateTo=${encodeURIComponent(dateTo)}`;
-      console.log("Fetching tracks from:", trackUrl);
 
-      const res = await fetch(trackUrl, { headers: gpsHeaders });
-      const rawText = await res.text();
-      console.log("GPSGate tracks response status:", res.status, "body length:", rawText.length, "preview:", rawText.substring(0, 300));
+      // GPSGate API requires a "Date" param (YYYY-MM-DD) plus optional "From"/"Until" (HH:MM:SS)
+      // dateFrom/dateTo may come as ISO strings or bare dates
+      const startDate = dateFrom.split("T")[0];
+      const endDate = dateTo.split("T")[0];
+
+      // If same day, use single Date param; if multi-day, fetch each day
+      const allPoints: any[] = [];
+      const currentDate = new Date(startDate);
+      const lastDate = new Date(endDate);
       
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        console.error("Failed to parse GPSGate tracks response:", rawText.substring(0, 500));
-        data = [];
+      while (currentDate <= lastDate) {
+        const dateStr = currentDate.toISOString().split("T")[0];
+        const trackUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users/${gpsUserId}/tracks?Date=${dateStr}`;
+        console.log("Fetching tracks for date:", dateStr, "url:", trackUrl);
+
+        const res = await fetch(trackUrl, { headers: gpsHeaders });
+        if (res.ok) {
+          const dayData = await res.json();
+          if (Array.isArray(dayData)) {
+            allPoints.push(...dayData);
+          }
+          console.log("Date", dateStr, "returned", Array.isArray(dayData) ? dayData.length : 0, "points");
+        } else {
+          const errText = await res.text();
+          console.error("GPSGate tracks error for", dateStr, ":", res.status, errText);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
       }
+
+      const data = allPoints;
 
       // Also fetch operations for this tractor in the date range for implement matching
       const { data: operations } = await serviceClient

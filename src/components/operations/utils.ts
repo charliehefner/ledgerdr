@@ -97,10 +97,8 @@ export interface GPSTrackPoint {
  * Result of GPS field metrics computation
  */
 export interface FieldMetrics {
-  travelMinutes: number;
   fieldMinutes: number;
   downtimeMinutes: number;
-  avgSpeedKmh: number;
 }
 
 /**
@@ -136,58 +134,30 @@ function isInsideGeometry(lat: number, lng: number, geometry: any): boolean {
 
 /**
  * Haversine distance between two points in meters
- */
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 /**
  * Compute GPS-derived field metrics from track points and field boundary.
  * 
- * - travelMinutes: time from first significant movement (>250m from origin) to first point inside field
  * - fieldMinutes: time from first to last in-field point
  * - downtimeMinutes: sum of intervals where in-field speed < 0.5 km/h
- * - avgSpeedKmh: mean speed of in-field points where speed >= 0.5 km/h
  */
 export function computeFieldMetrics(
   points: GPSTrackPoint[],
   fieldBoundary: any
 ): FieldMetrics {
   if (!points.length || !fieldBoundary) {
-    return { travelMinutes: 0, fieldMinutes: 0, downtimeMinutes: 0, avgSpeedKmh: 0 };
+    return { fieldMinutes: 0, downtimeMinutes: 0 };
   }
 
-  // Sort by timestamp
   const sorted = [...points].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
   const SPEED_THRESHOLD = 0.5; // km/h
-  const MOVE_THRESHOLD_M = 250; // meters from origin to count as "started moving"
-
-  // Find start-of-day index: first point that is >250m from the very first point
-  const origin = sorted[0];
-  let dayStartIdx = 0;
-  for (let i = 1; i < sorted.length; i++) {
-    if (haversineMeters(origin.lat, origin.lng, sorted[i].lat, sorted[i].lng) > MOVE_THRESHOLD_M) {
-      dayStartIdx = i;
-      break;
-    }
-  }
 
   let firstInFieldIdx = -1;
   let lastInFieldIdx = -1;
   let downtimeMs = 0;
-  const movingSpeeds: number[] = [];
 
-  // Tag each point as in-field or not
   const inField: boolean[] = sorted.map((pt) =>
     isInsideGeometry(pt.lat, pt.lng, fieldBoundary)
   );
@@ -196,11 +166,6 @@ export function computeFieldMetrics(
     if (inField[i]) {
       if (firstInFieldIdx === -1) firstInFieldIdx = i;
       lastInFieldIdx = i;
-
-      const speed = sorted[i].speed ?? 0;
-      if (speed >= SPEED_THRESHOLD) {
-        movingSpeeds.push(speed);
-      }
     }
   }
 
@@ -217,29 +182,6 @@ export function computeFieldMetrics(
     }
   }
 
-  // Travel time: approach to field — find the last point where tractor was >500m
-  // from the field boundary before entering, then measure from the first point
-  // that is within 500m to the first in-field point (i.e. final approach)
-  let travelMs = 0;
-  if (firstInFieldIdx > 0) {
-    const APPROACH_THRESHOLD_M = 500;
-    const firstInFieldPt = sorted[firstInFieldIdx];
-    // Walk backwards from firstInFieldIdx to find when the tractor started approaching
-    let approachIdx = firstInFieldIdx;
-    for (let i = firstInFieldIdx - 1; i >= 0; i--) {
-      const dist = haversineMeters(sorted[i].lat, sorted[i].lng, firstInFieldPt.lat, firstInFieldPt.lng);
-      if (dist > APPROACH_THRESHOLD_M) {
-        approachIdx = i + 1;
-        break;
-      }
-      approachIdx = i;
-    }
-    travelMs =
-      new Date(sorted[firstInFieldIdx].timestamp).getTime() -
-      new Date(sorted[approachIdx].timestamp).getTime();
-  }
-
-  // Field time: first in-field -> last in-field
   let fieldMs = 0;
   if (firstInFieldIdx >= 0 && lastInFieldIdx >= 0) {
     fieldMs =
@@ -247,15 +189,8 @@ export function computeFieldMetrics(
       new Date(sorted[firstInFieldIdx].timestamp).getTime();
   }
 
-  const avgSpeed =
-    movingSpeeds.length > 0
-      ? movingSpeeds.reduce((a, b) => a + b, 0) / movingSpeeds.length
-      : 0;
-
   return {
-    travelMinutes: Math.round(travelMs / 60000),
     fieldMinutes: Math.round(fieldMs / 60000),
     downtimeMinutes: Math.round(downtimeMs / 60000),
-    avgSpeedKmh: Math.round(avgSpeed * 10) / 10,
   };
 }

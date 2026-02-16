@@ -1923,6 +1923,39 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_account_rules: {
+        Row: {
+          cbs_code: string | null
+          created_at: string | null
+          description_template: string | null
+          id: string
+          master_acct_code: string
+          project_code: string | null
+          updated_at: string | null
+          vendor_name: string
+        }
+        Insert: {
+          cbs_code?: string | null
+          created_at?: string | null
+          description_template?: string | null
+          id?: string
+          master_acct_code: string
+          project_code?: string | null
+          updated_at?: string | null
+          vendor_name: string
+        }
+        Update: {
+          cbs_code?: string | null
+          created_at?: string | null
+          description_template?: string | null
+          id?: string
+          master_acct_code?: string
+          project_code?: string | null
+          updated_at?: string | null
+          vendor_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       employees_safe: {

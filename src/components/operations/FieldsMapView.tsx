@@ -256,19 +256,16 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
       setAgingOperationTypeId(null);
       setTrackLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("gpsgate-proxy", {
-          body: null,
-          headers: {},
-          method: "GET",
-        });
-
-        // Use fetch directly since supabase.functions.invoke doesn't support query params well
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const session = await supabase.auth.getSession();
         const token = session.data.session?.access_token;
 
+        // Add time bounds so GPSGate gets full ISO datetimes
+        const isoFrom = `${dateFrom}T00:00:00Z`;
+        const isoTo = `${dateTo}T23:59:59Z`;
+
         const res = await fetch(
-          `${supabaseUrl}/functions/v1/gpsgate-proxy?action=tracks&tractorId=${tractorId}&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+          `${supabaseUrl}/functions/v1/gpsgate-proxy?action=tracks&tractorId=${tractorId}&dateFrom=${encodeURIComponent(isoFrom)}&dateTo=${encodeURIComponent(isoTo)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

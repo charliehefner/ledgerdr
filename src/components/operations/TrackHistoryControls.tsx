@@ -25,9 +25,10 @@ export function TrackHistoryControls({
   isLoading,
   hasActiveTracks,
 }: TrackHistoryControlsProps) {
+  const today = new Date().toISOString().split("T")[0];
   const [tractorId, setTractorId] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
 
   // Only tractors with gpsgate_user_id linked
   const { data: tractors } = useQuery({

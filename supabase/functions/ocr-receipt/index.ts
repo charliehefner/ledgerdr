@@ -123,7 +123,8 @@ serve(async (req) => {
   "amount": numeric total amount,
   "itbis": numeric tax/ITBIS amount,
   "document": "NCF or receipt number (e.g. B0100000123, E310000000001)",
-  "pay_method": "cash" or "cc_management" or "bank_transfer" or null
+  "pay_method": "cash" or "cc_management" or "bank_transfer" or null,
+  "description": "short summary of items purchased, e.g. '8.45 gal diesel', 'office supplies', 'materiales de oficina'"
 }
 
 Rules:
@@ -206,6 +207,7 @@ Rules:
       itbis: typeof extracted.itbis === "number" ? extracted.itbis : null,
       document: extracted.document || "",
       pay_method: extracted.pay_method || null,
+      description: extracted.description || "",
       raw_text: rawContent.substring(0, 500),
     };
 

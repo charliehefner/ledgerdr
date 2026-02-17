@@ -270,6 +270,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       if (result.document && !prev.document) updated.document = result.document;
       if (result.pay_method && !prev.pay_method) updated.pay_method = result.pay_method;
 
+      // Auto-fill description from OCR
+      if (result.description && !updated.description) {
+        updated.description = result.description;
+      }
+
       // Apply vendor rules if name was filled
       if (result.vendor_name) {
         const upperName = result.vendor_name.trim().toUpperCase();
@@ -280,8 +285,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           if (!prev.master_acct_code) updated.master_acct_code = rule.master_acct_code;
           if (!prev.project_code && rule.project_code) updated.project_code = rule.project_code;
           if (!prev.cbs_code && rule.cbs_code) updated.cbs_code = rule.cbs_code;
-          if (!prev.description && rule.description_template) updated.description = rule.description_template;
+          if (!updated.description && rule.description_template) updated.description = rule.description_template;
         }
+      }
+
+      // Diesel < 10k rule: auto-assign account 5611
+      const amt = parseFloat(updated.amount || '0');
+      const desc = (updated.description || '').toLowerCase();
+      if (!updated.master_acct_code && desc.includes('diesel') && amt > 0 && amt < 10000) {
+        updated.master_acct_code = '5611';
       }
 
       return updated;

@@ -1,103 +1,64 @@
 
-# Fixed Assets & Depreciation Module
 
-## What This Does
+# Accounting Page — Phase 1
 
-Creates a new "Activos Fijos" (Fixed Assets) section within the existing Equipment page to track depreciable assets. On creation, it will automatically import your 10 tractors/vehicles, 17 implements, and 3 fuel tanks as fixed asset records you can fill in later.
+## Summary
 
-## Database Changes
+Create a new `/accounting` route with a tabbed layout containing four functional tabs. The "Activos Fijos" tab moves from the Equipment page to here. Chart of Accounts and Periods use the existing database tables directly -- no placeholders.
 
-### 1. New Table: `asset_depreciation_rules`
-Reference table mapping asset categories to accounting accounts:
+## Tab Layout
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| category | text UNIQUE | vehicle, tractor, implement, building, tools, container, office, computer, solar_panel, land_improvement, other |
-| asset_account_code | text | e.g., 1240 |
-| depreciation_expense_account | text | e.g., 5631 |
-| accumulated_depreciation_account | text | Contra-asset |
+1. **Plan de Cuentas** (Chart of Accounts) -- Browse/manage the `chart_of_accounts` table
+2. **Periodos** (Accounting Periods) -- Browse/manage the `accounting_periods` table
+3. **Activos Fijos** (Fixed Assets) -- The existing `FixedAssetsView` component, relocated
+4. **Diario** (Journal) -- Browse the `journals` + `journal_lines` tables (read-only for now)
 
-Pre-populated with sensible defaults (account codes left as placeholders since `chart_of_accounts` is not yet populated -- you can update them later).
+## Changes
 
-### 2. New Table: `fixed_assets`
+### 1. New route and page
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| asset_code | text UNIQUE | Auto-generated FA-000001 |
-| name | text | Asset description |
-| category | text | Links to depreciation rules |
-| acquisition_date | date | Nullable -- fill in later |
-| acquisition_value | numeric(18,2) | Default 0 |
-| salvage_value | numeric(18,2) | Default 0 |
-| useful_life_years | integer | Default 5 |
-| depreciation_method | text | 'straight_line' |
-| accumulated_depreciation | numeric(18,2) | For importing partially depreciated assets |
-| in_service_date | date | When depreciation starts |
-| disposal_date | date | NULL until disposed |
-| disposal_value | numeric(18,2) | |
-| is_active | boolean | Default true |
-| asset_account_code | text | From rules or manual |
-| depreciation_expense_account | text | |
-| accumulated_depreciation_account | text | |
-| source_project_id | uuid | FK to projects (for CIP transfers) |
-| equipment_id | uuid | FK to fuel_equipment |
-| implement_id | uuid | FK to implements |
-| serial_number | text | |
-| notes | text | |
-| created_at, updated_at, deleted_at | timestamptz | |
+- Add `"accounting"` to the `Section` type in `src/lib/permissions.ts`
+- Add permission entries: admin, management, accountant can access; viewer can read
+- Add `/accounting` route in `src/App.tsx`
+- Add sidebar nav item with a `BookOpen` (or `Calculator`) icon
+- Create `src/pages/Accounting.tsx` using `TabbedPageLayout`
 
-### 3. New Table: `depreciation_schedule`
+### 2. Chart of Accounts tab (`src/components/accounting/ChartOfAccountsView.tsx`)
 
-Monthly depreciation entries linked to journal entries:
+- Queries `chart_of_accounts` table (currently 0 rows, but ready for the SQL import)
+- Table columns: account_code, account_name, account_type, allow_posting, currency
+- Hierarchical display using `parent_id` (indent child accounts)
+- Filter by account_type (ASSET, LIABILITY, EQUITY, INCOME, EXPENSE)
+- Add/Edit dialog for individual accounts
+- The table is already there with RLS policies in place
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| asset_id | uuid FK | |
-| period_date | date | First of month |
-| depreciation_amount | numeric(18,2) | |
-| journal_id | uuid FK | NULL until posted |
-| created_at | timestamptz | |
+### 3. Accounting Periods tab (`src/components/accounting/PeriodsView.tsx`)
 
-### 4. Auto-number trigger
-A trigger to auto-generate `asset_code` as FA-000001, FA-000002, etc.
+- Queries `accounting_periods` table
+- Table columns: period_name (or start/end formatted), start_date, end_date, status (open/closed)
+- Button to create new period
+- Button to close a period (sets status)
+- Simple CRUD -- the table structure already exists
 
-### 5. RLS Policies
-Standard pattern: admin/management full access, accountant can CRUD, supervisor/viewer SELECT only.
+### 4. Fixed Assets tab
 
-### 6. Seed Data
-- Insert default depreciation rules for each category
-- Import all 10 tractors from `fuel_equipment` with `equipment_id` link, copying name, serial_number, purchase_date, purchase_price where available, category = 'tractor' (or 'vehicle' for Pala Volvo)
-- Import all 17 implements from `implements` with `implement_id` link, copying name, serial_number, purchase_date, purchase_price, category = 'implement'
-- Import 3 fuel tanks as category = 'container'
+- Move the existing `FixedAssetsView` and `FixedAssetDialog` from `src/components/equipment/` to `src/components/accounting/` (or just import from current location)
+- Remove the "Activos Fijos" tab from `src/pages/Equipment.tsx`, reverting it to just Tractors + Implements
 
-## UI Changes
+### 5. Journal tab (`src/components/accounting/JournalView.tsx`)
 
-### New Tab in Equipment Page: "Activos Fijos"
+- Queries `journals` joined with `journal_lines`
+- Table columns: journal_number, journal_date, description, currency, posted status
+- Expandable rows to show debit/credit lines
+- Read-only for now (journal entry creation is a follow-up)
 
-Add a third tab to the existing Equipment page (`src/pages/Equipment.tsx`) with a new `FixedAssetsView` component.
+### 6. No database changes needed
 
-**Asset List View** (`src/components/equipment/FixedAssetsView.tsx`):
-- Table showing: asset_code, name, category, acquisition_date, acquisition_value, useful_life_years, accumulated_depreciation, net book value (calculated), status
-- Filter by category, active/disposed
-- "Agregar Activo" button to add new assets manually
+All tables (`chart_of_accounts`, `accounting_periods`, `journals`, `journal_lines`) already exist with proper RLS policies. No migrations required.
 
-**Asset Form Dialog** (`src/components/equipment/FixedAssetDialog.tsx`):
-- Form fields for all editable columns
-- Category dropdown auto-fills account codes from `asset_depreciation_rules`
-- Supports editing existing assets (for filling in details later)
+## Technical Notes
 
-### Navigation & Permissions
-- Add "fixed-assets" as a section accessible to admin, management, accountant roles
-- No new route needed -- it's a tab within Equipment
-
-## Technical Details
-
-- Net Book Value = acquisition_value - accumulated_depreciation
-- Monthly depreciation = (acquisition_value - salvage_value) / (useful_life_years * 12)
-- For imported assets with no acquisition_value, depreciation is 0 until values are filled in
-- The `accumulated_depreciation` field allows importing partially depreciated assets by entering the amount already taken
-- CIP transfer and monthly depreciation run will be implemented in a follow-up increment
-- Translation keys added for Spanish labels
+- The `chart_of_accounts` table currently has 0 rows. The CoA view will show an empty state with a message like "No hay cuentas. Importe su plan de cuentas." The SQL import that was discussed previously can populate it.
+- `accounting_periods` is also empty -- the Periods view will let users create their first period.
+- Permissions: `accounting` section accessible to admin, management, accountant (write), and viewer (read-only), matching the RLS policies already on the tables.
+- Equipment page reverts to its original 2-tab layout (Tractors, Implements).

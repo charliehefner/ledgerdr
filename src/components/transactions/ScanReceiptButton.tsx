@@ -32,6 +32,7 @@ export interface OcrResult {
   itbis: number | null;
   document: string;
   pay_method: string | null;
+  description?: string;
   raw_text?: string;
   image_base64?: string;
 }

@@ -1,55 +1,103 @@
 
+# Fixed Assets & Depreciation Module
 
-# OCR Enhancement: Purchase Summary + Diesel Account Rule
+## What This Does
 
-## Overview
-Two improvements to the receipt scanning workflow:
+Creates a new "Activos Fijos" (Fixed Assets) section within the existing Equipment page to track depreciable assets. On creation, it will automatically import your 10 tractors/vehicles, 17 implements, and 3 fuel tanks as fixed asset records you can fill in later.
 
-1. **Auto-categorize gas station diesel under $10,000 to account 5611** -- a conditional vendor rule applied after OCR extracts the data.
-2. **Summarize purchased items in the description field** -- the AI will extract a short purchase summary (e.g., "8.45 gal diesel", "office supplies") and auto-fill the description.
+## Database Changes
 
----
+### 1. New Table: `asset_depreciation_rules`
+Reference table mapping asset categories to accounting accounts:
 
-## Changes
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| category | text UNIQUE | vehicle, tractor, implement, building, tools, container, office, computer, solar_panel, land_improvement, other |
+| asset_account_code | text | e.g., 1240 |
+| depreciation_expense_account | text | e.g., 5631 |
+| accumulated_depreciation_account | text | Contra-asset |
 
-### 1. Update the `ocr-receipt` edge function
-**File:** `supabase/functions/ocr-receipt/index.ts`
+Pre-populated with sensible defaults (account codes left as placeholders since `chart_of_accounts` is not yet populated -- you can update them later).
 
-- Add a `description` field to the AI prompt's JSON output schema, instructing it to produce a short purchase summary (items, quantities, units when visible).
-- Example output: `"description": "8.45 gal diesel"` or `"description": "Materiales de oficina, papel, toner"`.
-- Return `description` in the response alongside existing fields.
+### 2. New Table: `fixed_assets`
 
-### 2. Update the `OcrResult` interface
-**File:** `src/components/transactions/ScanReceiptButton.tsx`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| asset_code | text UNIQUE | Auto-generated FA-000001 |
+| name | text | Asset description |
+| category | text | Links to depreciation rules |
+| acquisition_date | date | Nullable -- fill in later |
+| acquisition_value | numeric(18,2) | Default 0 |
+| salvage_value | numeric(18,2) | Default 0 |
+| useful_life_years | integer | Default 5 |
+| depreciation_method | text | 'straight_line' |
+| accumulated_depreciation | numeric(18,2) | For importing partially depreciated assets |
+| in_service_date | date | When depreciation starts |
+| disposal_date | date | NULL until disposed |
+| disposal_value | numeric(18,2) | |
+| is_active | boolean | Default true |
+| asset_account_code | text | From rules or manual |
+| depreciation_expense_account | text | |
+| accumulated_depreciation_account | text | |
+| source_project_id | uuid | FK to projects (for CIP transfers) |
+| equipment_id | uuid | FK to fuel_equipment |
+| implement_id | uuid | FK to implements |
+| serial_number | text | |
+| notes | text | |
+| created_at, updated_at, deleted_at | timestamptz | |
 
-- Add `description?: string` to the `OcrResult` interface so the new field flows through.
+### 3. New Table: `depreciation_schedule`
 
-### 3. Consume description in TransactionForm + diesel rule
-**File:** `src/components/transactions/TransactionForm.tsx`
+Monthly depreciation entries linked to journal entries:
 
-- In `handleOcrResult`: if `result.description` is present and description is empty, auto-fill it.
-- After vendor rules are applied, add a conditional check: if the description contains "diesel" (case-insensitive) and the amount is under 10,000, set `master_acct_code` to `"5611"` (only if no account is already set).
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| asset_id | uuid FK | |
+| period_date | date | First of month |
+| depreciation_amount | numeric(18,2) | |
+| journal_id | uuid FK | NULL until posted |
+| created_at | timestamptz | |
 
-### 4. Redeploy the edge function
+### 4. Auto-number trigger
+A trigger to auto-generate `asset_code` as FA-000001, FA-000002, etc.
 
----
+### 5. RLS Policies
+Standard pattern: admin/management full access, accountant can CRUD, supervisor/viewer SELECT only.
+
+### 6. Seed Data
+- Insert default depreciation rules for each category
+- Import all 10 tractors from `fuel_equipment` with `equipment_id` link, copying name, serial_number, purchase_date, purchase_price where available, category = 'tractor' (or 'vehicle' for Pala Volvo)
+- Import all 17 implements from `implements` with `implement_id` link, copying name, serial_number, purchase_date, purchase_price, category = 'implement'
+- Import 3 fuel tanks as category = 'container'
+
+## UI Changes
+
+### New Tab in Equipment Page: "Activos Fijos"
+
+Add a third tab to the existing Equipment page (`src/pages/Equipment.tsx`) with a new `FixedAssetsView` component.
+
+**Asset List View** (`src/components/equipment/FixedAssetsView.tsx`):
+- Table showing: asset_code, name, category, acquisition_date, acquisition_value, useful_life_years, accumulated_depreciation, net book value (calculated), status
+- Filter by category, active/disposed
+- "Agregar Activo" button to add new assets manually
+
+**Asset Form Dialog** (`src/components/equipment/FixedAssetDialog.tsx`):
+- Form fields for all editable columns
+- Category dropdown auto-fills account codes from `asset_depreciation_rules`
+- Supports editing existing assets (for filling in details later)
+
+### Navigation & Permissions
+- Add "fixed-assets" as a section accessible to admin, management, accountant roles
+- No new route needed -- it's a tab within Equipment
 
 ## Technical Details
 
-**AI Prompt addition** (in the system message JSON schema):
-```
-"description": "short summary of items purchased, e.g. '8.45 gal diesel', 'office supplies'"
-```
-
-**Diesel rule logic** (in `handleOcrResult`):
-```typescript
-// After vendor rules, apply diesel < 10k rule
-const amt = parseFloat(updated.amount || '0');
-const desc = (updated.description || '').toLowerCase();
-if (!updated.master_acct_code && desc.includes('diesel') && amt > 0 && amt < 10000) {
-  updated.master_acct_code = '5611';
-}
-```
-
-This keeps the rule in code (not in the vendor_account_rules table) since it's amount-conditional, which the table schema doesn't support.
-
+- Net Book Value = acquisition_value - accumulated_depreciation
+- Monthly depreciation = (acquisition_value - salvage_value) / (useful_life_years * 12)
+- For imported assets with no acquisition_value, depreciation is 0 until values are filled in
+- The `accumulated_depreciation` field allows importing partially depreciated assets by entering the amount already taken
+- CIP transfer and monthly depreciation run will be implemented in a follow-up increment
+- Translation keys added for Spanish labels

@@ -134,6 +134,30 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_depreciation_rules: {
+        Row: {
+          accumulated_depreciation_account: string | null
+          asset_account_code: string | null
+          category: string
+          depreciation_expense_account: string | null
+          id: string
+        }
+        Insert: {
+          accumulated_depreciation_account?: string | null
+          asset_account_code?: string | null
+          category: string
+          depreciation_expense_account?: string | null
+          id?: string
+        }
+        Update: {
+          accumulated_depreciation_account?: string | null
+          asset_account_code?: string | null
+          category?: string
+          depreciation_expense_account?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       cbs_codes: {
         Row: {
           code: string
@@ -365,6 +389,48 @@ export type Database = {
           workers_count?: number
         }
         Relationships: []
+      }
+      depreciation_schedule: {
+        Row: {
+          asset_id: string
+          created_at: string
+          depreciation_amount: number
+          id: string
+          journal_id: string | null
+          period_date: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          depreciation_amount?: number
+          id?: string
+          journal_id?: string | null
+          period_date: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          depreciation_amount?: number
+          id?: string
+          journal_id?: string | null
+          period_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "depreciation_schedule_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "depreciation_schedule_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_benefits: {
         Row: {
@@ -824,6 +890,112 @@ export type Database = {
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixed_assets: {
+        Row: {
+          accumulated_depreciation: number
+          accumulated_depreciation_account: string | null
+          acquisition_date: string | null
+          acquisition_value: number
+          asset_account_code: string | null
+          asset_code: string | null
+          category: string
+          created_at: string
+          deleted_at: string | null
+          depreciation_expense_account: string | null
+          depreciation_method: string
+          disposal_date: string | null
+          disposal_value: number | null
+          equipment_id: string | null
+          id: string
+          implement_id: string | null
+          in_service_date: string | null
+          is_active: boolean
+          name: string
+          notes: string | null
+          salvage_value: number
+          serial_number: string | null
+          source_project_id: string | null
+          updated_at: string
+          useful_life_years: number
+        }
+        Insert: {
+          accumulated_depreciation?: number
+          accumulated_depreciation_account?: string | null
+          acquisition_date?: string | null
+          acquisition_value?: number
+          asset_account_code?: string | null
+          asset_code?: string | null
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          depreciation_expense_account?: string | null
+          depreciation_method?: string
+          disposal_date?: string | null
+          disposal_value?: number | null
+          equipment_id?: string | null
+          id?: string
+          implement_id?: string | null
+          in_service_date?: string | null
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          salvage_value?: number
+          serial_number?: string | null
+          source_project_id?: string | null
+          updated_at?: string
+          useful_life_years?: number
+        }
+        Update: {
+          accumulated_depreciation?: number
+          accumulated_depreciation_account?: string | null
+          acquisition_date?: string | null
+          acquisition_value?: number
+          asset_account_code?: string | null
+          asset_code?: string | null
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          depreciation_expense_account?: string | null
+          depreciation_method?: string
+          disposal_date?: string | null
+          disposal_value?: number | null
+          equipment_id?: string | null
+          id?: string
+          implement_id?: string | null
+          in_service_date?: string | null
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          salvage_value?: number
+          serial_number?: string | null
+          source_project_id?: string | null
+          updated_at?: string
+          useful_life_years?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_assets_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_implement_id_fkey"
+            columns: ["implement_id"]
+            isOneToOne: false
+            referencedRelation: "implements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_source_project_id_fkey"
+            columns: ["source_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

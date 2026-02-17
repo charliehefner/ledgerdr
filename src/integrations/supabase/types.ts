@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      accounting_periods: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          end_date: string
+          id: string
+          is_closed: boolean | null
+          period_name: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          end_date: string
+          id?: string
+          is_closed?: boolean | null
+          period_name: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          end_date?: string
+          id?: string
+          is_closed?: boolean | null
+          period_name?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       accounts: {
         Row: {
           code: string
@@ -88,6 +157,59 @@ export type Database = {
           spanish_description?: string
         }
         Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string
+          allow_posting: boolean | null
+          base_currency: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          deleted_at: string | null
+          id: string
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type: string
+          allow_posting?: boolean | null
+          base_currency?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          id?: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string
+          allow_posting?: boolean | null
+          base_currency?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          id?: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cronograma_entries: {
         Row: {
@@ -1056,6 +1178,152 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_lines: {
+        Row: {
+          account_id: string
+          cbs_code: string | null
+          created_at: string | null
+          created_by: string | null
+          credit: number | null
+          debit: number | null
+          deleted_at: string | null
+          id: string
+          journal_id: string | null
+          project_code: string | null
+          tax_code_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          cbs_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit?: number | null
+          debit?: number | null
+          deleted_at?: string | null
+          id?: string
+          journal_id?: string | null
+          project_code?: string | null
+          tax_code_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          cbs_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit?: number | null
+          debit?: number | null
+          deleted_at?: string | null
+          id?: string
+          journal_id?: string | null
+          project_code?: string | null
+          tax_code_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journals: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          deleted_at: string | null
+          description: string | null
+          exchange_rate: number | null
+          id: string
+          journal_date: string
+          journal_number: string | null
+          period_id: string | null
+          posted: boolean | null
+          posted_at: string | null
+          posted_by: string | null
+          reversal_of_id: string | null
+          transaction_source_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          exchange_rate?: number | null
+          id?: string
+          journal_date: string
+          journal_number?: string | null
+          period_id?: string | null
+          posted?: boolean | null
+          posted_at?: string | null
+          posted_by?: string | null
+          reversal_of_id?: string | null
+          transaction_source_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          exchange_rate?: number | null
+          id?: string
+          journal_date?: string
+          journal_number?: string | null
+          period_id?: string | null
+          posted?: boolean | null
+          posted_at?: string | null
+          posted_by?: string | null
+          reversal_of_id?: string | null
+          transaction_source_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journals_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journals_reversal_of_id_fkey"
+            columns: ["reversal_of_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journals_transaction_source_id_fkey"
+            columns: ["transaction_source_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operation_followups: {
         Row: {
           created_at: string | null
@@ -1744,6 +2012,45 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_codes: {
+        Row: {
+          affects_isr: boolean | null
+          affects_itbis: boolean | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          dgii_code: string
+          id: string
+          rate: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          affects_isr?: boolean | null
+          affects_itbis?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          dgii_code: string
+          id?: string
+          rate?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          affects_isr?: boolean | null
+          affects_itbis?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          dgii_code?: string
+          id?: string
+          rate?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tractor_maintenance: {
         Row: {
           created_at: string
@@ -2018,8 +2325,70 @@ export type Database = {
         }
         Relationships: []
       }
+      general_ledger: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          credit: number | null
+          credit_base: number | null
+          debit: number | null
+          debit_base: number | null
+          description: string | null
+          journal_date: string | null
+          journal_number: string | null
+          running_balance_base: number | null
+        }
+        Relationships: []
+      }
+      trial_balance_all: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          account_type: string | null
+          balance_base: number | null
+          total_credit_base: number | null
+          total_debit_base: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      create_journal_from_transaction: {
+        Args: {
+          p_created_by?: string
+          p_date: string
+          p_description: string
+          p_transaction_id: string
+        }
+        Returns: string
+      }
+      create_reversal_journal: {
+        Args: {
+          p_created_by: string
+          p_description: string
+          p_original_journal_id: string
+          p_reversal_date: string
+        }
+        Returns: string
+      }
+      dgii_507_report: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          dgii_code: string
+          journal_date: string
+          retained_amount: number
+          transaction_id: string
+        }[]
+      }
+      dgii_509_report: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          dgii_code: string
+          itbis_withheld: number
+          journal_date: string
+          transaction_id: string
+        }[]
+      }
       get_fields_with_boundaries: {
         Args: never
         Returns: {
@@ -2046,7 +2415,40 @@ export type Database = {
         }
         Returns: boolean
       }
+      income_statement: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          account_type: string
+          net_result: number
+          total_expense: number
+          total_income: number
+        }[]
+      }
+      income_statement_detail: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_type: string
+          total_amount: number
+        }[]
+      }
       is_accountant_only: { Args: never; Returns: boolean }
+      post_journal: {
+        Args: { p_journal_id: string; p_user: string }
+        Returns: undefined
+      }
+      trial_balance: {
+        Args: { p_end?: string; p_start?: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_type: string
+          balance_base: number
+          total_credit_base: number
+          total_debit_base: number
+        }[]
+      }
       upsert_field_boundary: {
         Args: { p_field_id: string; p_geojson: string }
         Returns: undefined

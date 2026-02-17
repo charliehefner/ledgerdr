@@ -65,6 +65,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
   { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
   { nameKey: "nav.reports", href: "/reports", icon: BarChart3, section: "reports" },
+  { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
   { nameKey: "nav.hr", href: "/hr", icon: Users, section: "hr" },
   { nameKey: "nav.inventory", href: "/inventory", icon: Package, section: "inventory" },
   { nameKey: "nav.fuel", href: "/fuel", icon: Fuel, section: "fuel" },
@@ -73,7 +74,6 @@ const navigation: NavItem[] = [
   { nameKey: "nav.herbicide", href: "/herbicide", icon: Beaker, section: "herbicide" },
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
   { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
-  { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
 ];
 
 const secondaryNav: NavItem[] = [

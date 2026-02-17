@@ -18,6 +18,7 @@ import {
   Languages,
   CalendarClock,
   Beaker,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/jord-logo.png";
@@ -55,6 +56,7 @@ const sectionColors: Record<Section, string> = {
   cronograma: "",
   alerts: "",
   settings: "",
+  accounting: "",
   "driver-portal": "", // Not shown in sidebar - drivers have minimal UI
 };
 
@@ -71,6 +73,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.herbicide", href: "/herbicide", icon: Beaker, section: "herbicide" },
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
   { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
+  { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
 ];
 
 const secondaryNav: NavItem[] = [

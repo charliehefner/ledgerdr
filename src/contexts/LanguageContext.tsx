@@ -84,6 +84,13 @@ const translations: Record<Language, Record<string, string>> = {
     "page.cronograma.subtitle": "Planificación semanal de operaciones",
     "page.settings.title": "Configuración",
     "page.settings.subtitle": "Configure su aplicación",
+    "page.accounting.title": "Contabilidad",
+    "page.accounting.subtitle": "Plan de cuentas, períodos y activos fijos",
+    "nav.accounting": "Contabilidad",
+    "accounting.chartOfAccounts": "Plan de Cuentas",
+    "accounting.periods": "Períodos",
+    "accounting.fixedAssets": "Activos Fijos",
+    "accounting.journal": "Diario",
 
     // Cronograma Module
     "nav.cronograma": "Cronograma",
@@ -582,6 +589,13 @@ const translations: Record<Language, Record<string, string>> = {
     "page.cronograma.subtitle": "Weekly operations planning",
     "page.settings.title": "Settings",
     "page.settings.subtitle": "Configure your application",
+    "page.accounting.title": "Accounting",
+    "page.accounting.subtitle": "Chart of accounts, periods, and fixed assets",
+    "nav.accounting": "Accounting",
+    "accounting.chartOfAccounts": "Chart of Accounts",
+    "accounting.periods": "Periods",
+    "accounting.fixedAssets": "Fixed Assets",
+    "accounting.journal": "Journal",
 
     // Cronograma Module
     "nav.cronograma": "Schedule",

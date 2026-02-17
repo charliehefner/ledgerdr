@@ -2,7 +2,6 @@ import { useState } from "react";
 import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
 import { TractorsView } from "@/components/fuel/TractorsView";
 import { ImplementsView } from "@/components/fuel/ImplementsView";
-import { FixedAssetsView } from "@/components/equipment/FixedAssetsView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Equipment() {
@@ -27,11 +26,6 @@ export default function Equipment() {
               value: "implements",
               label: t("equipment.implements"),
               content: <ImplementsView />,
-            },
-            {
-              value: "fixed-assets",
-              label: "Activos Fijos",
-              content: <FixedAssetsView />,
             },
           ],
         },

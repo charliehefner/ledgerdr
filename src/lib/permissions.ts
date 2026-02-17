@@ -29,6 +29,7 @@ export type Section =
   | "cronograma"
   | "alerts"
   | "settings"
+  | "accounting"
   | "driver-portal";
 
 // HR sub-tabs for granular access control
@@ -96,6 +97,7 @@ export const routeToSection: Record<string, Section> = {
   "/cronograma": "cronograma",
   "/alerts": "alerts",
   "/settings": "settings",
+  "/accounting": "accounting",
   "/driver-portal": "driver-portal",
 };
 
@@ -115,6 +117,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   cronograma: ["admin", "management", "supervisor", "viewer"],
   alerts: ["admin", "management", "supervisor"],
   settings: ["admin"],
+  accounting: ["admin", "management", "accountant", "viewer"],
   "driver-portal": ["driver"],
 };
 
@@ -136,6 +139,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   cronograma: ["admin", "management", "supervisor"],
   alerts: ["admin", "management", "supervisor"],
   settings: ["admin"],
+  accounting: ["admin", "management", "accountant"],
   "driver-portal": ["driver"],
 };
 

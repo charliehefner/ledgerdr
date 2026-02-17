@@ -60,11 +60,11 @@ export default function Login() {
 
   // Navigate to correct route based on role after login
   useEffect(() => {
-    if (user && !isLoading) {
+    if (user && !authLoading) {
       const defaultRoute = getDefaultRouteForRole(user.role);
-      navigate(defaultRoute);
+      navigate(defaultRoute, { replace: true });
     }
-  }, [user, isLoading, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();

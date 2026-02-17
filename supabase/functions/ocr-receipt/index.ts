@@ -18,60 +18,6 @@ function sanitizeError(error: unknown): string {
   return "An unknown error occurred.";
 }
 
-function extractFieldValue(predictions: any[], label: string): string {
-  const field = predictions.find(
-    (p: any) => p.label?.toLowerCase() === label.toLowerCase()
-  );
-  if (!field) return "";
-  // Nanonets returns an array of ocr_text values per field
-  if (Array.isArray(field.ocr_text)) {
-    return field.ocr_text.join(" ").trim();
-  }
-  return (field.ocr_text || "").trim();
-}
-
-function extractRncFromRawText(rawText: string): string {
-  // Look for RNC patterns common in Dominican receipts
-  const patterns = [
-    /RNC[:\s]*(\d{9,11})/i,
-    /R\.?N\.?C\.?[:\s]*(\d{9,11})/i,
-    /REGISTRO\s*NACIONAL[:\s]*(\d{9,11})/i,
-  ];
-  for (const pattern of patterns) {
-    const match = rawText.match(pattern);
-    if (match) return match[1];
-  }
-  return "";
-}
-
-function parseAmount(value: string): number | null {
-  if (!value) return null;
-  // Remove currency symbols, commas, spaces
-  const cleaned = value.replace(/[^0-9.,\-]/g, "").replace(/,/g, "");
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
-}
-
-function parseDate(value: string): string | null {
-  if (!value) return null;
-  // Try common date formats
-  // DD/MM/YYYY or DD-MM-YYYY (Dominican standard)
-  const ddmmyyyy = value.match(/(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
-  if (ddmmyyyy) {
-    const [, day, month, year] = ddmmyyyy;
-    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
-  }
-  // YYYY-MM-DD
-  const iso = value.match(/(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})/);
-  if (iso) {
-    const [, year, month, day] = iso;
-    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
-  }
-  return null;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -133,12 +79,10 @@ serve(async (req) => {
       });
     }
 
-    const NANONETS_API_KEY = Deno.env.get("NANONETS_API_KEY");
-    const NANONETS_MODEL_ID = Deno.env.get("NANONETS_MODEL_ID");
-
-    if (!NANONETS_API_KEY || !NANONETS_MODEL_ID) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "OCR service not configured" }),
+        JSON.stringify({ error: "AI service not configured" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -146,102 +90,126 @@ serve(async (req) => {
       );
     }
 
-    // Decode base64 to binary
-    const binaryStr = atob(image_base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
+    // Determine mime type from file name
+    const ext = (file_name || "receipt.jpg").split(".").pop()?.toLowerCase() || "jpg";
+    const mimeMap: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+      gif: "image/gif",
+      pdf: "application/pdf",
+    };
+    const mimeType = mimeMap[ext] || "image/jpeg";
 
-    // Build multipart form
-    const formData = new FormData();
-    const blob = new Blob([bytes], { type: "application/octet-stream" });
-    formData.append("file", blob, file_name || "receipt.jpg");
-
-    // Call Nanonets
-    const nanonetsUrl = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL_ID}/LabelFile/`;
-    const nanonetsResponse = await fetch(nanonetsUrl, {
+    // Call Lovable AI Gateway with Gemini vision
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: "Basic " + btoa(NANONETS_API_KEY + ":"),
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: formData,
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `You are an OCR assistant specialized in extracting data from Dominican Republic receipts and invoices (comprobantes fiscales). Extract the following fields and return ONLY a valid JSON object with no additional text:
+
+{
+  "vendor_name": "merchant/seller name",
+  "rnc": "RNC number (9-11 digits)",
+  "date": "YYYY-MM-DD format",
+  "amount": numeric total amount,
+  "itbis": numeric tax/ITBIS amount,
+  "document": "NCF or receipt number (e.g. B0100000123, E310000000001)",
+  "pay_method": "cash" or "cc_management" or "bank_transfer" or null
+}
+
+Rules:
+- For date, use YYYY-MM-DD format. Dominican dates are typically DD/MM/YYYY.
+- For amount and itbis, return numbers without currency symbols.
+- For RNC, look for patterns like "RNC: 123456789" or "R.N.C. 123456789".
+- For document/NCF, look for patterns starting with B01, B02, B04, B14, B15, B16, B17, E31, E32, E33, E34, E41, E43, E44, E45, E46, E47.
+- For pay_method, if you see credit card info return "cc_management", if cash/efectivo return "cash", if transfer/transferencia return "bank_transfer", otherwise null.
+- If you cannot determine a field, use null for strings and null for numbers.
+- Return ONLY the JSON object, no markdown, no explanation.`,
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract the receipt data from this image.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${image_base64}`,
+                },
+              },
+            ],
+          },
+        ],
+      }),
     });
 
-    if (!nanonetsResponse.ok) {
-      const errText = await nanonetsResponse.text();
-      console.error("Nanonets API error:", nanonetsResponse.status, errText);
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error("AI Gateway error:", aiResponse.status, errText);
+
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Servicio AI ocupado, intente de nuevo en unos segundos" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos AI agotados" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: "OCR service returned an error" }),
-        {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const nanonetsData = await nanonetsResponse.json();
+    const aiData = await aiResponse.json();
+    const rawContent = aiData.choices?.[0]?.message?.content || "";
 
-    // Extract predictions from first result
-    const result = nanonetsData.result?.[0];
-    if (!result) {
+    // Parse the JSON from the AI response
+    let extracted;
+    try {
+      // Strip markdown code fences if present
+      const jsonStr = rawContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      extracted = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      console.error("Failed to parse AI response:", rawContent);
       return new Response(
-        JSON.stringify({ error: "No OCR results returned" }),
-        {
-          status: 422,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({
+          error: "Could not parse receipt data",
+          raw_text: rawContent.substring(0, 500),
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const predictions = result.prediction || [];
-    const rawText = result.page_data?.raw_text || 
-      predictions.map((p: any) => p.ocr_text || "").join(" ");
-
-    // Extract fields
-    const vendorName = extractFieldValue(predictions, "Merchant_Name") ||
-      extractFieldValue(predictions, "merchant_name") ||
-      extractFieldValue(predictions, "Seller_Name") ||
-      extractFieldValue(predictions, "seller_name");
-
-    const dateStr = extractFieldValue(predictions, "Date") ||
-      extractFieldValue(predictions, "date") ||
-      extractFieldValue(predictions, "Invoice_Date") ||
-      extractFieldValue(predictions, "invoice_date");
-
-    const totalStr = extractFieldValue(predictions, "Total_Amount") ||
-      extractFieldValue(predictions, "total_amount") ||
-      extractFieldValue(predictions, "Total") ||
-      extractFieldValue(predictions, "total");
-
-    const taxStr = extractFieldValue(predictions, "Tax_Amount") ||
-      extractFieldValue(predictions, "tax_amount") ||
-      extractFieldValue(predictions, "Tax") ||
-      extractFieldValue(predictions, "tax");
-
-    const receiptNumber = extractFieldValue(predictions, "Receipt_Number") ||
-      extractFieldValue(predictions, "receipt_number") ||
-      extractFieldValue(predictions, "Invoice_Number") ||
-      extractFieldValue(predictions, "invoice_number");
-
-    const cardTender = extractFieldValue(predictions, "Card_Tender") ||
-      extractFieldValue(predictions, "card_tender") ||
-      extractFieldValue(predictions, "Payment_Method") ||
-      extractFieldValue(predictions, "payment_method");
-
-    // Parse and structure the response
-    const extracted = {
-      vendor_name: vendorName,
-      rnc: extractRncFromRawText(rawText),
-      date: parseDate(dateStr),
-      amount: parseAmount(totalStr),
-      itbis: parseAmount(taxStr),
-      document: receiptNumber,
-      pay_method: cardTender ? "cc_management" : null,
-      raw_text: rawText.substring(0, 500), // Send a preview for debugging
+    // Normalize the response to match expected format
+    const result = {
+      vendor_name: extracted.vendor_name || "",
+      rnc: extracted.rnc || "",
+      date: extracted.date || null,
+      amount: typeof extracted.amount === "number" ? extracted.amount : null,
+      itbis: typeof extracted.itbis === "number" ? extracted.itbis : null,
+      document: extracted.document || "",
+      pay_method: extracted.pay_method || null,
+      raw_text: rawContent.substring(0, 500),
     };
 
-    return new Response(JSON.stringify(extracted), {
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

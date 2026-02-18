@@ -176,15 +176,26 @@ export async function updateTransaction(id: string | number, transaction: Partia
   // Find by legacy_id if numeric, otherwise by uuid
   const legacyId = typeof id === 'number' ? id : parseInt(id, 10);
   
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({
-      document: transaction.document,
-      // Add other updatable fields as needed
-    })
-    .eq('legacy_id', legacyId)
-    .select()
-    .single();
+  // Build update payload from provided fields
+  const updatePayload: Record<string, any> = {};
+  if (transaction.document !== undefined) updatePayload.document = transaction.document;
+  if (transaction.description !== undefined) updatePayload.description = transaction.description;
+  if (transaction.rnc !== undefined) updatePayload.rnc = transaction.rnc;
+  if (transaction.itbis !== undefined) updatePayload.itbis = transaction.itbis;
+  if ((transaction as any).itbis_retenido !== undefined) updatePayload.itbis_retenido = (transaction as any).itbis_retenido;
+  if ((transaction as any).isr_retenido !== undefined) updatePayload.isr_retenido = (transaction as any).isr_retenido;
+  if (transaction.pay_method !== undefined) updatePayload.pay_method = transaction.pay_method;
+  if ((transaction as any).dgii_tipo_bienes_servicios !== undefined) updatePayload.dgii_tipo_bienes_servicios = (transaction as any).dgii_tipo_bienes_servicios;
+
+  // Try legacy_id first, fall back to UUID
+  let query = supabase.from('transactions').update(updatePayload);
+  if (!isNaN(legacyId) && legacyId > 0) {
+    query = query.eq('legacy_id', legacyId);
+  } else {
+    query = query.eq('id', String(id));
+  }
+
+  const { data, error } = await query.select().single();
   
   if (error) {
     console.error('Error updating transaction:', error);

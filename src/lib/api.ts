@@ -150,7 +150,6 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       comments: transaction.comments || null,
       is_void: false,
       is_internal: transaction.is_internal ?? false,
-      cost_center: transaction.cost_center || 'general',
       transaction_direction: transaction.transaction_direction || 'purchase',
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
     })

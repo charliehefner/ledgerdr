@@ -193,8 +193,10 @@ export type Database = {
           created_by: string | null
           currency: string | null
           deleted_at: string | null
+          english_description: string | null
           id: string
           parent_id: string | null
+          spanish_description: string | null
           updated_at: string | null
         }
         Insert: {
@@ -207,8 +209,10 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
+          english_description?: string | null
           id?: string
           parent_id?: string | null
+          spanish_description?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -221,8 +225,10 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
+          english_description?: string | null
           id?: string
           parent_id?: string | null
+          spanish_description?: string | null
           updated_at?: string | null
         }
         Relationships: [

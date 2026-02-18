@@ -31,7 +31,7 @@ export function DGII607Table({ transactions, month, year }: Props) {
     ncf: tx.document || "",
     fecha: formatDateDGII(tx.transaction_date),
     tipoIngreso: tx.dgii_tipo_ingreso || "",
-    montoFacturado: tx.amount?.toFixed(2) || "0.00",
+    montoFacturado: ((tx.amount || 0) - (tx.itbis || 0)).toFixed(2),
     itbisFacturado: tx.itbis?.toFixed(2) || "0.00",
     itbisRetenido: (tx.itbis_retenido || 0).toFixed(2),
     isrRetenido: (tx.isr_retenido || 0).toFixed(2),

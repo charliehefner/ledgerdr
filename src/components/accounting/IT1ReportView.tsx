@@ -21,13 +21,13 @@ export function IT1ReportView({ purchases, sales, month, year }: IT1ReportViewPr
   const calc = useMemo(() => {
     const totalVentasGravadas = sales
       .filter((s) => (s.itbis ?? 0) > 0)
-      .reduce((sum, s) => sum + Number(s.amount || 0), 0);
+      .reduce((sum, s) => sum + (Number(s.amount || 0) - Number(s.itbis || 0)), 0);
 
     const itbisCobrado = sales.reduce((sum, s) => sum + Number(s.itbis || 0), 0);
 
     const totalComprasConItbis = purchases
       .filter((p) => (p.itbis ?? 0) > 0)
-      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      .reduce((sum, p) => sum + (Number(p.amount || 0) - Number(p.itbis || 0)), 0);
 
     const itbisPagado = purchases.reduce((sum, p) => sum + Number(p.itbis || 0), 0);
 

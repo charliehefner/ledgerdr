@@ -25,7 +25,8 @@ import {
   Users,
   QrCode,
   Store,
-  Satellite
+  Satellite,
+  BookOpen
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +40,7 @@ import { QRCodeManager } from "@/components/settings/QRCodeManager";
 import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager";
 import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
+import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -122,6 +124,12 @@ export default function Settings() {
               <TabsTrigger value="gps">
                 <Satellite className="h-4 w-4 mr-2" />
                 GPS
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="chart-of-accounts">
+                <BookOpen className="h-4 w-4 mr-2" />
+                {t("accounting.chartOfAccounts")}
               </TabsTrigger>
             )}
           </TabsList>
@@ -299,6 +307,14 @@ export default function Settings() {
             <TabsContent value="gps" className="mt-6">
               <div className="max-w-4xl">
                 <GPSLinkingManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="chart-of-accounts" className="mt-6">
+              <div className="max-w-5xl">
+                <ChartOfAccountsView />
               </div>
             </TabsContent>
           )}

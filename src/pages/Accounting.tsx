@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
-import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { AccountingReportsView } from "@/components/accounting/AccountingReportsView";
 import { FixedAssetsView } from "@/components/equipment/FixedAssetsView";
 import { JournalView } from "@/components/accounting/JournalView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Accounting() {
-  const [activeTab, setActiveTab] = useState("chart-of-accounts");
+  const [activeTab, setActiveTab] = useState("reports");
   const { t } = useLanguage();
 
   return (
@@ -19,11 +18,6 @@ export default function Accounting() {
       tabGroups={[
         {
           tabs: [
-            {
-              value: "chart-of-accounts",
-              label: t("accounting.chartOfAccounts"),
-              content: <ChartOfAccountsView />,
-            },
             {
               value: "reports",
               label: t("accounting.reports"),

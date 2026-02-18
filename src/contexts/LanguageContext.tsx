@@ -699,6 +699,13 @@ const translations: Record<Language, Record<string, string>> = {
     "txForm.projectCbsRequired": "Proyecto y código CBS son requeridos para la cuenta 1180",
     "txForm.itbisExceeds": "ITBIS no puede exceder el 18% del monto",
     "txForm.duplicate": "Transacción duplicada detectada. Ya existe una transacción con la misma fecha, cuenta, monto y nombre.",
+    "txForm.direction": "Tipo",
+    "txForm.purchase": "Compra",
+    "txForm.sale": "Venta",
+    "txForm.tipoIngreso": "Tipo de Ingreso",
+    "txForm.selectTipoIngreso": "Seleccionar tipo",
+    "txForm.namePlaceholderPurchase": "Proveedor",
+    "txForm.namePlaceholderSale": "Cliente",
 
     // DGII
     "dgii.reports": "Reportes DGII",
@@ -1396,6 +1403,13 @@ const translations: Record<Language, Record<string, string>> = {
     "txForm.projectCbsRequired": "Project and CBS code are required for account 1180",
     "txForm.itbisExceeds": "ITBIS cannot exceed 18% of the amount",
     "txForm.duplicate": "Duplicate transaction detected. A transaction with the same date, account, amount, and name already exists.",
+    "txForm.direction": "Type",
+    "txForm.purchase": "Purchase",
+    "txForm.sale": "Sale",
+    "txForm.tipoIngreso": "Income Type",
+    "txForm.selectTipoIngreso": "Select type",
+    "txForm.namePlaceholderPurchase": "Supplier",
+    "txForm.namePlaceholderSale": "Customer",
 
     // DGII
     "dgii.reports": "DGII Reports",

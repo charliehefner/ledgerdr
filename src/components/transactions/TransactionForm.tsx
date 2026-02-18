@@ -6,6 +6,7 @@ import { CalendarIcon } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
+import { TIPO_INGRESO } from '@/components/accounting/dgiiConstants';
 import {
   fetchAccounts,
   fetchProjects,
@@ -63,6 +64,8 @@ const initialFormState = {
   comments: '',
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
+  transaction_direction: 'purchase' as 'purchase' | 'sale',
+  dgii_tipo_ingreso: '',
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -203,6 +206,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
         is_internal: form.master_acct_code === '0000',
         cost_center: form.cost_center,
+        transaction_direction: form.transaction_direction,
+        dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
       });
 
       // Save all attachments to local database
@@ -368,7 +373,23 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           </div>
 
           {/* Account Dropdowns + Cost Center */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
+            <div className="space-y-2">
+              <Label>{t('txForm.direction')}</Label>
+              <Select
+                value={form.transaction_direction}
+                onValueChange={(value: 'purchase' | 'sale') => updateField('transaction_direction', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="purchase">{t('txForm.purchase')}</SelectItem>
+                  <SelectItem value="sale">{t('txForm.sale')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>{t('txForm.costCenter')}</Label>
               <Select
@@ -468,7 +489,27 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             />
           </div>
 
-          {/* Amount Fields */}
+          {/* Tipo de Ingreso - only for sales */}
+          {form.transaction_direction === 'sale' && (
+            <div className="space-y-2 max-w-xs">
+              <Label>{t('txForm.tipoIngreso')}</Label>
+              <Select
+                value={form.dgii_tipo_ingreso}
+                onValueChange={(value) => updateField('dgii_tipo_ingreso', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('txForm.selectTipoIngreso')} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {Object.entries(TIPO_INGRESO).map(([code, desc]) => (
+                    <SelectItem key={code} value={code}>
+                      {code} - {desc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label>{t('txForm.currency')}</Label>

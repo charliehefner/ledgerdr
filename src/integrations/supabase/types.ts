@@ -2361,11 +2361,16 @@ export type Database = {
           created_at: string
           currency: string
           description: string
+          dgii_tipo_anulacion: string | null
+          dgii_tipo_bienes_servicios: string | null
+          dgii_tipo_ingreso: string | null
           document: string | null
           id: string
           is_internal: boolean
           is_void: boolean
+          isr_retenido: number | null
           itbis: number | null
+          itbis_retenido: number | null
           legacy_id: number | null
           master_acct_code: string | null
           name: string | null
@@ -2373,6 +2378,7 @@ export type Database = {
           project_code: string | null
           rnc: string | null
           transaction_date: string
+          transaction_direction: string | null
           updated_at: string
           void_reason: string | null
           voided_at: string | null
@@ -2384,11 +2390,16 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          dgii_tipo_anulacion?: string | null
+          dgii_tipo_bienes_servicios?: string | null
+          dgii_tipo_ingreso?: string | null
           document?: string | null
           id?: string
           is_internal?: boolean
           is_void?: boolean
+          isr_retenido?: number | null
           itbis?: number | null
+          itbis_retenido?: number | null
           legacy_id?: number | null
           master_acct_code?: string | null
           name?: string | null
@@ -2396,6 +2407,7 @@ export type Database = {
           project_code?: string | null
           rnc?: string | null
           transaction_date: string
+          transaction_direction?: string | null
           updated_at?: string
           void_reason?: string | null
           voided_at?: string | null
@@ -2407,11 +2419,16 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          dgii_tipo_anulacion?: string | null
+          dgii_tipo_bienes_servicios?: string | null
+          dgii_tipo_ingreso?: string | null
           document?: string | null
           id?: string
           is_internal?: boolean
           is_void?: boolean
+          isr_retenido?: number | null
           itbis?: number | null
+          itbis_retenido?: number | null
           legacy_id?: number | null
           master_acct_code?: string | null
           name?: string | null
@@ -2419,6 +2436,7 @@ export type Database = {
           project_code?: string | null
           rnc?: string | null
           transaction_date?: string
+          transaction_direction?: string | null
           updated_at?: string
           void_reason?: string | null
           voided_at?: string | null

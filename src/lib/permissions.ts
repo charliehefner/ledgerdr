@@ -33,7 +33,7 @@ export type Section =
   | "driver-portal";
 
 // HR sub-tabs for granular access control
-export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-employee" | "servicios" | "prestadores";
+export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-employee" | "servicios" | "prestadores" | "tss";
 
 // Which HR tabs each role can access
 const hrTabPermissions: Record<HrTab, UserRole[]> = {
@@ -44,6 +44,7 @@ const hrTabPermissions: Record<HrTab, UserRole[]> = {
   prestadores: ["admin", "management", "accountant", "supervisor"],
   employees: ["admin", "management", "accountant"],
   "add-employee": ["admin", "management"],
+  tss: ["admin", "management", "accountant"],
 };
 
 // Which HR tabs each role can write to (add/edit/delete)
@@ -55,6 +56,7 @@ const hrTabWritePermissions: Record<HrTab, UserRole[]> = {
   prestadores: ["admin", "management", "accountant", "supervisor"],
   employees: ["admin", "management", "accountant"],
   "add-employee": ["admin", "management"],
+  tss: ["admin", "management", "accountant"],
 };
 
 /**

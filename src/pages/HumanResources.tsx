@@ -7,6 +7,7 @@ import { DayLaborView } from "@/components/hr/DayLaborView";
 import { JornalerosView } from "@/components/hr/JornalerosView";
 import { ServicesView } from "@/components/hr/ServicesView";
 import { ServiceProvidersView } from "@/components/hr/ServiceProvidersView";
+import { TSSAutodeterminacionView } from "@/components/hr/TSSAutodeterminacionView";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessHrTab, getDefaultHrTabForRole, HrTab } from "@/lib/permissions";
@@ -97,6 +98,13 @@ export default function HumanResources() {
       value: "employees",
       label: t("hr.employees"),
       content: <EmployeeList onEdit={handleEditEmployee} />,
+    });
+  }
+  if (canAccessTab("tss")) {
+    rightTabs.push({
+      value: "tss",
+      label: "TSS",
+      content: <TSSAutodeterminacionView />,
     });
   }
 

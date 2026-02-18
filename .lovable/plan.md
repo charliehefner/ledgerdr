@@ -1,86 +1,41 @@
 
 
-# IT-1: Declaracion Mensual de ITBIS
+# Bilingual Info Tooltips
 
-## What is the IT-1?
+## Overview
 
-The IT-1 is the monthly ITBIS (VAT) declaration form filed on the DGII portal. It calculates the net ITBIS to pay (or carry forward) based on:
+Add a reusable `InfoTooltip` component (a "?" icon showing help text on hover) with all tooltip texts registered in the existing `LanguageContext` translation system, so they automatically follow the language toggle.
 
-- **ITBIS Cobrado** (collected): ITBIS from sales (607 transactions)
-- **ITBIS Pagado** (paid): ITBIS from purchases (606 transactions)
-- **ITBIS Retenido por Terceros**: ITBIS withheld by third parties on your sales (if any)
-- **Saldo a favor anterior**: Carry-forward credit from prior months (manual entry)
+## New Component
 
-The formula: **ITBIS a Pagar = ITBIS Cobrado - ITBIS Pagado - Saldo Anterior**
+**`src/components/ui/info-tooltip.tsx`**
 
-If the result is negative, it becomes a "saldo a favor" (credit) to carry to the next month.
+A small wrapper: `HelpCircle` icon (14px, `text-muted-foreground`) inside a Radix Tooltip. Accepts a translation key string and calls `t(key)` internally to resolve the correct language.
 
-## Where It Fits
+## Translation Keys
 
-This belongs in the **Accounting module's DGII tab**, right alongside the existing 606/607/608 reports since it uses the exact same data. A new sub-tab "IT-1" will be added.
+Added to both `es` and `en` blocks in `src/contexts/LanguageContext.tsx`:
 
-## Data Sources (Already Available)
-
-All data already exists in the `transactions` table:
-
-| Source | Filter | Field |
+| Key | Spanish | English |
 |---|---|---|
-| ITBIS Cobrado | `transaction_direction = 'sale'`, not void | `itbis` column |
-| ITBIS Pagado | `transaction_direction = 'purchase'` (or null), not void | `itbis` column |
-| ITBIS Retenido a terceros | Same purchases | `itbis_retenido` column |
+| `help.generateJournals` | Crea asientos contables automaticamente a partir de transacciones sin asiento vinculado. Se generan en estado Borrador para revision. | Automatically creates journal entries from transactions without a linked entry. Generated as Draft for review. |
+| `help.dgii606` | Reporte de compras y gastos con comprobantes fiscales. Se sube como archivo .txt al portal de la DGII cada mes. | Purchase and expense report with fiscal receipts. Uploaded as a .txt file to the DGII portal monthly. |
+| `help.dgii607` | Reporte de ventas con comprobantes fiscales. Se sube como archivo .txt al portal de la DGII cada mes. | Sales report with fiscal receipts. Uploaded as a .txt file to the DGII portal monthly. |
+| `help.dgii608` | Reporte de comprobantes fiscales anulados durante el mes. Se sube como archivo .txt al portal de la DGII. | Report of voided fiscal receipts during the month. Uploaded as a .txt file to the DGII portal. |
+| `help.it1` | Calcula el ITBIS neto a pagar o saldo a favor del mes. Los valores se copian manualmente al formulario IT-1 en el portal de la DGII. | Calculates the net ITBIS to pay or credit balance for the month. Values are manually copied to the IT-1 form on the DGII portal. |
+| `help.tss` | Genera el archivo .txt de Autodeterminacion Mensual para cargar al sistema SUIRPLUS de la TSS. Incluye todos los empleados activos con sus salarios. | Generates the Monthly Self-Assessment .txt file to upload to the TSS SUIRPLUS system. Includes all active employees with their salaries. |
+| `help.ir3` | Retencion mensual del ISR sobre salarios. Los valores se ingresan manualmente en el formulario IR-3 del portal de la DGII. | Monthly ISR withholding on salaries. Values are manually entered in the IR-3 form on the DGII portal. |
+| `help.ir17` | Declaracion del impuesto complementario sobre retribuciones complementarias. Se ingresa manualmente en el formulario IR-17 de la DGII. | Complementary tax declaration on supplementary compensation. Manually entered in the IR-17 form on the DGII portal. |
 
-No database changes required.
-
-## Report Layout
-
-The IT-1 report card will display:
-
-```text
-+--------------------------------------------------+
-| IT-1 - ITBIS Mensual          [Mes] [Ano]        |
-+--------------------------------------------------+
-| Seccion I: Operaciones                            |
-|   Total Ventas Gravadas .......... RD$ XXX,XXX.XX |
-|   ITBIS Cobrado .................. RD$  XX,XXX.XX |
-|                                                    |
-| Seccion II: Deducciones                           |
-|   Total Compras con ITBIS ........ RD$ XXX,XXX.XX |
-|   ITBIS Pagado en Compras ........ RD$  XX,XXX.XX |
-|   ITBIS Retenido por Terceros .... RD$      XX.XX |
-|   Saldo a Favor Anterior ......... RD$       0.00 | <-- manual input
-|   Total Deducciones .............. RD$  XX,XXX.XX |
-|                                                    |
-| Resultado                                         |
-|   ITBIS a Pagar / (Saldo a Favor) RD$   X,XXX.XX |
-+--------------------------------------------------+
-| [Copiar Total]  [Exportar Excel]                  |
-+--------------------------------------------------+
-```
-
-## Technical Changes
+## Files Modified
 
 | File | Change |
 |---|---|
-| `src/components/accounting/IT1ReportView.tsx` | **New** -- IT-1 summary component |
-| `src/components/accounting/DGIIReportsView.tsx` | Add "IT-1" as a 4th sub-tab alongside 606, 607, 608 |
-
-### IT1ReportView Implementation
-
-- Reuses the same month/year selector already passed from `DGIIReportsView`
-- Receives `purchases` and `sales` arrays already fetched by the parent (no extra queries)
-- Calculates:
-  - `totalVentasGravadas`: sum of `amount` from sales where `itbis > 0`
-  - `itbisCobrado`: sum of `itbis` from sales
-  - `totalComprasConItbis`: sum of `amount` from purchases where `itbis > 0`
-  - `itbisPagado`: sum of `itbis` from purchases
-  - `itbisRetenidoTerceros`: sum of `itbis_retenido` from purchases
-  - `saldoAnterior`: manual input field (default 0)
-  - `resultado`: `itbisCobrado - itbisPagado - itbisRetenidoTerceros - saldoAnterior`
-- "Copy Total" and "Export Excel" buttons following existing patterns
-- Summary display matching DGII IT-1 form sections for easy portal entry
-
-### Parent Changes (DGIIReportsView)
-
-- Add a 4th tab trigger: `IT-1 - ITBIS`
-- Pass existing `purchases` and `sales` data to `IT1ReportView` as props (zero extra queries)
+| `src/components/ui/info-tooltip.tsx` | **New** -- reusable component, calls `useLanguage().t(key)` |
+| `src/contexts/LanguageContext.tsx` | Add 8 new keys to both `es` and `en` translation blocks |
+| `src/components/accounting/JournalView.tsx` | Add `InfoTooltip` next to "Generar Asientos" button |
+| `src/components/accounting/DGIIReportsView.tsx` | Add `InfoTooltip` next to each tab label (606, 607, 608, IT-1) |
+| `src/components/hr/TSSAutodeterminacionView.tsx` | Add `InfoTooltip` next to the card title |
+| `src/components/hr/IR3ReportView.tsx` | Add `InfoTooltip` next to the card title |
+| `src/components/hr/IR17ReportView.tsx` | Add `InfoTooltip` next to the card title |
 

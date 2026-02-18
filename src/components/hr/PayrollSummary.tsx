@@ -708,7 +708,35 @@ export function PayrollSummary({
 
       if (error) throw error;
 
-      // 3. Decrement remaining_payments for all active loans
+      // 3. Save payroll snapshots for IR-3 and other reports
+      const snapshotRows = payrollData.map((p) => ({
+        period_id: periodId,
+        employee_id: p.employee.id,
+        base_pay: p.basePay,
+        overtime_pay: p.overtimePay,
+        holiday_pay: p.holidayPay,
+        sunday_pay: p.sundayPay,
+        total_benefits: p.totalBenefits,
+        tss: p.tss,
+        isr: p.isr,
+        loan_deduction: p.loanDeduction,
+        absence_deduction: p.absenceDeduction,
+        vacation_deduction: p.vacationDeduction,
+        gross_pay: p.grossPay,
+        net_pay: p.netPay,
+      }));
+
+      if (snapshotRows.length > 0) {
+        const { error: snapError } = await supabase
+          .from("payroll_snapshots" as any)
+          .upsert(snapshotRows, { onConflict: "period_id,employee_id" });
+        if (snapError) {
+          console.error("Snapshot insert error:", snapError);
+          // Non-fatal: don't block close
+        }
+      }
+
+      // 4. Decrement remaining_payments for all active loans
       for (const loan of loans) {
         const newRemaining = Math.max(0, loan.remaining_payments - 1);
         const isStillActive = newRemaining > 0;
@@ -722,7 +750,7 @@ export function PayrollSummary({
           .eq("id", loan.id);
       }
 
-      // 4. Generate receipts automatically on close
+      // 5. Generate receipts automatically on close
       await generatePayrollReceiptsZip(payrollData, nominaNumber, startDate, endDate);
     },
     onSuccess: () => {

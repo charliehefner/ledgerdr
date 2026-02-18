@@ -727,7 +727,7 @@ const translations: Record<Language, Record<string, string>> = {
     "help.dgii608": "Reporte de comprobantes anulados. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transacción en Libro Mayor.",
     "help.it1": "Calcula el ITBIS neto a pagar o saldo a favor del mes. Los valores se copian manualmente al formulario IT-1 en el portal de la DGII.",
     "help.tss": "Genera el archivo .txt de Autodeterminación Mensual para cargar al sistema SUIRPLUS de la TSS. Incluye todos los empleados activos con sus salarios.",
-    "help.ir3": "Retención mensual del ISR sobre salarios. Los valores se ingresan manualmente en el formulario IR-3 del portal de la DGII.",
+    "help.ir3": "Retención mensual del ISR sobre salarios. Los valores provienen de los snapshots guardados al cerrar cada nómina. Si el período está abierto, se muestra un estimado (~). Ingrese el total en el formulario IR-3 de la DGII.",
     "help.ir17": "Declaración del impuesto complementario sobre retribuciones complementarias. Se ingresa manualmente en el formulario IR-17 de la DGII.",
   },
   en: {
@@ -1443,7 +1443,7 @@ const translations: Record<Language, Record<string, string>> = {
     "help.dgii608": "Voided fiscal receipts report. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger.",
     "help.it1": "Calculates the net ITBIS to pay or credit balance for the month. Values are manually copied to the IT-1 form on the DGII portal.",
     "help.tss": "Generates the Monthly Self-Assessment .txt file to upload to the TSS SUIRPLUS system. Includes all active employees with their salaries.",
-    "help.ir3": "Monthly ISR withholding on salaries. Values are manually entered in the IR-3 form on the DGII portal.",
+    "help.ir3": "Monthly ISR withholding on salaries. Values come from snapshots saved when each payroll period is closed. Open periods show estimates (~). Enter the total in the IR-3 form on the DGII portal.",
     "help.ir17": "Complementary tax declaration on supplementary compensation. Manually entered in the IR-17 form on the DGII portal.",
   },
 };

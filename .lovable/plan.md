@@ -1,86 +1,73 @@
 
 
-# Consolidate Accounts into `chart_of_accounts` + Import Corporate CoA from Excel
+# Journal Entry Review & Approval Workflow
 
 ## Summary
 
-Import the full corporate Chart of Accounts (~350 accounts) from the uploaded Excel file into `chart_of_accounts`, add bilingual description columns, and retire the old `accounts` table from code. The existing 89 accounts are a subset of this corporate CoA, so they'll be covered by the import.
+Add a full review/approval UI to the Journal tab so an accountant (or admin/management) can open any draft journal entry, inspect and edit its lines, then post it -- or leave it as draft for later. The database already has the necessary columns (`posted`, `posted_by`, `posted_at`) and a trigger preventing edits to posted entries.
 
-## Step 1: Database Migration -- Add bilingual columns to `chart_of_accounts`
+## What Changes
 
-Add two new columns:
-- `english_description TEXT`
-- `spanish_description TEXT`
+### 1. New Component: `JournalDetailDialog.tsx`
 
-These preserve the bilingual support that the `accounts` table currently provides.
+A dialog that opens when clicking a journal row, showing:
 
-## Step 2: Import the ~350 accounts from Excel
+- **Header**: Journal number, date, description, currency, status badge
+- **Editable lines table**: Account code (dropdown from `chart_of_accounts`), debit, credit amounts -- editable only while draft
+- **Add/remove line buttons** (draft only)
+- **Description edit** (draft only)
+- **Footer actions**:
+  - "Save Changes" -- saves edits to journal lines and description
+  - "Post / Approve" -- sets `posted = true`, `posted_by = current user`, `posted_at = now()`. Shows a confirmation dialog since this is irreversible (the existing trigger blocks further edits)
+  - "Delete" -- soft-deletes the journal (sets `deleted_at`)
+- Posted journals open in **read-only mode** with a "Posted by [user] on [date]" indicator
 
-Insert all accounts from the Excel file into `chart_of_accounts` with:
-- `account_code` = the Master account code (1010, 1018, etc.)
-- `account_name` = Spanish description (primary display name)
-- `english_description` = English description
-- `spanish_description` = Spanish description
-- `account_type` inferred from code prefix:
-  - 1xxx = ASSET
-  - 2xxx = LIABILITY (2081-2099 = EQUITY)
-  - 3xxx = INCOME
-  - 4xxx = EXPENSE
-  - 5xxx-7xxx = EXPENSE
-  - 8xxx = FINANCIAL (mapped to INCOME or EXPENSE as appropriate, or a catch-all)
-- `allow_posting` = true for all (can be refined later)
-- `currency` = DOP (default)
-- No `parent_id` initially -- hierarchy can be set up later by grouping codes
+### 2. Update `JournalView.tsx`
 
-Empty rows in the Excel (separators) will be skipped.
+- Add a filter toolbar: "All | Drafts | Posted" toggle to filter by status
+- Each row becomes clickable to open `JournalDetailDialog`
+- Show totals (sum of debits/credits) in the expanded line view
+- Add a "New Journal" button for manual entry creation (admin/management/accountant only, using `canWriteSection`)
 
-The special account `0000` (Internal Transfer) from the current `accounts` table is NOT in the Excel -- it will be added as an extra insert.
+### 3. New Component: `JournalEntryForm.tsx`
 
-## Step 3: Update code references (2 files)
+A dialog for creating new manual journal entries with:
+- Date picker, description, currency selector
+- Dynamic lines table: account selector + debit/credit inputs
+- Real-time balance indicator (total debits vs credits -- must match to save)
+- The existing `trg_validate_journal_balance` trigger enforces balance on save
 
-### `src/lib/api.ts` -- `fetchAccounts()`
-Change query from `accounts` to `chart_of_accounts`, selecting `account_code as code, english_description, spanish_description`. The returned `Account` interface shape stays identical, so all downstream components (TransactionForm, Reports, etc.) need zero changes.
+### 4. Database Changes
 
-### `src/components/hr/ServicesView.tsx`
-Same change -- query `chart_of_accounts` instead of `accounts`, mapping `account_code` to `code` and `spanish_description`.
+**None required.** The schema already has everything needed:
+- `journals.posted` (boolean, default false)
+- `journals.posted_by` (uuid)
+- `journals.posted_at` (timestamptz)
+- `trg_no_edit_posted_journal` trigger prevents changes to posted entries
+- `trg_validate_journal_balance` trigger ensures debit = credit
+- RLS policies already allow accountant INSERT/UPDATE
 
-## Step 4: Update `ChartOfAccountsView.tsx`
+### 5. Permission Enforcement
 
-- Add bilingual display: show `english_description` or `spanish_description` based on language context using `getDescription()` pattern
-- The existing tree, type filter, and CRUD dialog already work with `chart_of_accounts`
-- Add `english_description` and `spanish_description` fields to the Add/Edit dialog
+- Only users with write access to accounting (admin, management, accountant) see "Post", "Edit", "Delete", and "New Journal" buttons
+- Viewers and supervisors see the journal in read-only mode
+- The `canWriteSection(role, 'accounting')` check gates all write actions
 
-## Step 5: Keep `accounts` table (no drop)
+## Files
 
-The table stays in the database but is no longer queried. It can be removed in a future cleanup migration.
+| File | Action |
+|------|--------|
+| `src/components/accounting/JournalDetailDialog.tsx` | New -- review/edit/post dialog |
+| `src/components/accounting/JournalEntryForm.tsx` | New -- create new journal entry |
+| `src/components/accounting/JournalView.tsx` | Update -- add filters, "New" button, click-to-open |
 
-## Files Changed
+## User Flow
 
-1. **Database migration**: Add `english_description` and `spanish_description` columns to `chart_of_accounts`
-2. **Data insert**: ~350 rows from Excel + the `0000` Internal Transfer account
-3. **`src/lib/api.ts`**: Change `fetchAccounts()` to query `chart_of_accounts`
-4. **`src/components/hr/ServicesView.tsx`**: Update inline account query
-5. **`src/components/accounting/ChartOfAccountsView.tsx`**: Add bilingual display and update dialog fields
+1. Journals are created as **Borrador** (Draft) -- either auto-generated from transactions or manually
+2. Accountant opens the Journal tab, sees list filtered to "Drafts"
+3. Clicks a draft entry to open the detail dialog
+4. Reviews the lines, edits accounts/amounts if needed, saves changes
+5. Clicks "Aprobar y Publicar" (Approve & Post)
+6. Confirms in the confirmation dialog
+7. Entry becomes **Publicado** (Posted) and is now locked from further edits
 
-## Account Type Mapping
-
-```text
-Code Range    account_type
-----------    ------------
-1000-1999     ASSET
-2000-2099     EQUITY
-2100-2999     LIABILITY
-3000-3999     INCOME
-4000-4999     EXPENSE
-5000-7999     EXPENSE
-8000-8499     INCOME (financial)
-8400-8499     EXPENSE (interest expense)
-8800-8999     EQUITY/TAX
-```
-
-## What Stays the Same
-
-- The `Account` interface in `api.ts` (`code`, `english_description`, `spanish_description`) -- no shape change
-- All UI components that consume accounts (TransactionForm, Reports, autocompletes) -- they use the `Account` interface from `api.ts`
-- The `getDescription()` helper continues to work as-is
-- RLS policies on `chart_of_accounts` already cover all needed roles

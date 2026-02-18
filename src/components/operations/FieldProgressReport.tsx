@@ -136,21 +136,31 @@ export function FieldProgressReport() {
   const { data: operations, isLoading } = useQuery({
     queryKey: ["operations-for-report"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("operations")
-        .select(`
-          id,
-          operation_date,
-          field_id,
-          operation_type_id,
-          hectares_done,
-          fields(id, name, hectares, farms(name)),
-          operation_types(name, is_mechanical),
-          operation_inputs(id, quantity_used, inventory_items(commercial_name, use_unit))
-        `)
-        .order("operation_date", { ascending: false });
-      if (error) throw error;
-      return data as Operation[];
+      // Fetch all operations (may exceed default 1000 row limit)
+      let allData: Operation[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from("operations")
+          .select(`
+            id,
+            operation_date,
+            field_id,
+            operation_type_id,
+            hectares_done,
+            fields(id, name, hectares, farms(name)),
+            operation_types(name, is_mechanical),
+            operation_inputs(id, quantity_used, inventory_items(commercial_name, use_unit))
+          `)
+          .order("operation_date", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        allData = allData.concat(data as Operation[]);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return allData;
     },
   });
 

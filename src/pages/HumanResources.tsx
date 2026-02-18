@@ -79,6 +79,19 @@ export default function HumanResources() {
       content: <ServicesView />,
     });
   }
+  if (canAccessTab("tss")) {
+    mainTabs.push({
+      value: "tss",
+      label: "Reportes Gob.",
+      content: (
+        <div className="space-y-6">
+          <TSSAutodeterminacionView />
+          <IR3ReportView />
+          <IR17ReportView />
+        </div>
+      ),
+    });
+  }
 
   const rightTabs = [];
   if (canAccessTab("jornaleros")) {
@@ -100,19 +113,6 @@ export default function HumanResources() {
       value: "employees",
       label: t("hr.employees"),
       content: <EmployeeList onEdit={handleEditEmployee} />,
-    });
-  }
-  if (canAccessTab("tss")) {
-    rightTabs.push({
-      value: "tss",
-      label: "Reportes Gob.",
-      content: (
-        <div className="space-y-6">
-          <TSSAutodeterminacionView />
-          <IR3ReportView />
-          <IR17ReportView />
-        </div>
-      ),
     });
   }
 

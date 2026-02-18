@@ -61,6 +61,7 @@ const initialFormState = {
   rnc: '',
   comments: '',
   exchange_rate: '',
+  cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -199,6 +200,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         comments: form.comments || undefined,
         exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
         is_internal: form.master_acct_code === '0000',
+        cost_center: form.cost_center,
       });
 
       // Save all attachments to local database
@@ -361,6 +363,24 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 </PopoverContent>
               </Popover>
             </div>
+          </div>
+
+          {/* Cost Center */}
+          <div className="space-y-2">
+            <Label>Centro de Costo</Label>
+            <Select
+              value={form.cost_center}
+              onValueChange={(value: 'general' | 'agricultural' | 'industrial') => updateField('cost_center', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover">
+                <SelectItem value="general">General</SelectItem>
+                <SelectItem value="agricultural">Agrícola</SelectItem>
+                <SelectItem value="industrial">Industrial</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Account Dropdowns */}

@@ -36,6 +36,7 @@ export interface Transaction {
   rnc?: string;
   comments?: string;
   exchange_rate?: number;
+  cost_center?: 'general' | 'agricultural' | 'industrial';
   is_internal: boolean;
   is_void?: boolean;
   void_reason?: string;
@@ -113,6 +114,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     id: t.legacy_id?.toString() || t.id,
     currency: t.currency as 'DOP' | 'USD',
     is_internal: t.is_internal ?? false,
+    cost_center: (t as any).cost_center || 'general',
   }));
 }
 
@@ -145,6 +147,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       comments: transaction.comments || null,
       is_void: false,
       is_internal: transaction.is_internal ?? false,
+      cost_center: transaction.cost_center || 'general',
     })
     .select()
     .single();
@@ -159,6 +162,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
+    cost_center: (data as any).cost_center || 'general',
   };
 }
 

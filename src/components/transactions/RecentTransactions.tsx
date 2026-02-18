@@ -16,6 +16,7 @@ import { getDescription } from '@/lib/getDescription';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { MultiAttachmentCell } from './MultiAttachmentCell';
 import { EditTransactionDialog } from '@/components/invoices/EditTransactionDialog';
+import { Badge } from '@/components/ui/badge';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { ColumnSelector } from '@/components/ui/column-selector';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -102,6 +103,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 {columnVisibility.isVisible("payMethod") && <TableHead>{t("col.payMethod")}</TableHead>}
                 {columnVisibility.isVisible("document") && <TableHead>{t("col.document")}</TableHead>}
                 {columnVisibility.isVisible("name") && <TableHead>{t("common.name")}</TableHead>}
+                {columnVisibility.isVisible("costCenter") && <TableHead>Centro Costo</TableHead>}
                 {columnVisibility.isVisible("attach") && <TableHead className="text-center">{t("col.attachment")}</TableHead>}
               </TableRow>
             </TableHeader>
@@ -158,6 +160,16 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     )}
                     {columnVisibility.isVisible("name") && (
                       <TableCell className="truncate max-w-[120px]">{tx.name || "-"}</TableCell>
+                    )}
+                    {columnVisibility.isVisible("costCenter") && (
+                      <TableCell>
+                        {(() => {
+                          const cc = (tx as any).cost_center || 'general';
+                          const label = cc === 'agricultural' ? 'Agrícola' : cc === 'industrial' ? 'Industrial' : 'General';
+                          const cls = cc === 'agricultural' ? 'bg-green-100 text-green-800 border-green-200' : cc === 'industrial' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-muted text-muted-foreground';
+                          return <Badge variant="outline" className={cls}>{label}</Badge>;
+                        })()}
+                      </TableCell>
                     )}
                     {columnVisibility.isVisible("attach") && (
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>

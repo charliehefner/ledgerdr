@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DGII606Table } from "./DGII606Table";
 import { DGII607Table } from "./DGII607Table";
 import { DGII608Table } from "./DGII608Table";
+import { IT1ReportView } from "./IT1ReportView";
 import { Loader2 } from "lucide-react";
 
 const MONTHS = [
@@ -128,6 +129,7 @@ export function DGIIReportsView() {
                 <TabsTrigger value="606">606 - Compras ({purchases.length})</TabsTrigger>
                 <TabsTrigger value="607">607 - Ventas ({sales.length})</TabsTrigger>
                 <TabsTrigger value="608">608 - Anulados ({voided.length})</TabsTrigger>
+                <TabsTrigger value="it1">IT-1 - ITBIS</TabsTrigger>
               </TabsList>
               <TabsContent value="606">
                 <DGII606Table transactions={purchases} month={month} year={year} />
@@ -137,6 +139,9 @@ export function DGIIReportsView() {
               </TabsContent>
               <TabsContent value="608">
                 <DGII608Table transactions={voided} month={month} year={year} />
+              </TabsContent>
+              <TabsContent value="it1">
+                <IT1ReportView purchases={purchases} sales={sales} month={month} year={year} />
               </TabsContent>
             </Tabs>
           )}

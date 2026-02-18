@@ -21,6 +21,7 @@ export const TRANSACTION_COLUMNS: ColumnConfig[] = [
   { key: "name", label: "Name / Nombre", defaultVisible: false },
   { key: "comments", label: "Comments / Comentarios", defaultVisible: false },
   { key: "exchangeRate", label: "Exchange Rate / Tasa Cambio", defaultVisible: false },
+  { key: "costCenter", label: "Cost Center / Centro Costo", defaultVisible: false },
   { key: "attach", label: "Attachment / Adjunto", defaultVisible: true },
 ];
 
@@ -44,6 +45,7 @@ export const REPORT_COLUMNS: ColumnConfig[] = [
   { key: "name", label: "Name / Nombre", defaultVisible: true },
   { key: "comments", label: "Comments / Comentarios", defaultVisible: false },
   { key: "exchangeRate", label: "Exchange Rate / Tasa Cambio", defaultVisible: true },
+  { key: "costCenter", label: "Cost Center / Centro Costo", defaultVisible: true },
   { key: "attach", label: "Attachment / Adjunto", defaultVisible: true },
 ];
 
@@ -67,5 +69,6 @@ export const DASHBOARD_COLUMNS: ColumnConfig[] = [
   { key: "name", label: "Name / Nombre", defaultVisible: false },
   { key: "comments", label: "Comments / Comentarios", defaultVisible: false },
   { key: "exchangeRate", label: "Exchange Rate / Tasa Cambio", defaultVisible: false },
+  { key: "costCenter", label: "Cost Center / Centro Costo", defaultVisible: false },
   { key: "attach", label: "Attachment / Adjunto", defaultVisible: true },
 ];

@@ -1759,6 +1759,85 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_snapshots: {
+        Row: {
+          absence_deduction: number
+          base_pay: number
+          created_at: string
+          employee_id: string
+          gross_pay: number
+          holiday_pay: number
+          id: string
+          isr: number
+          loan_deduction: number
+          net_pay: number
+          overtime_pay: number
+          period_id: string
+          sunday_pay: number
+          total_benefits: number
+          tss: number
+          vacation_deduction: number
+        }
+        Insert: {
+          absence_deduction?: number
+          base_pay?: number
+          created_at?: string
+          employee_id: string
+          gross_pay?: number
+          holiday_pay?: number
+          id?: string
+          isr?: number
+          loan_deduction?: number
+          net_pay?: number
+          overtime_pay?: number
+          period_id: string
+          sunday_pay?: number
+          total_benefits?: number
+          tss?: number
+          vacation_deduction?: number
+        }
+        Update: {
+          absence_deduction?: number
+          base_pay?: number
+          created_at?: string
+          employee_id?: string
+          gross_pay?: number
+          holiday_pay?: number
+          id?: string
+          isr?: number
+          loan_deduction?: number
+          net_pay?: number
+          overtime_pay?: number
+          period_id?: string
+          sunday_pay?: number
+          total_benefits?: number
+          tss?: number
+          vacation_deduction?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_snapshots_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_snapshots_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_snapshots_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_fuel_submissions: {
         Row: {
           created_at: string | null

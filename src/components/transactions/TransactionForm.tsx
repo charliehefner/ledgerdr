@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
 import {
   fetchAccounts,
@@ -73,6 +74,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useLanguage();
 
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
@@ -166,17 +168,17 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
     if (!isValid()) {
       if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
-        toast.error('Proyecto y código CBS son requeridos para la cuenta 1180');
+        toast.error(t('txForm.projectCbsRequired'));
       } else if (form.itbis && form.amount && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
-        toast.error('ITBIS no puede exceder el 18% del monto');
+        toast.error(t('txForm.itbisExceeds'));
       } else {
-        toast.error('Por favor complete todos los campos requeridos');
+        toast.error(t('txForm.requiredFields'));
       }
       return;
     }
 
     if (checkForDuplicate()) {
-      toast.error('Transacción duplicada detectada. Ya existe una transacción con la misma fecha, cuenta, monto y nombre.');
+      toast.error(t('txForm.duplicate'));
       return;
     }
 
@@ -216,11 +218,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
       }
 
-      toast.success('Transacción guardada exitosamente');
+      toast.success(t('txForm.success'));
       setForm(initialFormState);
       onSuccess();
     } catch (error) {
-      toast.error('Error al guardar la transacción');
+      toast.error(t('txForm.error'));
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -305,7 +307,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Nueva Transacción</CardTitle>
+        <CardTitle>{t('txForm.title')}</CardTitle>
         <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
       <CardContent>
@@ -313,7 +315,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Dates Row */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Fecha de Transacción *</Label>
+              <Label>{t('txForm.transactionDate')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -324,7 +326,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.transaction_date ? format(form.transaction_date, 'PPP') : 'Seleccionar fecha'}
+                    {form.transaction_date ? format(form.transaction_date, 'PPP') : t('txForm.selectDate')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-popover" align="start">
@@ -339,7 +341,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha de Compra</Label>
+              <Label>{t('txForm.purchaseDate')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -350,7 +352,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.purchase_date ? format(form.purchase_date, 'PPP') : 'Seleccionar fecha'}
+                    {form.purchase_date ? format(form.purchase_date, 'PPP') : t('txForm.selectDate')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-popover" align="start">
@@ -368,7 +370,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Account Dropdowns + Cost Center */}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Centro de Costo</Label>
+              <Label>{t('txForm.costCenter')}</Label>
               <Select
                 value={form.cost_center}
                 onValueChange={(value: 'general' | 'agricultural' | 'industrial') => updateField('cost_center', value)}
@@ -377,21 +379,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="agricultural">Agrícola</SelectItem>
-                  <SelectItem value="industrial">Industrial</SelectItem>
+                  <SelectItem value="general">{t('txForm.general')}</SelectItem>
+                  <SelectItem value="agricultural">{t('txForm.agricultural')}</SelectItem>
+                  <SelectItem value="industrial">{t('txForm.industrial')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Cuenta Principal *</Label>
+              <Label>{t('txForm.mainAccount')}</Label>
               <Select
                 value={form.master_acct_code}
                 onValueChange={(value) => updateField('master_acct_code', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingAccounts ? 'Cargando...' : 'Seleccionar cuenta'} />
+                  <SelectValue placeholder={loadingAccounts ? t('txForm.loadingAccounts') : t('txForm.selectAccount')} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover max-h-[300px]">
                   {accounts.map((account: Account) => (
@@ -405,14 +407,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
             <div className="space-y-2">
               <Label>
-                Proyecto {requires1180Fields && '*'}
+                {t('txForm.project')} {requires1180Fields && '*'}
               </Label>
               <Select
                 value={form.project_code}
                 onValueChange={(value) => updateField('project_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.project_code && 'border-destructive')}>
-                  <SelectValue placeholder={loadingProjects ? 'Cargando...' : 'Seleccionar proyecto'}>
+                  <SelectValue placeholder={loadingProjects ? t('txForm.loadingProjects') : t('txForm.selectProject')}>
                     {form.project_code && (() => {
                       const selected = projects.find(p => p.code === form.project_code);
                       return selected ? `${selected.code} - ${getDescription(selected)}` : form.project_code;
@@ -431,14 +433,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
             <div className="space-y-2">
               <Label>
-                Código CBS {requires1180Fields && '*'}
+                {t('txForm.cbsCode')} {requires1180Fields && '*'}
               </Label>
               <Select
                 value={form.cbs_code}
                 onValueChange={(value) => updateField('cbs_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.cbs_code && 'border-destructive')}>
-                  <SelectValue placeholder={loadingCbsCodes ? 'Cargando...' : 'Seleccionar código CBS'}>
+                  <SelectValue placeholder={loadingCbsCodes ? t('txForm.loadingCbs') : t('txForm.selectCbs')}>
                     {form.cbs_code && (() => {
                       const selected = cbsCodes.find(c => String(c.code) === form.cbs_code);
                       return selected ? `${selected.code} - ${getDescription(selected)}` : form.cbs_code;
@@ -458,18 +460,18 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Descripción *</Label>
+            <Label>{t('txForm.description')}</Label>
             <Input
               value={form.description}
               onChange={(e) => updateField('description', e.target.value)}
-              placeholder="Descripción de la transacción"
+              placeholder={t('txForm.descriptionPlaceholder')}
             />
           </div>
 
           {/* Amount Fields */}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Moneda</Label>
+              <Label>{t('txForm.currency')}</Label>
               <Select
                 value={form.currency}
                 onValueChange={(value: 'DOP' | 'USD') => updateField('currency', value)}
@@ -485,7 +487,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Monto *</Label>
+              <Label>{t('txForm.amount')}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -509,7 +511,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Tasa de Cambio</Label>
+              <Label>{t('txForm.exchangeRate')}</Label>
               <Input
                 type="number"
                 step="0.0001"
@@ -524,36 +526,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Additional Fields */}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Método de Pago</Label>
+              <Label>{t('txForm.payMethod')}</Label>
               <Select
                 value={form.pay_method}
                 onValueChange={(value) => updateField('pay_method', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar método" />
+                  <SelectValue placeholder={t('txForm.selectMethod')} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
-                  <SelectItem value="transfer_bdi">Transferencia BDI</SelectItem>
-                  <SelectItem value="transfer_bhd">Transferencia BHD</SelectItem>
-                  <SelectItem value="cash">Efectivo</SelectItem>
-                  <SelectItem value="cc_management">Tarjeta Crédito Management</SelectItem>
-                  <SelectItem value="cc_agri">Tarjeta Crédito Agri</SelectItem>
-                  <SelectItem value="cc_industry">Tarjeta Crédito Industry</SelectItem>
+                  <SelectItem value="transfer_bdi">{t('txForm.transferBdi')}</SelectItem>
+                  <SelectItem value="transfer_bhd">{t('txForm.transferBhd')}</SelectItem>
+                  <SelectItem value="cash">{t('txForm.cash')}</SelectItem>
+                  <SelectItem value="cc_management">{t('txForm.ccManagement')}</SelectItem>
+                  <SelectItem value="cc_agri">{t('txForm.ccAgri')}</SelectItem>
+                  <SelectItem value="cc_industry">{t('txForm.ccIndustry')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Documento</Label>
+              <Label>{t('txForm.document')}</Label>
               <Input
                 value={form.document}
                 onChange={(e) => updateField('document', e.target.value)}
-                placeholder="NCF / Referencia"
+                placeholder={t('txForm.documentPlaceholder')}
               />
             </div>
 
             <div className="space-y-2 relative">
-              <Label>Nombre</Label>
+              <Label>{t('txForm.name')}</Label>
               <NameAutocomplete
                 value={form.name}
                 onChange={(value) => updateField('name', value)}
@@ -562,11 +564,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>RNC</Label>
+              <Label>{t('txForm.rnc')}</Label>
               <Input
                 value={form.rnc}
                 onChange={(e) => updateField('rnc', e.target.value)}
-                placeholder="Registro Nacional"
+                placeholder={t('txForm.rncPlaceholder')}
               />
             </div>
           </div>
@@ -574,17 +576,17 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Comments and Attachment */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Comentarios</Label>
+              <Label>{t('txForm.comments')}</Label>
               <Textarea
                 value={form.comments}
                 onChange={(e) => updateField('comments', e.target.value)}
-                placeholder="Notas adicionales..."
+                placeholder={t('txForm.commentsPlaceholder')}
                 rows={3}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Adjuntos (NCF, Comprobante, Cotización)</Label>
+              <Label>{t('txForm.attachments')}</Label>
               <MultiAttachmentUpload
                 attachments={form.attachments}
                 onUpload={(category, url) => 
@@ -595,7 +597,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 }
               />
               <p className="text-xs text-muted-foreground">
-                Subir recibo o factura (JPG, PNG, PDF, máx 5MB)
+                {t('txForm.attachmentHelp')}
               </p>
             </div>
           </div>
@@ -603,7 +605,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {/* Submit */}
           <div className="flex justify-end pt-4 border-t">
             <Button type="submit" disabled={isSubmitting || !isValid()}>
-              {isSubmitting ? 'Guardando...' : 'Guardar Transacción'}
+              {isSubmitting ? t('txForm.saving') : t('txForm.saveTransaction')}
             </Button>
           </div>
         </form>

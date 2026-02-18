@@ -1,50 +1,41 @@
 
 
-# Sales Registration -- Minimal Addition
+# Improve Payment Method and Name for Sales
 
-## Approach
+## Payment Method
 
-Add a single **Compra / Venta** toggle to the existing Transaction Form. No new pages, no new tables, no clutter. Sales and purchases share the same ledger (the `transactions` table already has `transaction_direction`), so the only change is letting users flip that flag when entering a transaction.
+Keep the same payment methods for both purchases and sales -- no need to differentiate. A "Transfer BDI" is a transfer whether money goes in or out. The DGII mapping in `dgiiConstants.ts` already handles the conversion to the correct "Forma de Pago" code for both 606 and 607 reports.
 
-## What Changes
+One addition: add a **"Credito" (Credit)** option to the dropdown. The `PAY_METHOD_TO_DGII` mapping already has `credit: "05"` defined but the UI never shows it. This is relevant for sales where the customer pays on terms.
 
-### Transaction Form (`TransactionForm.tsx`)
+## Name Field
 
-1. Add a **"Tipo" toggle** (Compra | Venta) at the top of the form, right next to the Cost Center dropdown. Default: Compra.
-2. When **Venta** is selected:
-   - Sets `transaction_direction = 'sale'` on save
-   - Shows a **"Tipo de Ingreso"** dropdown (DGII codes 01-06) instead of Tipo Bienes/Servicios
-   - Label for "Name" changes contextually from supplier to customer context ("Cliente" hint)
-3. When **Compra** is selected (default, current behavior):
-   - Everything works exactly as it does today
-   - Optionally shows "Tipo Bienes/Servicios" dropdown for DGII compliance
+When "Venta" is selected, change the label from "Nombre" to "Cliente" to give the user proper context. The autocomplete pool stays shared (the same entity can be both a supplier and a customer), which is realistic for a small operation.
 
-### `createTransaction` in `api.ts`
+## Changes
 
-- Pass `transaction_direction` through to the insert (currently defaults to `'purchase'` in the DB, so purchases need no change -- only sales need to explicitly send `'sale'`).
+### `TransactionForm.tsx`
 
-### Constants (`dgiiConstants.ts`)
+1. **Name label**: Change from `t('txForm.name')` to conditionally show `t('txForm.cliente')` when `transaction_direction === 'sale'`.
+2. **Payment method dropdown**: Add a `credit` option labeled "Credito" (mapped to DGII code 05, already in `dgiiConstants.ts`).
 
-- Already has `TIPO_INGRESO` codes -- no changes needed.
+### `LanguageContext.tsx`
 
-### DGII 607 Report
+Add one translation key: `txForm.cliente` = "Cliente" (EN: "Customer").
 
-- Already filters by `transaction_direction = 'sale'` -- sales will automatically appear there once entered.
+## What does NOT change
 
-## What Does NOT Change
+- No new database columns
+- No changes to DGII mappings (already correct)
+- Payment method dropdown stays unified for both directions
+- Name autocomplete pool stays shared
 
-- No new pages or tabs
-- No new database columns or tables (everything already exists)
-- The Recent Transactions table shows both purchases and sales together (they're all transactions)
-- No changes to accounting journal generation logic
-
-## Files Modified
+## Technical Detail
 
 | File | Change |
 |---|---|
-| `src/components/transactions/TransactionForm.tsx` | Add Compra/Venta toggle, conditionally show Tipo Ingreso dropdown, pass `transaction_direction` |
-| `src/lib/api.ts` | Include `transaction_direction` in `createTransaction` insert |
-| `src/contexts/LanguageContext.tsx` | Add 2-3 translation keys (sale, purchase, income type) |
+| `src/components/transactions/TransactionForm.tsx` | Conditional label on Name field; add `credit` SelectItem to pay_method |
+| `src/contexts/LanguageContext.tsx` | Add `txForm.cliente` translation |
 
-Total: ~30 lines of new code across 3 files.
+Total: ~5 lines changed across 2 files.
 

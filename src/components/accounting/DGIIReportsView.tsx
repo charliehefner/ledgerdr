@@ -9,6 +9,7 @@ import { DGII607Table } from "./DGII607Table";
 import { DGII608Table } from "./DGII608Table";
 import { IT1ReportView } from "./IT1ReportView";
 import { Loader2 } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -126,10 +127,10 @@ export function DGIIReportsView() {
           ) : (
             <Tabs value={subTab} onValueChange={setSubTab}>
               <TabsList>
-                <TabsTrigger value="606">606 - Compras ({purchases.length})</TabsTrigger>
-                <TabsTrigger value="607">607 - Ventas ({sales.length})</TabsTrigger>
-                <TabsTrigger value="608">608 - Anulados ({voided.length})</TabsTrigger>
-                <TabsTrigger value="it1">IT-1 - ITBIS</TabsTrigger>
+                <TabsTrigger value="606" className="gap-1">606 - Compras ({purchases.length}) <InfoTooltip translationKey="help.dgii606" /></TabsTrigger>
+                <TabsTrigger value="607" className="gap-1">607 - Ventas ({sales.length}) <InfoTooltip translationKey="help.dgii607" /></TabsTrigger>
+                <TabsTrigger value="608" className="gap-1">608 - Anulados ({voided.length}) <InfoTooltip translationKey="help.dgii608" /></TabsTrigger>
+                <TabsTrigger value="it1" className="gap-1">IT-1 - ITBIS <InfoTooltip translationKey="help.it1" /></TabsTrigger>
               </TabsList>
               <TabsContent value="606">
                 <DGII606Table transactions={purchases} month={month} year={year} />

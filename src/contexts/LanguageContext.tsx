@@ -719,6 +719,16 @@ const translations: Record<Language, Record<string, string>> = {
     "dgii.direction": "Dirección",
     "dgii.purchase": "Compra",
     "dgii.sale": "Venta",
+
+    // Help tooltips
+    "help.generateJournals": "Crea asientos contables automáticamente a partir de transacciones sin asiento vinculado. Se generan en estado Borrador para revisión.",
+    "help.dgii606": "Reporte de compras y gastos con comprobantes fiscales. Se sube como archivo .txt al portal de la DGII cada mes.",
+    "help.dgii607": "Reporte de ventas con comprobantes fiscales. Se sube como archivo .txt al portal de la DGII cada mes.",
+    "help.dgii608": "Reporte de comprobantes fiscales anulados durante el mes. Se sube como archivo .txt al portal de la DGII.",
+    "help.it1": "Calcula el ITBIS neto a pagar o saldo a favor del mes. Los valores se copian manualmente al formulario IT-1 en el portal de la DGII.",
+    "help.tss": "Genera el archivo .txt de Autodeterminación Mensual para cargar al sistema SUIRPLUS de la TSS. Incluye todos los empleados activos con sus salarios.",
+    "help.ir3": "Retención mensual del ISR sobre salarios. Los valores se ingresan manualmente en el formulario IR-3 del portal de la DGII.",
+    "help.ir17": "Declaración del impuesto complementario sobre retribuciones complementarias. Se ingresa manualmente en el formulario IR-17 de la DGII.",
   },
   en: {
     // Sidebar navigation
@@ -1425,6 +1435,16 @@ const translations: Record<Language, Record<string, string>> = {
     "dgii.direction": "Direction",
     "dgii.purchase": "Purchase",
     "dgii.sale": "Sale",
+
+    // Help tooltips
+    "help.generateJournals": "Automatically creates journal entries from transactions without a linked entry. Generated as Draft for review.",
+    "help.dgii606": "Purchase and expense report with fiscal receipts. Uploaded as a .txt file to the DGII portal monthly.",
+    "help.dgii607": "Sales report with fiscal receipts. Uploaded as a .txt file to the DGII portal monthly.",
+    "help.dgii608": "Report of voided fiscal receipts during the month. Uploaded as a .txt file to the DGII portal.",
+    "help.it1": "Calculates the net ITBIS to pay or credit balance for the month. Values are manually copied to the IT-1 form on the DGII portal.",
+    "help.tss": "Generates the Monthly Self-Assessment .txt file to upload to the TSS SUIRPLUS system. Includes all active employees with their salaries.",
+    "help.ir3": "Monthly ISR withholding on salaries. Values are manually entered in the IR-3 form on the DGII portal.",
+    "help.ir17": "Complementary tax declaration on supplementary compensation. Manually entered in the IR-17 form on the DGII portal.",
   },
 };
 

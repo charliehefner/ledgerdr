@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet, Copy } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { calculateMonthlyISR, TSS_EMPLOYEE_RATE } from "@/lib/payrollCalculations";
@@ -131,7 +132,7 @@ export function IR3ReportView() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>IR-3 — Retenciones de Asalariados</CardTitle>
+        <CardTitle className="flex items-center gap-2">IR-3 — Retenciones de Asalariados <InfoTooltip translationKey="help.ir3" /></CardTitle>
         <CardDescription>
           ISR retenido mensual a empleados. Usa este total para completar la casilla correspondiente en el formulario IR-3 de la DGII.
         </CardDescription>

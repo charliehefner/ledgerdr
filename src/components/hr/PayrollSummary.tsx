@@ -100,34 +100,11 @@ const LUNCH_THRESHOLD_HOURS = 5; // Deduct lunch if worked more than 5 clock hou
 const SATURDAY_NORMAL_END = 11 * 60 + 30; // 11:30 AM - end of normal Saturday hours
 const SATURDAY_NORMAL_HOURS = 4; // Normal Saturday: 7:30 AM to 11:30 AM
 const SATURDAY_LUNCH_THRESHOLD = 14 * 60; // 2:00 PM - if end time > this, deduct lunch
-const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
+import { TSS_EMPLOYEE_RATE, calculateAnnualISR } from "@/lib/payrollCalculations";
+
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay
 const SUNDAY_MULTIPLIER = 2.0; // 100% bonus for Sunday work per DR labor law
-
-// ISR Progressive Tax Brackets (Annual Income - DOP)
-// Source: DGII / PWC Tax Summaries
-const ISR_BRACKETS = [
-  { min: 0, max: 416220, rate: 0, baseTax: 0 },
-  { min: 416220, max: 624329, rate: 0.15, baseTax: 0 },
-  { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
-  { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
-];
-
-/**
- * Calculate annual ISR using Dominican Republic progressive tax brackets
- */
-function calculateAnnualISR(annualIncome: number): number {
-  if (annualIncome <= ISR_BRACKETS[0].max) return 0;
-  
-  for (let i = ISR_BRACKETS.length - 1; i >= 0; i--) {
-    const bracket = ISR_BRACKETS[i];
-    if (annualIncome > bracket.min) {
-      return bracket.baseTax + (annualIncome - bracket.min) * bracket.rate;
-    }
-  }
-  return 0;
-}
 
 export function PayrollSummary({
   periodId,

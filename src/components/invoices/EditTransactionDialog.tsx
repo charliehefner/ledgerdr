@@ -17,6 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +32,8 @@ import { Transaction, voidTransaction, fetchAccounts, fetchProjects, fetchCbsCod
 import { toast } from "sonner";
 import { Ban, Loader2, Save } from "lucide-react";
 import { getDescription } from "@/lib/getDescription";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { TIPO_BIENES_SERVICIOS } from "@/components/accounting/dgiiConstants";
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
@@ -38,26 +47,38 @@ export function EditTransactionDialog({
   onOpenChange,
 }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Editable fields state
   const [editedDocument, setEditedDocument] = useState("");
   const [originalDocument, setOriginalDocument] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [originalDescription, setOriginalDescription] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [editedRnc, setEditedRnc] = useState("");
+  const [originalRnc, setOriginalRnc] = useState("");
+  const [editedItbis, setEditedItbis] = useState("");
+  const [originalItbis, setOriginalItbis] = useState("");
+  const [editedItbisRetenido, setEditedItbisRetenido] = useState("");
+  const [originalItbisRetenido, setOriginalItbisRetenido] = useState("");
+  const [editedIsrRetenido, setEditedIsrRetenido] = useState("");
+  const [originalIsrRetenido, setOriginalIsrRetenido] = useState("");
+  const [editedPayMethod, setEditedPayMethod] = useState("");
+  const [originalPayMethod, setOriginalPayMethod] = useState("");
+  const [editedTipoBienes, setEditedTipoBienes] = useState("");
+  const [originalTipoBienes, setOriginalTipoBienes] = useState("");
+
   const [formData, setFormData] = useState({
     transaction_date: "",
     master_acct_code: "",
     project_code: "",
     cbs_code: "",
-    description: "",
     currency: "DOP" as "DOP" | "USD",
     amount: "",
-    itbis: "",
-    pay_method: "",
-    document: "",
     name: "",
-    rnc: "",
     comments: "",
+    transaction_direction: "purchase" as "purchase" | "sale",
   });
 
   const { data: accounts = [] } = useQuery({
@@ -78,26 +99,42 @@ export function EditTransactionDialog({
   useEffect(() => {
     if (transaction && open) {
       const docValue = transaction.document ?? "";
+      const descValue = transaction.description || "";
+      const rncValue = transaction.rnc || "";
+      const itbisValue = String(transaction.itbis || "");
+      const itbisRetValue = String((transaction as any).itbis_retenido || "");
+      const isrRetValue = String((transaction as any).isr_retenido || "");
+      const payMethodValue = transaction.pay_method || "";
+      const tipoBienesValue = (transaction as any).dgii_tipo_bienes_servicios || "";
+
       setFormData({
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
         project_code: transaction.project_code || "",
         cbs_code: transaction.cbs_code || "",
-        description: transaction.description || "",
         currency: transaction.currency || "DOP",
         amount: String(transaction.amount || ""),
-        itbis: String(transaction.itbis || ""),
-        pay_method: transaction.pay_method || "",
-        document: docValue,
         name: transaction.name || "",
-        rnc: transaction.rnc || "",
         comments: transaction.comments || "",
+        transaction_direction: transaction.transaction_direction || "purchase",
       });
+
       setEditedDocument(docValue);
       setOriginalDocument(docValue);
-      const descValue = transaction.description || "";
       setEditedDescription(descValue);
       setOriginalDescription(descValue);
+      setEditedRnc(rncValue);
+      setOriginalRnc(rncValue);
+      setEditedItbis(itbisValue);
+      setOriginalItbis(itbisValue);
+      setEditedItbisRetenido(itbisRetValue);
+      setOriginalItbisRetenido(itbisRetValue);
+      setEditedIsrRetenido(isrRetValue);
+      setOriginalIsrRetenido(isrRetValue);
+      setEditedPayMethod(payMethodValue);
+      setOriginalPayMethod(payMethodValue);
+      setEditedTipoBienes(tipoBienesValue);
+      setOriginalTipoBienes(tipoBienesValue);
     }
   }, [transaction, open]);
 
@@ -121,12 +158,28 @@ export function EditTransactionDialog({
     if (!transaction?.id) return;
     setIsSaving(true);
     try {
-      const updates: Record<string, string> = {};
+      const updates: Record<string, any> = {};
       if (editedDocument !== originalDocument) updates.document = editedDocument;
       if (editedDescription !== originalDescription) updates.description = editedDescription;
+      if (editedRnc !== originalRnc) updates.rnc = editedRnc || null;
+      if (editedItbis !== originalItbis) updates.itbis = editedItbis ? parseFloat(editedItbis) : null;
+      if (editedItbisRetenido !== originalItbisRetenido) updates.itbis_retenido = editedItbisRetenido ? parseFloat(editedItbisRetenido) : null;
+      if (editedIsrRetenido !== originalIsrRetenido) updates.isr_retenido = editedIsrRetenido ? parseFloat(editedIsrRetenido) : null;
+      if (editedPayMethod !== originalPayMethod) updates.pay_method = editedPayMethod || null;
+      if (editedTipoBienes !== originalTipoBienes) updates.dgii_tipo_bienes_servicios = editedTipoBienes || null;
+
       await updateTransaction(String(transaction.id), updates);
+
+      // Sync original values
       setOriginalDocument(editedDocument);
       setOriginalDescription(editedDescription);
+      setOriginalRnc(editedRnc);
+      setOriginalItbis(editedItbis);
+      setOriginalItbisRetenido(editedItbisRetenido);
+      setOriginalIsrRetenido(editedIsrRetenido);
+      setOriginalPayMethod(editedPayMethod);
+      setOriginalTipoBienes(editedTipoBienes);
+
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
@@ -139,7 +192,15 @@ export function EditTransactionDialog({
     }
   };
 
-  const hasChanges = editedDocument !== originalDocument || editedDescription !== originalDescription;
+  const hasChanges =
+    editedDocument !== originalDocument ||
+    editedDescription !== originalDescription ||
+    editedRnc !== originalRnc ||
+    editedItbis !== originalItbis ||
+    editedItbisRetenido !== originalItbisRetenido ||
+    editedIsrRetenido !== originalIsrRetenido ||
+    editedPayMethod !== originalPayMethod ||
+    editedTipoBienes !== originalTipoBienes;
 
   if (!transaction) return null;
 
@@ -203,31 +264,11 @@ export function EditTransactionDialog({
                 />
               </div>
 
-              {/* Pay Method */}
-              <div className="space-y-2">
-                <Label>Método de Pago</Label>
-                <Input
-                  value={formData.pay_method || 'Ninguno'}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-
               {/* Amount */}
               <div className="space-y-2">
                 <Label>Monto</Label>
                 <Input
                   value={formData.amount}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-
-              {/* ITBIS */}
-              <div className="space-y-2">
-                <Label>ITBIS</Label>
-                <Input
-                  value={formData.itbis || '0'}
                   readOnly
                   className="bg-muted"
                 />
@@ -255,12 +296,13 @@ export function EditTransactionDialog({
                 />
               </div>
 
+              {/* RNC - EDITABLE */}
               <div className="space-y-2">
                 <Label>RNC</Label>
                 <Input
-                  value={formData.rnc || ''}
-                  readOnly
-                  className="bg-muted"
+                  value={editedRnc}
+                  onChange={(e) => setEditedRnc(e.target.value)}
+                  placeholder="RNC / Cédula"
                 />
               </div>
             </div>
@@ -268,27 +310,92 @@ export function EditTransactionDialog({
             {/* Document - EDITABLE */}
             <div className="space-y-2">
               <Label>Documento # (NCF)</Label>
-              <div className="flex gap-2">
+              <Input
+                value={editedDocument}
+                onChange={(e) => setEditedDocument(e.target.value)}
+                placeholder="Ingrese número de documento/NCF"
+              />
+            </div>
+
+            {/* ITBIS fields - EDITABLE */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>ITBIS</Label>
                 <Input
-                  value={editedDocument}
-                  onChange={(e) => setEditedDocument(e.target.value)}
-                  placeholder="Ingrese número de documento/NCF"
-                  className="flex-1"
+                  type="number"
+                  step="0.01"
+                  value={editedItbis}
+                  onChange={(e) => setEditedItbis(e.target.value)}
+                  placeholder="0.00"
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveChanges}
-                  disabled={!hasChanges || isSaving}
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Documento y Descripción pueden actualizarse después de guardar</p>
+
+              <div className="space-y-2">
+                <Label>ITBIS Retenido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editedItbisRetenido}
+                  onChange={(e) => setEditedItbisRetenido(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>ISR Retenido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editedIsrRetenido}
+                  onChange={(e) => setEditedIsrRetenido(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Pay Method and Tipo Bienes - EDITABLE */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('txForm.payMethod')}</Label>
+                <Select
+                  value={editedPayMethod}
+                  onValueChange={setEditedPayMethod}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('txForm.selectMethod')} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="transfer_bdi">{t('txForm.transferBdi')}</SelectItem>
+                    <SelectItem value="transfer_bhd">{t('txForm.transferBhd')}</SelectItem>
+                    <SelectItem value="cash">{t('txForm.cash')}</SelectItem>
+                    <SelectItem value="cc_management">{t('txForm.ccManagement')}</SelectItem>
+                    <SelectItem value="cc_agri">{t('txForm.ccAgri')}</SelectItem>
+                    <SelectItem value="cc_industry">{t('txForm.ccIndustry')}</SelectItem>
+                    <SelectItem value="credit">{t('txForm.credit')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.transaction_direction === 'purchase' && (
+                <div className="space-y-2">
+                  <Label>Tipo Bienes/Servicios</Label>
+                  <Select
+                    value={editedTipoBienes}
+                    onValueChange={setEditedTipoBienes}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
+                        <SelectItem key={code} value={code}>
+                          {code} - {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Comments */}
@@ -302,7 +409,7 @@ export function EditTransactionDialog({
               />
             </div>
 
-            <DialogFooter className="flex justify-between">
+            <DialogFooter className="flex justify-between gap-2">
               {!transaction.is_void && (
                 <Button
                   type="button"
@@ -317,13 +424,29 @@ export function EditTransactionDialog({
               {transaction.is_void && (
                 <span className="text-muted-foreground italic">Esta transacción está anulada</span>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cerrar
-              </Button>
+              <div className="flex gap-2">
+                {hasChanges && (
+                  <Button
+                    type="button"
+                    onClick={handleSaveChanges}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Guardar Cambios
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
             </DialogFooter>
           </div>
         </DialogContent>

@@ -722,9 +722,9 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Help tooltips
     "help.generateJournals": "Crea asientos contables automáticamente a partir de transacciones sin asiento vinculado. Se generan en estado Borrador para revisión.",
-    "help.dgii606": "Reporte de compras y gastos con comprobantes fiscales. Exporta a Excel para revisión y entrada manual al portal de la DGII.",
-    "help.dgii607": "Reporte de ventas con comprobantes fiscales. Exporta a Excel para revisión y entrada manual al portal de la DGII.",
-    "help.dgii608": "Reporte de comprobantes fiscales anulados durante el mes. Exporta a Excel para revisión y entrada manual al portal de la DGII.",
+    "help.dgii606": "Reporte de compras y gastos con comprobantes fiscales. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transacción en Libro Mayor.",
+    "help.dgii607": "Reporte de ventas con comprobantes fiscales. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transacción en Libro Mayor.",
+    "help.dgii608": "Reporte de comprobantes anulados. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transacción en Libro Mayor.",
     "help.it1": "Calcula el ITBIS neto a pagar o saldo a favor del mes. Los valores se copian manualmente al formulario IT-1 en el portal de la DGII.",
     "help.tss": "Genera el archivo .txt de Autodeterminación Mensual para cargar al sistema SUIRPLUS de la TSS. Incluye todos los empleados activos con sus salarios.",
     "help.ir3": "Retención mensual del ISR sobre salarios. Los valores se ingresan manualmente en el formulario IR-3 del portal de la DGII.",
@@ -1438,9 +1438,9 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Help tooltips
     "help.generateJournals": "Automatically creates journal entries from transactions without a linked entry. Generated as Draft for review.",
-    "help.dgii606": "Purchase and expense report with fiscal receipts. Exports to Excel for review and manual entry on the DGII portal.",
-    "help.dgii607": "Sales report with fiscal receipts. Exports to Excel for review and manual entry on the DGII portal.",
-    "help.dgii608": "Report of voided fiscal receipts during the month. Exports to Excel for review and manual entry on the DGII portal.",
+    "help.dgii606": "Purchase and expense report with fiscal receipts. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger.",
+    "help.dgii607": "Sales report with fiscal receipts. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger.",
+    "help.dgii608": "Voided fiscal receipts report. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger.",
     "help.it1": "Calculates the net ITBIS to pay or credit balance for the month. Values are manually copied to the IT-1 form on the DGII portal.",
     "help.tss": "Generates the Monthly Self-Assessment .txt file to upload to the TSS SUIRPLUS system. Includes all active employees with their salaries.",
     "help.ir3": "Monthly ISR withholding on salaries. Values are manually entered in the IR-3 form on the DGII portal.",

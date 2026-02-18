@@ -1,64 +1,86 @@
 
 
-# Accounting Page — Phase 1
+# Consolidate Accounts into `chart_of_accounts` + Import Corporate CoA from Excel
 
 ## Summary
 
-Create a new `/accounting` route with a tabbed layout containing four functional tabs. The "Activos Fijos" tab moves from the Equipment page to here. Chart of Accounts and Periods use the existing database tables directly -- no placeholders.
+Import the full corporate Chart of Accounts (~350 accounts) from the uploaded Excel file into `chart_of_accounts`, add bilingual description columns, and retire the old `accounts` table from code. The existing 89 accounts are a subset of this corporate CoA, so they'll be covered by the import.
 
-## Tab Layout
+## Step 1: Database Migration -- Add bilingual columns to `chart_of_accounts`
 
-1. **Plan de Cuentas** (Chart of Accounts) -- Browse/manage the `chart_of_accounts` table
-2. **Periodos** (Accounting Periods) -- Browse/manage the `accounting_periods` table
-3. **Activos Fijos** (Fixed Assets) -- The existing `FixedAssetsView` component, relocated
-4. **Diario** (Journal) -- Browse the `journals` + `journal_lines` tables (read-only for now)
+Add two new columns:
+- `english_description TEXT`
+- `spanish_description TEXT`
 
-## Changes
+These preserve the bilingual support that the `accounts` table currently provides.
 
-### 1. New route and page
+## Step 2: Import the ~350 accounts from Excel
 
-- Add `"accounting"` to the `Section` type in `src/lib/permissions.ts`
-- Add permission entries: admin, management, accountant can access; viewer can read
-- Add `/accounting` route in `src/App.tsx`
-- Add sidebar nav item with a `BookOpen` (or `Calculator`) icon
-- Create `src/pages/Accounting.tsx` using `TabbedPageLayout`
+Insert all accounts from the Excel file into `chart_of_accounts` with:
+- `account_code` = the Master account code (1010, 1018, etc.)
+- `account_name` = Spanish description (primary display name)
+- `english_description` = English description
+- `spanish_description` = Spanish description
+- `account_type` inferred from code prefix:
+  - 1xxx = ASSET
+  - 2xxx = LIABILITY (2081-2099 = EQUITY)
+  - 3xxx = INCOME
+  - 4xxx = EXPENSE
+  - 5xxx-7xxx = EXPENSE
+  - 8xxx = FINANCIAL (mapped to INCOME or EXPENSE as appropriate, or a catch-all)
+- `allow_posting` = true for all (can be refined later)
+- `currency` = DOP (default)
+- No `parent_id` initially -- hierarchy can be set up later by grouping codes
 
-### 2. Chart of Accounts tab (`src/components/accounting/ChartOfAccountsView.tsx`)
+Empty rows in the Excel (separators) will be skipped.
 
-- Queries `chart_of_accounts` table (currently 0 rows, but ready for the SQL import)
-- Table columns: account_code, account_name, account_type, allow_posting, currency
-- Hierarchical display using `parent_id` (indent child accounts)
-- Filter by account_type (ASSET, LIABILITY, EQUITY, INCOME, EXPENSE)
-- Add/Edit dialog for individual accounts
-- The table is already there with RLS policies in place
+The special account `0000` (Internal Transfer) from the current `accounts` table is NOT in the Excel -- it will be added as an extra insert.
 
-### 3. Accounting Periods tab (`src/components/accounting/PeriodsView.tsx`)
+## Step 3: Update code references (2 files)
 
-- Queries `accounting_periods` table
-- Table columns: period_name (or start/end formatted), start_date, end_date, status (open/closed)
-- Button to create new period
-- Button to close a period (sets status)
-- Simple CRUD -- the table structure already exists
+### `src/lib/api.ts` -- `fetchAccounts()`
+Change query from `accounts` to `chart_of_accounts`, selecting `account_code as code, english_description, spanish_description`. The returned `Account` interface shape stays identical, so all downstream components (TransactionForm, Reports, etc.) need zero changes.
 
-### 4. Fixed Assets tab
+### `src/components/hr/ServicesView.tsx`
+Same change -- query `chart_of_accounts` instead of `accounts`, mapping `account_code` to `code` and `spanish_description`.
 
-- Move the existing `FixedAssetsView` and `FixedAssetDialog` from `src/components/equipment/` to `src/components/accounting/` (or just import from current location)
-- Remove the "Activos Fijos" tab from `src/pages/Equipment.tsx`, reverting it to just Tractors + Implements
+## Step 4: Update `ChartOfAccountsView.tsx`
 
-### 5. Journal tab (`src/components/accounting/JournalView.tsx`)
+- Add bilingual display: show `english_description` or `spanish_description` based on language context using `getDescription()` pattern
+- The existing tree, type filter, and CRUD dialog already work with `chart_of_accounts`
+- Add `english_description` and `spanish_description` fields to the Add/Edit dialog
 
-- Queries `journals` joined with `journal_lines`
-- Table columns: journal_number, journal_date, description, currency, posted status
-- Expandable rows to show debit/credit lines
-- Read-only for now (journal entry creation is a follow-up)
+## Step 5: Keep `accounts` table (no drop)
 
-### 6. No database changes needed
+The table stays in the database but is no longer queried. It can be removed in a future cleanup migration.
 
-All tables (`chart_of_accounts`, `accounting_periods`, `journals`, `journal_lines`) already exist with proper RLS policies. No migrations required.
+## Files Changed
 
-## Technical Notes
+1. **Database migration**: Add `english_description` and `spanish_description` columns to `chart_of_accounts`
+2. **Data insert**: ~350 rows from Excel + the `0000` Internal Transfer account
+3. **`src/lib/api.ts`**: Change `fetchAccounts()` to query `chart_of_accounts`
+4. **`src/components/hr/ServicesView.tsx`**: Update inline account query
+5. **`src/components/accounting/ChartOfAccountsView.tsx`**: Add bilingual display and update dialog fields
 
-- The `chart_of_accounts` table currently has 0 rows. The CoA view will show an empty state with a message like "No hay cuentas. Importe su plan de cuentas." The SQL import that was discussed previously can populate it.
-- `accounting_periods` is also empty -- the Periods view will let users create their first period.
-- Permissions: `accounting` section accessible to admin, management, accountant (write), and viewer (read-only), matching the RLS policies already on the tables.
-- Equipment page reverts to its original 2-tab layout (Tractors, Implements).
+## Account Type Mapping
+
+```text
+Code Range    account_type
+----------    ------------
+1000-1999     ASSET
+2000-2099     EQUITY
+2100-2999     LIABILITY
+3000-3999     INCOME
+4000-4999     EXPENSE
+5000-7999     EXPENSE
+8000-8499     INCOME (financial)
+8400-8499     EXPENSE (interest expense)
+8800-8999     EQUITY/TAX
+```
+
+## What Stays the Same
+
+- The `Account` interface in `api.ts` (`code`, `english_description`, `spanish_description`) -- no shape change
+- All UI components that consume accounts (TransactionForm, Reports, autocompletes) -- they use the `Account` interface from `api.ts`
+- The `getDescription()` helper continues to work as-is
+- RLS policies on `chart_of_accounts` already cover all needed roles

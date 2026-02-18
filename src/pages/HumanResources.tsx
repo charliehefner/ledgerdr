@@ -8,6 +8,8 @@ import { JornalerosView } from "@/components/hr/JornalerosView";
 import { ServicesView } from "@/components/hr/ServicesView";
 import { ServiceProvidersView } from "@/components/hr/ServiceProvidersView";
 import { TSSAutodeterminacionView } from "@/components/hr/TSSAutodeterminacionView";
+import { IR3ReportView } from "@/components/hr/IR3ReportView";
+import { IR17ReportView } from "@/components/hr/IR17ReportView";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessHrTab, getDefaultHrTabForRole, HrTab } from "@/lib/permissions";
@@ -103,8 +105,14 @@ export default function HumanResources() {
   if (canAccessTab("tss")) {
     rightTabs.push({
       value: "tss",
-      label: "TSS",
-      content: <TSSAutodeterminacionView />,
+      label: "Reportes Gob.",
+      content: (
+        <div className="space-y-6">
+          <TSSAutodeterminacionView />
+          <IR3ReportView />
+          <IR17ReportView />
+        </div>
+      ),
     });
   }
 

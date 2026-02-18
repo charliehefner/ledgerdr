@@ -699,6 +699,17 @@ const translations: Record<Language, Record<string, string>> = {
     "txForm.projectCbsRequired": "Proyecto y código CBS son requeridos para la cuenta 1180",
     "txForm.itbisExceeds": "ITBIS no puede exceder el 18% del monto",
     "txForm.duplicate": "Transacción duplicada detectada. Ya existe una transacción con la misma fecha, cuenta, monto y nombre.",
+
+    // DGII
+    "dgii.reports": "Reportes DGII",
+    "dgii.tipoBienes": "Tipo Bienes/Servicios",
+    "dgii.tipoIngreso": "Tipo de Ingreso",
+    "dgii.tipoAnulacion": "Tipo de Anulación",
+    "dgii.itbisRetenido": "ITBIS Retenido",
+    "dgii.isrRetenido": "ISR Retenido",
+    "dgii.direction": "Dirección",
+    "dgii.purchase": "Compra",
+    "dgii.sale": "Venta",
   },
   en: {
     // Sidebar navigation
@@ -1385,6 +1396,17 @@ const translations: Record<Language, Record<string, string>> = {
     "txForm.projectCbsRequired": "Project and CBS code are required for account 1180",
     "txForm.itbisExceeds": "ITBIS cannot exceed 18% of the amount",
     "txForm.duplicate": "Duplicate transaction detected. A transaction with the same date, account, amount, and name already exists.",
+
+    // DGII
+    "dgii.reports": "DGII Reports",
+    "dgii.tipoBienes": "Goods/Services Type",
+    "dgii.tipoIngreso": "Income Type",
+    "dgii.tipoAnulacion": "Cancellation Type",
+    "dgii.itbisRetenido": "ITBIS Withheld",
+    "dgii.isrRetenido": "ISR Withheld",
+    "dgii.direction": "Direction",
+    "dgii.purchase": "Purchase",
+    "dgii.sale": "Sale",
   },
 };
 

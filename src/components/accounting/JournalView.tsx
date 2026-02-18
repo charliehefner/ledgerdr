@@ -8,10 +8,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
-import { BookOpen, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalEntryForm } from "./JournalEntryForm";
+import { GenerateJournalsButton } from "./GenerateJournalsButton";
+import { PaymentMethodMappingDialog } from "./PaymentMethodMappingDialog";
 
 type JournalLine = {
   id: string;
@@ -32,6 +34,7 @@ type Journal = {
   posted: boolean | null;
   posted_by: string | null;
   posted_at: string | null;
+  transaction_source_id: string | null;
   journal_lines: JournalLine[];
 };
 
@@ -39,7 +42,7 @@ type StatusFilter = "all" | "draft" | "posted";
 
 export function JournalView() {
   const { t } = useLanguage();
-  const { canWriteSection } = useAuth();
+  const { canWriteSection, user } = useAuth();
   const canWrite = canWriteSection("accounting");
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -47,6 +50,7 @@ export function JournalView() {
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
 
   const { data: journals = [], isLoading } = useQuery({
     queryKey: ["journals"],
@@ -54,7 +58,7 @@ export function JournalView() {
       const { data, error } = await supabase
         .from("journals")
         .select(`
-          id, journal_number, journal_date, description, currency, posted, posted_by, posted_at,
+          id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id,
           journal_lines (
             id, debit, credit, account_id, cbs_code, project_code,
             chart_of_accounts:account_id ( account_code, account_name )
@@ -117,9 +121,15 @@ export function JournalView() {
           ))}
         </div>
         {canWrite && (
-          <Button size="sm" onClick={() => setNewOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
-          </Button>
+          <div className="flex gap-1">
+            <GenerateJournalsButton userId={user?.id} />
+            <Button size="sm" variant="ghost" onClick={() => setMappingOpen(true)} title="Configurar mapeo de métodos de pago">
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button size="sm" onClick={() => setNewOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
+            </Button>
+          </div>
         )}
       </div>
 
@@ -167,9 +177,16 @@ export function JournalView() {
                       <TableCell>{j.description || "—"}</TableCell>
                       <TableCell>{j.currency || "DOP"}</TableCell>
                       <TableCell>
-                        <Badge variant={j.posted ? "default" : "outline"}>
-                          {j.posted ? "Publicado" : "Borrador"}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant={j.posted ? "default" : "outline"}>
+                            {j.posted ? "Publicado" : "Borrador"}
+                          </Badge>
+                          {j.transaction_source_id && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5">
+                              <FileText className="h-3 w-3 mr-0.5" />Txn
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                     {expanded.has(j.id) && j.journal_lines.length > 0 && (
@@ -219,6 +236,7 @@ export function JournalView() {
 
       <JournalDetailDialog journal={selectedJournal} open={detailOpen} onOpenChange={setDetailOpen} />
       <JournalEntryForm open={newOpen} onOpenChange={setNewOpen} />
+      <PaymentMethodMappingDialog open={mappingOpen} onOpenChange={setMappingOpen} />
     </div>
   );
 }

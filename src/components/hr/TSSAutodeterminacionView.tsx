@@ -20,6 +20,28 @@ const TSS_RATES = {
   erSRL: 0.0110,    // 1.10%
 };
 
+// TSS salary ceilings (monthly) — 2025 values based on minimum wage RD$21,000 private sector
+// SFS ceiling: 10× minimum wage = RD$210,000 (applies to both employee and employer SFS)
+// AFP ceiling: 20× minimum wage = RD$420,000 (applies to both employee and employer AFP)
+// SRL: no ceiling (applies on full salary)
+const TSS_CEILINGS = {
+  sfs: 210000,
+  afp: 420000,
+};
+
+function calcTssForEmployee(salary: number) {
+  const sfsSalary = Math.min(salary, TSS_CEILINGS.sfs);
+  const afpSalary = Math.min(salary, TSS_CEILINGS.afp);
+
+  const empSFS = sfsSalary * TSS_RATES.empSFS;
+  const empAFP = afpSalary * TSS_RATES.empAFP;
+  const erSFS = sfsSalary * TSS_RATES.erSFS;
+  const erAFP = afpSalary * TSS_RATES.erAFP;
+  const erSRL = salary * TSS_RATES.erSRL; // no ceiling
+
+  return { empSFS, empAFP, erSFS, erAFP, erSRL, sfsSalary, afpSalary };
+}
+
 // Hardcoded employer RNC — move to settings later
 const EMPLOYER_RNC = "132214048";
 
@@ -308,34 +330,34 @@ export function TSSAutodeterminacionView() {
               </TableHeader>
               <TableBody>
                 {employees.map((emp, idx) => {
-                  const empSFS = emp.salary * TSS_RATES.empSFS;
-                  const empAFP = emp.salary * TSS_RATES.empAFP;
-                  const erSFS = emp.salary * TSS_RATES.erSFS;
-                  const erAFP = emp.salary * TSS_RATES.erAFP;
-                  const erSRL = emp.salary * TSS_RATES.erSRL;
-                  const total = empSFS + empAFP + erSFS + erAFP + erSRL;
+                  const c = calcTssForEmployee(emp.salary);
+                  const total = c.empSFS + c.empAFP + c.erSFS + c.erAFP + c.erSRL;
+                  const hasCap = emp.salary > TSS_CEILINGS.sfs || emp.salary > TSS_CEILINGS.afp;
                   return (
                     <TableRow key={emp.id}>
                       <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell className="font-mono text-xs">{cleanCedula(emp.cedula)}</TableCell>
-                      <TableCell>{emp.name}</TableCell>
+                      <TableCell>
+                        {emp.name}
+                        {hasCap && <span className="ml-1 text-xs text-warning" title="Tope salarial aplicado">⚠</span>}
+                      </TableCell>
                       <TableCell className="text-right font-mono">
                         {emp.salary.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {empSFS.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                        {c.empSFS.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {empAFP.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                        {c.empAFP.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {erSFS.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                        {c.erSFS.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {erAFP.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                        {c.erAFP.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {erSRL.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                        {c.erSRL.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold">
                         {total.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
@@ -351,39 +373,101 @@ export function TSSAutodeterminacionView() {
                   </TableRow>
                 )}
               </TableBody>
-              {employees.length > 0 && (
-                <TableFooter>
-                  <TableRow className="font-semibold">
-                    <TableCell colSpan={3}>Totales</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => s + e.salary, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => s + e.salary * TSS_RATES.empSFS, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => s + e.salary * TSS_RATES.empAFP, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => s + e.salary * TSS_RATES.erSFS, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => s + e.salary * TSS_RATES.erAFP, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => s + e.salary * TSS_RATES.erSRL, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {employees.reduce((s, e) => {
-                        const t = e.salary * (TSS_RATES.empSFS + TSS_RATES.empAFP + TSS_RATES.erSFS + TSS_RATES.erAFP + TSS_RATES.erSRL);
-                        return s + t;
-                      }, 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
-                    </TableCell>
-                  </TableRow>
-                </TableFooter>
-              )}
+              {employees.length > 0 && (() => {
+                const totals = employees.reduce(
+                  (acc, e) => {
+                    const c = calcTssForEmployee(e.salary);
+                    acc.salary += e.salary;
+                    acc.empSFS += c.empSFS;
+                    acc.empAFP += c.empAFP;
+                    acc.erSFS += c.erSFS;
+                    acc.erAFP += c.erAFP;
+                    acc.erSRL += c.erSRL;
+                    return acc;
+                  },
+                  { salary: 0, empSFS: 0, empAFP: 0, erSFS: 0, erAFP: 0, erSRL: 0 }
+                );
+                const grandTotal = totals.empSFS + totals.empAFP + totals.erSFS + totals.erAFP + totals.erSRL;
+                return (
+                  <TableFooter>
+                    <TableRow className="font-semibold">
+                      <TableCell colSpan={3}>Totales</TableCell>
+                      <TableCell className="text-right font-mono">
+                        {totals.salary.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {totals.empSFS.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {totals.empAFP.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {totals.erSFS.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {totals.erAFP.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {totals.erSRL.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {grandTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                );
+              })()}
             </Table>
           </div>
+
+          {/* Autorización de Pago summary */}
+          {employees.length > 0 && (() => {
+            const totals = employees.reduce(
+              (acc, e) => {
+                const c = calcTssForEmployee(e.salary);
+                acc.empSFS += c.empSFS;
+                acc.empAFP += c.empAFP;
+                acc.erSFS += c.erSFS;
+                acc.erAFP += c.erAFP;
+                acc.erSRL += c.erSRL;
+                return acc;
+              },
+              { empSFS: 0, empAFP: 0, erSFS: 0, erAFP: 0, erSRL: 0 }
+            );
+            const totalEmployee = totals.empSFS + totals.empAFP;
+            const totalEmployer = totals.erSFS + totals.erAFP + totals.erSRL;
+            const autorizacion = totalEmployee + totalEmployer;
+            const fmt = (n: number) => n.toLocaleString("es-DO", { minimumFractionDigits: 2 });
+
+            return (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Autorización de Pago TSS — {months.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Aporte Empleado</p>
+                      <p className="text-sm font-mono">(SFS {fmt(totals.empSFS)} + AFP {fmt(totals.empAFP)})</p>
+                      <p className="text-lg font-semibold font-mono">RD$ {fmt(totalEmployee)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Aporte Patronal</p>
+                      <p className="text-sm font-mono">(SFS {fmt(totals.erSFS)} + AFP {fmt(totals.erAFP)} + SRL {fmt(totals.erSRL)})</p>
+                      <p className="text-lg font-semibold font-mono">RD$ {fmt(totalEmployer)}</p>
+                    </div>
+                    <div className="col-span-2 sm:col-span-2 sm:text-right">
+                      <p className="text-xs text-muted-foreground">Total Autorización de Pago</p>
+                      <p className="text-2xl font-bold font-mono text-primary">RD$ {fmt(autorizacion)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Topes aplicados: SFS ≤ {fmt(TSS_CEILINGS.sfs)} · AFP ≤ {fmt(TSS_CEILINGS.afp)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Raw file preview */}
           {showPreview && fileContent && (

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Download, Eye, FileText } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 
 // Hardcoded employer RNC — move to settings later
@@ -221,6 +222,7 @@ export function TSSAutodeterminacionView() {
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             TSS — Autodeterminación Mensual (AM)
+            <InfoTooltip translationKey="help.tss" />
           </CardTitle>
           <CardDescription>
             Genera el archivo de texto (.txt) de Autodeterminación Mensual para cargar al SUIRPLUS de la TSS.

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Copy, FileSpreadsheet } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { calculateComplementaryTax } from "@/lib/payrollCalculations";
@@ -201,7 +202,7 @@ export function IR17ReportView() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>IR-17 — Otras Retenciones y Retribuciones Complementarias</CardTitle>
+        <CardTitle className="flex items-center gap-2">IR-17 — Otras Retenciones y Retribuciones Complementarias <InfoTooltip translationKey="help.ir17" /></CardTitle>
         <CardDescription>
           Resumen mensual de ISR retenido a terceros, retribuciones complementarias e ITBIS retenido para completar el formulario IR-17 de la DGII.
         </CardDescription>

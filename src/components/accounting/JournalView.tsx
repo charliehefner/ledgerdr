@@ -14,6 +14,7 @@ import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
 import { PaymentMethodMappingDialog } from "./PaymentMethodMappingDialog";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 type JournalLine = {
   id: string;
@@ -122,6 +123,7 @@ export function JournalView() {
         </div>
         {canWrite && (
           <div className="flex gap-1">
+            <InfoTooltip translationKey="help.generateJournals" />
             <GenerateJournalsButton userId={user?.id} />
             <Button size="sm" variant="ghost" onClick={() => setMappingOpen(true)} title="Configurar mapeo de métodos de pago">
               <Settings className="h-4 w-4" />

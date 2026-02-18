@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessHrTab, getDefaultHrTabForRole, HrTab } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, FileText, ArrowLeft } from "lucide-react";
 
 export default function HumanResources() {
   const { canModifySettings, user } = useAuth();
@@ -26,6 +26,7 @@ export default function HumanResources() {
   );
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [selectedGovReport, setSelectedGovReport] = useState<string | null>(null);
 
   // Update default tab when role changes
   useEffect(() => {
@@ -36,6 +37,13 @@ export default function HumanResources() {
       }
     }
   }, [userRole, activeTab]);
+
+  // Reset gov report selection when switching away from tss tab
+  useEffect(() => {
+    if (activeTab !== "tss") {
+      setSelectedGovReport(null);
+    }
+  }, [activeTab]);
 
   const handleEditEmployee = (employeeId: string) => {
     setEditingEmployeeId(employeeId);
@@ -55,6 +63,44 @@ export default function HumanResources() {
   };
 
   const canAccessTab = (tab: HrTab) => canAccessHrTab(userRole, tab);
+
+  const govReportOptions = [
+    { key: "tss", label: "TSS Autodeterminación", description: "Archivo mensual para la Tesorería de la Seguridad Social" },
+    { key: "ir3", label: "IR-3", description: "Retenciones de asalariados (ISR)" },
+    { key: "ir17", label: "IR-17", description: "Retenciones complementarias y de terceros" },
+  ];
+
+  const renderGovReportContent = () => {
+    if (!selectedGovReport) {
+      return (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {govReportOptions.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setSelectedGovReport(opt.key)}
+              className="flex flex-col items-start gap-2 rounded-lg border border-border bg-card p-5 text-left shadow-sm transition-colors hover:bg-accent hover:border-accent-foreground/20"
+            >
+              <FileText className="h-6 w-6 text-primary" />
+              <span className="text-base font-semibold text-foreground">{opt.label}</span>
+              <span className="text-sm text-muted-foreground">{opt.description}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setSelectedGovReport(null)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver a reportes
+        </Button>
+        {selectedGovReport === "tss" && <TSSAutodeterminacionView />}
+        {selectedGovReport === "ir3" && <IR3ReportView />}
+        {selectedGovReport === "ir17" && <IR17ReportView />}
+      </div>
+    );
+  };
 
   // Build tab groups based on permissions
   const mainTabs = [];
@@ -83,13 +129,7 @@ export default function HumanResources() {
     mainTabs.push({
       value: "tss",
       label: "Reportes Gob.",
-      content: (
-        <div className="space-y-6">
-          <TSSAutodeterminacionView />
-          <IR3ReportView />
-          <IR17ReportView />
-        </div>
-      ),
+      content: renderGovReportContent(),
     });
   }
 

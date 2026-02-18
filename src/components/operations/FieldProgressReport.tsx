@@ -185,7 +185,7 @@ export function FieldProgressReport() {
       const existing = fieldOpMap.get(compositeKey);
 
       if (existing) {
-        existing.hectaresDone += op.hectares_done;
+        existing.hectaresDone += op.hectares_done ?? 0;
         // Aggregate inputs
         op.operation_inputs?.forEach((input) => {
           const existingInput = existing.inputs.find(
@@ -219,7 +219,7 @@ export function FieldProgressReport() {
           farmName: op.fields?.farms?.name || "Unknown",
           operationTypeName: opTypeName,
           totalHectares,
-          hectaresDone: op.hectares_done,
+          hectaresDone: op.hectares_done ?? 0,
           hectaresRemaining: 0, // calculated after
           percentComplete: 0, // calculated after
           isOverage: false, // calculated after

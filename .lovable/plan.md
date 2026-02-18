@@ -1,51 +1,60 @@
 
 
-# Add Cost Center to Transactions
+# Replace Periods Tab with Accounting Reports
 
 ## Overview
-Add a `cost_center` column to the `transactions` table with three fixed values: **General**, **Agricola** (Agricultural), **Industrial**. The dropdown will appear in the transaction form before the "Cuenta Principal" field, defaulting to "General" to minimize friction.
+Remove the "Periodos" tab from the Accounting page and replace it with an "Informes Contables" (Accounting Reports) tab. This tab will show a button that opens a report configuration dialog where the accountant can set filters (date range, cost center, account, project, CBS, supplier) and then view or export the results.
 
-## Database Migration
+## What Gets Removed
+- The `PeriodsView` component import and tab from `Accounting.tsx`
+- The `PeriodsView.tsx` file itself (can be kept but will no longer be referenced)
+- The `accounting_periods` table stays in the database (no destructive change) but is no longer surfaced in the UI
 
-Add a `cost_center` column to the `transactions` table:
-- Type: `text NOT NULL DEFAULT 'general'`
-- Constrained via CHECK to: `'general'`, `'agricultural'`, `'industrial'`
-- All existing rows default to `'general'`
+## What Gets Added
 
-## Files to Change
+### 1. New Component: `src/components/accounting/AccountingReportsView.tsx`
+A view with a "Generar Informe" button that opens a filter dialog. Contains:
 
-### 1. New Migration
-- `ALTER TABLE transactions ADD COLUMN cost_center text NOT NULL DEFAULT 'general'`
-- CHECK constraint limiting to the three values
+- **Filter Dialog** with the following fields:
+  - Date range (start/end date inputs)
+  - Cost Center dropdown (General / Agricola / Industrial / Todos)
+  - Account dropdown (from `chart_of_accounts`)
+  - Project dropdown (from distinct `project_code` values in transactions)
+  - CBS dropdown (from distinct `cbs_code` values in transactions)
+  - Supplier/Name text input (searches `name` field)
+- **Results Table** displayed after filters are applied, showing matching transactions with columns: Date, Account, Project, CBS, Cost Center, Name, Description, Currency, Amount, ITBIS
+- **Export buttons**: Excel and PDF using the same `exceljs`/`jspdf` patterns already used in `Reports.tsx`
 
-### 2. `src/lib/api.ts`
-- Add `cost_center` to the `Transaction` interface (`'general' | 'agricultural' | 'industrial'`)
-- Include `cost_center` in `createTransaction` insert
-- Include `cost_center` in `fetchRecentTransactions` mapping
+### 2. Update: `src/pages/Accounting.tsx`
+- Remove `PeriodsView` import
+- Replace the "periods" tab with a new "reports" tab pointing to `AccountingReportsView`
+- Tab label: "Informes" (matching the existing sidebar terminology)
 
-### 3. `src/components/transactions/TransactionForm.tsx`
-- Add `cost_center: 'general'` to `initialFormState`
-- Insert a "Centro de Costo" dropdown **before** the "Cuenta Principal" row (between the dates row and the account dropdowns row)
-- Three options: General, Agricola, Industrial
-- Pre-selected to "General"
-- Pass `cost_center` to `createTransaction`
+## Data Source
+The report queries the `transactions` table directly (same as `Reports.tsx`), but scoped to the filters chosen in the dialog. This gives the accountant a focused, accounting-specific report tool without navigating away from the Accounting module.
 
-### 4. `src/components/transactions/columnConfig.ts`
-- Add `costCenter` column to all three config arrays (`TRANSACTION_COLUMNS`, `REPORT_COLUMNS`, `DASHBOARD_COLUMNS`)
-- Default visible in `REPORT_COLUMNS`, hidden in the other two
+## Technical Details
 
-### 5. `src/components/transactions/RecentTransactions.tsx`
-- Add cost center column rendering with colored badges:
-  - General = gray badge
-  - Agricola = green badge
-  - Industrial = blue badge
+### AccountingReportsView Component Structure
+- State: `filtersOpen` (dialog), `filters` (object with all filter values), `showResults` (boolean)
+- Query: `useQuery` fetching from `transactions` with `.eq()` / `.gte()` / `.lte()` / `.ilike()` based on active filters
+- Distinct values for dropdowns fetched via separate queries on `transactions` (project_code, cbs_code) and `chart_of_accounts`
+- Export logic: reuse the same Excel/PDF patterns from `Reports.tsx` (ExcelJS workbook, jsPDF with autoTable)
+- PDF header includes the active filters and totals by currency
 
-### 6. `src/components/accounting/useJournalGeneration.ts`
-- Add `cost_center` to the fetched transaction fields
-- Append cost center label to journal description (e.g., "Compra diesel [Agricola]")
+### Filter Dialog Layout
+- Two-column grid for date range
+- Four-column grid for Cost Center, Account, Project, CBS
+- Full-width row for Supplier name
+- Footer: Cancel + "Ver Informe" (View Report) button
 
-## User Experience
-- The dropdown defaults to "General", so existing workflows require zero extra clicks
-- Colored badges in tables make cost centers instantly scannable
-- Reports can be filtered and grouped by cost center
+### Results View
+- Summary bar showing transaction count and totals by currency
+- Sortable table with the filtered data
+- Export dropdown (Excel / PDF) in the toolbar
+- "Modificar Filtros" button to reopen the dialog
+
+## Files Changed
+1. **New**: `src/components/accounting/AccountingReportsView.tsx` -- the full report component with dialog, table, and export
+2. **Edit**: `src/pages/Accounting.tsx` -- swap PeriodsView for AccountingReportsView
 

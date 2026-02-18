@@ -2437,6 +2437,7 @@ export type Database = {
           amount: number
           cbs_code: string | null
           comments: string | null
+          cost_center: string
           created_at: string
           currency: string
           description: string
@@ -2466,6 +2467,7 @@ export type Database = {
           amount?: number
           cbs_code?: string | null
           comments?: string | null
+          cost_center?: string
           created_at?: string
           currency?: string
           description?: string
@@ -2495,6 +2497,7 @@ export type Database = {
           amount?: number
           cbs_code?: string | null
           comments?: string | null
+          cost_center?: string
           created_at?: string
           currency?: string
           description?: string

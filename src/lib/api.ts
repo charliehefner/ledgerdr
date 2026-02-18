@@ -150,6 +150,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       comments: transaction.comments || null,
       is_void: false,
       is_internal: transaction.is_internal ?? false,
+      cost_center: transaction.cost_center || 'general',
       transaction_direction: transaction.transaction_direction || 'purchase',
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
     })
@@ -206,6 +207,7 @@ export async function updateTransaction(id: string | number, transaction: Partia
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
+    cost_center: ((data as any).cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }
@@ -247,6 +249,7 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
+    cost_center: ((data as any).cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }

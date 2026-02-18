@@ -26,7 +26,7 @@ export default function Accounting() {
             },
             {
               value: "reports",
-              label: "Informes",
+              label: t("accounting.reports"),
               content: <AccountingReportsView />,
             },
             {

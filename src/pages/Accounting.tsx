@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
-import { PeriodsView } from "@/components/accounting/PeriodsView";
+import { AccountingReportsView } from "@/components/accounting/AccountingReportsView";
 import { FixedAssetsView } from "@/components/equipment/FixedAssetsView";
 import { JournalView } from "@/components/accounting/JournalView";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -25,9 +25,9 @@ export default function Accounting() {
               content: <ChartOfAccountsView />,
             },
             {
-              value: "periods",
-              label: t("accounting.periods"),
-              content: <PeriodsView />,
+              value: "reports",
+              label: "Informes",
+              content: <AccountingReportsView />,
             },
             {
               value: "fixed-assets",

@@ -77,12 +77,14 @@ export function ServicesView() {
   });
 
   const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
+    queryKey: ["chart-of-accounts-select"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("accounts")
-        .select("code, spanish_description").order("code");
+      const { data, error } = await supabase.from("chart_of_accounts")
+        .select("account_code, spanish_description")
+        .is("deleted_at", null)
+        .order("account_code");
       if (error) throw error;
-      return data as Account[];
+      return (data || []).map(row => ({ code: row.account_code, spanish_description: row.spanish_description || row.account_code })) as Account[];
     },
   });
 

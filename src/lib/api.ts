@@ -49,16 +49,21 @@ export interface Transaction {
 
 export async function fetchAccounts(): Promise<Account[]> {
   const { data, error } = await supabase
-    .from('accounts')
-    .select('code, english_description, spanish_description')
-    .order('code');
+    .from('chart_of_accounts')
+    .select('account_code, english_description, spanish_description')
+    .is('deleted_at', null)
+    .order('account_code');
   
   if (error) {
     console.error('Error fetching accounts:', error);
     throw new Error(error.message);
   }
   
-  return data || [];
+  return (data || []).map(row => ({
+    code: row.account_code,
+    english_description: row.english_description || row.account_code,
+    spanish_description: row.spanish_description || row.account_code,
+  }));
 }
 
 export async function fetchProjects(): Promise<Project[]> {

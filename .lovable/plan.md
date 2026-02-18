@@ -1,41 +1,77 @@
 
 
-# Bilingual Info Tooltips
+# Expand Editable Fields + Update DGII Tooltip Text
 
 ## Overview
 
-Add a reusable `InfoTooltip` component (a "?" icon showing help text on hover) with all tooltip texts registered in the existing `LanguageContext` translation system, so they automatically follow the language toggle.
+Two changes: (1) make DGII-critical fields editable in the Edit Transaction Dialog, and (2) update the DGII report tooltip texts to mention that corrections can be made in Financial Ledger.
 
-## New Component
+## 1. Expand Editable Fields in EditTransactionDialog
 
-**`src/components/ui/info-tooltip.tsx`**
+Currently only **Document #** and **Description** are editable. The following fields will be made editable to allow DGII report corrections without voiding:
 
-A small wrapper: `HelpCircle` icon (14px, `text-muted-foreground`) inside a Radix Tooltip. Accepts a translation key string and calls `t(key)` internally to resolve the correct language.
-
-## Translation Keys
-
-Added to both `es` and `en` blocks in `src/contexts/LanguageContext.tsx`:
-
-| Key | Spanish | English |
+| Field | DB Column | UI Control |
 |---|---|---|
-| `help.generateJournals` | Crea asientos contables automaticamente a partir de transacciones sin asiento vinculado. Se generan en estado Borrador para revision. | Automatically creates journal entries from transactions without a linked entry. Generated as Draft for review. |
-| `help.dgii606` | Reporte de compras y gastos con comprobantes fiscales. Se sube como archivo .txt al portal de la DGII cada mes. | Purchase and expense report with fiscal receipts. Uploaded as a .txt file to the DGII portal monthly. |
-| `help.dgii607` | Reporte de ventas con comprobantes fiscales. Se sube como archivo .txt al portal de la DGII cada mes. | Sales report with fiscal receipts. Uploaded as a .txt file to the DGII portal monthly. |
-| `help.dgii608` | Reporte de comprobantes fiscales anulados durante el mes. Se sube como archivo .txt al portal de la DGII. | Report of voided fiscal receipts during the month. Uploaded as a .txt file to the DGII portal. |
-| `help.it1` | Calcula el ITBIS neto a pagar o saldo a favor del mes. Los valores se copian manualmente al formulario IT-1 en el portal de la DGII. | Calculates the net ITBIS to pay or credit balance for the month. Values are manually copied to the IT-1 form on the DGII portal. |
-| `help.tss` | Genera el archivo .txt de Autodeterminacion Mensual para cargar al sistema SUIRPLUS de la TSS. Incluye todos los empleados activos con sus salarios. | Generates the Monthly Self-Assessment .txt file to upload to the TSS SUIRPLUS system. Includes all active employees with their salaries. |
-| `help.ir3` | Retencion mensual del ISR sobre salarios. Los valores se ingresan manualmente en el formulario IR-3 del portal de la DGII. | Monthly ISR withholding on salaries. Values are manually entered in the IR-3 form on the DGII portal. |
-| `help.ir17` | Declaracion del impuesto complementario sobre retribuciones complementarias. Se ingresa manualmente en el formulario IR-17 de la DGII. | Complementary tax declaration on supplementary compensation. Manually entered in the IR-17 form on the DGII portal. |
+| RNC | `rnc` | Text input |
+| ITBIS | `itbis` | Number input |
+| ITBIS Retenido | `itbis_retenido` | Number input |
+| ISR Retenido | `isr_retenido` | Number input |
+| Payment Method | `pay_method` | Select dropdown (same options as TransactionForm) |
+| Tipo Bienes/Servicios | `dgii_tipo_bienes_servicios` | Select dropdown (codes 01-13) |
 
-## Files Modified
+The save button currently sits next to Document #. It will be moved to the dialog footer as a standalone "Save Changes" button, and all editable fields will lose their `readOnly` + `bg-muted` styling.
+
+### Files Changed
+
+**`src/components/invoices/EditTransactionDialog.tsx`**
+- Add state variables for each new editable field (+ original values for change detection)
+- Remove `readOnly` and `bg-muted` from RNC, ITBIS, ITBIS Retenido, ISR Retenido, Payment Method fields
+- Add new DGII Tipo Bienes/Servicios select field (for purchase transactions)
+- Move Save button to footer next to existing Cerrar/Anular buttons
+- Update `hasChanges` logic to include all new fields
+- Update `handleSaveChanges` to send all changed fields
+
+**`src/lib/api.ts`**
+- Update `updateTransaction` to pass through all fields from the partial transaction object instead of only `document`
+- Also support finding by UUID (not just legacy_id) for newer records
+
+## 2. Update DGII Tooltip Text
+
+Update the 606, 607, and 608 tooltip translations to mention that errors can be corrected in the Financial Ledger.
+
+**`src/contexts/LanguageContext.tsx`** -- update 6 strings (3 Spanish, 3 English):
+
+| Key | New Spanish | New English |
+|---|---|---|
+| help.dgii606 | Reporte de compras y gastos con comprobantes fiscales. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transaccion en Libro Mayor. | Purchase and expense report with fiscal receipts. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger. |
+| help.dgii607 | Reporte de ventas con comprobantes fiscales. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transaccion en Libro Mayor. | Sales report with fiscal receipts. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger. |
+| help.dgii608 | Reporte de comprobantes anulados. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transaccion en Libro Mayor. | Voided fiscal receipts report. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger. |
+
+## Technical Details
+
+### updateTransaction (api.ts) fix
+
+The current function hardcodes only `document` in the update payload. It will be changed to spread all provided fields:
+
+```typescript
+const updatePayload: Record<string, any> = {};
+if (transaction.document !== undefined) updatePayload.document = transaction.document;
+if (transaction.description !== undefined) updatePayload.description = transaction.description;
+if (transaction.rnc !== undefined) updatePayload.rnc = transaction.rnc;
+if (transaction.itbis !== undefined) updatePayload.itbis = transaction.itbis;
+if (transaction.pay_method !== undefined) updatePayload.pay_method = transaction.pay_method;
+// ... etc for all DGII fields
+```
+
+### EditTransactionDialog state management
+
+Each new editable field gets an `edited` + `original` state pair (same pattern as document/description), and `hasChanges` checks all pairs.
+
+### Files summary
 
 | File | Change |
 |---|---|
-| `src/components/ui/info-tooltip.tsx` | **New** -- reusable component, calls `useLanguage().t(key)` |
-| `src/contexts/LanguageContext.tsx` | Add 8 new keys to both `es` and `en` translation blocks |
-| `src/components/accounting/JournalView.tsx` | Add `InfoTooltip` next to "Generar Asientos" button |
-| `src/components/accounting/DGIIReportsView.tsx` | Add `InfoTooltip` next to each tab label (606, 607, 608, IT-1) |
-| `src/components/hr/TSSAutodeterminacionView.tsx` | Add `InfoTooltip` next to the card title |
-| `src/components/hr/IR3ReportView.tsx` | Add `InfoTooltip` next to the card title |
-| `src/components/hr/IR17ReportView.tsx` | Add `InfoTooltip` next to the card title |
+| `src/components/invoices/EditTransactionDialog.tsx` | Expand editable fields, move save to footer |
+| `src/lib/api.ts` | `updateTransaction` accepts all DGII-relevant fields |
+| `src/contexts/LanguageContext.tsx` | Update 6 tooltip strings |
 

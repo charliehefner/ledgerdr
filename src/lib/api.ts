@@ -42,6 +42,8 @@ export interface Transaction {
   void_reason?: string;
   voided_at?: string;
   attachment_url?: string;
+  transaction_direction?: 'purchase' | 'sale';
+  dgii_tipo_ingreso?: string;
 }
 
 // ============================================
@@ -115,6 +117,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     currency: t.currency as 'DOP' | 'USD',
     is_internal: t.is_internal ?? false,
     cost_center: (t as any).cost_center || 'general',
+    transaction_direction: (t.transaction_direction || 'purchase') as 'purchase' | 'sale',
   }));
 }
 
@@ -148,6 +151,8 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       is_void: false,
       is_internal: transaction.is_internal ?? false,
       cost_center: transaction.cost_center || 'general',
+      transaction_direction: transaction.transaction_direction || 'purchase',
+      dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
     })
     .select()
     .single();
@@ -163,6 +168,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
     cost_center: (data as any).cost_center || 'general',
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }
 
@@ -190,6 +196,7 @@ export async function updateTransaction(id: string | number, transaction: Partia
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }
 
@@ -230,5 +237,6 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }

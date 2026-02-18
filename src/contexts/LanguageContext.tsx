@@ -706,6 +706,8 @@ const translations: Record<Language, Record<string, string>> = {
     "txForm.selectTipoIngreso": "Seleccionar tipo",
     "txForm.namePlaceholderPurchase": "Proveedor",
     "txForm.namePlaceholderSale": "Cliente",
+    "txForm.cliente": "Cliente",
+    "txForm.credit": "Crédito",
 
     // DGII
     "dgii.reports": "Reportes DGII",
@@ -1410,6 +1412,8 @@ const translations: Record<Language, Record<string, string>> = {
     "txForm.selectTipoIngreso": "Select type",
     "txForm.namePlaceholderPurchase": "Supplier",
     "txForm.namePlaceholderSale": "Customer",
+    "txForm.cliente": "Customer",
+    "txForm.credit": "Credit",
 
     // DGII
     "dgii.reports": "DGII Reports",

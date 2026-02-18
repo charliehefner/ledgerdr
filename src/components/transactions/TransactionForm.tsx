@@ -582,6 +582,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <SelectItem value="cc_management">{t('txForm.ccManagement')}</SelectItem>
                   <SelectItem value="cc_agri">{t('txForm.ccAgri')}</SelectItem>
                   <SelectItem value="cc_industry">{t('txForm.ccIndustry')}</SelectItem>
+                  <SelectItem value="credit">{t('txForm.credit')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -596,7 +597,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
 
             <div className="space-y-2 relative">
-              <Label>{t('txForm.name')}</Label>
+              <Label>{form.transaction_direction === 'sale' ? t('txForm.cliente') : t('txForm.name')}</Label>
               <NameAutocomplete
                 value={form.name}
                 onChange={(value) => updateField('name', value)}

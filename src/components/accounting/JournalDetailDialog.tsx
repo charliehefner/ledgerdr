@@ -1,0 +1,435 @@
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { Plus, Trash2, Lock, Save, CheckCircle } from "lucide-react";
+
+type JournalLine = {
+  id: string;
+  account_id: string;
+  debit: number | null;
+  credit: number | null;
+  cbs_code: string | null;
+  project_code: string | null;
+  chart_of_accounts: { account_code: string; account_name: string } | null;
+};
+
+type Journal = {
+  id: string;
+  journal_number: string | null;
+  journal_date: string;
+  description: string | null;
+  currency: string | null;
+  posted: boolean | null;
+  posted_by: string | null;
+  posted_at: string | null;
+  journal_lines: JournalLine[];
+};
+
+type EditableLine = {
+  id: string;
+  account_id: string;
+  debit: string;
+  credit: string;
+  isNew?: boolean;
+};
+
+interface JournalDetailDialogProps {
+  journal: Journal | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDetailDialogProps) {
+  const { user, canWriteSection } = useAuth();
+  const queryClient = useQueryClient();
+  const canWrite = canWriteSection("accounting");
+  const isDraft = !journal?.posted;
+  const isEditable = canWrite && isDraft;
+
+  const [description, setDescription] = useState("");
+  const [lines, setLines] = useState<EditableLine[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["chart_of_accounts_posting"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("id, account_code, account_name")
+        .eq("allow_posting", true)
+        .is("deleted_at", null)
+        .order("account_code");
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (journal) {
+      setDescription(journal.description || "");
+      setLines(
+        journal.journal_lines.map((l) => ({
+          id: l.id,
+          account_id: l.account_id,
+          debit: l.debit ? String(l.debit) : "",
+          credit: l.credit ? String(l.credit) : "",
+        }))
+      );
+    }
+  }, [journal]);
+
+  const totals = useMemo(() => {
+    const totalDebit = lines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
+    const totalCredit = lines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
+    return { totalDebit, totalCredit, balanced: Math.abs(totalDebit - totalCredit) < 0.01 };
+  }, [lines]);
+
+  const fmtNum = (n: number) =>
+    n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const addLine = () => {
+    setLines((prev) => [
+      ...prev,
+      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", isNew: true },
+    ]);
+  };
+
+  const removeLine = (idx: number) => {
+    setLines((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateLine = (idx: number, field: keyof EditableLine, value: string) => {
+    setLines((prev) =>
+      prev.map((l, i) => {
+        if (i !== idx) return l;
+        const updated = { ...l, [field]: value };
+        // If setting debit, clear credit and vice versa
+        if (field === "debit" && value) updated.credit = "";
+        if (field === "credit" && value) updated.debit = "";
+        return updated;
+      })
+    );
+  };
+
+  const handleSave = async () => {
+    if (!journal || !isEditable) return;
+    if (!totals.balanced) {
+      toast({ title: "Error", description: "Débitos y créditos no están balanceados.", variant: "destructive" });
+      return;
+    }
+    if (lines.some((l) => !l.account_id)) {
+      toast({ title: "Error", description: "Todas las líneas necesitan una cuenta.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Update journal description
+      const { error: jErr } = await supabase
+        .from("journals")
+        .update({ description })
+        .eq("id", journal.id);
+      if (jErr) throw jErr;
+
+      // Delete existing lines
+      const existingIds = journal.journal_lines.map((l) => l.id);
+      if (existingIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from("journal_lines")
+          .delete()
+          .in("id", existingIds);
+        if (delErr) throw delErr;
+      }
+
+      // Insert all lines
+      const newLines = lines.map((l) => ({
+        journal_id: journal.id,
+        account_id: l.account_id,
+        debit: parseFloat(l.debit) || 0,
+        credit: parseFloat(l.credit) || 0,
+      }));
+      const { error: insErr } = await supabase.from("journal_lines").insert(newLines);
+      if (insErr) throw insErr;
+
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      toast({ title: "Guardado", description: "Asiento actualizado correctamente." });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePost = async () => {
+    if (!journal || !canWrite) return;
+    if (!totals.balanced) {
+      toast({ title: "Error", description: "Débitos y créditos no están balanceados.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save changes first if any
+      await handleSave();
+
+      const { error } = await supabase
+        .from("journals")
+        .update({
+          posted: true,
+          posted_by: user?.id,
+          posted_at: new Date().toISOString(),
+        })
+        .eq("id", journal.id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      toast({ title: "Publicado", description: "Asiento aprobado y publicado." });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!journal || !canWrite) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("journals")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", journal.id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      toast({ title: "Eliminado", description: "Asiento eliminado." });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!journal) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <DialogTitle className="text-lg">
+              {journal.journal_number || "Sin número"}
+            </DialogTitle>
+            <Badge variant={journal.posted ? "default" : "outline"}>
+              {journal.posted ? "Publicado" : "Borrador"}
+            </Badge>
+          </div>
+          <DialogDescription className="flex gap-4 text-sm">
+            <span>{format(new Date(journal.journal_date), "dd/MM/yyyy")}</span>
+            <span>{journal.currency || "DOP"}</span>
+            {journal.posted && journal.posted_at && (
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Lock className="h-3 w-3" />
+                Publicado el {format(new Date(journal.posted_at), "dd/MM/yyyy HH:mm")}
+              </span>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Description */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Descripción</label>
+          {isEditable ? (
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">{description || "—"}</p>
+          )}
+        </div>
+
+        {/* Lines Table */}
+        <div className="border rounded-lg overflow-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-2 font-medium">Cuenta</th>
+                <th className="text-right p-2 font-medium w-[140px]">Débito</th>
+                <th className="text-right p-2 font-medium w-[140px]">Crédito</th>
+                {isEditable && <th className="w-[40px]" />}
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line, idx) => (
+                <tr key={line.id} className="border-b border-border/30">
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Select
+                        value={line.account_id}
+                        onValueChange={(v) => updateLine(idx, "account_id", v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Seleccionar cuenta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.account_code} — {a.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="font-mono text-xs">
+                        {accounts.find((a) => a.id === line.account_id)?.account_code ||
+                          journal.journal_lines[idx]?.chart_of_accounts?.account_code ||
+                          "—"}{" "}
+                        —{" "}
+                        {accounts.find((a) => a.id === line.account_id)?.account_name ||
+                          journal.journal_lines[idx]?.chart_of_accounts?.account_name ||
+                          ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="h-8 text-right text-xs"
+                        value={line.debit}
+                        onChange={(e) => updateLine(idx, "debit", e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-right">{line.debit ? fmtNum(parseFloat(line.debit)) : ""}</div>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="h-8 text-right text-xs"
+                        value={line.credit}
+                        onChange={(e) => updateLine(idx, "credit", e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-right">{line.credit ? fmtNum(parseFloat(line.credit)) : ""}</div>
+                    )}
+                  </td>
+                  {isEditable && (
+                    <td className="p-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => removeLine(idx)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-medium bg-muted/30">
+                <td className="p-2 text-right">Totales</td>
+                <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
+                  {fmtNum(totals.totalDebit)}
+                </td>
+                <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
+                  {fmtNum(totals.totalCredit)}
+                </td>
+                {isEditable && <td />}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {!totals.balanced && (
+          <p className="text-xs text-destructive">
+            Diferencia: {fmtNum(Math.abs(totals.totalDebit - totals.totalCredit))}
+          </p>
+        )}
+
+        {isEditable && (
+          <Button variant="outline" size="sm" onClick={addLine} className="w-fit">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Agregar línea
+          </Button>
+        )}
+
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          {isEditable && (
+            <>
+              {/* Delete */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={saving}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar asiento?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción eliminará el asiento {journal.journal_number || ""}.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Save */}
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving || !totals.balanced}>
+                <Save className="h-3.5 w-3.5 mr-1" /> Guardar cambios
+              </Button>
+
+              {/* Post */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" disabled={saving || !totals.balanced}>
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Aprobar y Publicar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Aprobar y publicar?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Una vez publicado, el asiento no se podrá modificar. Esta acción es irreversible.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handlePost}>Aprobar y Publicar</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

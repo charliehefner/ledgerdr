@@ -365,26 +365,25 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
           </div>
 
-          {/* Cost Center */}
-          <div className="space-y-2">
-            <Label>Centro de Costo</Label>
-            <Select
-              value={form.cost_center}
-              onValueChange={(value: 'general' | 'agricultural' | 'industrial') => updateField('cost_center', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="general">General</SelectItem>
-                <SelectItem value="agricultural">Agrícola</SelectItem>
-                <SelectItem value="industrial">Industrial</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Account Dropdowns + Cost Center */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label>Centro de Costo</Label>
+              <Select
+                value={form.cost_center}
+                onValueChange={(value: 'general' | 'agricultural' | 'industrial') => updateField('cost_center', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="agricultural">Agrícola</SelectItem>
+                  <SelectItem value="industrial">Industrial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Account Dropdowns */}
-          <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Cuenta Principal *</Label>
               <Select

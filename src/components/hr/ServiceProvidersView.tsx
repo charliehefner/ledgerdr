@@ -13,6 +13,7 @@ import { Plus, Pencil, UserCheck, UserX, Search, Wrench } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 
 interface ServiceProvider {
@@ -50,6 +51,7 @@ const emptyForm = {
 export function ServiceProvidersView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const canWrite = canWriteHrTab(user?.role, "prestadores");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -223,19 +225,19 @@ export function ServiceProvidersView() {
                     <TableCell className="font-medium">{p.name}</TableCell>
                     <TableCell className="font-mono">{p.cedula}</TableCell>
                     <TableCell>{p.bank || "—"}</TableCell>
-                    <TableCell>{p.bank_account_type === "current" ? "Corriente" : "Ahorros"}</TableCell>
+                    <TableCell>{p.bank_account_type === "current" ? t("common.checking") : t("common.savings")}</TableCell>
                     <TableCell>{p.currency || "DOP"}</TableCell>
                     <TableCell className="font-mono">{p.bank_account_number || "—"}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={p.is_active ? "default" : "secondary"}>{p.is_active ? "Activo" : "Inactivo"}</Badge>
+                      <Badge variant={p.is_active ? "default" : "secondary"}>{p.is_active ? t("common.active") : t("common.inactive")}</Badge>
                     </TableCell>
                     {canWrite && (
                       <TableCell>
                         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(p)} title="Editar">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(p)} title={t("common.edit")}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" title={p.is_active ? "Desactivar" : "Activar"}
+                          <Button variant="ghost" size="icon" title={p.is_active ? t("common.deactivate") : t("common.activate")}
                             onClick={() => toggleActiveMutation.mutate({ id: p.id, is_active: !p.is_active })}>
                             {p.is_active ? <UserX className="h-4 w-4 text-destructive" /> : <UserCheck className="h-4 w-4 text-primary" />}
                           </Button>
@@ -254,23 +256,23 @@ export function ServiceProvidersView() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingProvider ? "Editar Prestador" : "Agregar Prestador"}</DialogTitle>
+            <DialogTitle>{editingProvider ? t("providers.editProvider") : t("providers.addProvider")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Nombre *</Label>
+              <Label>{t("common.name")} *</Label>
               <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nombre completo" autoFocus />
+                placeholder={t("common.fullName")} autoFocus />
             </div>
             <div className="space-y-2">
-              <Label>Cédula *</Label>
+              <Label>{t("common.cedula")} *</Label>
               <Input value={formData.cedula} onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
                 placeholder="000-0000000-0" />
             </div>
             <div className="space-y-2">
-              <Label>Banco</Label>
+              <Label>{t("common.bank")}</Label>
               <Select value={formData.bank} onValueChange={(v) => setFormData({ ...formData, bank: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar banco" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("common.selectBank")} /></SelectTrigger>
                 <SelectContent>
                   {BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                 </SelectContent>
@@ -278,18 +280,18 @@ export function ServiceProvidersView() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Tipo de Cuenta</Label>
+                <Label>{t("common.accountType")}</Label>
                 <Select value={formData.bank_account_type}
                   onValueChange={(v) => setFormData({ ...formData, bank_account_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="savings">Ahorros</SelectItem>
-                    <SelectItem value="current">Corriente</SelectItem>
+                    <SelectItem value="savings">{t("common.savings")}</SelectItem>
+                    <SelectItem value="current">{t("common.checking")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Moneda</Label>
+                <Label>{t("common.currency")}</Label>
                 <Select value={formData.currency}
                   onValueChange={(v) => setFormData({ ...formData, currency: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -301,15 +303,15 @@ export function ServiceProvidersView() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Número de Cuenta</Label>
+              <Label>{t("common.bankAccount")}</Label>
               <Input value={formData.bank_account_number}
                 onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                 placeholder="Número de cuenta bancaria" />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? "Guardando..." : editingProvider ? "Actualizar" : "Agregar"}
+                {saveMutation.isPending ? t("common.saving") : editingProvider ? t("common.update") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>
@@ -320,21 +322,21 @@ export function ServiceProvidersView() {
       <Dialog open={!!historyProvider} onOpenChange={(open) => !open && setHistoryProvider(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Historial de Servicios — {historyProvider?.name}</DialogTitle>
+            <DialogTitle>{t("services.serviceHistory")} — {historyProvider?.name}</DialogTitle>
           </DialogHeader>
           <div className="max-h-96 overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead className="text-center">Estado</TableHead>
+                  <TableHead>{t("common.date")}</TableHead>
+                  <TableHead>{t("common.description")}</TableHead>
+                  <TableHead className="text-right">{t("common.amount")}</TableHead>
+                  <TableHead className="text-center">{t("common.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {history.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Sin servicios registrados</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t("services.noServicesRecorded")}</TableCell></TableRow>
                 ) : (
                   history.map((s) => (
                     <TableRow key={s.id}>
@@ -344,7 +346,7 @@ export function ServiceProvidersView() {
                         {s.amount != null ? `${s.currency} ${Number(s.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : "—"}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={s.is_closed ? "default" : "secondary"}>{s.is_closed ? "Cerrado" : "Abierto"}</Badge>
+                        <Badge variant={s.is_closed ? "default" : "secondary"}>{s.is_closed ? t("common.closed") : t("common.open")}</Badge>
                       </TableCell>
                     </TableRow>
                   ))

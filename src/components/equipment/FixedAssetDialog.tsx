@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const CATEGORIES = [
   { value: "vehicle", label: "Vehículo" },
@@ -31,6 +32,7 @@ interface FixedAssetDialogProps {
 }
 
 export function FixedAssetDialog({ open, onOpenChange, asset, onSaved }: FixedAssetDialogProps) {
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -245,9 +247,9 @@ export function FixedAssetDialog({ open, onOpenChange, asset, onSaved }: FixedAs
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Guardando..." : asset ? "Actualizar" : "Crear"}
+            {saving ? t("common.saving") : asset ? t("common.update") : t("common.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

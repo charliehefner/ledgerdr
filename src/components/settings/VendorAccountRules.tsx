@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Wand2 } from 'lucide-react';
@@ -29,6 +30,7 @@ interface VendorRule {
 
 export function VendorAccountRules() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<VendorRule | null>(null);
   const [form, setForm] = useState({
@@ -319,8 +321,8 @@ export function VendorAccountRules() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>Guardar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button onClick={handleSave}>{t("common.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

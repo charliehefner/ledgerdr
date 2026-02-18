@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Lock, AlertTriangle, Briefcase } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
@@ -59,6 +60,7 @@ function isIncomplete(entry: { master_acct_code: string | null; description: str
 export function ServicesView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const canWrite = canWriteHrTab(user?.role, "servicios");
   const [showClosed, setShowClosed] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -341,10 +343,10 @@ export function ServicesView() {
                           <div className="flex items-center justify-center gap-1">
                             {!entry.is_closed && (
                               <>
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(entry)} title="Editar">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(entry)} title={t("common.edit")}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleCloseService(entry)} title="Cerrar">
+                                <Button variant="ghost" size="icon" onClick={() => handleCloseService(entry)} title={t("common.close")}>
                                   <Lock className="h-4 w-4" />
                                 </Button>
                               </>
@@ -365,7 +367,7 @@ export function ServicesView() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingEntry ? "Editar Servicio" : "Agregar Servicio"}</DialogTitle>
+            <DialogTitle>{editingEntry ? t("services.editService") : t("services.addService")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -423,9 +425,9 @@ export function ServicesView() {
                 placeholder="Comentarios adicionales (opcional)" rows={2} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? "Guardando..." : editingEntry ? "Actualizar" : "Agregar"}
+                {saveMutation.isPending ? t("common.saving") : editingEntry ? t("common.update") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>
@@ -436,7 +438,7 @@ export function ServicesView() {
       <AlertDialog open={!!closingEntry} onOpenChange={(open) => !open && setClosingEntry(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Cerrar Servicio?</AlertDialogTitle>
+            <AlertDialogTitle>{t("services.closeServiceConfirm")}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
                 <p>Esto hará lo siguiente:</p>
@@ -450,10 +452,10 @@ export function ServicesView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => closingEntry && closeMutation.mutate(closingEntry)}
               disabled={closeMutation.isPending}>
-              {closeMutation.isPending ? "Cerrando..." : "Cerrar Servicio"}
+              {closeMutation.isPending ? t("common.closing") : t("common.closeService")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

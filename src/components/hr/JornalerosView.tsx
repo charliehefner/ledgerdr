@@ -11,6 +11,7 @@ import { Plus, Pencil, UserCheck, UserX, Search, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Jornalero {
   id: string;
@@ -24,6 +25,7 @@ interface Jornalero {
 export function JornalerosView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const canWrite = canWriteHrTab(user?.role, "jornaleros");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -199,7 +201,7 @@ export function JornalerosView() {
               ) : filteredJornaleros.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? "No se encontraron jornaleros" : "No hay jornaleros registrados"}
+                    {searchTerm ? t("jornaleros.noJornalerosFound") : t("jornaleros.noJornalerosRegistered")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -209,7 +211,7 @@ export function JornalerosView() {
                     <TableCell className="font-mono">{jornalero.cedula}</TableCell>
                     <TableCell className="text-center">
                       <Badge variant={jornalero.is_active ? "default" : "secondary"}>
-                        {jornalero.is_active ? "Activo" : "Inactivo"}
+                        {jornalero.is_active ? t("common.active") : t("common.inactive")}
                       </Badge>
                     </TableCell>
                     {canWrite && (
@@ -219,7 +221,7 @@ export function JornalerosView() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleOpenDialog(jornalero)}
-                            title="Editar"
+                            title={t("common.edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -232,7 +234,7 @@ export function JornalerosView() {
                                 is_active: !jornalero.is_active,
                               })
                             }
-                            title={jornalero.is_active ? "Desactivar" : "Activar"}
+                            title={jornalero.is_active ? t("common.deactivate") : t("common.activate")}
                           >
                             {jornalero.is_active ? (
                               <UserX className="h-4 w-4 text-destructive" />
@@ -256,21 +258,21 @@ export function JornalerosView() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingJornalero ? "Editar Jornalero" : "Agregar Jornalero"}
+              {editingJornalero ? t("jornaleros.editJornalero") : t("jornaleros.addJornalero")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre *</label>
+              <label className="text-sm font-medium">{t("common.name")} *</label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nombre completo"
+                placeholder={t("common.fullName")}
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cédula *</label>
+              <label className="text-sm font-medium">{t("common.cedula")} *</label>
               <Input
                 value={formData.cedula}
                 onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
@@ -279,10 +281,10 @@ export function JornalerosView() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? "Guardando..." : editingJornalero ? "Actualizar" : "Agregar"}
+                {saveMutation.isPending ? t("common.saving") : editingJornalero ? t("common.update") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>

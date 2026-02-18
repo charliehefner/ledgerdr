@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ interface FollowUpRule {
 
 export function FollowUpRulesManager() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<FollowUpRule | null>(null);
   const [form, setForm] = useState({
@@ -268,9 +270,9 @@ export function FollowUpRulesManager() {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                <Button variant="outline" onClick={handleCloseDialog}>{t("common.cancel")}</Button>
                 <Button onClick={handleSave} disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Guardando..." : editingRule ? "Actualizar" : "Crear"}
+                  {saveMutation.isPending ? t("common.saving") : editingRule ? t("common.update") : t("common.create")}
                 </Button>
               </div>
             </div>

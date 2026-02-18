@@ -1,77 +1,103 @@
 
 
-# Expand Editable Fields + Update DGII Tooltip Text
+# Complete IR-3 Report Solution
 
-## Overview
+## Problem
 
-Two changes: (1) make DGII-critical fields editable in the Edit Transaction Dialog, and (2) update the DGII report tooltip texts to mention that corrections can be made in Financial Ledger.
+The current IR-3 report has significant accuracy issues:
 
-## 1. Expand Editable Fields in EditTransactionDialog
+1. **Month/year selectors are decorative** -- the report always calculates ISR from current salary and current benefits, regardless of the selected month
+2. **No historical data** -- ISR amounts are never persisted when payroll is closed, so there is no way to know what was actually withheld in a past period
+3. **Missing data structure** -- there is no table to store the ISR (and other deduction amounts) calculated at payroll close time
 
-Currently only **Document #** and **Description** are editable. The following fields will be made editable to allow DGII report corrections without voiding:
+## Solution: Two-Part Approach
 
-| Field | DB Column | UI Control |
+### Part 1: New `payroll_snapshots` table (persist ISR at close time)
+
+Create a table that captures each employee's calculated payroll results when a period is closed. This ensures the IR-3 (and future reports) reflect what was *actually* withheld, not a recalculation.
+
+**New table: `payroll_snapshots`**
+
+| Column | Type | Description |
 |---|---|---|
-| RNC | `rnc` | Text input |
-| ITBIS | `itbis` | Number input |
-| ITBIS Retenido | `itbis_retenido` | Number input |
-| ISR Retenido | `isr_retenido` | Number input |
-| Payment Method | `pay_method` | Select dropdown (same options as TransactionForm) |
-| Tipo Bienes/Servicios | `dgii_tipo_bienes_servicios` | Select dropdown (codes 01-13) |
+| id | uuid (PK) | Auto-generated |
+| period_id | uuid (FK) | Links to payroll_periods |
+| employee_id | uuid (FK) | Links to employees |
+| base_pay | numeric | Bi-weekly base pay |
+| overtime_pay | numeric | Overtime earnings |
+| holiday_pay | numeric | Holiday bonus |
+| sunday_pay | numeric | Sunday bonus |
+| total_benefits | numeric | Sum of benefits |
+| tss | numeric | TSS deduction |
+| isr | numeric | ISR withheld (key field for IR-3) |
+| loan_deduction | numeric | Loan installment |
+| absence_deduction | numeric | Absence deduction |
+| vacation_deduction | numeric | Vacation deduction |
+| gross_pay | numeric | Total gross |
+| net_pay | numeric | Net paid |
+| created_at | timestamptz | Record timestamp |
 
-The save button currently sits next to Document #. It will be moved to the dialog footer as a standalone "Save Changes" button, and all editable fields will lose their `readOnly` + `bg-muted` styling.
+Unique constraint on (period_id, employee_id) to prevent duplicates.
 
-### Files Changed
+RLS policies will mirror the payroll_periods table (Admin/Management full access, Accountant read).
 
-**`src/components/invoices/EditTransactionDialog.tsx`**
-- Add state variables for each new editable field (+ original values for change detection)
-- Remove `readOnly` and `bg-muted` from RNC, ITBIS, ITBIS Retenido, ISR Retenido, Payment Method fields
-- Add new DGII Tipo Bienes/Servicios select field (for purchase transactions)
-- Move Save button to footer next to existing Cerrar/Anular buttons
-- Update `hasChanges` logic to include all new fields
-- Update `handleSaveChanges` to send all changed fields
+### Part 2: Populate snapshots at payroll close + update IR-3
 
-**`src/lib/api.ts`**
-- Update `updateTransaction` to pass through all fields from the partial transaction object instead of only `document`
-- Also support finding by UUID (not just legacy_id) for newer records
+**A. Modify PayrollSummary close logic** to insert snapshot rows for every employee when a period is closed.
 
-## 2. Update DGII Tooltip Text
+**B. Rewrite IR-3 report** to:
+- Find the two payroll periods whose date range falls within the selected month/year
+- Pull ISR from `payroll_snapshots` for those closed periods
+- For open (current) periods, fall back to the existing calculation
+- Show per-employee breakdown with actual withheld amounts
+- Display monthly total (sum of both bi-monthly periods)
 
-Update the 606, 607, and 608 tooltip translations to mention that errors can be corrected in the Financial Ledger.
+### Part 3: Backfill existing closed periods
 
-**`src/contexts/LanguageContext.tsx`** -- update 6 strings (3 Spanish, 3 English):
+For the already-closed periods (e.g., Jan 1-15, Jan 16-31, Feb 1-15), we will recalculate and insert snapshot rows so historical IR-3 reports work immediately. This will be done via a one-time backfill triggered by a button in the IR-3 view (visible to Admin/Management only).
 
-| Key | New Spanish | New English |
-|---|---|---|
-| help.dgii606 | Reporte de compras y gastos con comprobantes fiscales. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transaccion en Libro Mayor. | Purchase and expense report with fiscal receipts. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger. |
-| help.dgii607 | Reporte de ventas con comprobantes fiscales. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transaccion en Libro Mayor. | Sales report with fiscal receipts. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger. |
-| help.dgii608 | Reporte de comprobantes anulados. Exporta a Excel para entrada al portal de la DGII. Para corregir datos, edite la transaccion en Libro Mayor. | Voided fiscal receipts report. Exports to Excel for DGII portal entry. To correct data, edit the transaction in Financial Ledger. |
+## Data Gap Advisory
 
-## Technical Details
+**No missing columns in existing tables.** All the data needed to calculate payroll (timesheets, benefits, loans, vacations) already exists. The only missing piece is the *persistence of results*, which the new `payroll_snapshots` table solves.
 
-### updateTransaction (api.ts) fix
+One minor note: the `employee_benefits` table stores current/ongoing benefits but is not period-specific. The system already has `period_employee_benefits` for period-locked benefit amounts, but the current PayrollSummary reads from `employee_benefits` (the live table). This means benefit changes retroactively affect recalculations. The snapshot table solves this by capturing the actual amounts at close time.
 
-The current function hardcodes only `document` in the update payload. It will be changed to spread all provided fields:
-
-```typescript
-const updatePayload: Record<string, any> = {};
-if (transaction.document !== undefined) updatePayload.document = transaction.document;
-if (transaction.description !== undefined) updatePayload.description = transaction.description;
-if (transaction.rnc !== undefined) updatePayload.rnc = transaction.rnc;
-if (transaction.itbis !== undefined) updatePayload.itbis = transaction.itbis;
-if (transaction.pay_method !== undefined) updatePayload.pay_method = transaction.pay_method;
-// ... etc for all DGII fields
-```
-
-### EditTransactionDialog state management
-
-Each new editable field gets an `edited` + `original` state pair (same pattern as document/description), and `hasChanges` checks all pairs.
-
-### Files summary
+## Files to Create/Modify
 
 | File | Change |
 |---|---|
-| `src/components/invoices/EditTransactionDialog.tsx` | Expand editable fields, move save to footer |
-| `src/lib/api.ts` | `updateTransaction` accepts all DGII-relevant fields |
-| `src/contexts/LanguageContext.tsx` | Update 6 tooltip strings |
+| New migration | Create `payroll_snapshots` table with RLS |
+| `src/components/hr/PayrollSummary.tsx` | Insert snapshot rows on period close |
+| `src/components/hr/IR3ReportView.tsx` | Rewrite to query snapshots by month, add backfill button |
+| `src/contexts/LanguageContext.tsx` | Update help.ir3 tooltip text |
+
+## IR-3 Report New UI
+
+The updated IR-3 will show:
+
+```text
++----------------------------------------------------------+
+| IR-3 -- Retenciones de Asalariados                       |
+| [Month picker] [Year picker] [Copy Total] [Export Excel] |
+|                                                          |
+| Period: Feb 1-15 (closed) + Feb 16-28 (open/calculated)  |
+|                                                          |
+| Cedula | Nombre | Salario | ISR Q1 | ISR Q2 | ISR Mes  |
+| -------|--------|---------|--------|--------|--------- |
+| 001-.. | Juan   | 50,000  | 1,200  | 1,200  | 2,400   |
+| 002-.. | Maria  | 35,000  |   450  |   450  |   900   |
+|        |        |         |        | TOTAL  | 3,300   |
++----------------------------------------------------------+
+```
+
+- Q1 and Q2 columns show the ISR from each bi-monthly period
+- Closed periods pull from snapshots; open periods show calculated estimates
+- A badge indicates whether values are "actual" (from snapshot) or "estimated" (calculated)
+
+## Technical Notes
+
+- The snapshot insert happens inside the existing `closePeriod` mutation in PayrollSummary, using a batch upsert
+- The backfill button recalculates payroll for each closed period using the same `calculateEmployeePayroll` logic, then inserts snapshots
+- Excel export will include both Q1/Q2 columns plus the monthly total
+- The `payroll_snapshots` table is append-only; corrections require reopening and reclosing a period
 

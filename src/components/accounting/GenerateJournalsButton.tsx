@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { useJournalGeneration } from "./useJournalGeneration";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { FileText, Loader2 } from "lucide-react";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 
 export function GenerateJournalsButton({ userId }: Props) {
   const { generate, countUnlinked, generating, progress } = useJournalGeneration(userId);
+  const { t } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [count, setCount] = useState(0);
   const [counting, setCounting] = useState(false);
@@ -39,17 +41,17 @@ export function GenerateJournalsButton({ userId }: Props) {
     <>
       <Button size="sm" variant="outline" onClick={handleClick} disabled={counting || generating}>
         {counting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
-        Generar desde Transacciones
+        {t("accounting.generateFromTx")}
       </Button>
 
       <Dialog open={confirmOpen} onOpenChange={(v) => !generating && setConfirmOpen(v)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Generar Asientos desde Transacciones</DialogTitle>
+            <DialogTitle>{t("accounting.generateJournalsTitle")}</DialogTitle>
             <DialogDescription>
               {count === 0
-                ? "No hay transacciones pendientes de asiento contable."
-                : `Se generarán ${count} asientos como borradores para revisión.`}
+                ? t("accounting.noPendingJournals")
+                : t("accounting.willGenerateDrafts").replace("{count}", String(count))}
             </DialogDescription>
           </DialogHeader>
 
@@ -64,11 +66,11 @@ export function GenerateJournalsButton({ userId }: Props) {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={generating}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleConfirm} disabled={generating || count === 0}>
               {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-              {generating ? "Generando..." : "Generar"}
+              {generating ? t("common.generating") : t("common.generate")}
             </Button>
           </DialogFooter>
         </DialogContent>

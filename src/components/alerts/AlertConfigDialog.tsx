@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAlertConfigurations } from "./useAlertData";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ALERT_LABELS: Record<string, { name: string; unit: string | null }> = {
   vacation_upcoming: { name: "Vacaciones próximas", unit: "días" },
@@ -23,6 +24,7 @@ interface AlertConfigDialogProps {
 
 export function AlertConfigDialog({ open, onOpenChange }: AlertConfigDialogProps) {
   const { data: configs, isLoading } = useAlertConfigurations();
+  const { t } = useLanguage();
   const [localConfigs, setLocalConfigs] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -104,7 +106,7 @@ export function AlertConfigDialog({ open, onOpenChange }: AlertConfigDialogProps
             })}
             <div className="flex justify-end pt-2">
               <Button onClick={handleSave} disabled={saving} size="sm">
-                {saving ? "Guardando..." : "Guardar"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </div>

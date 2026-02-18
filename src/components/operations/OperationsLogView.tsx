@@ -1473,7 +1473,7 @@ export function OperationsLogView() {
                             setIsDialogOpen(true);
                           }}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            {missingClosingData ? "Completar Cierre" : "Editar"}
+                            {missingClosingData ? t("common.completeClosing") : t("common.edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
@@ -1497,19 +1497,19 @@ export function OperationsLogView() {
       <AlertDialog open={!!deleteOperationId} onOpenChange={(open) => !open && setDeleteOperationId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar operación?</AlertDialogTitle>
+            <AlertDialogTitle>{t("operations.deleteOperation")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará la operación y restaurará las cantidades de inventario utilizadas. Esta acción no se puede deshacer.
+              {t("operations.deleteOperationDesc")} {t("common.cannotUndo")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteOperationId && deleteMutation.mutate(deleteOperationId)}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+              {deleteMutation.isPending ? t("common.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

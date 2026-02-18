@@ -60,6 +60,99 @@ const translations: Record<Language, Record<string, string>> = {
     "common.active": "Activo",
     "common.inactive": "Inactivo",
     "common.all": "Todos",
+    "common.saving": "Guardando...",
+    "common.update": "Actualizar",
+    "common.create": "Crear",
+    "common.deleting": "Eliminando...",
+    "common.generating": "Generando...",
+    "common.generate": "Generar",
+    "common.confirm": "Confirmar",
+    "common.reopen": "Reabrir",
+    "common.deactivate": "Desactivar",
+    "common.activate": "Activar",
+    "common.creating": "Creando...",
+    "common.updating": "Actualizando...",
+    "common.closing": "Cerrando...",
+    "common.capture": "Capturar",
+    "common.retake": "Reintentar",
+    "common.upload": "Subir",
+    "common.fullName": "Nombre completo",
+    "common.cedula": "Cédula",
+    "common.bank": "Banco",
+    "common.bankAccount": "Número de Cuenta",
+    "common.accountType": "Tipo de Cuenta",
+    "common.savings": "Ahorros",
+    "common.checking": "Corriente",
+    "common.currency": "Moneda",
+    "common.open": "Abierto",
+    "common.closed": "Cerrado",
+    "common.provider": "Prestador",
+    "common.history": "Historial",
+    "common.noRecords": "Sin registros",
+    "common.selectBank": "Seleccionar banco",
+    "common.createUser": "Crear Usuario",
+    "common.updatePassword": "Actualizar Contraseña",
+    "common.cannotUndo": "Esta acción no se puede deshacer.",
+    "common.confirmDelete": "¿Confirmar eliminación?",
+    "common.registerLoan": "Registrar Préstamo",
+    "common.closePeriod": "Cerrar Período",
+    "common.closeService": "Cerrar Servicio",
+    "common.generateFromTx": "Generar desde Transacciones",
+    "common.generateJournals": "Generar Asientos desde Transacciones",
+    "common.noPendingTx": "No hay transacciones pendientes de asiento contable.",
+    "common.willGenerateDrafts": "Se generarán {count} asientos como borradores para revisión.",
+    "common.completeClosing": "Completar Cierre",
+
+    // HR - Services
+    "services.editService": "Editar Servicio",
+    "services.addService": "Agregar Servicio",
+    "services.providerRequired": "Prestador *",
+    "services.selectProvider": "Seleccionar prestador",
+    "services.masterAccount": "Cuenta Maestra",
+    "services.selectAccount": "Seleccionar cuenta",
+    "services.serviceDescription": "Descripción del Servicio",
+    "services.closeServiceConfirm": "¿Cerrar Servicio?",
+    "services.closeServiceDesc1": "Crear una transacción por",
+    "services.closeServiceDesc2": "Descargar un recibo en PDF",
+    "services.closeServiceDesc3": "Bloquear la edición de este servicio",
+    "services.serviceHistory": "Historial de Servicios",
+    "services.noServicesRecorded": "Sin servicios registrados",
+
+    // HR - Jornaleros
+    "jornaleros.editJornalero": "Editar Jornalero",
+    "jornaleros.addJornalero": "Agregar Jornalero",
+    "jornaleros.noJornalerosFound": "No se encontraron jornaleros",
+    "jornaleros.noJornalerosRegistered": "No hay jornaleros registrados",
+
+    // HR - Service Providers
+    "providers.editProvider": "Editar Prestador",
+    "providers.addProvider": "Agregar Prestador",
+
+    // Settings - Users
+    "users.deleteScheduled": "Eliminación programada para medianoche",
+    "users.cancelFromPending": "Puede cancelar desde 'Eliminaciones Pendientes' si fue un error.",
+    "users.cancelDeletion": "Cancelar eliminación",
+
+    // Operations
+    "operations.deleteOperation": "¿Eliminar operación?",
+    "operations.deleteOperationDesc": "Esta acción eliminará la operación y restaurará las cantidades de inventario utilizadas.",
+
+    // Loans
+    "loans.deleteLoan": "¿Eliminar préstamo?",
+    "loans.deleteLoanDesc": "Esta acción eliminará el préstamo y su historial de pagos.",
+
+    // Fixed Assets
+    "fixedAssets.notesLabel": "Notas",
+
+    // Accounting - Generate Journals
+    "accounting.generateFromTx": "Generar desde Transacciones",
+    "accounting.generateJournalsTitle": "Generar Asientos desde Transacciones",
+    "accounting.noPendingJournals": "No hay transacciones pendientes de asiento contable.",
+    "accounting.willGenerateDrafts": "Se generarán {count} asientos como borradores para revisión.",
+
+    // Payroll
+    "payroll.closePeriodConfirm": "¿Cerrar período?",
+    "payroll.receiptsWillDownload": "Los recibos PDF se descargarán automáticamente.",
 
     // Page titles and subtitles
     "page.dashboard.title": "Panel",
@@ -603,6 +696,99 @@ const translations: Record<Language, Record<string, string>> = {
     "common.active": "Active",
     "common.inactive": "Inactive",
     "common.all": "All",
+    "common.saving": "Saving...",
+    "common.update": "Update",
+    "common.create": "Create",
+    "common.deleting": "Deleting...",
+    "common.generating": "Generating...",
+    "common.generate": "Generate",
+    "common.confirm": "Confirm",
+    "common.reopen": "Reopen",
+    "common.deactivate": "Deactivate",
+    "common.activate": "Activate",
+    "common.creating": "Creating...",
+    "common.updating": "Updating...",
+    "common.closing": "Closing...",
+    "common.capture": "Capture",
+    "common.retake": "Retake",
+    "common.upload": "Upload",
+    "common.fullName": "Full name",
+    "common.cedula": "ID Number",
+    "common.bank": "Bank",
+    "common.bankAccount": "Account Number",
+    "common.accountType": "Account Type",
+    "common.savings": "Savings",
+    "common.checking": "Checking",
+    "common.currency": "Currency",
+    "common.open": "Open",
+    "common.closed": "Closed",
+    "common.provider": "Provider",
+    "common.history": "History",
+    "common.noRecords": "No records",
+    "common.selectBank": "Select bank",
+    "common.createUser": "Create User",
+    "common.updatePassword": "Update Password",
+    "common.cannotUndo": "This action cannot be undone.",
+    "common.confirmDelete": "Confirm deletion?",
+    "common.registerLoan": "Register Loan",
+    "common.closePeriod": "Close Period",
+    "common.closeService": "Close Service",
+    "common.generateFromTx": "Generate from Transactions",
+    "common.generateJournals": "Generate Journals from Transactions",
+    "common.noPendingTx": "No transactions pending journal entry.",
+    "common.willGenerateDrafts": "{count} journal entries will be generated as drafts for review.",
+    "common.completeClosing": "Complete Closing",
+
+    // HR - Services
+    "services.editService": "Edit Service",
+    "services.addService": "Add Service",
+    "services.providerRequired": "Provider *",
+    "services.selectProvider": "Select provider",
+    "services.masterAccount": "Master Account",
+    "services.selectAccount": "Select account",
+    "services.serviceDescription": "Service Description",
+    "services.closeServiceConfirm": "Close Service?",
+    "services.closeServiceDesc1": "Create a transaction for",
+    "services.closeServiceDesc2": "Download a receipt as PDF",
+    "services.closeServiceDesc3": "Lock editing for this service",
+    "services.serviceHistory": "Service History",
+    "services.noServicesRecorded": "No services recorded",
+
+    // HR - Jornaleros
+    "jornaleros.editJornalero": "Edit Day Laborer",
+    "jornaleros.addJornalero": "Add Day Laborer",
+    "jornaleros.noJornalerosFound": "No day laborers found",
+    "jornaleros.noJornalerosRegistered": "No day laborers registered",
+
+    // HR - Service Providers
+    "providers.editProvider": "Edit Provider",
+    "providers.addProvider": "Add Provider",
+
+    // Settings - Users
+    "users.deleteScheduled": "Deletion scheduled for midnight",
+    "users.cancelFromPending": "You can cancel from 'Pending Deletions' if this was a mistake.",
+    "users.cancelDeletion": "Cancel deletion",
+
+    // Operations
+    "operations.deleteOperation": "Delete operation?",
+    "operations.deleteOperationDesc": "This will delete the operation and restore inventory quantities used.",
+
+    // Loans
+    "loans.deleteLoan": "Delete loan?",
+    "loans.deleteLoanDesc": "This will delete the loan and its payment history.",
+
+    // Fixed Assets
+    "fixedAssets.notesLabel": "Notes",
+
+    // Accounting - Generate Journals
+    "accounting.generateFromTx": "Generate from Transactions",
+    "accounting.generateJournalsTitle": "Generate Journals from Transactions",
+    "accounting.noPendingJournals": "No transactions pending journal entry.",
+    "accounting.willGenerateDrafts": "{count} journal entries will be generated as drafts for review.",
+
+    // Payroll
+    "payroll.closePeriodConfirm": "Close period?",
+    "payroll.receiptsWillDownload": "PDF receipts will be downloaded automatically.",
 
     // Page titles and subtitles
     "page.dashboard.title": "Dashboard",

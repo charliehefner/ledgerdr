@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Database } from "@/integrations/supabase/types";
 import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions";
 
@@ -51,6 +52,7 @@ const extractUsername = (email: string) => email.replace("@internal.jord.local",
 
 export function UserManagement() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [useUsername, setUseUsername] = useState(false);
@@ -299,16 +301,16 @@ export function UserManagement() {
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isCreating}
               >
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleCreateUser} disabled={isCreating}>
                 {isCreating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creando...
+                    {t("common.creating")}
                   </>
                 ) : (
-                  "Crear Usuario"
+                  t("common.createUser")
                 )}
               </Button>
             </DialogFooter>
@@ -452,16 +454,16 @@ export function UserManagement() {
               onClick={() => { setResetPasswordUser(null); setResetPassword(""); }}
               disabled={isResetting}
             >
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleResetPassword} disabled={isResetting}>
               {isResetting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Actualizando...
+                  {t("common.updating")}
                 </>
               ) : (
-                "Actualizar Contraseña"
+                t("common.updatePassword")
               )}
             </Button>
           </DialogFooter>

@@ -24,6 +24,8 @@ type Account = {
   allow_posting: boolean | null;
   currency: string | null;
   deleted_at: string | null;
+  english_description: string | null;
+  spanish_description: string | null;
 };
 
 const ACCOUNT_TYPES = ["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"];
@@ -68,7 +70,7 @@ function buildTree(accounts: Account[]): TreeNode[] {
 }
 
 export function ChartOfAccountsView() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -84,6 +86,8 @@ export function ChartOfAccountsView() {
     parent_id: "",
     allow_posting: true,
     currency: "DOP",
+    english_description: "",
+    spanish_description: "",
   });
 
   const { data: accounts = [], isLoading } = useQuery({
@@ -108,6 +112,8 @@ export function ChartOfAccountsView() {
         parent_id: values.parent_id || null,
         allow_posting: values.allow_posting,
         currency: values.currency,
+        english_description: values.english_description || null,
+        spanish_description: values.spanish_description || null,
       };
       if (editing) {
         const { error } = await supabase.from("chart_of_accounts").update(payload).eq("id", editing.id);
@@ -130,7 +136,7 @@ export function ChartOfAccountsView() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ account_code: "", account_name: "", account_type: "ASSET", parent_id: "", allow_posting: true, currency: "DOP" });
+    setForm({ account_code: "", account_name: "", account_type: "ASSET", parent_id: "", allow_posting: true, currency: "DOP", english_description: "", spanish_description: "" });
     setDialogOpen(true);
   };
 
@@ -143,6 +149,8 @@ export function ChartOfAccountsView() {
       parent_id: a.parent_id || "",
       allow_posting: a.allow_posting ?? true,
       currency: a.currency || "DOP",
+      english_description: a.english_description || "",
+      spanish_description: a.spanish_description || "",
     });
     setDialogOpen(true);
   };
@@ -174,7 +182,7 @@ export function ChartOfAccountsView() {
     if (typeFilter !== "all" && node.account_type !== typeFilter) return false;
     if (search) {
       const s = search.toLowerCase();
-      return node.account_code.toLowerCase().includes(s) || node.account_name.toLowerCase().includes(s);
+      return node.account_code.toLowerCase().includes(s) || node.account_name.toLowerCase().includes(s) || (node.english_description || '').toLowerCase().includes(s) || (node.spanish_description || '').toLowerCase().includes(s);
     }
     return true;
   });
@@ -255,7 +263,11 @@ export function ChartOfAccountsView() {
                       <span className="font-mono text-sm">{node.account_code}</span>
                     </div>
                   </TableCell>
-                  <TableCell className={cn(!node.allow_posting && "font-semibold")}>{node.account_name}</TableCell>
+                  <TableCell className={cn(!node.allow_posting && "font-semibold")}>
+                    {language === "en" && node.english_description
+                      ? node.english_description
+                      : node.spanish_description || node.account_name}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn("text-xs", accountTypeColors[node.account_type])}>
                       {node.account_type}
@@ -293,8 +305,16 @@ export function ChartOfAccountsView() {
               </div>
             </div>
             <div>
-              <Label>Nombre</Label>
+              <Label>Nombre (cuenta)</Label>
               <Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder="Efectivo en Caja" />
+            </div>
+            <div>
+              <Label>Descripción en Español</Label>
+              <Input value={form.spanish_description} onChange={e => setForm(f => ({ ...f, spanish_description: e.target.value }))} placeholder="Efectivo en Caja" />
+            </div>
+            <div>
+              <Label>English Description</Label>
+              <Input value={form.english_description} onChange={e => setForm(f => ({ ...f, english_description: e.target.value }))} placeholder="Cash in Hand" />
             </div>
             <div>
               <Label>Cuenta Padre</Label>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,18 +66,20 @@ const emptyFilters: Filters = {
 type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis";
 type SortDir = "asc" | "desc" | null;
 
-const COST_CENTER_LABELS: Record<string, string> = {
-  general: "General",
-  agricultural: "Agrícola",
-  industrial: "Industrial",
+const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
+  es: { general: "General", agricultural: "Agrícola", industrial: "Industrial" },
+  en: { general: "General", agricultural: "Agricultural", industrial: "Industrial" },
 };
 
 export function AccountingReportsView() {
+  const { t, language } = useLanguage();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
+
+  const ccLabels = COST_CENTER_LABELS[language] || COST_CENTER_LABELS.es;
 
   // Fetch dropdown options
   const { data: accounts = [] } = useQuery({
@@ -98,7 +101,7 @@ export function AccountingReportsView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
-        .select("code, spanish_description")
+        .select("code, spanish_description, english_description")
         .order("code");
       if (error) throw error;
       return data;
@@ -110,7 +113,7 @@ export function AccountingReportsView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cbs_codes")
-        .select("code, spanish_description")
+        .select("code, spanish_description, english_description")
         .order("code");
       if (error) throw error;
       return data;
@@ -205,31 +208,44 @@ export function AccountingReportsView() {
   const activeFilterLabels = useMemo(() => {
     if (!activeFilters) return [];
     const parts: string[] = [];
-    if (activeFilters.startDate) parts.push(`Desde: ${formatExcelDate(activeFilters.startDate)}`);
-    if (activeFilters.endDate) parts.push(`Hasta: ${formatExcelDate(activeFilters.endDate)}`);
-    if (activeFilters.costCenter !== "all") parts.push(`Centro: ${COST_CENTER_LABELS[activeFilters.costCenter] || activeFilters.costCenter}`);
-    if (activeFilters.accountCode !== "all") parts.push(`Cuenta: ${activeFilters.accountCode}`);
-    if (activeFilters.projectCode !== "all") parts.push(`Proyecto: ${activeFilters.projectCode}`);
+    if (activeFilters.startDate) parts.push(`${t("acctReport.from")}: ${formatExcelDate(activeFilters.startDate)}`);
+    if (activeFilters.endDate) parts.push(`${t("acctReport.to")}: ${formatExcelDate(activeFilters.endDate)}`);
+    if (activeFilters.costCenter !== "all") parts.push(`${t("acctReport.center")}: ${ccLabels[activeFilters.costCenter] || activeFilters.costCenter}`);
+    if (activeFilters.accountCode !== "all") parts.push(`${t("acctReport.account")}: ${activeFilters.accountCode}`);
+    if (activeFilters.projectCode !== "all") parts.push(`${t("acctReport.project")}: ${activeFilters.projectCode}`);
     if (activeFilters.cbsCode !== "all") parts.push(`CBS: ${activeFilters.cbsCode}`);
-    if (activeFilters.supplierName) parts.push(`Proveedor: ${activeFilters.supplierName}`);
+    if (activeFilters.supplierName) parts.push(`${t("acctReport.supplier").split(" /")[0]}: ${activeFilters.supplierName}`);
     return parts;
-  }, [activeFilters]);
+  }, [activeFilters, t, ccLabels]);
+
+  const colHeaders: [SortKey, string][] = [
+    ["transaction_date", t("acctReport.col.date")],
+    ["master_acct_code", t("acctReport.col.account")],
+    ["project_code", t("acctReport.col.project")],
+    ["cbs_code", "CBS"],
+    ["cost_center", t("acctReport.col.center")],
+    ["name", t("acctReport.col.name")],
+    ["description", t("acctReport.col.description")],
+    ["currency", t("acctReport.col.currency")],
+    ["amount", t("acctReport.col.amount")],
+    ["itbis", "ITBIS"],
+  ];
 
   const exportToExcel = async () => {
-    if (sorted.length === 0) { toast.error("No hay datos para exportar"); return; }
+    if (sorted.length === 0) { toast.error(t("acctReport.noDataExport")); return; }
     try {
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet("Informe Contable");
+      const ws = wb.addWorksheet(t("acctReport.reportTitle"));
       ws.columns = [
-        { header: "Fecha", key: "date", width: 14 },
-        { header: "Cuenta", key: "account", width: 14 },
-        { header: "Proyecto", key: "project", width: 12 },
+        { header: t("acctReport.col.date"), key: "date", width: 14 },
+        { header: t("acctReport.col.account"), key: "account", width: 14 },
+        { header: t("acctReport.col.project"), key: "project", width: 12 },
         { header: "CBS", key: "cbs", width: 12 },
-        { header: "Centro Costo", key: "cc", width: 14 },
-        { header: "Nombre", key: "name", width: 22 },
-        { header: "Descripción", key: "desc", width: 30 },
-        { header: "Moneda", key: "currency", width: 10 },
-        { header: "Monto", key: "amount", width: 14 },
+        { header: t("acctReport.costCenter"), key: "cc", width: 14 },
+        { header: t("acctReport.col.name"), key: "name", width: 22 },
+        { header: t("acctReport.col.description"), key: "desc", width: 30 },
+        { header: t("acctReport.col.currency"), key: "currency", width: 10 },
+        { header: t("acctReport.col.amount"), key: "amount", width: 14 },
         { header: "ITBIS", key: "itbis", width: 12 },
       ];
       sorted.forEach((tx: any) => {
@@ -238,7 +254,7 @@ export function AccountingReportsView() {
           account: tx.master_acct_code || "-",
           project: tx.project_code || "-",
           cbs: tx.cbs_code || "-",
-          cc: COST_CENTER_LABELS[tx.cost_center || "general"] || "General",
+          cc: ccLabels[tx.cost_center || "general"] || "General",
           name: tx.name || "-",
           desc: tx.description || "-",
           currency: tx.currency,
@@ -255,42 +271,42 @@ export function AccountingReportsView() {
       const a = document.createElement("a");
       a.href = url;
       const ds = [activeFilters?.startDate, activeFilters?.endDate].filter(Boolean).join("_to_");
-      a.download = `informe_contable_${ds || format(new Date(), "yyyy-MM-dd")}.xlsx`;
+      a.download = `${language === "en" ? "accounting_report" : "informe_contable"}_${ds || format(new Date(), "yyyy-MM-dd")}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Excel exportado exitosamente");
+      toast.success(t("acctReport.excelSuccess"));
     } catch (e) {
       console.error(e);
-      toast.error("Error al exportar Excel");
+      toast.error(t("acctReport.excelError"));
     }
   };
 
   const exportToPDF = () => {
-    if (sorted.length === 0) { toast.error("No hay datos para exportar"); return; }
+    if (sorted.length === 0) { toast.error(t("acctReport.noDataExport")); return; }
     const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(18);
-    doc.text("Informe Contable", 14, 22);
+    doc.text(t("acctReport.reportTitle"), 14, 22);
     doc.setFontSize(10);
-    doc.text(`Generado: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`${t("acctReport.generated")}: ${new Date().toLocaleDateString()}`, 14, 30);
     let y = 36;
     if (activeFilterLabels.length) {
-      doc.text(`Filtros: ${activeFilterLabels.join(" | ")}`, 14, y);
+      doc.text(`${t("acctReport.filters")}: ${activeFilterLabels.join(" | ")}`, 14, y);
       y += 6;
     }
-    doc.text(`Total Transacciones: ${sorted.length}`, 14, y);
+    doc.text(`${t("acctReport.totalTransactions")}: ${sorted.length}`, 14, y);
     y += 6;
     Object.entries(totalsByCurrency).forEach(([cur, total]) => {
-      doc.text(`Total ${cur}: ${formatCurrency(total as number, cur)}`, 14, y);
+      doc.text(`${t("common.total")} ${cur}: ${formatCurrency(total as number, cur)}`, 14, y);
       y += 6;
     });
 
-    const headers = ["Fecha", "Cuenta", "Proyecto", "CBS", "Centro", "Nombre", "Descripción", "Moneda", "Monto", "ITBIS"];
+    const headers = colHeaders.map(([, label]) => label);
     const body = sorted.map((tx: any) => [
       formatExcelDate(tx.transaction_date),
       tx.master_acct_code || "-",
       tx.project_code || "-",
       tx.cbs_code || "-",
-      COST_CENTER_LABELS[tx.cost_center || "general"] || "General",
+      ccLabels[tx.cost_center || "general"] || "General",
       tx.name || "-",
       tx.description || "-",
       tx.currency,
@@ -307,21 +323,24 @@ export function AccountingReportsView() {
     });
 
     const ds = [activeFilters?.startDate, activeFilters?.endDate].filter(Boolean).join("_to_");
-    doc.save(`informe_contable_${ds || format(new Date(), "yyyy-MM-dd")}.pdf`);
-    toast.success("PDF exportado exitosamente");
+    doc.save(`${language === "en" ? "accounting_report" : "informe_contable"}_${ds || format(new Date(), "yyyy-MM-dd")}.pdf`);
+    toast.success(t("acctReport.pdfSuccess"));
   };
+
+  const getDesc = (item: { spanish_description: string; english_description: string }) =>
+    language === "en" ? item.english_description : item.spanish_description;
 
   return (
     <div className="space-y-4">
       {!activeFilters ? (
         <EmptyState
           icon={FileBarChart}
-          title="Informes Contables"
-          description="Configure los filtros para generar un informe de transacciones."
+          title={t("acctReport.title")}
+          description={t("acctReport.description")}
           action={
             <Button onClick={() => { setFilters(emptyFilters); setFiltersOpen(true); }}>
               <Filter className="h-4 w-4 mr-1" />
-              Generar Informe
+              {t("acctReport.generateReport")}
             </Button>
           }
         />
@@ -332,7 +351,7 @@ export function AccountingReportsView() {
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => { setFilters(activeFilters); setFiltersOpen(true); }}>
                 <Filter className="h-4 w-4 mr-1" />
-                Modificar Filtros
+                {t("acctReport.modifyFilters")}
               </Button>
               {activeFilterLabels.map((l, i) => (
                 <Badge key={i} variant="secondary" className="text-xs">{l}</Badge>
@@ -340,14 +359,14 @@ export function AccountingReportsView() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {sorted.length} transacciones
+                {sorted.length} {t("acctReport.transactions")}
                 {Object.entries(totalsByCurrency).map(([c, t]) => ` | ${c}: ${formatCurrency(t as number, c)}`).join("")}
               </span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm">
                     <Download className="h-4 w-4 mr-1" />
-                    Exportar
+                    {t("acctReport.export")}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-popover">
@@ -366,26 +385,15 @@ export function AccountingReportsView() {
 
           {/* Results Table */}
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+            <div className="p-8 text-center text-muted-foreground">{t("acctReport.loading")}</div>
           ) : sorted.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">No se encontraron transacciones con los filtros seleccionados.</div>
+            <div className="p-8 text-center text-muted-foreground">{t("acctReport.noResults")}</div>
           ) : (
             <div className="border rounded-lg overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {([
-                      ["transaction_date", "Fecha"],
-                      ["master_acct_code", "Cuenta"],
-                      ["project_code", "Proyecto"],
-                      ["cbs_code", "CBS"],
-                      ["cost_center", "Centro"],
-                      ["name", "Nombre"],
-                      ["description", "Descripción"],
-                      ["currency", "Moneda"],
-                      ["amount", "Monto"],
-                      ["itbis", "ITBIS"],
-                    ] as [SortKey, string][]).map(([key, label]) => (
+                    {colHeaders.map(([key, label]) => (
                       <TableHead key={key} className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort(key)}>
                         <span className="inline-flex items-center">{label}<SortIcon col={key} /></span>
                       </TableHead>
@@ -405,7 +413,7 @@ export function AccountingReportsView() {
                           (tx.cost_center || "general") === "industrial" ? "bg-blue-100 text-blue-800 border-blue-200" :
                           "bg-muted text-muted-foreground"
                         }>
-                          {COST_CENTER_LABELS[tx.cost_center || "general"] || "General"}
+                          {ccLabels[tx.cost_center || "general"] || "General"}
                         </Badge>
                       </TableCell>
                       <TableCell className="truncate max-w-[150px]">{tx.name || "-"}</TableCell>
@@ -426,17 +434,17 @@ export function AccountingReportsView() {
       <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Configurar Informe Contable</DialogTitle>
+            <DialogTitle>{t("acctReport.dialogTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {/* Date range */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>Fecha Inicio</Label>
+                <Label>{t("acctReport.startDate")}</Label>
                 <Input type="date" value={filters.startDate} onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label>Fecha Fin</Label>
+                <Label>{t("acctReport.endDate")}</Label>
                 <Input type="date" value={filters.endDate} onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))} />
               </div>
             </div>
@@ -444,23 +452,23 @@ export function AccountingReportsView() {
             {/* 4-col grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
-                <Label>Centro de Costo</Label>
+                <Label>{t("acctReport.costCenter")}</Label>
                 <Select value={filters.costCenter} onValueChange={v => setFilters(f => ({ ...f, costCenter: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">
-                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="all">{t("common.all")}</SelectItem>
                     <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="agricultural">Agrícola</SelectItem>
-                    <SelectItem value="industrial">Industrial</SelectItem>
+                    <SelectItem value="agricultural">{ccLabels.agricultural}</SelectItem>
+                    <SelectItem value="industrial">{ccLabels.industrial}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Cuenta</Label>
+                <Label>{t("acctReport.account")}</Label>
                 <Select value={filters.accountCode} onValueChange={v => setFilters(f => ({ ...f, accountCode: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover max-h-60">
-                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="all">{t("common.all")}</SelectItem>
                     {accounts.map(a => (
                       <SelectItem key={a.account_code} value={a.account_code}>
                         {a.account_code} – {a.account_name}
@@ -470,14 +478,14 @@ export function AccountingReportsView() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Proyecto</Label>
+                <Label>{t("acctReport.project")}</Label>
                 <Select value={filters.projectCode} onValueChange={v => setFilters(f => ({ ...f, projectCode: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover max-h-60">
-                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="all">{t("common.all")}</SelectItem>
                     {projects.map(p => (
                       <SelectItem key={p.code} value={p.code}>
-                        {p.code} – {p.spanish_description}
+                        {p.code} – {getDesc(p)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -488,10 +496,10 @@ export function AccountingReportsView() {
                 <Select value={filters.cbsCode} onValueChange={v => setFilters(f => ({ ...f, cbsCode: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover max-h-60">
-                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="all">{t("common.all")}</SelectItem>
                     {cbsCodes.map(c => (
                       <SelectItem key={c.code} value={c.code}>
-                        {c.code} – {c.spanish_description}
+                        {c.code} – {getDesc(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -501,19 +509,19 @@ export function AccountingReportsView() {
 
             {/* Supplier */}
             <div className="space-y-1">
-              <Label>Proveedor / Nombre</Label>
+              <Label>{t("acctReport.supplier")}</Label>
               <Input
                 value={filters.supplierName}
                 onChange={e => setFilters(f => ({ ...f, supplierName: e.target.value }))}
-                placeholder="Buscar por nombre..."
+                placeholder={t("acctReport.supplierPlaceholder")}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFiltersOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setFiltersOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={applyFilters}>
               <FileBarChart className="h-4 w-4 mr-1" />
-              Ver Informe
+              {t("acctReport.viewReport")}
             </Button>
           </DialogFooter>
         </DialogContent>

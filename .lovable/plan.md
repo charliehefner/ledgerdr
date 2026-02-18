@@ -1,91 +1,86 @@
 
 
-# IR-3 and IR-17 Report Generators
+# IT-1: Declaracion Mensual de ITBIS
 
-## What We're Building
+## What is the IT-1?
 
-Two new report cards inside the existing **TSS tab** (rename it to something like "Reportes Gubernamentales" or keep it as a broader reporting tab) that calculate and display the exact values needed to fill out the IR-3 and IR-17 forms on the DGII portal.
+The IT-1 is the monthly ITBIS (VAT) declaration form filed on the DGII portal. It calculates the net ITBIS to pay (or carry forward) based on:
 
-Since these forms are submitted online (not as file uploads), the reports will show summary tables with the totals organized by the form's sections, with a "Copy" button for easy entry into the DGII portal.
+- **ITBIS Cobrado** (collected): ITBIS from sales (607 transactions)
+- **ITBIS Pagado** (paid): ITBIS from purchases (606 transactions)
+- **ITBIS Retenido por Terceros**: ITBIS withheld by third parties on your sales (if any)
+- **Saldo a favor anterior**: Carry-forward credit from prior months (manual entry)
 
----
+The formula: **ITBIS a Pagar = ITBIS Cobrado - ITBIS Pagado - Saldo Anterior**
 
-## IR-3: Retenciones de Asalariados
+If the result is negative, it becomes a "saldo a favor" (credit) to carry to the next month.
 
-**Purpose**: Monthly total of ISR withheld from employee salaries.
+## Where It Fits
 
-**Data source**: Payroll periods and the ISR calculation logic already in `PayrollSummary.tsx`.
+This belongs in the **Accounting module's DGII tab**, right alongside the existing 606/607/608 reports since it uses the exact same data. A new sub-tab "IT-1" will be added.
 
-**Report output**:
-- Period selector (month/year)
-- Aggregate ISR withheld across the 2 payroll periods in that month
-- Show per-employee breakdown: Name, Cedula, Salary, ISR Withheld
-- Total ISR withheld (the value to enter in IR-3)
-- Export to Excel for records
+## Data Sources (Already Available)
 
-**Calculation**: Sum the ISR from both bi-monthly payroll periods (1-15 and 16-end) for the selected month. Reuses the existing `calculateAnnualISR` function and TSS rate (5.91%).
+All data already exists in the `transactions` table:
 
----
+| Source | Filter | Field |
+|---|---|---|
+| ITBIS Cobrado | `transaction_direction = 'sale'`, not void | `itbis` column |
+| ITBIS Pagado | `transaction_direction = 'purchase'` (or null), not void | `itbis` column |
+| ITBIS Retenido a terceros | Same purchases | `itbis_retenido` column |
 
-## IR-17: Otras Retenciones y Retribuciones Complementarias
+No database changes required.
 
-**Purpose**: Monthly total of ISR retained from third-party payments + retribuciones complementarias tax.
+## Report Layout
 
-**Data source**: 
-- `transactions` table where `isr_retenido > 0` for the selected month (Section I: Retenciones a terceros)
-- `employee_benefits` for retribuciones complementarias (Section II)
+The IT-1 report card will display:
 
-**Report output**:
-- Period selector (month/year)
-- **Section I - Retenciones por servicios**: List of transactions with ISR retention, grouped by type (alquileres 10%, honorarios 10%, etc.), with subtotals
-- **Section II - Retribuciones Complementarias**: Employee benefits (phone, gas, bonuses) with 27% tax calculation using gross-up
-- **Section III - ITBIS Retenido**: Sum of `itbis_retenido` from transactions
-- Grand total to pay
-- Export to Excel
-
----
+```text
++--------------------------------------------------+
+| IT-1 - ITBIS Mensual          [Mes] [Ano]        |
++--------------------------------------------------+
+| Seccion I: Operaciones                            |
+|   Total Ventas Gravadas .......... RD$ XXX,XXX.XX |
+|   ITBIS Cobrado .................. RD$  XX,XXX.XX |
+|                                                    |
+| Seccion II: Deducciones                           |
+|   Total Compras con ITBIS ........ RD$ XXX,XXX.XX |
+|   ITBIS Pagado en Compras ........ RD$  XX,XXX.XX |
+|   ITBIS Retenido por Terceros .... RD$      XX.XX |
+|   Saldo a Favor Anterior ......... RD$       0.00 | <-- manual input
+|   Total Deducciones .............. RD$  XX,XXX.XX |
+|                                                    |
+| Resultado                                         |
+|   ITBIS a Pagar / (Saldo a Favor) RD$   X,XXX.XX |
++--------------------------------------------------+
+| [Copiar Total]  [Exportar Excel]                  |
++--------------------------------------------------+
+```
 
 ## Technical Changes
 
 | File | Change |
 |---|---|
-| `src/components/hr/TSSAutodeterminacionView.tsx` | Rename/restructure to be a container with sub-tabs or accordion sections for TSS AM, IR-3, and IR-17 |
-| `src/components/hr/IR3ReportView.tsx` | **New** - IR-3 summary report component |
-| `src/components/hr/IR17ReportView.tsx` | **New** - IR-17 summary report component |
-| `src/pages/HumanResources.tsx` | No change needed (TSS tab already exists) |
+| `src/components/accounting/IT1ReportView.tsx` | **New** -- IT-1 summary component |
+| `src/components/accounting/DGIIReportsView.tsx` | Add "IT-1" as a 4th sub-tab alongside 606, 607, 608 |
 
-### IR-3 Implementation
+### IT1ReportView Implementation
 
-- Query `payroll_periods` for the two periods in the selected month
-- Query `employee_timesheets` for those periods
-- Reuse the ISR calculation logic from `PayrollSummary.tsx` (extract into a shared utility)
-- Display a table: Employee | Cedula | Salario Cotizable | ISR Retenido
-- Footer row with total ISR to declare
+- Reuses the same month/year selector already passed from `DGIIReportsView`
+- Receives `purchases` and `sales` arrays already fetched by the parent (no extra queries)
+- Calculates:
+  - `totalVentasGravadas`: sum of `amount` from sales where `itbis > 0`
+  - `itbisCobrado`: sum of `itbis` from sales
+  - `totalComprasConItbis`: sum of `amount` from purchases where `itbis > 0`
+  - `itbisPagado`: sum of `itbis` from purchases
+  - `itbisRetenidoTerceros`: sum of `itbis_retenido` from purchases
+  - `saldoAnterior`: manual input field (default 0)
+  - `resultado`: `itbisCobrado - itbisPagado - itbisRetenidoTerceros - saldoAnterior`
+- "Copy Total" and "Export Excel" buttons following existing patterns
+- Summary display matching DGII IT-1 form sections for easy portal entry
 
-### IR-17 Implementation
+### Parent Changes (DGIIReportsView)
 
-- Query `transactions` for the selected month where `isr_retenido > 0` OR `itbis_retenido > 0`
-- Group by retention type (alquileres, honorarios, otros)
-- Query `employee_benefits` and calculate 27% retribuciones complementarias tax with gross-up formula: `benefit_amount / 0.73 * 0.27`
-- Display in sections matching the IR-17 form layout
-
-### Shared Utility Extraction
-
-Extract the ISR calculation functions from `PayrollSummary.tsx` into a shared file `src/lib/payrollCalculations.ts` so both `PayrollSummary` and `IR3ReportView` can use them without duplication:
-- `calculateAnnualISR()`
-- ISR brackets constant
-- TSS rate constant
-
----
-
-## UI Layout
-
-The TSS tab will show three cards stacked vertically (or as sub-tabs):
-1. TSS Autodeterminacion Mensual (existing)
-2. IR-3 Retenciones de Asalariados (new)
-3. IR-17 Otras Retenciones (new)
-
-Each card has its own month/year selector, summary table, and export button.
-
-No database changes required -- all data already exists.
+- Add a 4th tab trigger: `IT-1 - ITBIS`
+- Pass existing `purchases` and `sales` data to `IT1ReportView` as props (zero extra queries)
 

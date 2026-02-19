@@ -1,114 +1,123 @@
 
 
-# Profit & Loss and Balance Sheet for Accounting Module
+# Restructure P&L into Standard Financial Statement Format
 
-## Overview
+## Problem
+The current P&L lists all income and expense accounts in a flat list with just two totals (Total Income, Total Expenses, Net Income). A proper financial statement groups accounts into meaningful categories with intermediate subtotals.
 
-Add two new financial statement views -- **Estado de Resultados (P&L)** and **Balance General (Balance Sheet)** -- to the Accounting module. Since no journals have been posted yet, these reports will pull directly from the `transactions` table (grouped by account), giving you immediately useful reports. They can later be switched to use posted journal data as the accounting workflow matures.
+## Proposed Structure
 
-## Data Source Strategy
+Based on your chart of accounts structure (European-style numbering), the P&L will be reorganized into this standard format:
 
-Since the journal posting workflow is not yet in active use (0 posted journals), the reports will aggregate non-void transactions by their `master_acct_code`, joining to `chart_of_accounts` to determine account type, hierarchy, and display names. This gives accurate results right away.
-
-- **P&L** shows INCOME and EXPENSE accounts for a selected date range
-- **Balance Sheet** shows ASSET, LIABILITY, and EQUITY accounts as of a selected date
-
-## UI Design
-
-Both reports will be added as **sub-tabs** (or a selector) within the existing "Informes" tab, keeping the current transaction-level report as well:
-
-**Report Selector** (dropdown or toggle at the top):
-1. Detalle de Transacciones (current view -- default)
-2. Estado de Resultados (P&L)
-3. Balance General (Balance Sheet)
-
-Each financial statement will include:
-- Date range filter (P&L) or "as of" date filter (Balance Sheet)
-- Cost center filter (all / general / agricultural / industrial)
-- Hierarchical account display using the chart of accounts tree structure
-- Subtotals by account group (parent accounts)
-- Grand totals (Net Income for P&L; Assets = Liabilities + Equity check for Balance Sheet)
-- Export to Excel and PDF
-
-### P&L Layout
 ```text
-+----------------------------------------------+
-| Estado de Resultados                         |
-| Periodo: 01/01/2025 - 31/12/2025            |
-+----------------------------------------------+
-| Cuenta         | Descripcion      | Monto   |
-+----------------------------------------------+
-| INGRESOS                                     |
-|   3010         | Ventas de Azucar | 500,000  |
-|   3020         | Otros Ingresos   |  50,000  |
-|                | Total Ingresos   | 550,000  |
-+----------------------------------------------+
-| GASTOS                                       |
-|   4010         | Salarios         | 200,000  |
-|   5010         | Combustible      |  80,000  |
-|                | Total Gastos     | 280,000  |
-+----------------------------------------------+
-|                | UTILIDAD NETA    | 270,000  |
-+----------------------------------------------+
++--------------------------------------------------+
+| ESTADO DE RESULTADOS                             |
+| Periodo: 01/01/2025 - 31/12/2025                |
++--------------------------------------------------+
+|                                                  |
+| INGRESOS OPERACIONALES (30-39)                   |
+|   3010  Ventas Skymining nacionales    500,000   |
+|   3410  Ventas de servicios             50,000   |
+|                         Total Ingresos  550,000  |
+|                                                  |
+| COSTO DE VENTAS (40-49)                          |
+|   4040  Compra de gasoleo               80,000   |
+|   4030  Compra de plaguicidas           30,000   |
+|                    Total Costo Ventas   110,000  |
+|                                                  |
+| ============================================     |
+| UTILIDAD BRUTA                          440,000  |
+| ============================================     |
+|                                                  |
+| GASTOS OPERACIONALES                             |
+|                                                  |
+|   Gastos de Local (50-51)                        |
+|     5010  Alquiler                      20,000   |
+|     5020  Electricidad                   5,000   |
+|                           Subtotal      25,000   |
+|                                                  |
+|   Maquinaria y Equipo (52-53)                    |
+|     5210  Alquiler maquinaria           15,000   |
+|                           Subtotal      15,000   |
+|                                                  |
+|   Vehiculos (54)                                 |
+|     5410  Combustible vehiculos         10,000   |
+|                           Subtotal      10,000   |
+|                                                  |
+|   Gastos de Personal (60-65)                     |
+|     6010  Salarios                     120,000   |
+|     6510  Seguro social                 18,000   |
+|                           Subtotal     138,000   |
+|                                                  |
+|   Depreciacion y Amortizacion (69)               |
+|     6900  Depreciacion                  30,000   |
+|                           Subtotal      30,000   |
+|                                                  |
+|              Total Gastos Operacionales 218,000  |
+|                                                  |
+| ============================================     |
+| UTILIDAD OPERACIONAL (EBIT)             222,000  |
+| ============================================     |
+|                                                  |
+| OTROS INGRESOS / GASTOS (70-84)                  |
+|   7010  Intereses ganados                2,000   |
+|   7310  Intereses pagados              (5,000)   |
+|                    Total Otros          (3,000)   |
+|                                                  |
+| ============================================     |
+| UTILIDAD NETA                           219,000  |
+| ============================================     |
++--------------------------------------------------+
 ```
 
-### Balance Sheet Layout
-```text
-+----------------------------------------------+
-| Balance General                              |
-| Al: 31/12/2025                               |
-+----------------------------------------------+
-| ACTIVOS                                      |
-|   1100         | Efectivo         | 300,000  |
-|   1200         | Cuentas x Cobrar | 150,000  |
-|                | Total Activos    | 450,000  |
-+----------------------------------------------+
-| PASIVOS                                      |
-|   2110         | Cuentas x Pagar  | 100,000  |
-|                | Total Pasivos    | 100,000  |
-+----------------------------------------------+
-| PATRIMONIO                                   |
-|   2081         | Capital Social   |  80,000  |
-|                | Utilidad Periodo | 270,000  |
-|                | Total Patrimonio | 350,000  |
-+----------------------------------------------+
-| PASIVOS + PATRIMONIO                | 450,000|
-+----------------------------------------------+
-```
+## Category Mapping
 
-## Technical Plan
+The account code prefixes map to these P&L sections:
 
-### 1. New Component: `ProfitLossView.tsx`
-- Date range picker (start/end) and cost center filter
-- Queries `transactions` table filtered by date range, is_void=false, cost_center
-- Joins to `chart_of_accounts` to get account_type, account hierarchy, and descriptions
-- Groups totals by account_code for INCOME and EXPENSE types
-- Renders hierarchical tree with subtotals per parent group
-- Shows Net Income (Total Income - Total Expenses) at bottom
-- Excel and PDF export following existing patterns
+| Prefix | Category (ES) | Category (EN) | Section |
+|--------|--------------|---------------|---------|
+| 30-39 | Ingresos Operacionales | Operating Revenue | Revenue |
+| 40-49 | Costo de Ventas | Cost of Goods Sold | COGS |
+| 50-51 | Gastos de Local | Premises Costs | OpEx |
+| 52-53 | Maquinaria y Equipo | Machinery & Equipment | OpEx |
+| 54 | Vehiculos | Vehicles | OpEx |
+| 55-56 | Herramientas y Oficina | Tools & Office | OpEx |
+| 57-59 | Administracion y Varios | Admin & Miscellaneous | OpEx |
+| 60-65 | Gastos de Personal | Personnel Costs | OpEx |
+| 69 | Depreciacion | Depreciation & Amortization | OpEx |
+| 70-84 | Otros Ingresos/Gastos | Other Income/Expenses | Financial |
+| 89 | Extraordinarios | Extraordinary Items | Financial |
 
-### 2. New Component: `BalanceSheetView.tsx`
-- "As of" date picker and cost center filter
-- Queries all non-void transactions up to the selected date
-- Groups by account_code for ASSET, LIABILITY, and EQUITY types
-- For Balance Sheet, also calculates retained earnings (net income from INCOME/EXPENSE accounts) and includes it in the Equity section
-- Renders hierarchical tree with subtotals
-- Shows balancing check (Assets = Liabilities + Equity)
-- Excel and PDF export
+## Key Intermediate Subtotals
 
-### 3. Update `AccountingReportsView.tsx`
-- Add a report-type selector (dropdown or segmented control) at the top
-- "Detalle" shows the existing transaction table view
-- "Estado de Resultados" renders `ProfitLossView`
-- "Balance General" renders `BalanceSheetView`
+1. **Total Ingresos** (Total Revenue)
+2. **Utilidad Bruta** = Revenue - COGS (Gross Profit)
+3. **Total Gastos Operacionales** (Total Operating Expenses)
+4. **Utilidad Operacional (EBIT)** = Gross Profit - Operating Expenses
+5. **Utilidad Neta** = EBIT + Other Income/Expenses (Net Income)
 
-### 4. Translation Keys
-- Add Spanish/English labels for all new UI elements to the language context
+## Technical Changes
 
-### Key Technical Details
-- Account classification uses the `account_type` field from `chart_of_accounts` (ASSET, LIABILITY, EQUITY, INCOME, EXPENSE)
-- Hierarchical display uses `parent_id` relationships already in the chart
-- For purchases (`transaction_direction = 'purchase'`), amounts are debits; for sales, amounts are credits
-- Currency handling: separate columns/totals for DOP and USD transactions
-- Both reports respect the bilingual `getDescription()` pattern
+### File: `src/components/accounting/ProfitLossView.tsx`
 
+- Define a `PL_CATEGORIES` constant array that maps 2-digit prefix ranges to category names (bilingual) and section type (revenue / cogs / opex / financial)
+- Replace the current flat `buildRows()` with a `buildCategorizedStatement()` function that:
+  - Groups accounts by their prefix into the defined categories
+  - Only shows categories that have non-zero balances
+  - Calculates subtotals per category
+  - Calculates the intermediate totals (Gross Profit, EBIT, Net Income)
+- Update the table rendering to show:
+  - Section headers (bold, colored background) for Revenue, COGS, OpEx, Financial
+  - Category sub-headers (semi-bold) within OpEx
+  - Individual account rows indented under their category
+  - Category subtotals
+  - Highlighted intermediate total rows (Gross Profit, EBIT) with heavier borders
+  - Net Income row at bottom with prominent styling
+- Update Excel and PDF exports to match the new hierarchical layout with all intermediate totals
+
+### File: `src/contexts/LanguageContext.tsx`
+
+- Add translation keys for new labels: `pl.cogs`, `pl.grossProfit`, `pl.operatingExpenses`, `pl.ebit`, `pl.financialItems`, `pl.premises`, `pl.machinery`, `pl.vehicles`, `pl.toolsOffice`, `pl.admin`, `pl.personnel`, `pl.depreciation`, `pl.extraordinary`
+
+### Balance Sheet
+No changes needed -- balance sheet format is already appropriate for its purpose.

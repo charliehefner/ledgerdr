@@ -37,6 +37,8 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ProfitLossView } from "./ProfitLossView";
+import { BalanceSheetView } from "./BalanceSheetView";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ExcelJS from "exceljs";
@@ -71,8 +73,11 @@ const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
   en: { general: "General", agricultural: "Agricultural", industrial: "Industrial" },
 };
 
+type ReportType = "detail" | "pl" | "bs";
+
 export function AccountingReportsView() {
   const { t, language } = useLanguage();
+  const [reportType, setReportType] = useState<ReportType>("detail");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [activeFilters, setActiveFilters] = useState<Filters | null>(null);
@@ -332,6 +337,26 @@ export function AccountingReportsView() {
 
   return (
     <div className="space-y-4">
+      {/* Report Type Selector */}
+      <div className="flex items-center gap-2">
+        <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+          <SelectTrigger className="w-64">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-popover">
+            <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
+            <SelectItem value="pl">{t("pl.title")}</SelectItem>
+            <SelectItem value="bs">{t("bs.title")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {reportType === "pl" ? (
+        <ProfitLossView />
+      ) : reportType === "bs" ? (
+        <BalanceSheetView />
+      ) : (
+      <>
       {!activeFilters ? (
         <EmptyState
           icon={FileBarChart}
@@ -526,6 +551,8 @@ export function AccountingReportsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </div>
   );
 }

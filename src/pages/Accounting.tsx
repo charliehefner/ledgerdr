@@ -3,6 +3,7 @@ import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
 import { AccountingReportsView } from "@/components/accounting/AccountingReportsView";
 import { FixedAssetsView } from "@/components/equipment/FixedAssetsView";
 import { JournalView } from "@/components/accounting/JournalView";
+import { PeriodsView } from "@/components/accounting/PeriodsView";
 import { DGIIReportsView } from "@/components/accounting/DGIIReportsView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -33,6 +34,11 @@ export default function Accounting() {
               value: "journal",
               label: t("accounting.journal"),
               content: <JournalView />,
+            },
+            {
+              value: "periods",
+              label: t("accounting.periods"),
+              content: <PeriodsView />,
             },
             {
               value: "dgii",

@@ -184,6 +184,7 @@ const translations: Record<Language, Record<string, string>> = {
     "accounting.reports": "Informes",
     "accounting.fixedAssets": "Activos Fijos",
     "accounting.journal": "Diario",
+    "accounting.periods": "Períodos",
 
     // Accounting Reports
     "acctReport.title": "Informes Contables",
@@ -941,6 +942,7 @@ const translations: Record<Language, Record<string, string>> = {
     "accounting.reports": "Reports",
     "accounting.fixedAssets": "Fixed Assets",
     "accounting.journal": "Journal",
+    "accounting.periods": "Periods",
 
     // Accounting Reports
     "acctReport.title": "Accounting Reports",

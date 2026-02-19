@@ -53,8 +53,8 @@ interface AccountRow {
 interface GroupedAccount {
   code: string;
   name: string;
-  dop: number;
-  usd: number;
+  rdTotal: number;
+  usTotal: number;
   isParent?: boolean;
   children?: GroupedAccount[];
 }
@@ -98,23 +98,23 @@ export function BalanceSheetView() {
     return transactions.filter((tx: any) => (tx.cost_center || "general") === costCenter);
   }, [transactions, costCenter]);
 
+  // RD$ includes converted USD amounts; US$ shows raw USD
   const accountTotals = useMemo(() => {
-    const totals: Record<string, { dop: number; usd: number }> = {};
+    const totals: Record<string, { rd: number; us: number }> = {};
     filteredTx.forEach((tx: any) => {
       const code = tx.master_acct_code;
       if (!code) return;
       const amount = parseFloat(tx.amount) || 0;
-      if (!totals[code]) totals[code] = { dop: 0, usd: 0 };
+      if (!totals[code]) totals[code] = { rd: 0, us: 0 };
       if (tx.currency === "USD") {
-        totals[code].usd += amount;
+        totals[code].us += amount;
+        totals[code].rd += amount * exchangeRate;
       } else {
-        totals[code].dop += amount;
+        totals[code].rd += amount;
       }
     });
     return totals;
-  }, [filteredTx]);
-
-  const equiv = (dop: number, usd: number) => dop + usd * exchangeRate;
+  }, [filteredTx, exchangeRate]);
 
   const buildRows = (types: string[]): GroupedAccount[] => {
     const typeAccounts = accounts.filter(a => types.includes(a.account_type));
@@ -127,7 +127,7 @@ export function BalanceSheetView() {
       parentMap.set(p.id, {
         code: p.account_code,
         name: language === "en" ? (p.english_description || p.account_name) : (p.spanish_description || p.account_name),
-        dop: 0, usd: 0,
+        rdTotal: 0, usTotal: 0,
         isParent: true,
         children: [],
       });
@@ -135,17 +135,17 @@ export function BalanceSheetView() {
 
     const orphans: GroupedAccount[] = [];
     children.forEach(c => {
-      const tt = accountTotals[c.account_code] || { dop: 0, usd: 0 };
+      const tt = accountTotals[c.account_code] || { rd: 0, us: 0 };
       const row: GroupedAccount = {
         code: c.account_code,
         name: language === "en" ? (c.english_description || c.account_name) : (c.spanish_description || c.account_name),
-        dop: tt.dop, usd: tt.usd,
+        rdTotal: tt.rd, usTotal: tt.us,
       };
       if (c.parent_id && parentMap.has(c.parent_id)) {
         const parent = parentMap.get(c.parent_id)!;
         parent.children!.push(row);
-        parent.dop += row.dop;
-        parent.usd += row.usd;
+        parent.rdTotal += row.rdTotal;
+        parent.usTotal += row.usTotal;
       } else {
         orphans.push(row);
       }
@@ -153,12 +153,12 @@ export function BalanceSheetView() {
 
     const result: GroupedAccount[] = [];
     [...parentMap.values()].forEach(p => {
-      if (p.dop !== 0 || p.usd !== 0 || p.children!.some(c => c.dop !== 0 || c.usd !== 0)) {
-        p.children = p.children!.filter(c => c.dop !== 0 || c.usd !== 0);
+      if (p.rdTotal !== 0 || p.usTotal !== 0 || p.children!.some(c => c.rdTotal !== 0 || c.usTotal !== 0)) {
+        p.children = p.children!.filter(c => c.rdTotal !== 0 || c.usTotal !== 0);
         result.push(p);
       }
     });
-    orphans.filter(o => o.dop !== 0 || o.usd !== 0).forEach(o => result.push(o));
+    orphans.filter(o => o.rdTotal !== 0 || o.usTotal !== 0).forEach(o => result.push(o));
     return result.sort((a, b) => a.code.localeCompare(b.code));
   };
 
@@ -166,35 +166,35 @@ export function BalanceSheetView() {
   const liabilityRows = useMemo(() => buildRows(["LIABILITY"]), [accounts, accountTotals, language]);
   const equityRows = useMemo(() => buildRows(["EQUITY"]), [accounts, accountTotals, language]);
 
-  const sumDop = (rows: GroupedAccount[]) => rows.reduce((s, r) => s + r.dop, 0);
-  const sumUsd = (rows: GroupedAccount[]) => rows.reduce((s, r) => s + r.usd, 0);
+  const sumRd = (rows: GroupedAccount[]) => rows.reduce((s, r) => s + r.rdTotal, 0);
+  const sumUs = (rows: GroupedAccount[]) => rows.reduce((s, r) => s + r.usTotal, 0);
 
-  const totalAssetsDop = sumDop(assetRows);
-  const totalAssetsUsd = sumUsd(assetRows);
-  const totalLiabDop = sumDop(liabilityRows);
-  const totalLiabUsd = sumUsd(liabilityRows);
-  const equityDop = sumDop(equityRows);
-  const equityUsd = sumUsd(equityRows);
+  const totalAssetsRd = sumRd(assetRows);
+  const totalAssetsUs = sumUs(assetRows);
+  const totalLiabRd = sumRd(liabilityRows);
+  const totalLiabUs = sumUs(liabilityRows);
+  const equityRd = sumRd(equityRows);
+  const equityUs = sumUs(equityRows);
 
   // Retained earnings
-  const { retainedDop, retainedUsd } = useMemo(() => {
+  const { retainedRd, retainedUs } = useMemo(() => {
     const incomeAccounts = accounts.filter(a => a.account_type === "INCOME");
     const expenseAccounts = accounts.filter(a => a.account_type === "EXPENSE");
-    const incomeDop = incomeAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.dop || 0), 0);
-    const incomeUsd = incomeAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.usd || 0), 0);
-    const expenseDop = expenseAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.dop || 0), 0);
-    const expenseUsd = expenseAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.usd || 0), 0);
-    return { retainedDop: incomeDop - expenseDop, retainedUsd: incomeUsd - expenseUsd };
+    const incomeRd = incomeAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.rd || 0), 0);
+    const incomeUs = incomeAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.us || 0), 0);
+    const expenseRd = expenseAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.rd || 0), 0);
+    const expenseUs = expenseAccounts.reduce((s, a) => s + (accountTotals[a.account_code]?.us || 0), 0);
+    return { retainedRd: incomeRd - expenseRd, retainedUs: incomeUs - expenseUs };
   }, [accounts, accountTotals]);
 
-  const totalEquityDop = equityDop + retainedDop;
-  const totalEquityUsd = equityUsd + retainedUsd;
-  const totalLEDop = totalLiabDop + totalEquityDop;
-  const totalLEUsd = totalLiabUsd + totalEquityUsd;
+  const totalEquityRd = equityRd + retainedRd;
+  const totalEquityUs = equityUs + retainedUs;
+  const totalLERd = totalLiabRd + totalEquityRd;
+  const totalLEUs = totalLiabUs + totalEquityUs;
 
-  const isBalanced = Math.abs(equiv(totalAssetsDop, totalAssetsUsd) - equiv(totalLEDop, totalLEUsd)) < 0.01;
-  const hasUsd = totalAssetsUsd !== 0 || totalLiabUsd !== 0 || totalEquityUsd !== 0 || retainedUsd !== 0;
-  const colCount = hasUsd ? 5 : 3;
+  const isBalanced = Math.abs(totalAssetsRd - totalLERd) < 0.01;
+  const hasUsd = totalAssetsUs !== 0 || totalLiabUs !== 0 || equityUs !== 0 || retainedUs !== 0;
+  const colCount = hasUsd ? 4 : 3;
 
   const renderRows = (rows: GroupedAccount[]) => {
     const result: JSX.Element[] = [];
@@ -203,9 +203,8 @@ export function BalanceSheetView() {
         <>
           <TableCell className={indent ? "pl-8" : ""}>{r.code}</TableCell>
           <TableCell className={indent ? "pl-8" : ""}>{r.name}</TableCell>
-          <TableCell className="text-right">{formatCurrency(r.dop, "DOP")}</TableCell>
-          {hasUsd && <TableCell className="text-right">{r.usd !== 0 ? formatCurrency(r.usd, "USD") : "—"}</TableCell>}
-          {hasUsd && <TableCell className="text-right">{formatCurrency(equiv(r.dop, r.usd), "DOP")}</TableCell>}
+          <TableCell className="text-right">{formatCurrency(r.rdTotal, "DOP")}</TableCell>
+          {hasUsd && <TableCell className="text-right">{r.usTotal !== 0 ? formatCurrency(r.usTotal, "USD") : "—"}</TableCell>}
         </>
       );
 
@@ -221,13 +220,12 @@ export function BalanceSheetView() {
     return result;
   };
 
-  const TotalRow = ({ label, dop, usd, className = "" }: { label: string; dop: number; usd: number; className?: string }) => (
+  const TotalRow = ({ label, rd, us, className = "" }: { label: string; rd: number; us: number; className?: string }) => (
     <TableRow className={className}>
       <TableCell />
       <TableCell className="font-bold">{label}</TableCell>
-      <TableCell className="text-right font-bold">{formatCurrency(dop, "DOP")}</TableCell>
-      {hasUsd && <TableCell className="text-right font-bold">{formatCurrency(usd, "USD")}</TableCell>}
-      {hasUsd && <TableCell className="text-right font-bold">{formatCurrency(equiv(dop, usd), "DOP")}</TableCell>}
+      <TableCell className="text-right font-bold">{formatCurrency(rd, "DOP")}</TableCell>
+      {hasUsd && <TableCell className="text-right font-bold">{formatCurrency(us, "USD")}</TableCell>}
     </TableRow>
   );
 
@@ -238,49 +236,46 @@ export function BalanceSheetView() {
       const cols: any[] = [
         { header: t("acctReport.col.account"), key: "code", width: 14 },
         { header: t("acctReport.col.description"), key: "name", width: 40 },
-        { header: "DOP", key: "dop", width: 16 },
+        { header: "RD$", key: "rd", width: 16 },
       ];
-      if (hasUsd) {
-        cols.push({ header: "USD", key: "usd", width: 16 });
-        cols.push({ header: `${t("pl.dopEquiv")} (${exchangeRate})`, key: "equiv", width: 18 });
-      }
+      if (hasUsd) cols.push({ header: "US$", key: "us", width: 16 });
       ws.columns = cols;
 
-      const addSection = (title: string, rows: GroupedAccount[], totalDop: number, totalUsd: number) => {
+      const addSection = (title: string, rows: GroupedAccount[], totalRd: number, totalUs: number) => {
         ws.addRow({ code: "", name: title }).font = { bold: true, size: 12 };
         rows.forEach(r => {
           const add = (g: GroupedAccount, indent = false) => {
-            const row: any = { code: indent ? `  ${g.code}` : g.code, name: indent ? `  ${g.name}` : g.name, dop: g.dop };
-            if (hasUsd) { row.usd = g.usd; row.equiv = equiv(g.dop, g.usd); }
+            const row: any = { code: indent ? `  ${g.code}` : g.code, name: indent ? `  ${g.name}` : g.name, rd: g.rdTotal };
+            if (hasUsd) row.us = g.usTotal;
             ws.addRow(row);
           };
           if (r.isParent && r.children) { add(r); r.children.forEach(c => add(c, true)); }
           else add(r);
         });
-        const tr: any = { code: "", name: `Total ${title}`, dop: totalDop };
-        if (hasUsd) { tr.usd = totalUsd; tr.equiv = equiv(totalDop, totalUsd); }
+        const tr: any = { code: "", name: `Total ${title}`, rd: totalRd };
+        if (hasUsd) tr.us = totalUs;
         ws.addRow(tr).font = { bold: true };
         ws.addRow({});
       };
 
-      addSection(t("bs.assets"), assetRows, totalAssetsDop, totalAssetsUsd);
-      addSection(t("bs.liabilities"), liabilityRows, totalLiabDop, totalLiabUsd);
+      addSection(t("bs.assets"), assetRows, totalAssetsRd, totalAssetsUs);
+      addSection(t("bs.liabilities"), liabilityRows, totalLiabRd, totalLiabUs);
       // Equity
       ws.addRow({ code: "", name: t("bs.equity") }).font = { bold: true, size: 12 };
       equityRows.forEach(r => {
-        const row: any = { code: r.code, name: r.name, dop: r.dop };
-        if (hasUsd) { row.usd = r.usd; row.equiv = equiv(r.dop, r.usd); }
+        const row: any = { code: r.code, name: r.name, rd: r.rdTotal };
+        if (hasUsd) row.us = r.usTotal;
         ws.addRow(row);
       });
-      const reRow: any = { code: "", name: t("bs.retainedEarnings"), dop: retainedDop };
-      if (hasUsd) { reRow.usd = retainedUsd; reRow.equiv = equiv(retainedDop, retainedUsd); }
+      const reRow: any = { code: "", name: t("bs.retainedEarnings"), rd: retainedRd };
+      if (hasUsd) reRow.us = retainedUs;
       ws.addRow(reRow);
-      const teRow: any = { code: "", name: `Total ${t("bs.equity")}`, dop: totalEquityDop };
-      if (hasUsd) { teRow.usd = totalEquityUsd; teRow.equiv = equiv(totalEquityDop, totalEquityUsd); }
+      const teRow: any = { code: "", name: `Total ${t("bs.equity")}`, rd: totalEquityRd };
+      if (hasUsd) teRow.us = totalEquityUs;
       ws.addRow(teRow).font = { bold: true };
       ws.addRow({});
-      const leRow: any = { code: "", name: t("bs.liabilitiesAndEquity"), dop: totalLEDop };
-      if (hasUsd) { leRow.usd = totalLEUsd; leRow.equiv = equiv(totalLEDop, totalLEUsd); }
+      const leRow: any = { code: "", name: t("bs.liabilitiesAndEquity"), rd: totalLERd };
+      if (hasUsd) leRow.us = totalLEUs;
       ws.addRow(leRow).font = { bold: true, size: 14 };
 
       ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -297,48 +292,48 @@ export function BalanceSheetView() {
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF({ orientation: hasUsd ? "landscape" : "portrait" });
+    const doc = new jsPDF();
     doc.setFontSize(16); doc.text(t("bs.title"), 14, 20);
     doc.setFontSize(10); doc.text(`${t("bs.asOf")}: ${asOfDate}`, 14, 28);
     let y = 34;
     if (costCenter !== "all") { doc.text(`${t("acctReport.costCenter")}: ${ccLabels[costCenter]}`, 14, y); y += 6; }
     if (hasUsd) { doc.text(`${t("pl.exchangeRate")}: ${exchangeRate}`, 14, y); y += 6; }
 
-    const headers = [t("acctReport.col.account"), t("acctReport.col.description"), "DOP"];
-    if (hasUsd) headers.push("USD", t("pl.dopEquiv"));
+    const headers = [t("acctReport.col.account"), t("acctReport.col.description"), "RD$"];
+    if (hasUsd) headers.push("US$");
 
     const rows: string[][] = [];
-    const fmtRow = (label: string, dop: number, usd: number) => {
-      const r = ["", label, formatCurrency(dop, "DOP")];
-      if (hasUsd) r.push(formatCurrency(usd, "USD"), formatCurrency(equiv(dop, usd), "DOP"));
+    const fmtRow = (label: string, rd: number, us: number) => {
+      const r = ["", label, formatCurrency(rd, "DOP")];
+      if (hasUsd) r.push(formatCurrency(us, "USD"));
       return r;
     };
-    const addSection = (title: string, items: GroupedAccount[], tDop: number, tUsd: number) => {
-      rows.push([title, "", "", ...(hasUsd ? ["", ""] : [])]);
+    const addSection = (title: string, items: GroupedAccount[], tRd: number, tUs: number) => {
+      rows.push([title, "", "", ...(hasUsd ? [""] : [])]);
       items.forEach(g => {
         const add = (a: GroupedAccount, indent = false) => {
-          const r = [indent ? `  ${a.code}` : a.code, indent ? `  ${a.name}` : a.name, formatCurrency(a.dop, "DOP")];
-          if (hasUsd) r.push(a.usd ? formatCurrency(a.usd, "USD") : "—", formatCurrency(equiv(a.dop, a.usd), "DOP"));
+          const r = [indent ? `  ${a.code}` : a.code, indent ? `  ${a.name}` : a.name, formatCurrency(a.rdTotal, "DOP")];
+          if (hasUsd) r.push(a.usTotal ? formatCurrency(a.usTotal, "USD") : "—");
           rows.push(r);
         };
         if (g.isParent && g.children) { add(g); g.children.forEach(c => add(c, true)); } else add(g);
       });
-      rows.push(fmtRow(`Total ${title}`, tDop, tUsd));
+      rows.push(fmtRow(`Total ${title}`, tRd, tUs));
       rows.push(Array(headers.length).fill(""));
     };
 
-    addSection(t("bs.assets"), assetRows, totalAssetsDop, totalAssetsUsd);
-    addSection(t("bs.liabilities"), liabilityRows, totalLiabDop, totalLiabUsd);
-    rows.push([t("bs.equity"), "", "", ...(hasUsd ? ["", ""] : [])]);
+    addSection(t("bs.assets"), assetRows, totalAssetsRd, totalAssetsUs);
+    addSection(t("bs.liabilities"), liabilityRows, totalLiabRd, totalLiabUs);
+    rows.push([t("bs.equity"), "", "", ...(hasUsd ? [""] : [])]);
     equityRows.forEach(r => {
-      const row = [r.code, r.name, formatCurrency(r.dop, "DOP")];
-      if (hasUsd) row.push(formatCurrency(r.usd, "USD"), formatCurrency(equiv(r.dop, r.usd), "DOP"));
+      const row = [r.code, r.name, formatCurrency(r.rdTotal, "DOP")];
+      if (hasUsd) row.push(formatCurrency(r.usTotal, "USD"));
       rows.push(row);
     });
-    rows.push(fmtRow(t("bs.retainedEarnings"), retainedDop, retainedUsd));
-    rows.push(fmtRow(`Total ${t("bs.equity")}`, totalEquityDop, totalEquityUsd));
+    rows.push(fmtRow(t("bs.retainedEarnings"), retainedRd, retainedUs));
+    rows.push(fmtRow(`Total ${t("bs.equity")}`, totalEquityRd, totalEquityUs));
     rows.push(Array(headers.length).fill(""));
-    rows.push(fmtRow(t("bs.liabilitiesAndEquity"), totalLEDop, totalLEUsd));
+    rows.push(fmtRow(t("bs.liabilitiesAndEquity"), totalLERd, totalLEUs));
 
     autoTable(doc, { head: [headers], body: rows, startY: y, styles: { fontSize: 8 }, headStyles: { fillColor: [30, 58, 138] } });
     doc.save(`${language === "en" ? "balance_sheet" : "balance_general"}_${asOfDate}.pdf`);
@@ -409,9 +404,8 @@ export function BalanceSheetView() {
               <TableRow>
                 <TableHead className="w-24">{t("acctReport.col.account")}</TableHead>
                 <TableHead>{t("acctReport.col.description")}</TableHead>
-                <TableHead className="text-right w-36">DOP</TableHead>
-                {hasUsd && <TableHead className="text-right w-36">USD</TableHead>}
-                {hasUsd && <TableHead className="text-right w-36">{t("pl.dopEquiv")}</TableHead>}
+                <TableHead className="text-right w-36">RD$</TableHead>
+                {hasUsd && <TableHead className="text-right w-36">US$</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -420,14 +414,14 @@ export function BalanceSheetView() {
                 <TableCell colSpan={colCount} className="font-bold text-base">{t("bs.assets")}</TableCell>
               </TableRow>
               {renderRows(assetRows)}
-              <TotalRow label={t("bs.totalAssets")} dop={totalAssetsDop} usd={totalAssetsUsd} className="border-t-2 border-primary/20" />
+              <TotalRow label={t("bs.totalAssets")} rd={totalAssetsRd} us={totalAssetsUs} className="border-t-2 border-primary/20" />
 
               {/* LIABILITIES */}
               <TableRow className="bg-destructive/5">
                 <TableCell colSpan={colCount} className="font-bold text-base">{t("bs.liabilities")}</TableCell>
               </TableRow>
               {renderRows(liabilityRows)}
-              <TotalRow label={t("bs.totalLiabilities")} dop={totalLiabDop} usd={totalLiabUsd} className="border-t-2 border-destructive/20" />
+              <TotalRow label={t("bs.totalLiabilities")} rd={totalLiabRd} us={totalLiabUs} className="border-t-2 border-destructive/20" />
 
               {/* EQUITY */}
               <TableRow className="bg-accent/50">
@@ -437,29 +431,23 @@ export function BalanceSheetView() {
               <TableRow>
                 <TableCell />
                 <TableCell className="italic">{t("bs.retainedEarnings")}</TableCell>
-                <TableCell className={`text-right italic ${retainedDop >= 0 ? "text-primary" : "text-destructive"}`}>
-                  {formatCurrency(retainedDop, "DOP")}
+                <TableCell className={`text-right italic ${retainedRd >= 0 ? "text-primary" : "text-destructive"}`}>
+                  {formatCurrency(retainedRd, "DOP")}
                 </TableCell>
                 {hasUsd && (
-                  <TableCell className={`text-right italic ${retainedUsd >= 0 ? "text-primary" : "text-destructive"}`}>
-                    {formatCurrency(retainedUsd, "USD")}
-                  </TableCell>
-                )}
-                {hasUsd && (
-                  <TableCell className="text-right italic">
-                    {formatCurrency(equiv(retainedDop, retainedUsd), "DOP")}
+                  <TableCell className={`text-right italic ${retainedUs >= 0 ? "text-primary" : "text-destructive"}`}>
+                    {formatCurrency(retainedUs, "USD")}
                   </TableCell>
                 )}
               </TableRow>
-              <TotalRow label={t("bs.totalEquity")} dop={totalEquityDop} usd={totalEquityUsd} className="border-t-2 border-accent-foreground/20" />
+              <TotalRow label={t("bs.totalEquity")} rd={totalEquityRd} us={totalEquityUs} className="border-t-2 border-accent-foreground/20" />
 
               {/* TOTAL L+E */}
               <TableRow className="bg-muted border-t-4">
                 <TableCell />
                 <TableCell className="font-bold text-lg">{t("bs.liabilitiesAndEquity")}</TableCell>
-                <TableCell className="text-right font-bold text-lg">{formatCurrency(totalLEDop, "DOP")}</TableCell>
-                {hasUsd && <TableCell className="text-right font-bold text-lg">{formatCurrency(totalLEUsd, "USD")}</TableCell>}
-                {hasUsd && <TableCell className="text-right font-bold text-lg">{formatCurrency(equiv(totalLEDop, totalLEUsd), "DOP")}</TableCell>}
+                <TableCell className="text-right font-bold text-lg">{formatCurrency(totalLERd, "DOP")}</TableCell>
+                {hasUsd && <TableCell className="text-right font-bold text-lg">{formatCurrency(totalLEUs, "USD")}</TableCell>}
               </TableRow>
             </TableBody>
           </Table>

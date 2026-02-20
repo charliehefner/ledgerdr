@@ -8,7 +8,7 @@ import { JornalerosView } from "@/components/hr/JornalerosView";
 import { ServicesView } from "@/components/hr/ServicesView";
 import { ServiceProvidersView } from "@/components/hr/ServiceProvidersView";
 import { TSSAutodeterminacionView } from "@/components/hr/TSSAutodeterminacionView";
-import { IR3ReportView } from "@/components/hr/IR3ReportView";
+// IR3 moved to Accounting > DGII tab
 import { IR17ReportView } from "@/components/hr/IR17ReportView";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -66,7 +66,6 @@ export default function HumanResources() {
 
   const govReportOptions = [
     { key: "tss", label: "TSS Autodeterminación", description: "Archivo mensual para la Tesorería de la Seguridad Social" },
-    { key: "ir3", label: "IR-3", description: "Retenciones de asalariados (ISR)" },
     { key: "ir17", label: "IR-17", description: "Retenciones complementarias y de terceros" },
   ];
 
@@ -96,7 +95,6 @@ export default function HumanResources() {
           Volver a reportes
         </Button>
         {selectedGovReport === "tss" && <TSSAutodeterminacionView />}
-        {selectedGovReport === "ir3" && <IR3ReportView />}
         {selectedGovReport === "ir17" && <IR17ReportView />}
       </div>
     );

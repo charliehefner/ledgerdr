@@ -57,6 +57,8 @@ const initialFormState = {
   currency: 'DOP' as 'DOP' | 'USD',
   amount: '',
   itbis: '',
+  itbis_retenido: '',
+  isr_retenido: '',
   pay_method: '',
   document: '',
   name: '',
@@ -188,6 +190,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     setIsSubmitting(true);
 
     try {
+      const isB11 = form.document?.toUpperCase().startsWith('B11');
       const result = await createTransaction({
         transaction_date: formatDateLocal(form.transaction_date!),
         master_acct_code: form.master_acct_code,
@@ -198,6 +201,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         currency: form.currency,
         amount: parseFloat(form.amount),
         itbis: form.itbis ? parseFloat(form.itbis) : undefined,
+        itbis_retenido: isB11 && form.itbis_retenido ? parseFloat(form.itbis_retenido) : undefined,
+        isr_retenido: isB11 && form.isr_retenido ? parseFloat(form.isr_retenido) : undefined,
         pay_method: form.pay_method || undefined,
         document: form.document || undefined,
         name: form.name || undefined,
@@ -237,6 +242,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const updateField = <K extends keyof typeof form>(field: K, value: typeof form[K]) => {
     setForm(prev => {
       const updated = { ...prev, [field]: value };
+
+      // Auto-fill ITBIS Retenido when document changes to B11
+      if (field === 'document' && typeof value === 'string') {
+        const isNowB11 = value.toUpperCase().startsWith('B11');
+        const wasB11 = prev.document?.toUpperCase().startsWith('B11');
+        if (isNowB11 && !wasB11 && prev.itbis && !prev.itbis_retenido) {
+          updated.itbis_retenido = prev.itbis;
+        }
+      }
       
       // Auto-fill RNC when name changes and matches a previous transaction
       if (field === 'name' && typeof value === 'string' && value.trim()) {
@@ -545,7 +559,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 type="number"
                 step="0.01"
                 value={form.itbis}
-                onChange={(e) => updateField('itbis', e.target.value)}
+                onChange={(e) => {
+                  const newItbis = e.target.value;
+                  updateField('itbis', newItbis);
+                  // Auto-fill ITBIS Retenido for B11 if currently empty
+                  const isB11 = form.document?.toUpperCase().startsWith('B11');
+                  if (isB11 && newItbis && !form.itbis_retenido) {
+                    updateField('itbis_retenido', newItbis);
+                  }
+                }}
                 placeholder="0.00"
                 className="font-mono"
               />
@@ -563,6 +585,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               />
             </div>
           </div>
+
+          {/* B11 Withholding Fields - visible only for B11 documents */}
+          {form.document?.toUpperCase().startsWith('B11') && (
+            <div className="grid gap-4 md:grid-cols-2 max-w-md">
+              <div className="space-y-2">
+                <Label>ITBIS Retenido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.itbis_retenido}
+                  onChange={(e) => updateField('itbis_retenido', e.target.value)}
+                  placeholder="0.00"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">100% del ITBIS</p>
+              </div>
+              <div className="space-y-2">
+                <Label>ISR Retenido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.isr_retenido}
+                  onChange={(e) => updateField('isr_retenido', e.target.value)}
+                  placeholder="0.00"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">10% renta / 2% bienes</p>
+              </div>
+            </div>
+          )}
 
           {/* Additional Fields */}
           <div className="grid gap-4 md:grid-cols-4">

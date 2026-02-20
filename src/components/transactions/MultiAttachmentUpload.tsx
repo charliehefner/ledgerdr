@@ -92,7 +92,7 @@ export function MultiAttachmentUpload({ attachments, onUpload, onClear }: MultiA
 
       const { error: uploadError } = await supabase.storage
         .from('transaction-attachments')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -239,7 +239,7 @@ export function MultiAttachmentUpload({ attachments, onUpload, onClear }: MultiA
 
       const { error: uploadError } = await supabase.storage
         .from('transaction-attachments')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 

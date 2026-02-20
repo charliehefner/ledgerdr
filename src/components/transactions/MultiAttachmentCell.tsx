@@ -146,7 +146,7 @@ export function MultiAttachmentCell({
 
       const { error: uploadError } = await supabase.storage
         .from('transaction-attachments')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 

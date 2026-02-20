@@ -51,7 +51,7 @@ export async function uploadAttachment(
 
   const { error: uploadError } = await supabase.storage
     .from('transaction-attachments')
-    .upload(filePath, file);
+    .upload(filePath, file, { upsert: true });
 
   if (uploadError) {
     console.error('Upload error:', uploadError);

@@ -140,7 +140,7 @@ export function EditTransactionDialog({
 
 
   const voidMutation = useMutation({
-    mutationFn: () => voidTransaction(transaction!.id!),
+    mutationFn: () => voidTransaction(transaction!.legacy_id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
@@ -155,7 +155,7 @@ export function EditTransactionDialog({
   });
 
   const handleSaveChanges = async () => {
-    if (!transaction?.id) return;
+    if (!transaction?.legacy_id) return;
     setIsSaving(true);
     try {
       const updates: Record<string, any> = {};
@@ -168,7 +168,7 @@ export function EditTransactionDialog({
       if (editedPayMethod !== originalPayMethod) updates.pay_method = editedPayMethod || null;
       if (editedTipoBienes !== originalTipoBienes) updates.dgii_tipo_bienes_servicios = editedTipoBienes || null;
 
-      await updateTransaction(String(transaction.id), updates);
+      await updateTransaction(String(transaction.legacy_id), updates);
 
       // Sync original values
       setOriginalDocument(editedDocument);
@@ -209,7 +209,7 @@ export function EditTransactionDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Ver Transacción #{transaction.id}</DialogTitle>
+            <DialogTitle>Ver Transacción #{transaction.legacy_id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -458,7 +458,7 @@ export function EditTransactionDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Anular Transacción?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esto marcará la transacción #{transaction.id} como anulada. La transacción permanecerá en los registros pero se marcará como anulada.
+              Esto marcará la transacción #{transaction.legacy_id} como anulada. La transacción permanecerá en los registros pero se marcará como anulada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

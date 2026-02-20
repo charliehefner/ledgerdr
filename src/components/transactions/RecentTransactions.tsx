@@ -10,6 +10,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
 import { getAllAttachmentUrls, AttachmentCategory } from '@/lib/attachments';
 import { getDescription } from '@/lib/getDescription';
@@ -21,6 +30,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { ColumnSelector } from '@/components/ui/column-selector';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TRANSACTION_COLUMNS } from './columnConfig';
+import { usePagination } from '@/hooks/usePagination';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
@@ -46,20 +56,23 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
 
   const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['recentTransactions', refreshKey],
-    queryFn: () => fetchRecentTransactions(20),
+    queryFn: () => fetchRecentTransactions(500),
   });
 
-  // Transactions already filtered at database level
-  const transactions = allTransactions;
+  const pagination = usePagination(allTransactions, { defaultPageSize: 20 });
+  const transactions = pagination.pageData;
 
-  // Get transaction IDs to fetch attachments
-  const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
+  // Use legacy_id for attachment lookups (transaction_attachments stores legacy integer IDs)
+  const attachmentLegacyIds = transactions
+    .map(tx => tx.legacy_id)
+    .filter((id): id is number => id != null)
+    .map(String);
 
   // Fetch all attachments with categories from local database
   const { data: allAttachments = {} } = useQuery({
-    queryKey: ['transactionAttachments', transactionIds],
-    queryFn: () => getAllAttachmentUrls(transactionIds),
-    enabled: transactionIds.length > 0,
+    queryKey: ['transactionAttachments', attachmentLegacyIds],
+    queryFn: () => getAllAttachmentUrls(attachmentLegacyIds),
+    enabled: attachmentLegacyIds.length > 0,
   });
 
   const { data: accounts = [] } = useQuery({
@@ -127,7 +140,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                   >
                     {columnVisibility.isVisible("id") && (
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {tx.id || "-"}
+                        {tx.legacy_id || "-"}
                       </TableCell>
                     )}
                     {columnVisibility.isVisible("date") && (
@@ -173,10 +186,10 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     )}
                     {columnVisibility.isVisible("attach") && (
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                        {tx.id ? (
+                        {tx.legacy_id ? (
                           <MultiAttachmentCell
-                            transactionId={tx.id}
-                            attachments={getAttachmentsForTransaction(String(tx.id))}
+                            transactionId={String(tx.legacy_id)}
+                            attachments={getAttachmentsForTransaction(String(tx.legacy_id))}
                             onUpdate={handleAttachmentUpdate}
                           />
                         ) : (
@@ -198,6 +211,50 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination controls */}
+        {pagination.totalItems > 0 && (
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{language === 'es' ? 'Mostrar' : 'Show'}</span>
+              <Select
+                value={String(pagination.pageSize)}
+                onValueChange={(v) => pagination.setPageSize(Number(v))}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pagination.pageSizeOptions.map(size => (
+                    <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>
+                {language === 'es' 
+                  ? `de ${pagination.totalItems} transacciones`
+                  : `of ${pagination.totalItems} transactions`}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasPrevPage} onClick={() => pagination.setPage(0)}>
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasPrevPage} onClick={pagination.prevPage}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm px-2">
+                {pagination.page + 1} / {pagination.totalPages}
+              </span>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasNextPage} onClick={pagination.nextPage}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasNextPage} onClick={() => pagination.setPage(pagination.totalPages - 1)}>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
 
       <EditTransactionDialog

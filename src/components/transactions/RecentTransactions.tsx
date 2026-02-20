@@ -62,17 +62,16 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const pagination = usePagination(allTransactions, { defaultPageSize: 20 });
   const transactions = pagination.pageData;
 
-  // Use legacy_id for attachment lookups (transaction_attachments stores legacy integer IDs)
-  const attachmentLegacyIds = transactions
-    .map(tx => tx.legacy_id)
-    .filter((id): id is number => id != null)
-    .map(String);
+  // Use UUID for attachment lookups (transaction_attachments now uses UUID FK)
+  const attachmentIds = transactions
+    .map(tx => tx.id)
+    .filter((id): id is string => !!id);
 
   // Fetch all attachments with categories from local database
   const { data: allAttachments = {} } = useQuery({
-    queryKey: ['transactionAttachments', attachmentLegacyIds],
-    queryFn: () => getAllAttachmentUrls(attachmentLegacyIds),
-    enabled: attachmentLegacyIds.length > 0,
+    queryKey: ['transactionAttachments', attachmentIds],
+    queryFn: () => getAllAttachmentUrls(attachmentIds),
+    enabled: attachmentIds.length > 0,
   });
 
   const { data: accounts = [] } = useQuery({
@@ -186,10 +185,10 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                     )}
                     {columnVisibility.isVisible("attach") && (
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                        {tx.legacy_id ? (
+                        {tx.id ? (
                           <MultiAttachmentCell
-                            transactionId={String(tx.legacy_id)}
-                            attachments={getAttachmentsForTransaction(String(tx.legacy_id))}
+                            transactionId={tx.id}
+                            attachments={getAttachmentsForTransaction(tx.id)}
                             onUpdate={handleAttachmentUpdate}
                           />
                         ) : (

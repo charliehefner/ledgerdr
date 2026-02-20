@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface AttachmentCellProps {
-  transactionId: string | number;
+  transactionId: string;
   attachmentUrl: string | null | undefined;
   onUpdate: () => void;
 }

@@ -2434,8 +2434,10 @@ export type Database = {
       }
       transactions: {
         Row: {
+          account_id: string | null
           amount: number
           cbs_code: string | null
+          cbs_id: string | null
           comments: string | null
           cost_center: string
           created_at: string
@@ -2456,6 +2458,7 @@ export type Database = {
           name: string | null
           pay_method: string | null
           project_code: string | null
+          project_id: string | null
           rnc: string | null
           transaction_date: string
           transaction_direction: string | null
@@ -2464,8 +2467,10 @@ export type Database = {
           voided_at: string | null
         }
         Insert: {
+          account_id?: string | null
           amount?: number
           cbs_code?: string | null
+          cbs_id?: string | null
           comments?: string | null
           cost_center?: string
           created_at?: string
@@ -2486,6 +2491,7 @@ export type Database = {
           name?: string | null
           pay_method?: string | null
           project_code?: string | null
+          project_id?: string | null
           rnc?: string | null
           transaction_date: string
           transaction_direction?: string | null
@@ -2494,8 +2500,10 @@ export type Database = {
           voided_at?: string | null
         }
         Update: {
+          account_id?: string | null
           amount?: number
           cbs_code?: string | null
+          cbs_id?: string | null
           comments?: string | null
           cost_center?: string
           created_at?: string
@@ -2516,6 +2524,7 @@ export type Database = {
           name?: string | null
           pay_method?: string | null
           project_code?: string | null
+          project_id?: string | null
           rnc?: string | null
           transaction_date?: string
           transaction_direction?: string | null
@@ -2523,7 +2532,29 @@ export type Database = {
           void_reason?: string | null
           voided_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_cbs_id_fkey"
+            columns: ["cbs_id"]
+            isOneToOne: false
+            referencedRelation: "cbs_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

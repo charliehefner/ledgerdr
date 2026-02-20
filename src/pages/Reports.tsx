@@ -116,7 +116,7 @@ export default function Reports() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(tx =>
-        tx.id?.toLowerCase().includes(term) ||
+        String(tx.legacy_id || '').includes(term) ||
         tx.description?.toLowerCase().includes(term) ||
         tx.name?.toLowerCase().includes(term) ||
         tx.master_acct_code?.toLowerCase().includes(term) ||
@@ -278,7 +278,7 @@ export default function Reports() {
 
   // Column export config: maps column keys to header labels, widths, and data extractors
   const columnExportMap: Record<string, { header: string; width: number; getValue: (tx: Transaction) => string | number }> = {
-    id: { header: "ID", width: 12, getValue: (tx) => tx.id || "-" },
+    id: { header: "ID", width: 12, getValue: (tx) => tx.legacy_id || "-" },
     date: { header: "Date", width: 15, getValue: (tx) => formatExcelDate(tx.transaction_date) },
     account: { header: "Account", width: 15, getValue: (tx) => tx.master_acct_code || "-" },
     project: { header: "Project", width: 15, getValue: (tx) => tx.project_code || "-" },
@@ -714,7 +714,7 @@ export default function Reports() {
                         <TableRow key={tx.id || index} className={rowClass}>
                           {columnVisibility.isVisible("id") && (
                             <TableCell className="font-mono text-xs text-muted-foreground">
-                              {tx.id || "-"}
+                              {tx.legacy_id || "-"}
                             </TableCell>
                           )}
                           {columnVisibility.isVisible("date") && (

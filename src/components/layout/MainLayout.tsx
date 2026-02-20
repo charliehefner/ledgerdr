@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar, MobileSidebar } from "./Sidebar";
-import { Bell, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { AISearchBar } from "./AISearchBar";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
 
   const handleLogout = () => {
     logout();
@@ -54,12 +56,6 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           <div className="flex items-center gap-2 md:gap-4">
             {/* AI Search - hide on mobile */}
             {!isMobile && <AISearchBar />}
-            
-            {/* Notifications */}
-            <button className="relative p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
-            </button>
 
             {/* User menu */}
             <DropdownMenu>
@@ -80,7 +76,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Cerrar sesión
+                  {t("sidebar.logout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

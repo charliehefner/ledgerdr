@@ -8,10 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarDays, Lock, LockOpen } from "lucide-react";
+import { Plus, CalendarDays } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+
+type PeriodStatus = "open" | "closed" | "reported" | "locked";
 
 type Period = {
   id: string;
@@ -19,7 +22,15 @@ type Period = {
   start_date: string;
   end_date: string;
   is_closed: boolean | null;
+  status: PeriodStatus;
   created_at: string | null;
+};
+
+const STATUS_CONFIG: Record<PeriodStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  open: { label: "Abierto", variant: "default" },
+  closed: { label: "Cerrado", variant: "secondary" },
+  reported: { label: "Reportado", variant: "outline" },
+  locked: { label: "Bloqueado", variant: "destructive" },
 };
 
 export function PeriodsView() {
@@ -38,7 +49,10 @@ export function PeriodsView() {
         .is("deleted_at", null)
         .order("start_date", { ascending: false });
       if (error) throw error;
-      return data as Period[];
+      return (data as unknown as Period[]).map(p => ({
+        ...p,
+        status: (p.status || (p.is_closed ? "closed" : "open")) as PeriodStatus,
+      }));
     },
   });
 
@@ -49,7 +63,8 @@ export function PeriodsView() {
         start_date: values.start_date,
         end_date: values.end_date,
         is_closed: false,
-      });
+        status: "open",
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -62,9 +77,9 @@ export function PeriodsView() {
     },
   });
 
-  const toggleCloseMutation = useMutation({
-    mutationFn: async ({ id, close }: { id: string; close: boolean }) => {
-      const { error } = await supabase.from("accounting_periods").update({ is_closed: close }).eq("id", id);
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: PeriodStatus }) => {
+      const { error } = await supabase.from("accounting_periods").update({ status } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -109,7 +124,7 @@ export function PeriodsView() {
                 <TableHead>Inicio</TableHead>
                 <TableHead>Fin</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead className="w-[100px]">Acciones</TableHead>
+                <TableHead className="w-[140px]">Cambiar Estado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -119,19 +134,25 @@ export function PeriodsView() {
                   <TableCell>{format(new Date(p.start_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{format(new Date(p.end_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>
-                    <Badge variant={p.is_closed ? "secondary" : "default"}>
-                      {p.is_closed ? "Cerrado" : "Abierto"}
+                    <Badge variant={STATUS_CONFIG[p.status].variant}>
+                      {STATUS_CONFIG[p.status].label}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleCloseMutation.mutate({ id: p.id, close: !p.is_closed })}
-                      title={p.is_closed ? "Reabrir" : "Cerrar"}
+                    <Select
+                      value={p.status}
+                      onValueChange={(val) => updateStatusMutation.mutate({ id: p.id, status: val as PeriodStatus })}
                     >
-                      {p.is_closed ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    </Button>
+                      <SelectTrigger className="h-8 w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Abierto</SelectItem>
+                        <SelectItem value="closed">Cerrado</SelectItem>
+                        <SelectItem value="reported">Reportado</SelectItem>
+                        <SelectItem value="locked">Bloqueado</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                 </TableRow>
               ))}

@@ -35,8 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserRole = async (userId: string, retries = 3): Promise<UserRole | null> => {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`[Auth] Role fetch attempt ${attempt}/${retries} for:`, userId);
-        
         // Generous timeout for poor connections (25s)
         const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
           setTimeout(() => reject(new Error('Role fetch timeout after 25s')), 25000)
@@ -46,12 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
         
-        console.log('[Auth] Role RPC result:', { data, error });
-        
         if (error) {
           console.error('[Auth] Error fetching user role:', error);
           if (attempt < retries) {
-            // Exponential backoff: 2s, 4s
             await new Promise(r => setTimeout(r, 2000 * attempt));
             continue;
           }
@@ -79,17 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Set up auth state listener BEFORE checking session
   useEffect(() => {
     let isMounted = true;
-    console.log('[Auth] Starting auth initialization...');
 
     // Helper to set user with role - logs out if role fetch fails
     const setUserWithRole = async (authUser: User): Promise<boolean> => {
       try {
-        console.log('[Auth] Fetching role for user:', authUser.id);
         const role = await fetchUserRole(authUser.id);
-        console.log('[Auth] Role result:', role);
         
         if (!role) {
-          // Role fetch failed - force logout for security
           console.error('[Auth] Role fetch failed, forcing logout for security');
           await supabase.auth.signOut();
           if (isMounted) {
@@ -124,7 +115,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // but do NOT force logout on role fetch failure here (login() handles that)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        console.log('[Auth] onAuthStateChange event:', event);
         if (!isMounted) return;
         
         setSession(currentSession);
@@ -156,21 +146,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // INITIAL load - controls isLoading state
     const initializeAuth = async () => {
       try {
-        console.log('[Auth] Getting existing session...');
         const { data: { session: existingSession } } = await supabase.auth.getSession();
-        console.log('[Auth] Existing session:', existingSession ? 'found' : 'none');
         if (!isMounted) return;
 
         setSession(existingSession);
         
         if (existingSession?.user) {
-          console.log('[Auth] User found, fetching role...');
           await setUserWithRole(existingSession.user);
         }
       } catch (err) {
         console.error('[Auth] Error in initializeAuth:', err);
       } finally {
-        console.log('[Auth] Setting isLoading to false');
         if (isMounted) {
           setIsLoading(false);
         }

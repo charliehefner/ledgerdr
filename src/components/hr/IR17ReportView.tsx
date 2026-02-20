@@ -206,7 +206,7 @@ export function IR17ReportView() {
 
     if ("showSaveFilePicker" in window) {
       try {
-        const handle = await (window as any).showSaveFilePicker({
+        const handle = await window.showSaveFilePicker!({
           suggestedName: fileName,
           types: [{ description: "Excel", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] } }],
         });

@@ -46,6 +46,7 @@ export interface Transaction {
   attachment_url?: string;
   transaction_direction?: 'purchase' | 'sale';
   dgii_tipo_ingreso?: string;
+  dgii_tipo_bienes_servicios?: string;
 }
 
 // ============================================
@@ -118,7 +119,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     id: t.legacy_id?.toString() || t.id,
     currency: t.currency as 'DOP' | 'USD',
     is_internal: t.is_internal ?? false,
-    cost_center: (t as any).cost_center || 'general',
+    cost_center: (t.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (t.transaction_direction || 'purchase') as 'purchase' | 'sale',
   }));
 }
@@ -171,7 +172,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
-    cost_center: (data as any).cost_center || 'general',
+    cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }
@@ -181,15 +182,15 @@ export async function updateTransaction(id: string | number, transaction: Partia
   const legacyId = typeof id === 'number' ? id : parseInt(id, 10);
   
   // Build update payload from provided fields
-  const updatePayload: Record<string, any> = {};
+  const updatePayload: Record<string, unknown> = {};
   if (transaction.document !== undefined) updatePayload.document = transaction.document;
   if (transaction.description !== undefined) updatePayload.description = transaction.description;
   if (transaction.rnc !== undefined) updatePayload.rnc = transaction.rnc;
   if (transaction.itbis !== undefined) updatePayload.itbis = transaction.itbis;
-  if ((transaction as any).itbis_retenido !== undefined) updatePayload.itbis_retenido = (transaction as any).itbis_retenido;
-  if ((transaction as any).isr_retenido !== undefined) updatePayload.isr_retenido = (transaction as any).isr_retenido;
+  if (transaction.itbis_retenido !== undefined) updatePayload.itbis_retenido = transaction.itbis_retenido;
+  if (transaction.isr_retenido !== undefined) updatePayload.isr_retenido = transaction.isr_retenido;
   if (transaction.pay_method !== undefined) updatePayload.pay_method = transaction.pay_method;
-  if ((transaction as any).dgii_tipo_bienes_servicios !== undefined) updatePayload.dgii_tipo_bienes_servicios = (transaction as any).dgii_tipo_bienes_servicios;
+  if (transaction.dgii_tipo_bienes_servicios !== undefined) updatePayload.dgii_tipo_bienes_servicios = transaction.dgii_tipo_bienes_servicios;
 
   // Try legacy_id first, fall back to UUID
   let query = supabase.from('transactions').update(updatePayload);
@@ -211,7 +212,7 @@ export async function updateTransaction(id: string | number, transaction: Partia
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
-    cost_center: ((data as any).cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
+    cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }
@@ -253,7 +254,7 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
     id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
-    cost_center: ((data as any).cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
+    cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale',
   };
 }

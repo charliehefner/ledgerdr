@@ -11,6 +11,7 @@ type UnlinkedTransaction = {
   itbis: number | null;
   master_acct_code: string | null;
   pay_method: string | null;
+  cost_center: string | null;
 };
 
 type PayMethodMapping = {
@@ -85,15 +86,15 @@ export function useJournalGeneration(userId?: string) {
 
       const linkedIds = new Set((linked || []).map((j) => j.transaction_source_id));
 
-      // 4. Fetch unlinked transactions (using * to include cost_center which may not be in types yet)
+      // 4. Fetch unlinked transactions
       const { data: txns, error: tErr } = await supabase
         .from("transactions")
-        .select("*")
+        .select("id, transaction_date, description, amount, itbis, master_acct_code, pay_method, cost_center")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true });
       if (tErr) throw tErr;
 
-      const unlinked = ((txns || []) as any[]).filter((t) => !linkedIds.has(t.id)) as UnlinkedTransaction[];
+      const unlinked = (txns || []).filter((t) => !linkedIds.has(t.id)) as UnlinkedTransaction[];
 
       if (unlinked.length === 0) {
         toast({ title: "Info", description: "No hay transacciones sin asiento." });
@@ -127,7 +128,7 @@ export function useJournalGeneration(userId?: string) {
           {
             p_transaction_id: txn.id,
             p_date: txn.transaction_date,
-            p_description: `${txn.description || "Transacción"}${(txn as any).cost_center && (txn as any).cost_center !== 'general' ? ` [${(txn as any).cost_center === 'agricultural' ? 'Agrícola' : 'Industrial'}]` : ''}`,
+            p_description: `${txn.description || "Transacción"}${txn.cost_center && txn.cost_center !== 'general' ? ` [${txn.cost_center === 'agricultural' ? 'Agrícola' : 'Industrial'}]` : ''}`,
             p_created_by: userId || null,
           }
         );

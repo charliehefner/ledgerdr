@@ -90,8 +90,8 @@ export function InventoryItemDialog({
         function: existingItem.function,
         use_unit: existingItem.use_unit,
         co2_equivalent: existingItem.co2_equivalent?.toString() || "",
-        cas_number: (existingItem as any).cas_number || "",
-        normal_dose_per_ha: (existingItem as any).normal_dose_per_ha?.toString() || "",
+        cas_number: existingItem.cas_number || "",
+        normal_dose_per_ha: existingItem.normal_dose_per_ha?.toString() || "",
       });
     } else if (!editingItemId) {
       setForm(initialFormState);
@@ -100,10 +100,12 @@ export function InventoryItemDialog({
 
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
+      type InventoryFunction = "adherente" | "condicionador" | "fertilizer" | "fuel" | "fungicide" | "insecticide" | "other" | "pesticide" | "post_emergent_herbicide" | "pre_emergent_herbicide" | "seed";
+      
       const payload = {
         commercial_name: data.commercial_name,
         molecule_name: data.molecule_name || null,
-        function: data.function as any,
+        function: data.function as InventoryFunction,
         use_unit: data.use_unit,
         co2_equivalent: data.co2_equivalent
           ? parseFloat(data.co2_equivalent)
@@ -117,11 +119,11 @@ export function InventoryItemDialog({
       if (editingItemId) {
         const { error } = await supabase
           .from("inventory_items")
-          .update(payload as any)
+          .update(payload)
           .eq("id", editingItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("inventory_items").insert(payload as any);
+        const { error } = await supabase.from("inventory_items").insert(payload);
         if (error) throw error;
       }
     },

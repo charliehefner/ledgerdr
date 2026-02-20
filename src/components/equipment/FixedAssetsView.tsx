@@ -28,7 +28,7 @@ export function FixedAssetsView() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"active" | "disposed" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<any>(null);
+  const [editingAsset, setEditingAsset] = useState<Record<string, unknown> | null>(null);
 
   const { data: assets = [], isLoading, refetch } = useQuery({
     queryKey: ["fixed-assets", categoryFilter, statusFilter],
@@ -60,7 +60,7 @@ export function FixedAssetsView() {
   const getCategoryLabel = (cat: string) =>
     CATEGORIES.find((c) => c.value === cat)?.label || cat;
 
-  const handleEdit = (asset: any) => {
+  const handleEdit = (asset: Record<string, unknown>) => {
     setEditingAsset(asset);
     setDialogOpen(true);
   };
@@ -84,7 +84,7 @@ export function FixedAssetsView() {
           </SelectContent>
         </Select>
 
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+        <Select value={statusFilter} onValueChange={(v: string) => setStatusFilter(v as "active" | "disposed" | "all")}>
           <SelectTrigger className="w-[140px]">
             <SelectValue />
           </SelectTrigger>
@@ -132,7 +132,7 @@ export function FixedAssetsView() {
                 </TableCell>
               </TableRow>
             ) : (
-              assets.map((asset: any) => {
+              assets.map((asset) => {
                 const netBookValue = Number(asset.acquisition_value) - Number(asset.accumulated_depreciation);
                 return (
                   <TableRow key={asset.id}>

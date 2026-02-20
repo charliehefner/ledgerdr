@@ -99,9 +99,10 @@ export function MultiAttachmentUpload({ attachments, onUpload, onClear }: MultiA
       const storagePath = `transaction-attachments/${filePath}`;
       onUpload(category, storagePath);
       toast.success(`${CATEGORY_LABELS[category].es} uploaded successfully`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload attachment');
+      const detail = error?.message || error?.statusCode || '';
+      toast.error(`Failed to upload attachment: ${detail}`);
     } finally {
       setIsUploading(false);
       setUploadCategory(null);

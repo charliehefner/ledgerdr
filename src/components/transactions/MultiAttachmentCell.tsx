@@ -158,9 +158,10 @@ export function MultiAttachmentCell({
       const label = categoryConfig[category][language === 'es' ? 'labelEs' : 'labelEn'];
       toast.success(language === 'es' ? `${label} guardado` : `${label} saved`);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error(language === 'es' ? 'Error al subir' : 'Failed to upload');
+      const detail = error?.message || error?.statusCode || '';
+      toast.error(language === 'es' ? `Error al subir: ${detail}` : `Failed to upload: ${detail}`);
     } finally {
       setIsUploading(false);
       setUploadingCategory(null);

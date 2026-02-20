@@ -720,7 +720,7 @@ export function PayrollSummary({
 
       if (snapshotRows.length > 0) {
         const { error: snapError } = await supabase
-          .from("payroll_snapshots" as any)
+          .from("payroll_snapshots")
           .upsert(snapshotRows, { onConflict: "period_id,employee_id" });
         if (snapError) {
           console.error("Snapshot insert error:", snapError);

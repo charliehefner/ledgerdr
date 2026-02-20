@@ -102,10 +102,10 @@ export function EditTransactionDialog({
       const descValue = transaction.description || "";
       const rncValue = transaction.rnc || "";
       const itbisValue = String(transaction.itbis || "");
-      const itbisRetValue = String((transaction as any).itbis_retenido || "");
-      const isrRetValue = String((transaction as any).isr_retenido || "");
+      const itbisRetValue = String(transaction.itbis_retenido || "");
+      const isrRetValue = String(transaction.isr_retenido || "");
       const payMethodValue = transaction.pay_method || "";
-      const tipoBienesValue = (transaction as any).dgii_tipo_bienes_servicios || "";
+      const tipoBienesValue = transaction.dgii_tipo_bienes_servicios || "";
 
       setFormData({
         transaction_date: transaction.transaction_date?.split("T")[0] || "",

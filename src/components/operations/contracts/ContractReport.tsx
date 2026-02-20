@@ -294,7 +294,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
       },
     });
 
-    let finalY = (doc as any).lastAutoTable.finalY || 200;
+    let finalY = doc.lastAutoTable.finalY || 200;
 
     // Payments table if there are payments
     if (filteredPayments.length > 0) {
@@ -347,7 +347,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
         },
       });
       
-      finalY = (doc as any).lastAutoTable.finalY || finalY + 30;
+      finalY = doc.lastAutoTable.finalY || finalY + 30;
     }
 
     // Summary section

@@ -80,6 +80,14 @@ export function BalanceSheetView() {
     },
   });
 
+  interface BSTransaction {
+    master_acct_code: string | null;
+    amount: number;
+    currency: string;
+    transaction_direction: string | null;
+    cost_center: string;
+  }
+
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["bs-transactions", asOfDate],
     queryFn: async () => {
@@ -89,22 +97,22 @@ export function BalanceSheetView() {
         .eq("is_void", false)
         .lte("transaction_date", asOfDate);
       if (error) throw error;
-      return data as any[];
+      return data as BSTransaction[];
     },
   });
 
   const filteredTx = useMemo(() => {
     if (costCenter === "all") return transactions;
-    return transactions.filter((tx: any) => (tx.cost_center || "general") === costCenter);
+    return transactions.filter((tx) => (tx.cost_center || "general") === costCenter);
   }, [transactions, costCenter]);
 
   // RD$ includes converted USD amounts; US$ shows raw USD
   const accountTotals = useMemo(() => {
     const totals: Record<string, { rd: number; us: number }> = {};
-    filteredTx.forEach((tx: any) => {
+    filteredTx.forEach((tx) => {
       const code = tx.master_acct_code;
       if (!code) return;
-      const amount = parseFloat(tx.amount) || 0;
+      const amount = parseFloat(String(tx.amount)) || 0;
       if (!totals[code]) totals[code] = { rd: 0, us: 0 };
       if (tx.currency === "USD") {
         totals[code].us += amount;

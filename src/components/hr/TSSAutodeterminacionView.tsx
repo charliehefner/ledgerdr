@@ -213,12 +213,12 @@ export function TSSAutodeterminacionView() {
     const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
     const fileName = `AM_${EMPLOYER_RNC}_${selectedMonth}${selectedYear}.txt`;
     if ("showSaveFilePicker" in window) {
-      (window as any)
-        .showSaveFilePicker({
+      window
+        .showSaveFilePicker!({
           suggestedName: fileName,
           types: [{ description: "Text file", accept: { "text/plain": [".txt"] } }],
         })
-        .then(async (handle: any) => {
+        .then(async (handle) => {
           const writable = await handle.createWritable();
           await writable.write(blob);
           await writable.close();

@@ -117,6 +117,9 @@ export interface InventoryItem {
   co2_equivalent: number | null;
   supplier: string | null;
   is_active: boolean;
+  cas_number: string | null;
+  normal_dose_per_ha: number | null;
+  minimum_stock: number | null;
 }
 
 export interface InventoryPurchase {
@@ -246,6 +249,8 @@ export interface Transaction {
   currency: string;
   amount: number;
   itbis: number | null;
+  itbis_retenido: number | null;
+  isr_retenido: number | null;
   pay_method: string | null;
   document: string | null;
   name: string | null;
@@ -255,6 +260,12 @@ export interface Transaction {
   void_reason: string | null;
   voided_at: string | null;
   legacy_id: number | null;
+  cost_center: string;
+  is_internal: boolean;
+  transaction_direction: string | null;
+  dgii_tipo_bienes_servicios: string | null;
+  dgii_tipo_ingreso: string | null;
+  dgii_tipo_anulacion: string | null;
 }
 
 // =====================

@@ -80,9 +80,8 @@ Deno.serve(async (req) => {
 
     if (action === "list-assets") {
       const gpsUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users?FromIndex=0&PageSize=1000&Kind=Asset`;
-      console.log("Fetching GPS assets from:", gpsUrl);
       const res = await fetch(gpsUrl, { headers: gpsHeaders });
-      console.log("GPS response status:", res.status);
+      if (!res.ok) {
       if (!res.ok) {
         const errText = await res.text();
         console.error("GPSGate API error:", res.status, errText);
@@ -95,7 +94,6 @@ Deno.serve(async (req) => {
         );
       }
       const data = await res.json();
-      console.log("GPS assets count:", Array.isArray(data) ? data.length : "not array");
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -218,7 +216,6 @@ Deno.serve(async (req) => {
       while (currentDate <= lastDate) {
         const dateStr = currentDate.toISOString().split("T")[0];
         const trackUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users/${gpsUserId}/tracks?Date=${dateStr}`;
-        console.log("Fetching tracks for date:", dateStr, "url:", trackUrl);
 
         const res = await fetch(trackUrl, { headers: gpsHeaders });
         if (res.ok) {
@@ -226,7 +223,6 @@ Deno.serve(async (req) => {
           if (Array.isArray(dayData)) {
             allPoints.push(...dayData);
           }
-          console.log("Date", dateStr, "returned", Array.isArray(dayData) ? dayData.length : 0, "points");
         } else {
           const errText = await res.text();
           console.error("GPSGate tracks error for", dateStr, ":", res.status, errText);

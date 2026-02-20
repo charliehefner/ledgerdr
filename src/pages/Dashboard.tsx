@@ -169,7 +169,7 @@ export default function Dashboard() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(tx)}
                   >
-                    {pendingNcfColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
+                    {pendingNcfColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id || "-"}</TableCell>}
                     {pendingNcfColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {pendingNcfColumns.isVisible("account") && (
                       <TableCell>
@@ -262,7 +262,7 @@ export default function Dashboard() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(tx)}
                   >
-                    {withoutPaymentReceiptColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.id || "-"}</TableCell>}
+                    {withoutPaymentReceiptColumns.isVisible("id") && <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id || "-"}</TableCell>}
                     {withoutPaymentReceiptColumns.isVisible("date") && <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>}
                     {withoutPaymentReceiptColumns.isVisible("account") && (
                       <TableCell>

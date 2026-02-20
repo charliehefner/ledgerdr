@@ -57,6 +57,7 @@ export type Database = {
           is_closed: boolean | null
           period_name: string
           start_date: string
+          status: string
           updated_at: string | null
         }
         Insert: {
@@ -68,6 +69,7 @@ export type Database = {
           is_closed?: boolean | null
           period_name: string
           start_date: string
+          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -79,6 +81,7 @@ export type Database = {
           is_closed?: boolean | null
           period_name?: string
           start_date?: string
+          status?: string
           updated_at?: string | null
         }
         Relationships: []

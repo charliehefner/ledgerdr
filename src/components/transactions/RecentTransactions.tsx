@@ -165,8 +165,8 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                       <TableCell>
                         {(() => {
                           const cc = (tx as any).cost_center || 'general';
-                          const label = cc === 'agricultural' ? 'Agrícola' : cc === 'industrial' ? 'Industrial' : 'General';
-                          const cls = cc === 'agricultural' ? 'bg-green-100 text-green-800 border-green-200' : cc === 'industrial' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-muted text-muted-foreground';
+                          const label = cc === 'agricultural' ? t("common.agricultural") : cc === 'industrial' ? t("common.industrial") : t("common.general");
+                          const cls = cc === 'agricultural' ? 'bg-accent text-accent-foreground' : cc === 'industrial' ? 'bg-info/15 text-info' : 'bg-muted text-muted-foreground';
                           return <Badge variant="outline" className={cls}>{label}</Badge>;
                         })()}
                       </TableCell>

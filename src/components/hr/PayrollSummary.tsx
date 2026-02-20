@@ -119,6 +119,22 @@ export function PayrollSummary({
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingReceipts, setIsGeneratingReceipts] = useState(false);
 
+  const isClosed = periodStatus === "closed";
+
+  // Fetch snapshots for closed periods (immutable data)
+  const { data: snapshots = [] } = useQuery({
+    queryKey: ["payroll-snapshots", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_snapshots")
+        .select("*")
+        .eq("period_id", periodId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!periodId && isClosed,
+  });
+
   // Fetch employees with bank info
   const { data: employees = [] } = useQuery({
     queryKey: ["employees-with-bank"],
@@ -417,9 +433,41 @@ export function PayrollSummary({
   };
 
 
-  const payrollData = employees
-    .map((e) => calculateEmployeePayroll(e.id))
-    .filter(Boolean) as NonNullable<ReturnType<typeof calculateEmployeePayroll>>[];
+  // When period is closed, use immutable snapshots instead of recalculating
+  const payrollData = (() => {
+    if (isClosed && snapshots.length > 0) {
+      return snapshots.map((s) => {
+        const employee = employees.find((e) => e.id === s.employee_id);
+        if (!employee) return null;
+        return {
+          employee,
+          regularHours: 0,
+          overtimeHours: 0,
+          holidayHours: 0,
+          sundayHours: 0,
+          vacationDays: 0,
+          basePay: Number(s.base_pay),
+          overtimePay: Number(s.overtime_pay),
+          holidayPay: Number(s.holiday_pay),
+          sundayPay: Number(s.sunday_pay),
+          benefits: [] as EmployeeBenefit[],
+          totalBenefits: Number(s.total_benefits),
+          tss: Number(s.tss),
+          isr: Number(s.isr),
+          absenceDeduction: Number(s.absence_deduction),
+          vacationDeduction: Number(s.vacation_deduction),
+          loanDeduction: Number(s.loan_deduction),
+          loanDetails: [] as { loan_amount: number; payment_amount: number; payment_number: number; total_payments: number }[],
+          totalDeductions: Number(s.tss) + Number(s.isr) + Number(s.absence_deduction) + Number(s.vacation_deduction) + Number(s.loan_deduction),
+          grossPay: Number(s.gross_pay),
+          netPay: Number(s.net_pay),
+        };
+      }).filter(Boolean) as NonNullable<ReturnType<typeof calculateEmployeePayroll>>[];
+    }
+    return employees
+      .map((e) => calculateEmployeePayroll(e.id))
+      .filter(Boolean) as NonNullable<ReturnType<typeof calculateEmployeePayroll>>[];
+  })();
 
   const totals = payrollData.reduce(
     (acc, p) => ({
@@ -756,7 +804,7 @@ export function PayrollSummary({
     },
   });
 
-  const isClosed = periodStatus === "closed";
+  // isClosed is declared at the top of the component
 
   return (
     <div className="space-y-4">

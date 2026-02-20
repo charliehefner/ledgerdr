@@ -65,7 +65,7 @@ const emptyFilters: Filters = {
   supplierName: "",
 };
 
-type SortKey = "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis";
+type SortKey = "legacy_id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis";
 type SortDir = "asc" | "desc" | null;
 
 const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
@@ -224,6 +224,7 @@ export function AccountingReportsView() {
   }, [activeFilters, t, ccLabels]);
 
   const colHeaders: [SortKey, string][] = [
+    ["legacy_id", "ID"],
     ["transaction_date", t("acctReport.col.date")],
     ["master_acct_code", t("acctReport.col.account")],
     ["project_code", t("acctReport.col.project")],
@@ -242,6 +243,7 @@ export function AccountingReportsView() {
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet(t("acctReport.reportTitle"));
       ws.columns = [
+        { header: "ID", key: "legacy_id", width: 8 },
         { header: t("acctReport.col.date"), key: "date", width: 14 },
         { header: t("acctReport.col.account"), key: "account", width: 14 },
         { header: t("acctReport.col.project"), key: "project", width: 12 },
@@ -255,6 +257,7 @@ export function AccountingReportsView() {
       ];
       sorted.forEach((tx: any) => {
         ws.addRow({
+          legacy_id: tx.legacy_id || "-",
           date: formatExcelDate(tx.transaction_date),
           account: tx.master_acct_code || "-",
           project: tx.project_code || "-",
@@ -307,6 +310,7 @@ export function AccountingReportsView() {
 
     const headers = colHeaders.map(([, label]) => label);
     const body = sorted.map((tx: any) => [
+      tx.legacy_id || "-",
       formatExcelDate(tx.transaction_date),
       tx.master_acct_code || "-",
       tx.project_code || "-",
@@ -428,6 +432,7 @@ export function AccountingReportsView() {
                 <TableBody>
                   {sorted.map((tx: any) => (
                     <TableRow key={tx.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id || "-"}</TableCell>
                       <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>
                       <TableCell>{tx.master_acct_code || "-"}</TableCell>
                       <TableCell>{tx.project_code || "-"}</TableCell>

@@ -30,6 +30,8 @@ export interface Transaction {
   currency: 'DOP' | 'USD';
   amount: number;
   itbis?: number;
+  itbis_retenido?: number;
+  isr_retenido?: number;
   pay_method?: string;
   document?: string;
   name?: string;
@@ -143,6 +145,8 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       currency: transaction.currency,
       amount: transaction.amount,
       itbis: transaction.itbis || null,
+      itbis_retenido: transaction.itbis_retenido || null,
+      isr_retenido: transaction.isr_retenido || null,
       pay_method: transaction.pay_method || null,
       document: transaction.document || null,
       name: transaction.name || null,

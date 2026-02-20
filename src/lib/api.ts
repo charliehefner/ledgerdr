@@ -132,6 +132,33 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
   
   const nextLegacyId = ((maxData?.[0]?.legacy_id || 0) as number) + 1;
 
+  // Resolve FK IDs from text codes
+  const fkFields: Record<string, unknown> = {};
+  if (transaction.master_acct_code) {
+    const { data: acct } = await supabase
+      .from('chart_of_accounts')
+      .select('id')
+      .eq('account_code', transaction.master_acct_code)
+      .maybeSingle();
+    if (acct) fkFields.account_id = acct.id;
+  }
+  if (transaction.project_code) {
+    const { data: proj } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('code', transaction.project_code)
+      .maybeSingle();
+    if (proj) fkFields.project_id = proj.id;
+  }
+  if (transaction.cbs_code) {
+    const { data: cbs } = await supabase
+      .from('cbs_codes')
+      .select('id')
+      .eq('code', transaction.cbs_code)
+      .maybeSingle();
+    if (cbs) fkFields.cbs_id = cbs.id;
+  }
+
   const { data, error } = await supabase
     .from('transactions')
     .insert({
@@ -156,6 +183,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       cost_center: transaction.cost_center || 'general',
       transaction_direction: transaction.transaction_direction || 'purchase',
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
+      ...fkFields,
     })
     .select()
     .single();

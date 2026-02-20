@@ -9,11 +9,11 @@ export interface TransactionAttachment {
 }
 
 // Get attachment file path for a transaction from local database (legacy - single attachment)
-export async function getAttachmentUrl(transactionId: string | number): Promise<string | null> {
+export async function getAttachmentUrl(transactionId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('attachment_url')
-    .eq('transaction_id', String(transactionId))
+    .eq('transaction_id', transactionId)
     .maybeSingle();
 
   if (error) {
@@ -25,11 +25,11 @@ export async function getAttachmentUrl(transactionId: string | number): Promise<
 }
 
 // Get all attachments for a transaction by category
-export async function getAttachmentsByCategory(transactionId: string | number): Promise<Record<AttachmentCategory, string | null>> {
+export async function getAttachmentsByCategory(transactionId: string): Promise<Record<AttachmentCategory, string | null>> {
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('attachment_url, attachment_category')
-    .eq('transaction_id', String(transactionId));
+    .eq('transaction_id', transactionId);
 
   if (error) {
     console.error('Error fetching attachments:', error);
@@ -53,13 +53,13 @@ export async function getAttachmentsByCategory(transactionId: string | number): 
 }
 
 // Get attachment URLs for multiple transactions (returns payment_receipt by default for backward compatibility)
-export async function getAttachmentUrls(transactionIds: (string | number)[]): Promise<Record<string, string>> {
+export async function getAttachmentUrls(transactionIds: string[]): Promise<Record<string, string>> {
   if (transactionIds.length === 0) return {};
 
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('transaction_id, attachment_url, attachment_category')
-    .in('transaction_id', transactionIds.map(String))
+    .in('transaction_id', transactionIds)
     .eq('attachment_category', 'payment_receipt');
 
   if (error) {
@@ -76,13 +76,13 @@ export async function getAttachmentUrls(transactionIds: (string | number)[]): Pr
 }
 
 // Get all attachments for multiple transactions, organized by transaction and category
-export async function getAllAttachmentUrls(transactionIds: (string | number)[]): Promise<Record<string, Record<AttachmentCategory, string | null>>> {
+export async function getAllAttachmentUrls(transactionIds: string[]): Promise<Record<string, Record<AttachmentCategory, string | null>>> {
   if (transactionIds.length === 0) return {};
 
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('transaction_id, attachment_url, attachment_category')
-    .in('transaction_id', transactionIds.map(String));
+    .in('transaction_id', transactionIds);
 
   if (error) {
     console.error('Error fetching attachments:', error);
@@ -93,7 +93,7 @@ export async function getAllAttachmentUrls(transactionIds: (string | number)[]):
   
   // Initialize all transactions with empty categories
   transactionIds.forEach(id => {
-    result[String(id)] = { ncf: null, payment_receipt: null, quote: null };
+    result[id] = { ncf: null, payment_receipt: null, quote: null };
   });
 
   data?.forEach(item => {
@@ -109,7 +109,7 @@ export async function getAllAttachmentUrls(transactionIds: (string | number)[]):
 
 // Save or update attachment URL for a transaction with specific category
 export async function saveAttachment(
-  transactionId: string | number, 
+  transactionId: string, 
   attachmentUrl: string,
   category: AttachmentCategory = 'payment_receipt'
 ): Promise<boolean> {
@@ -117,7 +117,7 @@ export async function saveAttachment(
     .from('transaction_attachments')
     .upsert(
       { 
-        transaction_id: String(transactionId), 
+        transaction_id: transactionId, 
         attachment_url: attachmentUrl,
         attachment_category: category
       },
@@ -136,13 +136,13 @@ export async function saveAttachment(
 
 // Delete attachment for a transaction (specific category or all)
 export async function deleteAttachment(
-  transactionId: string | number,
+  transactionId: string,
   category?: AttachmentCategory
 ): Promise<boolean> {
   let query = supabase
     .from('transaction_attachments')
     .delete()
-    .eq('transaction_id', String(transactionId));
+    .eq('transaction_id', transactionId);
 
   if (category) {
     query = query.eq('attachment_category', category);
@@ -185,23 +185,21 @@ export async function getSignedAttachmentUrl(attachmentUrl: string): Promise<str
     });
 
     if (error) {
-      // Don't spam console with auth errors - just return null silently
       return null;
     }
 
     return data?.signedUrl || null;
   } catch (error) {
-    // Silently fail to prevent screen freeze
     return null;
   }
 }
 
 // Check if a transaction has a payment receipt attachment
-export async function hasPaymentReceipt(transactionId: string | number): Promise<boolean> {
+export async function hasPaymentReceipt(transactionId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('id')
-    .eq('transaction_id', String(transactionId))
+    .eq('transaction_id', transactionId)
     .eq('attachment_category', 'payment_receipt')
     .maybeSingle();
 
@@ -214,13 +212,13 @@ export async function hasPaymentReceipt(transactionId: string | number): Promise
 }
 
 // Get payment receipt status for multiple transactions
-export async function getPaymentReceiptStatus(transactionIds: (string | number)[]): Promise<Record<string, boolean>> {
+export async function getPaymentReceiptStatus(transactionIds: string[]): Promise<Record<string, boolean>> {
   if (transactionIds.length === 0) return {};
 
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('transaction_id')
-    .in('transaction_id', transactionIds.map(String))
+    .in('transaction_id', transactionIds)
     .eq('attachment_category', 'payment_receipt');
 
   if (error) {
@@ -230,7 +228,7 @@ export async function getPaymentReceiptStatus(transactionIds: (string | number)[
 
   const result: Record<string, boolean> = {};
   transactionIds.forEach(id => {
-    result[String(id)] = false;
+    result[id] = false;
   });
   
   data?.forEach(item => {

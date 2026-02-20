@@ -29,7 +29,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { generateAttachmentFileName } from '@/lib/attachmentNaming';
 
 interface MultiAttachmentCellProps {
-  transactionId: string | number;
+  transactionId: string;
   attachments: Record<AttachmentCategory, string | null>;
   onUpdate: () => void;
   showCategories?: AttachmentCategory[];

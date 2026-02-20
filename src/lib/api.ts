@@ -113,10 +113,8 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     throw new Error(error.message);
   }
   
-  // Map to expected format, using legacy_id as id for attachment compatibility
   return (data || []).map(t => ({
     ...t,
-    id: t.legacy_id?.toString() || t.id,
     currency: t.currency as 'DOP' | 'USD',
     is_internal: t.is_internal ?? false,
     cost_center: (t.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
@@ -169,7 +167,6 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
   
   return {
     ...data,
-    id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
@@ -177,9 +174,9 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
   };
 }
 
-export async function updateTransaction(id: string | number, transaction: Partial<Transaction>): Promise<Transaction> {
-  // Find by legacy_id if numeric, otherwise by uuid
-  const legacyId = typeof id === 'number' ? id : parseInt(id, 10);
+export async function updateTransaction(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
+  // Try legacy_id first (numeric string), fall back to UUID
+  const legacyId = parseInt(id, 10);
   
   // Build update payload from provided fields
   const updatePayload: Record<string, unknown> = {};
@@ -209,7 +206,6 @@ export async function updateTransaction(id: string | number, transaction: Partia
   
   return {
     ...data,
-    id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
@@ -251,7 +247,6 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
   
   return {
     ...data,
-    id: data.legacy_id?.toString() || data.id,
     currency: data.currency as 'DOP' | 'USD',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',

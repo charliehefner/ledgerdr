@@ -228,6 +228,7 @@ export function PayrollSummary({
     let overtimeHours = 0;
     let holidayHours = 0;
     let sundayHours = 0;
+    let deficitHours = 0;
 
     entries.forEach((t) => {
       // Skip vacation days - they are paid separately
@@ -246,23 +247,18 @@ export function PayrollSummary({
         const isSaturdayWork = workDate.getDay() === 6; // Saturday = 6
 
         // Sunday work gets 100% bonus (tracked separately)
-        // Sunday overtime is also at Sunday rate (2x), not regular overtime rate
         if (isSundayWork) {
-          // Calculate total clock hours, then deduct lunch if applicable
           const clockHours = (end - start) / 60;
           const totalDayHours = clockHours > LUNCH_THRESHOLD_HOURS 
             ? clockHours - LUNCH_DEDUCTION_HOURS 
             : clockHours;
-          sundayHours += totalDayHours; // All Sunday hours get 2x rate
+          sundayHours += totalDayHours;
           return;
         }
 
         // Saturday: Normal hours 7:30-11:30 (4 hours), overtime after that
-        // Lunch deduction if end time > 14:00 (2:00 PM)
-        // Gerencia employees are exempt from overtime
         if (isSaturdayWork && !t.is_holiday) {
           const clockHours = (end - start) / 60;
-          // Deduct lunch if end time is after 2:00 PM
           const totalDayHours = end > SATURDAY_LUNCH_THRESHOLD 
             ? clockHours - LUNCH_DEDUCTION_HOURS 
             : clockHours;
@@ -271,6 +267,9 @@ export function PayrollSummary({
             regularHours += totalDayHours;
           } else if (totalDayHours <= SATURDAY_NORMAL_HOURS) {
             regularHours += totalDayHours;
+            if (totalDayHours < SATURDAY_NORMAL_HOURS) {
+              deficitHours += SATURDAY_NORMAL_HOURS - totalDayHours;
+            }
           } else {
             regularHours += SATURDAY_NORMAL_HOURS;
             overtimeHours += totalDayHours - SATURDAY_NORMAL_HOURS;
@@ -279,26 +278,23 @@ export function PayrollSummary({
         }
 
         // Weekdays (Mon-Fri) and Saturday holidays
-        // Calculate total clock hours, then deduct lunch if applicable
         const clockHours = (end - start) / 60;
         const totalDayHours = clockHours > LUNCH_THRESHOLD_HOURS 
           ? clockHours - LUNCH_DEDUCTION_HOURS 
           : clockHours;
         
-        // If this is a holiday, all hours get holiday rate (2x)
-        // Holiday overtime is also at holiday rate (2x), not regular overtime rate
         if (t.is_holiday) {
-          holidayHours += totalDayHours; // All holiday hours get 2x rate
+          holidayHours += totalDayHours;
           return;
         }
 
-        // Overtime calculation: based on 8-hour day threshold (not 44-hour week)
-        // Hours beyond 8 in a single day are overtime at 1.35x rate
-        // Gerencia employees are exempt - all hours count as regular
         if (isOvertimeExempt) {
           regularHours += totalDayHours;
         } else if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
           regularHours += totalDayHours;
+          if (totalDayHours < STANDARD_HOURS_PER_DAY) {
+            deficitHours += STANDARD_HOURS_PER_DAY - totalDayHours;
+          }
         } else {
           regularHours += STANDARD_HOURS_PER_DAY;
           overtimeHours += totalDayHours - STANDARD_HOURS_PER_DAY;
@@ -306,17 +302,12 @@ export function PayrollSummary({
       }
     });
 
-    // Count absences (excluding vacation days AND holiday days)
-    const absenceDays = entries.filter((e) => {
-      // Holiday days with no times are NOT absences - employee gets the day off
-      if (e.is_holiday) {
-        return false;
-      }
+    // Count absences: full days (AUS flag) + partial days (deficit hours)
+    const fullAbsenceDays = entries.filter((e) => {
+      if (e.is_holiday) return false;
       if (e.work_date) {
         const workDate = parseDateLocal(e.work_date);
-        if (isEmployeeOnVacation(employeeId, workDate)) {
-          return false; // Vacation days are not absences
-        }
+        if (isEmployeeOnVacation(employeeId, workDate)) return false;
       }
       return e.is_absent;
     }).length;
@@ -376,9 +367,8 @@ export function PayrollSummary({
       isr = (annualISR / 24) * Math.min(workedRatio, 1);
     }
     
-    const absenceDeduction = absenceDays * dailyRate;
-
-    // Loan deductions - sum all active loan payment amounts for this employee
+    // Absence deduction: full days + partial days (deficit hours)
+    const absenceDeduction = (fullAbsenceDays * dailyRate) + (deficitHours * hourlyRate);
     const employeeLoans = loans.filter((l) => l.employee_id === employeeId);
     const loanDeduction = Math.round(employeeLoans.reduce((sum, l) => sum + l.payment_amount, 0) * 100) / 100;
 
@@ -445,6 +435,7 @@ export function PayrollSummary({
       totalBenefits: acc.totalBenefits + p.totalBenefits,
       tss: acc.tss + p.tss,
       isr: acc.isr + p.isr,
+      absenceDeduction: acc.absenceDeduction + p.absenceDeduction,
       loanDeduction: acc.loanDeduction + p.loanDeduction,
       totalDeductions: acc.totalDeductions + p.totalDeductions,
       grossPay: acc.grossPay + p.grossPay,
@@ -463,6 +454,7 @@ export function PayrollSummary({
       totalBenefits: 0,
       tss: 0,
       isr: 0,
+      absenceDeduction: 0,
       loanDeduction: 0,
       totalDeductions: 0,
       grossPay: 0,
@@ -831,6 +823,7 @@ export function PayrollSummary({
               <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">TSS</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">ISR</TableHead>
+              <TableHead className="text-right text-red-600 whitespace-nowrap">Ausencias</TableHead>
               <TableHead className="text-right whitespace-nowrap">Hrs Reg</TableHead>
               <TableHead className="text-right whitespace-nowrap bg-green-50">Hrs Extra</TableHead>
               <TableHead className="text-right whitespace-nowrap bg-green-50">Pago Extra</TableHead>
@@ -861,6 +854,9 @@ export function PayrollSummary({
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
                   {p.isr > 0 ? formatCurrency(p.isr) : "-"}
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-600">
+                  {p.absenceDeduction > 0 ? formatCurrency(p.absenceDeduction) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono">
                   {p.regularHours > 0 ? p.regularHours.toFixed(1) : "-"}
@@ -906,6 +902,9 @@ export function PayrollSummary({
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {totals.isr > 0 ? formatCurrency(totals.isr) : "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono text-red-600">
+                {totals.absenceDeduction > 0 ? formatCurrency(totals.absenceDeduction) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono">
                 {totals.regularHours > 0 ? totals.regularHours.toFixed(1) : "-"}

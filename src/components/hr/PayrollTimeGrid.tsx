@@ -487,6 +487,7 @@ export function PayrollTimeGrid({
 
   // Calculate hours: regular is within 7:30am-4:30pm, overtime is outside, holiday/Sunday hours tracked separately
   // Gerencia employees are exempt from overtime - all hours count as regular
+  // Deficit hours: when employee works less than standard day (counterpart to overtime)
   const calculateHoursForEmployee = (employeeId: string) => {
     const employee = employees.find((e) => e.id === employeeId);
     const isOvertimeExempt = employee && OVERTIME_EXEMPT_POSITIONS.includes(employee.position);
@@ -496,6 +497,7 @@ export function PayrollTimeGrid({
     let overtimeHours = 0;
     let holidayHours = 0;
     let sundayHours = 0;
+    let deficitHours = 0;
 
     entries.forEach((t) => {
       if (t.start_time && t.end_time) {
@@ -530,6 +532,10 @@ export function PayrollTimeGrid({
             regularHours += totalDayHours;
           } else if (totalDayHours <= SATURDAY_NORMAL_HOURS) {
             regularHours += totalDayHours;
+            // Track deficit if worked less than standard Saturday
+            if (totalDayHours < SATURDAY_NORMAL_HOURS) {
+              deficitHours += SATURDAY_NORMAL_HOURS - totalDayHours;
+            }
           } else {
             regularHours += SATURDAY_NORMAL_HOURS;
             overtimeHours += totalDayHours - SATURDAY_NORMAL_HOURS;
@@ -557,6 +563,10 @@ export function PayrollTimeGrid({
           regularHours += totalDayHours;
         } else if (totalDayHours <= STANDARD_HOURS_PER_DAY) {
           regularHours += totalDayHours;
+          // Track deficit if worked less than standard day
+          if (totalDayHours < STANDARD_HOURS_PER_DAY) {
+            deficitHours += STANDARD_HOURS_PER_DAY - totalDayHours;
+          }
         } else {
           regularHours += STANDARD_HOURS_PER_DAY;
           overtimeHours += totalDayHours - STANDARD_HOURS_PER_DAY;
@@ -564,7 +574,7 @@ export function PayrollTimeGrid({
       }
     });
 
-    return { regularHours, overtimeHours, holidayHours, sundayHours, totalHours: regularHours + overtimeHours };
+    return { regularHours, overtimeHours, holidayHours, sundayHours, deficitHours, totalHours: regularHours + overtimeHours };
   };
 
   const getAbsenceDays = (employeeId: string) => {
@@ -600,6 +610,7 @@ export function PayrollTimeGrid({
     const biweeklySalary = employee.salary / 2;
     const monthlySalary = employee.salary;
     const dailyRate = employee.salary / 23.83; // DR average work days
+    const hourlyRate = dailyRate / 8;
 
     // Get employee benefits (Teléfono, Gasolina, Bono) - these are taxable income per DGII
     const empBenefits = employeeBenefits.filter((b) => b.employee_id === employeeId);
@@ -627,30 +638,21 @@ export function PayrollTimeGrid({
     const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
 
     // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
-    // TSS contributions are pre-tax deductions that reduce the taxable base
-    // Benefits (Teléfono, Gasolina, Bono) are included in taxable income per DGII
-    // Formula: Monthly Taxable = (Salary + Benefits) - TSS
     let isr = 0;
     if (effectiveBasePay > 0 || totalBenefits > 0) {
-      // Calculate monthly taxable income (salary + benefits - TSS)
       const monthlyGross = monthlySalary + monthlyBenefits;
       const monthlyTSS = monthlyGross * TSS_EMPLOYEE_RATE;
       const monthlyTaxable = monthlyGross - monthlyTSS;
-      
-      // Project to annual taxable income
       const annualTaxableIncome = monthlyTaxable * 12;
-      
-      // Calculate annual ISR using progressive brackets
       const annualISR = calculateAnnualISR(annualTaxableIncome);
-      
-      // Prorate for this period based on worked ratio
       const workedRatio = (effectiveBasePay + totalBenefits) / (biweeklySalary + totalBenefits);
       isr = (annualISR / 24) * workedRatio;
     }
 
-    // Absence deduction (prorated)
-    const absenceDays = getAbsenceDays(employeeId);
-    const absenceDeduction = absenceDays * dailyRate;
+    // Absence deduction: full days (AUS flag) + partial days (deficit hours)
+    const fullAbsenceDays = getAbsenceDays(employeeId);
+    const { deficitHours } = calculateHoursForEmployee(employeeId);
+    const absenceDeduction = (fullAbsenceDays * dailyRate) + (deficitHours * hourlyRate);
 
     return { tss, isr, absenceDeduction, vacationDeduction };
   };

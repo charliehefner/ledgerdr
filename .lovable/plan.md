@@ -1,95 +1,101 @@
 
-# Audit Remediation - Lower Priority Items
 
-This plan addresses the remaining audit findings in 4 manageable batches to avoid overwhelming the system.
+# Recording Head Office Transfers (Capital Contributions)
 
----
+## The Accounting Problem
 
-## Batch 1: Type Safety - Eliminate `as any` Casts
+Head office transfers are **not income** -- they are intercompany transactions that increase the subsidiary's assets while creating a liability (or equity entry) to the parent company. Your chart of accounts already has the correct accounts for this:
 
-The 196 `as any` casts fall into a few root causes that can be fixed systematically:
+- **2460** - Empresas del grupo de cuentas por pagar (Intercompany Payable)
+- **2093** - Contribuciones de los accionistas recibidas (Shareholder Contributions)
 
-**A. Transaction type is missing fields** - `cost_center`, `itbis_retenido`, `isr_retenido`, `dgii_tipo_bienes_servicios` are used via `(t as any).field` because the `Transaction` interface in `src/types/index.ts` and `src/lib/api.ts` doesn't include them.
-- Fix: Add the missing fields to both Transaction interfaces
-- Files: `src/types/index.ts`, `src/lib/api.ts`, `src/components/invoices/EditTransactionDialog.tsx`, `src/components/accounting/useJournalGeneration.ts`, `src/components/transactions/RecentTransactions.tsx`
+The current system only supports "Purchase" and "Sale" directions, both of which assume expense-to-payment or income-to-deposit flows. A third direction is needed.
 
-**B. Supabase query results cast to `any[]`** - Views like ProfitLossView and BalanceSheetView cast query results because TypeScript doesn't know the shape.
-- Fix: Define proper result interfaces and use them instead of `any[]`
-- Files: `src/components/accounting/ProfitLossView.tsx`, `src/components/accounting/BalanceSheetView.tsx`
+## Two Scenarios
 
-**C. Inventory item missing DB columns** - `cas_number` and `normal_dose_per_ha` accessed via `as any`
-- Fix: Add these to the InventoryItem type in `src/types/index.ts`
-- Files: `src/types/index.ts`, `src/components/inventory/InventoryItemDialog.tsx`
+1. **Cash transfer from HQ**: Money arrives in your bank account
+   - Journal: Debit Bank Account (e.g. 1110 BDI) / Credit 2460 Intercompany Payable
+2. **Equipment transfer from HQ**: Equipment arrives with an invoice
+   - Journal: Debit Fixed Asset Account (e.g. 1220 Machinery) / Credit 2460 Intercompany Payable
+   - If the item is a fixed asset, it should also be registered in the Fixed Assets module
 
-**D. Supabase insert/update payload casts** - Used to bypass strict typing on `.insert()` / `.update()`
-- Fix: Use type assertions to the proper Database table types or cast narrowly
-- Files: `src/components/inventory/InventoryItemDialog.tsx`, `src/components/hr/PayrollSummary.tsx`
+## Plan
 
-**E. Window API casts** (`showSaveFilePicker`) - Legitimate since this is a non-standard API
-- Fix: Create a shared type declaration in `src/vite-env.d.ts`
-- Files: `src/vite-env.d.ts`, `src/components/hr/IR17ReportView.tsx`, `src/components/hr/TSSAutodeterminacionView.tsx`
+### 1. Add "Investment" Transaction Direction
 
-**F. jsPDF `lastAutoTable` property** - From jspdf-autotable plugin
-- Fix: Declare module augmentation for jspdf-autotable
-- Files: `src/components/operations/contracts/ContractReport.tsx`
+Add a third option to the Type dropdown in the Transaction Form:
+- Purchase (existing)
+- Sale (existing)
+- **Investment** (new) -- labeled "Inversión" in Spanish
 
-**G. Select/filter value casts** - Minor UI casts like `setStatusFilter(v as any)`
-- Fix: Properly type the state variables
-- Files: `src/components/equipment/FixedAssetsView.tsx`
+### 2. UI Behavior When "Investment" Is Selected
 
----
+- **Master Account** becomes the **credit account** (e.g. 2460 Intercompany Payable, 2093 Contributions)
+- A new **"Destination Account"** dropdown appears, allowing selection of where the value lands:
+  - A bank account (for cash transfers)
+  - A fixed asset account (for equipment transfers)
+  - Any other asset account
+- **DGII fields** (Tipo Ingreso, Tipo Bienes/Servicios) are hidden (not applicable)
+- **NCF/attachment** requirements remain optional (equipment may have invoices)
+- All other fields (amount, currency, description, name, document) remain available
 
-## Batch 2: Console Log Cleanup
+### 3. Update Journal Auto-Generation
 
-132 console statements across 7 files. Strategy:
+Modify `useJournalGeneration.ts` to handle `transaction_direction = 'investment'`:
 
-- **Keep**: `console.warn` in `DatabaseBackup.tsx` (error handling during export) and `MultiAttachmentCell.tsx` (graceful degradation)
-- **Remove**: All `console.log` in `AuthContext.tsx` (12 statements - debug logging from development)
-- **Remove**: `console.log` in `gpsgate-proxy/index.ts` edge function (4 statements)
-- **Keep**: `console.warn` for non-critical failures (follow-up scheduling in OperationsLogView)
+```text
+For investment transactions:
+  Debit:  destination_account (the bank or fixed asset account)
+  Credit: master_acct_code (the intercompany/equity account)
+  
+  If ITBIS exists:
+    Debit: 1650 ITBIS Pagado (for equipment with tax)
+    Credit amount increases accordingly
+```
 
-Net removal: ~16 statements. The rest are legitimate `console.warn`/`console.error` for error handling.
+This is the reverse of the purchase journal pattern.
 
----
+### 4. Database Changes
 
-## Batch 3: Split LanguageContext.tsx (1,582 lines)
+- Add a new column `destination_acct_code` (text, nullable) to the `transactions` table for storing the debit-side account on investment transactions
+- No new tables needed; uses existing chart of accounts
 
-The translation dictionary makes up ~95% of this file. Split into:
+### 5. Fixed Asset Integration
 
-1. **`src/i18n/es.ts`** - Spanish translations object (~700 lines)
-2. **`src/i18n/en.ts`** - English translations object (~700 lines)
-3. **`src/i18n/index.ts`** - Re-export combined translations record
-4. **`src/contexts/LanguageContext.tsx`** - Slim context provider (~30 lines), imports from `src/i18n`
-
-No behavioral changes - just file organization.
-
----
-
-## Batch 4: Fix Legacy ID Fallback + Add Pagination Hook
-
-**Legacy ID fix** in `api.ts`:
-- Current: `id: t.legacy_id?.toString() || t.id` silently swaps UUIDs for legacy IDs, causing confusion downstream
-- Fix: Keep `id` as the UUID, expose `legacy_id` as a separate field. Update attachment logic that depends on legacy_id to use the explicit field.
-
-**Reusable pagination hook**:
-- Create `src/hooks/usePagination.ts` with page size, current page, and total count
-- Apply to the Transactions page (currently hardcoded `limit: 500`) as the first consumer
-- Other modules can adopt it incrementally
+When an investment transaction uses a fixed asset account code (accounts starting with 12xx like 1220, 1230, etc.) as the destination:
+- Display an informational note: "Remember to register this equipment in the Fixed Assets module (Accounting > Activos Fijos)"
+- No automatic fixed asset creation (the user's existing workflow handles this manually through the Fixed Assets tab)
 
 ---
 
-## Execution Order
+## Technical Details
 
-Each batch will be implemented as a separate message to keep changes reviewable and avoid crashes:
+### Files to Modify
 
-1. Batch 1 - Type safety (highest impact on developer experience)
-2. Batch 2 - Console cleanup (quick win)
-3. Batch 3 - LanguageContext split (largest file change, isolated risk)
-4. Batch 4 - Legacy ID + pagination (behavioral change, needs care)
+| File | Change |
+|------|--------|
+| `src/components/transactions/TransactionForm.tsx` | Add 'investment' direction option, add destination account dropdown, conditional DGII field hiding |
+| `src/components/accounting/useJournalGeneration.ts` | Handle reversed debit/credit logic for investment direction |
+| `src/types/index.ts` | Update Transaction type with `destination_acct_code` field |
+| `src/i18n/en.ts` and `src/i18n/es.ts` | Add translation keys for "Investment/Inversion" and "Destination Account/Cuenta Destino" |
+| `src/components/transactions/RecentTransactions.tsx` | Display 'Investment' badge for the new direction |
+| `src/pages/Reports.tsx` | Show investment direction in ledger/reports |
 
-## Technical Notes
+### Database Migration
 
-- No database migrations required for any of these changes
-- All changes are backward-compatible
-- The LanguageContext split is a pure refactor with zero runtime behavior change
-- The legacy ID fix may affect attachment URLs if they rely on `legacy_id` as the path key -- this will be verified before changing
+```sql
+ALTER TABLE transactions 
+  ADD COLUMN destination_acct_code text;
+```
+
+### Journal Generation Logic Change
+
+```text
+IF transaction_direction = 'investment':
+  debit_account  = destination_acct_code  (bank or fixed asset)
+  credit_account = master_acct_code       (intercompany/equity)
+ELSE (purchase):
+  debit_account  = master_acct_code       (expense)
+  credit_account = payment_method_mapping  (bank)
+```
+

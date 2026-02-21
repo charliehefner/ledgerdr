@@ -696,6 +696,10 @@ export const es = {
   "txForm.namePlaceholderSale": "Cliente",
   "txForm.cliente": "Cliente",
   "txForm.credit": "Crédito",
+  "txForm.investment": "Inversión",
+  "txForm.destinationAccount": "Cuenta Destino",
+  "txForm.selectDestinationAccount": "Seleccionar cuenta destino",
+  "txForm.fixedAssetReminder": "Recuerde registrar este equipo en el módulo de Activos Fijos (Contabilidad > Activos Fijos)",
 
   // DGII
   "dgii.reports": "Reportes DGII",
@@ -707,6 +711,7 @@ export const es = {
   "dgii.direction": "Dirección",
   "dgii.purchase": "Compra",
   "dgii.sale": "Venta",
+  "dgii.investment": "Inversión",
 
   // Help tooltips
   "help.generateJournals": "Crea asientos contables automáticamente a partir de transacciones sin asiento vinculado. Se generan en estado Borrador para revisión.",

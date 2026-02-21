@@ -263,6 +263,7 @@ export interface Transaction {
   cost_center: string;
   is_internal: boolean;
   transaction_direction: string | null;
+  destination_acct_code: string | null;
   dgii_tipo_bienes_servicios: string | null;
   dgii_tipo_ingreso: string | null;
   dgii_tipo_anulacion: string | null;

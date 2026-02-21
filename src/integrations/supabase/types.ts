@@ -2454,6 +2454,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string
+          destination_acct_code: string | null
           dgii_tipo_anulacion: string | null
           dgii_tipo_bienes_servicios: string | null
           dgii_tipo_ingreso: string | null
@@ -2487,6 +2488,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          destination_acct_code?: string | null
           dgii_tipo_anulacion?: string | null
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
@@ -2520,6 +2522,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          destination_acct_code?: string | null
           dgii_tipo_anulacion?: string | null
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null

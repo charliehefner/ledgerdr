@@ -12,6 +12,8 @@ type UnlinkedTransaction = {
   master_acct_code: string | null;
   pay_method: string | null;
   cost_center: string | null;
+  transaction_direction: string | null;
+  destination_acct_code: string | null;
 };
 
 type PayMethodMapping = {
@@ -89,7 +91,7 @@ export function useJournalGeneration(userId?: string) {
       // 4. Fetch unlinked transactions
       const { data: txns, error: tErr } = await supabase
         .from("transactions")
-        .select("id, transaction_date, description, amount, itbis, master_acct_code, pay_method, cost_center")
+        .select("id, transaction_date, description, amount, itbis, master_acct_code, pay_method, cost_center, transaction_direction, destination_acct_code")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true });
       if (tErr) throw tErr;
@@ -107,7 +109,65 @@ export function useJournalGeneration(userId?: string) {
       const skipped: string[] = [];
 
       for (const txn of unlinked) {
-        // Validate mappings exist
+        const isInvestment = txn.transaction_direction === 'investment';
+
+        if (isInvestment) {
+          // Investment: Debit destination account, Credit master account (intercompany/equity)
+          const creditAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
+          const debitAccountId = txn.destination_acct_code ? acctByCode.get(txn.destination_acct_code) : null;
+
+          if (!creditAccountId) {
+            skipped.push(`${txn.description || txn.id}: cuenta crédito "${txn.master_acct_code}" no encontrada`);
+            setProgress((p) => ({ ...p, current: p.current + 1 }));
+            continue;
+          }
+          if (!debitAccountId) {
+            skipped.push(`${txn.description || txn.id}: cuenta destino "${txn.destination_acct_code}" no encontrada`);
+            setProgress((p) => ({ ...p, current: p.current + 1 }));
+            continue;
+          }
+
+          const { data: journalId, error: jErr } = await supabase.rpc(
+            "create_journal_from_transaction",
+            {
+              p_transaction_id: txn.id,
+              p_date: txn.transaction_date,
+              p_description: `${txn.description || "Inversión"}${txn.cost_center && txn.cost_center !== 'general' ? ` [${txn.cost_center === 'agricultural' ? 'Agrícola' : 'Industrial'}]` : ''}`,
+              p_created_by: userId || null,
+            }
+          );
+          if (jErr) {
+            skipped.push(`${txn.description || txn.id}: ${jErr.message}`);
+            setProgress((p) => ({ ...p, current: p.current + 1 }));
+            continue;
+          }
+
+          const itbisAmount = txn.itbis || 0;
+          const netAmount = txn.amount - itbisAmount;
+          const lines: { journal_id: string; account_id: string; debit: number; credit: number; created_by: string | undefined }[] = [];
+
+          // Debit: destination account (bank or fixed asset) - net amount
+          lines.push({ journal_id: journalId, account_id: debitAccountId, debit: netAmount, credit: 0, created_by: userId });
+
+          // Debit: ITBIS (if applicable)
+          if (itbisAmount > 0 && itbisAccountId) {
+            lines.push({ journal_id: journalId, account_id: itbisAccountId, debit: itbisAmount, credit: 0, created_by: userId });
+          }
+
+          // Credit: master account (intercompany/equity) - full amount
+          lines.push({ journal_id: journalId, account_id: creditAccountId, debit: 0, credit: txn.amount, created_by: userId });
+
+          const { error: lErr } = await supabase.from("journal_lines").insert(lines);
+          if (lErr) {
+            skipped.push(`${txn.description || txn.id}: líneas: ${lErr.message}`);
+          } else {
+            created++;
+          }
+          setProgress((p) => ({ ...p, current: p.current + 1 }));
+          continue;
+        }
+
+        // Standard purchase/sale logic
         const expenseAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
         const payAccountId = txn.pay_method ? mappingMap.get(txn.pay_method) : null;
 

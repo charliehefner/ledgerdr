@@ -696,6 +696,10 @@ export const en = {
   "txForm.namePlaceholderSale": "Customer",
   "txForm.cliente": "Customer",
   "txForm.credit": "Credit",
+  "txForm.investment": "Investment",
+  "txForm.destinationAccount": "Destination Account",
+  "txForm.selectDestinationAccount": "Select destination account",
+  "txForm.fixedAssetReminder": "Remember to register this equipment in the Fixed Assets module (Accounting > Fixed Assets)",
 
   // DGII
   "dgii.reports": "DGII Reports",
@@ -707,6 +711,7 @@ export const en = {
   "dgii.direction": "Direction",
   "dgii.purchase": "Purchase",
   "dgii.sale": "Sale",
+  "dgii.investment": "Investment",
 
   // Help tooltips
   "help.generateJournals": "Automatically creates journal entries from transactions without a linked entry. Generated as Draft for review.",

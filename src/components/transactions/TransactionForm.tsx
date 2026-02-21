@@ -66,7 +66,8 @@ const initialFormState = {
   comments: '',
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
-  transaction_direction: 'purchase' as 'purchase' | 'sale',
+  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'investment',
+  destination_acct_code: '',
   dgii_tipo_ingreso: '',
   attachments: {
     ncf: null,
@@ -84,6 +85,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: fetchAccounts,
+  });
+
+  // Fetch postable chart of accounts for destination account (investment)
+  const { data: chartOfAccounts = [] } = useQuery({
+    queryKey: ['chartOfAccountsPostable'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chart_of_accounts')
+        .select('id, account_code, account_name')
+        .eq('allow_posting', true)
+        .is('deleted_at', null)
+        .order('account_code');
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
@@ -157,6 +173,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
       return false;
     }
+    if (form.transaction_direction === 'investment' && !form.destination_acct_code) {
+      return false;
+    }
     // ITBIS cannot exceed 18% of amount
     if (form.itbis && form.amount) {
       const itbisValue = parseFloat(form.itbis);
@@ -212,6 +231,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         is_internal: form.master_acct_code === '0000',
         cost_center: form.cost_center,
         transaction_direction: form.transaction_direction,
+        destination_acct_code: form.transaction_direction === 'investment' ? form.destination_acct_code || undefined : undefined,
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
       });
 
@@ -392,7 +412,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Label>{t('txForm.direction')}</Label>
               <Select
                 value={form.transaction_direction}
-                onValueChange={(value: 'purchase' | 'sale') => updateField('transaction_direction', value)}
+                onValueChange={(value: 'purchase' | 'sale' | 'investment') => {
+                  updateField('transaction_direction', value);
+                  if (value !== 'investment') {
+                    updateField('destination_acct_code', '');
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -400,6 +425,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 <SelectContent className="bg-popover">
                   <SelectItem value="purchase">{t('txForm.purchase')}</SelectItem>
                   <SelectItem value="sale">{t('txForm.sale')}</SelectItem>
+                  <SelectItem value="investment">{t('txForm.investment')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -492,6 +518,33 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </Select>
             </div>
           </div>
+
+          {/* Destination Account - only for investment transactions */}
+          {form.transaction_direction === 'investment' && (
+            <div className="space-y-2">
+              <Label>{t('txForm.destinationAccount')} *</Label>
+              <Select
+                value={form.destination_acct_code}
+                onValueChange={(value) => updateField('destination_acct_code', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('txForm.selectDestinationAccount')} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  {chartOfAccounts.map((acct) => (
+                    <SelectItem key={acct.id} value={acct.account_code}>
+                      {acct.account_code} - {acct.account_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.destination_acct_code?.startsWith('12') && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  💡 {t('txForm.fixedAssetReminder')}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-2">

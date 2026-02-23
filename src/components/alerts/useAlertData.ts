@@ -361,11 +361,6 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
   const liveQuery = useQuery({
     queryKey: ["alert-gps-live-positions"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("gpsgate-proxy", {
-        body: null,
-        headers: { "Content-Type": "application/json" },
-      });
-      // Use GET with query params via manual fetch
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const session = await supabase.auth.getSession();

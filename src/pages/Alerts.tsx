@@ -13,6 +13,7 @@ import {
   useEquipmentAlerts,
   useInventoryAlerts,
   useOperationsAlerts,
+  useOperationsGpsAlerts,
 } from "@/components/alerts/useAlertData";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,10 +27,12 @@ export default function Alerts() {
   const equipment = useEquipmentAlerts(configs);
   const inventory = useInventoryAlerts(configs);
   const operations = useOperationsAlerts(configs);
+  const gpsOps = useOperationsGpsAlerts(configs);
 
-  const isLoading = configsLoading || hr.isLoading || fuel.isLoading || equipment.isLoading || inventory.isLoading || operations.isLoading;
+  const isLoading = configsLoading || hr.isLoading || fuel.isLoading || equipment.isLoading || inventory.isLoading || operations.isLoading || gpsOps.isLoading;
 
-  const totalAlerts = hr.alerts.length + fuel.alerts.length + equipment.alerts.length + inventory.alerts.length + operations.alerts.length;
+  const allOpsAlerts = [...operations.alerts, ...gpsOps.alerts];
+  const totalAlerts = hr.alerts.length + fuel.alerts.length + equipment.alerts.length + inventory.alerts.length + allOpsAlerts.length;
 
   const isAdmin = user?.role === "admin";
 
@@ -90,8 +93,8 @@ export default function Alerts() {
               ))}
             </AlertSector>
 
-            <AlertSector title="Operaciones" alertCount={operations.alerts.length}>
-              {operations.alerts.map((a, i) => (
+            <AlertSector title="Operaciones" alertCount={allOpsAlerts.length}>
+              {allOpsAlerts.map((a, i) => (
                 <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
               ))}
             </AlertSector>

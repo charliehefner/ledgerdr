@@ -15,6 +15,10 @@ const ALERT_LABELS: Record<string, { name: string; unit: string | null }> = {
   maintenance_due: { name: "Mantenimiento preventivo", unit: "horas" },
   inventory_low: { name: "Inventario bajo", unit: null },
   overdue_followups: { name: "Seguimientos vencidos", unit: null },
+  hectares_exceed_field: { name: "Hectáreas exceden tamaño del campo", unit: null },
+  gps_unrecorded_activity: { name: "Actividad GPS sin operación", unit: null },
+  gps_no_movement: { name: "Operación sin movimiento GPS", unit: null },
+  gps_hectares_mismatch: { name: "Hectáreas vs estimación GPS", unit: "%" },
 };
 
 interface AlertConfigDialogProps {

@@ -291,17 +291,14 @@ export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
   const today = new Date();
 
   for (const entry of entriesQuery.data) {
-    // Week is closed → assume work was completed
     if (closedWeeks.has(entry.week_ending_date)) continue;
 
-    // Compute the actual scheduled date from week_ending_date (Saturday) and day_of_week (0=Mon..5=Sat)
     const weekEnd = new Date(entry.week_ending_date);
-    const scheduledDate = addDays(weekEnd, entry.day_of_week - 5); // Sat=0 offset, Mon=-5
+    const scheduledDate = addDays(weekEnd, entry.day_of_week - 5);
 
     const daysUntil = differenceInDays(scheduledDate, today);
 
     if (daysUntil < 0) {
-      // Past due → red/urgent
       const daysOverdue = Math.abs(daysUntil);
       alerts.push({
         severity: "urgent",
@@ -309,7 +306,6 @@ export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
         detail: `${entry.worker_name} · ${format(scheduledDate, "dd/MM/yyyy")} (${entry.time_slot}) · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""} de atraso`,
       });
     } else if (daysUntil <= 5) {
-      // Within 5 days → yellow/warning
       alerts.push({
         severity: "warning",
         title: `Seguimiento próximo — ${entry.task || "Sin descripción"}`,
@@ -320,4 +316,309 @@ export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
 
   alerts.sort((a, b) => (a.severity === "urgent" ? -1 : 1));
   return { alerts, isLoading };
+}
+
+// ─── GPS-OPERATIONS CROSS-VALIDATION ALERTS ───────────────
+export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
+  const today = new Date();
+  const todayStr = format(today, "yyyy-MM-dd");
+  const yesterday = addDays(today, -1);
+  const yesterdayStr = format(yesterday, "yyyy-MM-dd");
+  const thirtyDaysAgo = format(addDays(today, -30), "yyyy-MM-dd");
+
+  // Alert 1: Hectares exceed field — operations from last 30 days
+  const opsQuery = useQuery({
+    queryKey: ["alert-ops-hectares", thirtyDaysAgo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("operations")
+        .select("id, operation_date, hectares_done, tractor_id, field_id, fields(name, hectares), operation_types(name, is_mechanical)")
+        .gte("operation_date", thirtyDaysAgo)
+        .order("operation_date", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!configs,
+  });
+
+  // GPS-linked tractors
+  const tractorsQuery = useQuery({
+    queryKey: ["alert-gps-tractors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fuel_equipment")
+        .select("id, name, gpsgate_user_id")
+        .eq("equipment_type", "tractor")
+        .eq("is_active", true)
+        .not("gpsgate_user_id", "is", null);
+      if (error) throw error;
+      return data as { id: string; name: string; gpsgate_user_id: number }[];
+    },
+    enabled: !!configs,
+  });
+
+  // Live positions for alerts 2 & 3
+  const liveQuery = useQuery({
+    queryKey: ["alert-gps-live-positions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("gpsgate-proxy", {
+        body: null,
+        headers: { "Content-Type": "application/json" },
+      });
+      // Use GET with query params via manual fetch
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (!accessToken) return [];
+
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/gpsgate-proxy?action=live-positions`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: anonKey,
+          },
+        }
+      );
+      if (!res.ok) return [];
+      return (await res.json()) as {
+        tractorId: string;
+        tractorName: string;
+        speed: number;
+        engineOn: boolean;
+        lastUpdate: string;
+      }[];
+    },
+    enabled: !!configs && !!tractorsQuery.data?.length,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Implements for Alert 4 working width
+  const implementsQuery = useQuery({
+    queryKey: ["alert-implements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("implements")
+        .select("id, name, working_width_m")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data as { id: string; name: string; working_width_m: number | null }[];
+    },
+    enabled: !!configs,
+  });
+
+  // Track history for Alert 4 — fetch for recent ops with GPS tractors
+  const recentGpsOps = (opsQuery.data ?? []).filter((op: any) => {
+    if (!op.tractor_id || !op.operation_types?.is_mechanical) return false;
+    if (!op.hectares_done || op.hectares_done <= 0) return false;
+    const opDate = op.operation_date;
+    return opDate === todayStr || opDate === yesterdayStr;
+  });
+
+  const gpsTractorIds = new Set((tractorsQuery.data ?? []).map((t) => t.id));
+  const opsNeedingTracks = recentGpsOps.filter((op: any) => gpsTractorIds.has(op.tractor_id));
+
+  // Fetch tracks for each unique tractor/date combo
+  const trackKeys = opsNeedingTracks.map((op: any) => `${op.tractor_id}|${op.operation_date}`);
+  const uniqueTrackKeys = [...new Set(trackKeys)];
+
+  const tracksQuery = useQuery({
+    queryKey: ["alert-gps-tracks", uniqueTrackKeys],
+    queryFn: async () => {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (!accessToken) return {};
+
+      const results: Record<string, { tracks: any[]; operations: any[] }> = {};
+      await Promise.all(
+        uniqueTrackKeys.map(async (key) => {
+          const [tractorId, date] = key.split("|");
+          try {
+            const res = await fetch(
+              `https://${projectId}.supabase.co/functions/v1/gpsgate-proxy?action=tracks&tractorId=${tractorId}&dateFrom=${date}&dateTo=${date}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  apikey: anonKey,
+                },
+              }
+            );
+            if (res.ok) {
+              results[key] = await res.json();
+            }
+          } catch {
+            // skip failed track fetches
+          }
+        })
+      );
+      return results;
+    },
+    enabled: !!configs && uniqueTrackKeys.length > 0 && !!tractorsQuery.data?.length,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Field boundaries for Alert 4
+  const fieldsWithBoundaryQuery = useQuery({
+    queryKey: ["alert-field-boundaries"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_fields_with_boundaries");
+      if (error) throw error;
+      return data as { id: string; name: string; hectares: number; boundary: any }[];
+    },
+    enabled: !!configs && opsNeedingTracks.length > 0,
+  });
+
+  const isLoading =
+    opsQuery.isLoading || tractorsQuery.isLoading || liveQuery.isLoading ||
+    implementsQuery.isLoading || tracksQuery.isLoading || fieldsWithBoundaryQuery.isLoading;
+
+  const alerts: AlertItem[] = [];
+  if (!configs || !opsQuery.data) return { alerts, isLoading };
+
+  // ── Alert 1: Hectares exceed field size ──
+  const hectaresConfig = getConfig(configs, "hectares_exceed_field");
+  if (hectaresConfig?.is_active) {
+    for (const op of opsQuery.data) {
+      const fieldHa = op.fields?.hectares;
+      if (fieldHa && fieldHa > 0 && op.hectares_done && op.hectares_done > fieldHa) {
+        alerts.push({
+          severity: "warning",
+          title: `${op.fields.name}: ${op.hectares_done} ha registradas pero el campo tiene ${fieldHa} ha`,
+          detail: `${op.operation_types?.name || "Operación"} — ${format(new Date(op.operation_date), "dd/MM/yyyy")}`,
+        });
+      }
+    }
+  }
+
+  // ── Alert 2: Unrecorded tractor activity ──
+  const unrecordedConfig = getConfig(configs, "gps_unrecorded_activity");
+  if (unrecordedConfig?.is_active && liveQuery.data && tractorsQuery.data) {
+    const currentHour = today.getHours();
+
+    for (const pos of liveQuery.data) {
+      if (!pos.lastUpdate) continue;
+      const lastUpdateDate = new Date(pos.lastUpdate);
+      const lastUpdateStr = format(lastUpdateDate, "yyyy-MM-dd");
+      const hadActivity = pos.speed > 0 || pos.engineOn;
+      if (!hadActivity) continue;
+
+      // Check yesterday
+      if (lastUpdateStr === yesterdayStr) {
+        const hasOp = opsQuery.data.some(
+          (op: any) => op.tractor_id === pos.tractorId && op.operation_date === yesterdayStr
+        );
+        if (!hasOp) {
+          alerts.push({
+            severity: "urgent",
+            title: `${pos.tractorName} tuvo actividad GPS ayer pero no tiene operación registrada`,
+            detail: format(yesterday, "dd/MM/yyyy"),
+          });
+        }
+      }
+
+      // Check today (only after 19:00)
+      if (lastUpdateStr === todayStr && currentHour >= 19) {
+        const hasOp = opsQuery.data.some(
+          (op: any) => op.tractor_id === pos.tractorId && op.operation_date === todayStr
+        );
+        if (!hasOp) {
+          alerts.push({
+            severity: "warning",
+            title: `${pos.tractorName} tuvo actividad GPS hoy pero no tiene operación registrada`,
+            detail: format(today, "dd/MM/yyyy"),
+          });
+        }
+      }
+    }
+  }
+
+  // ── Alert 3: Operation without GPS movement ──
+  const noMovementConfig = getConfig(configs, "gps_no_movement");
+  if (noMovementConfig?.is_active && liveQuery.data && tractorsQuery.data) {
+    const recentMechOps = opsQuery.data.filter(
+      (op: any) =>
+        op.operation_types?.is_mechanical &&
+        op.tractor_id &&
+        gpsTractorIds.has(op.tractor_id) &&
+        (op.operation_date === todayStr || op.operation_date === yesterdayStr)
+    );
+
+    for (const op of recentMechOps) {
+      const gpsPos = liveQuery.data.find((p) => p.tractorId === op.tractor_id);
+      if (!gpsPos) continue;
+
+      const lastUpdateDate = new Date(gpsPos.lastUpdate);
+      const lastUpdateStr = format(lastUpdateDate, "yyyy-MM-dd");
+
+      // If GPS last update is NOT on the operation date, tractor likely didn't move
+      if (lastUpdateStr !== op.operation_date) {
+        const tractor = tractorsQuery.data.find((t) => t.id === op.tractor_id);
+        alerts.push({
+          severity: "warning",
+          title: `${tractor?.name || "Tractor"} registra operación el ${format(new Date(op.operation_date), "dd/MM")} pero GPS no muestra movimiento`,
+          detail: `${op.operation_types?.name || "Operación"} — ${op.fields?.name || ""}`,
+        });
+      }
+    }
+  }
+
+  // ── Alert 4: Hectares mismatch vs GPS estimate ──
+  const mismatchConfig = getConfig(configs, "gps_hectares_mismatch");
+  if (mismatchConfig?.is_active && tracksQuery.data && fieldsWithBoundaryQuery.data && implementsQuery.data) {
+    const tolerance = (mismatchConfig.threshold_value ?? 30) / 100;
+    const fieldMap = new Map(fieldsWithBoundaryQuery.data.map((f) => [f.id, f]));
+    const implementMap = new Map(implementsQuery.data.map((i) => [i.id, i]));
+
+    for (const op of opsNeedingTracks) {
+      const key = `${op.tractor_id}|${op.operation_date}`;
+      const trackData = tracksQuery.data[key];
+      if (!trackData?.tracks?.length) continue;
+
+      const field = fieldMap.get(op.field_id);
+      if (!field?.boundary) continue;
+
+      const implement = op.implement_id ? implementMap.get(op.implement_id) : null;
+      const workingWidth = implement?.working_width_m;
+      if (!workingWidth || workingWidth <= 0) continue;
+
+      // Calculate total distance from track points
+      let totalDistanceM = 0;
+      const pts = trackData.tracks;
+      for (let i = 1; i < pts.length; i++) {
+        totalDistanceM += haversineDistance(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng);
+      }
+
+      const gpsHectares = (totalDistanceM * workingWidth) / 10000;
+      if (gpsHectares <= 0) continue;
+
+      const diff = Math.abs(op.hectares_done - gpsHectares) / gpsHectares;
+      if (diff > tolerance) {
+        alerts.push({
+          severity: "warning",
+          title: `${op.fields?.name || "Campo"} ${op.operation_types?.name || ""}: ${op.hectares_done} ha registradas vs ~${gpsHectares.toFixed(1)} ha estimadas por GPS`,
+          detail: `${format(new Date(op.operation_date), "dd/MM/yyyy")} · Diferencia: ${(diff * 100).toFixed(0)}%`,
+        });
+      }
+    }
+  }
+
+  alerts.sort((a, b) => (a.severity === "urgent" ? -1 : 1));
+  return { alerts, isLoading };
+}
+
+/**
+ * Haversine distance between two points in meters
+ */
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }

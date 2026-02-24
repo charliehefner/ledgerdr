@@ -196,8 +196,9 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         const hectares = op.hectares_done || 0;
         const amount = inputUsage.quantity_used;
         const amountPerHectare = hectares > 0 ? amount / hectares : 0;
-        const purchaseQty = inputUsage.inventory_items.purchase_unit_quantity || 1;
-        const costPerUnit = inputUsage.inventory_items.price_per_purchase_unit / purchaseQty;
+        const purchaseQty = inputUsage.inventory_items?.purchase_unit_quantity || 1;
+        const pricePerUnit = inputUsage.inventory_items?.price_per_purchase_unit ?? 0;
+        const costPerUnit = purchaseQty > 0 ? pricePerUnit / purchaseQty : 0;
 
         results.push({
           operationId: `${op.id}-${inputUsage.id}`,

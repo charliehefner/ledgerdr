@@ -17,16 +17,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
+
+const DIESEL_VIRTUAL_ID = "__diesel__";
 
 interface OperationWithInput {
   id: string;
   operation_date: string;
   hectares_done: number;
   driver: string | null;
+  tractor_id: string | null;
   fields: {
     name: string;
     farms: { name: string };
@@ -155,6 +158,40 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     },
   });
 
+  // Fetch fuel dispense transactions to correlate diesel usage with operations
+  const { data: fuelTransactions } = useQuery({
+    queryKey: ["fuel-dispense-for-input-report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fuel_transactions")
+        .select("id, equipment_id, gallons, transaction_date, transaction_type, tank_id, fuel_tanks!inner(fuel_type)")
+        .eq("transaction_type", "dispense");
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        equipment_id: string | null;
+        gallons: number;
+        transaction_date: string;
+        transaction_type: string;
+        tank_id: string;
+        fuel_tanks: { fuel_type: string };
+      }>;
+    },
+  });
+
+  // Fetch fuel purchase transactions for diesel cost per gallon
+  const { data: fuelPurchases } = useQuery({
+    queryKey: ["fuel-purchases-for-cost"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fuel_transactions")
+        .select("gallons, notes, tank_id")
+        .eq("transaction_type", "purchase");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Build a map of item_id -> weighted average cost per use unit
   // Formula: cost_per_use_unit = unit_price / packaging_quantity
   // Weighted average across purchases by number of packages (quantity)
@@ -189,6 +226,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           operation_date,
           hectares_done,
           driver,
+          tractor_id,
           fields(name, farms(name)),
           fuel_equipment(name),
           operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit, molecule_name, co2_equivalent))
@@ -208,9 +246,92 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
   // Get selected input details
   const selectedInputDetails = useMemo(() => {
-    if (!selectedInput || !inventoryItems) return null;
+    if (!selectedInput) return null;
+    if (selectedInput === DIESEL_VIRTUAL_ID) {
+      return { id: DIESEL_VIRTUAL_ID, commercial_name: "Diesel", use_unit: "gal", function: "fuel", is_active: true, molecule_name: null, co2_equivalent: null } as InventoryItem;
+    }
+    if (!inventoryItems) return null;
     return inventoryItems.find((i) => i.id === selectedInput);
   }, [selectedInput, inventoryItems]);
+
+  // Build diesel usage rows by matching fuel dispense transactions to operations
+  const dieselUsageRows = useMemo((): UsageRow[] => {
+    if (!fuelTransactions || !operations || !startDate || !endDate || !hasSearched) return [];
+    if (selectedInput !== "all" && selectedInput !== DIESEL_VIRTUAL_ID) return [];
+
+    const results: UsageRow[] = [];
+
+    // Build lookup: equipment_id + date -> operations on that day
+    const opsLookup = new Map<string, OperationWithInput[]>();
+    operations.forEach((op) => {
+      if (!op.tractor_id) return;
+      const key = `${op.tractor_id}__${op.operation_date}`;
+      if (!opsLookup.has(key)) opsLookup.set(key, []);
+      opsLookup.get(key)!.push(op);
+    });
+
+    // For each fuel dispense, find matching operations and distribute gallons
+    fuelTransactions.forEach((ft) => {
+      if (!ft.equipment_id) return;
+      const txDate = ft.transaction_date.substring(0, 10); // extract date part
+      const txDateObj = parseDateLocal(txDate);
+      const inDateRange = isWithinInterval(txDateObj, {
+        start: startOfDay(startDate),
+        end: endOfDay(endDate),
+      });
+      if (!inDateRange) return;
+
+      const key = `${ft.equipment_id}__${txDate}`;
+      const matchedOps = opsLookup.get(key) || [];
+
+      if (matchedOps.length === 0) {
+        // No matching operation - still show the fuel usage but field = "Sin operación"
+        results.push({
+          operationId: `fuel-${ft.id}`,
+          date: txDate,
+          fieldName: "Sin operación",
+          inputName: "Diesel",
+          inputUnit: "gal",
+          amount: Number(ft.gallons) || 0,
+          hectares: 0,
+          amountPerHectare: 0,
+          costPerUnit: 0,
+          tractor: "-",
+        });
+        return;
+      }
+
+      // Distribute gallons proportionally by hectares, or evenly
+      const totalHa = matchedOps.reduce((s, o) => s + (o.hectares_done || 0), 0);
+      matchedOps.forEach((op) => {
+        const field = fields?.find((f) => f.name === op.fields?.name);
+        // Apply farm/field filters
+        if (selectedFarm !== "all" && field?.farm_id !== selectedFarm) return;
+        if (selectedFields.length > 0 && field && !selectedFields.includes(field.id)) return;
+
+        const gallons = Number(ft.gallons) || 0;
+        const share = totalHa > 0
+          ? ((op.hectares_done || 0) / totalHa) * gallons
+          : gallons / matchedOps.length;
+        const hectares = op.hectares_done || 0;
+
+        results.push({
+          operationId: `fuel-${ft.id}-${op.id}`,
+          date: op.operation_date,
+          fieldName: op.fields?.name || "Unknown",
+          inputName: "Diesel",
+          inputUnit: "gal",
+          amount: share,
+          hectares,
+          amountPerHectare: hectares > 0 ? share / hectares : 0,
+          costPerUnit: 0, // TODO: diesel cost per gallon if needed
+          tractor: op.fuel_equipment?.name || op.driver || "-",
+        });
+      });
+    });
+
+    return results;
+  }, [fuelTransactions, operations, startDate, endDate, hasSearched, selectedInput, fields, selectedFarm, selectedFields]);
 
   // Calculate usage data based on filters
   const usageData = useMemo(() => {
@@ -233,6 +354,9 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
       // Check field filter (now supports multiple fields)
       if (selectedFields.length > 0 && field && !selectedFields.includes(field.id)) return;
+
+      // Skip chemical inputs if only diesel is selected
+      if (selectedInput === DIESEL_VIRTUAL_ID) return;
 
       // Get all inputs or just the selected one
       const inputsToProcess = selectedInput === "all"
@@ -260,13 +384,16 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       });
     });
 
+    // Add diesel rows
+    results.push(...dieselUsageRows);
+
     // Sort by date descending, then by input name
     return results.sort((a, b) => {
       const dateCompare = b.date.localeCompare(a.date);
       if (dateCompare !== 0) return dateCompare;
       return a.inputName.localeCompare(b.inputName);
     });
-  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap]);
+  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap, dieselUsageRows]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -532,6 +659,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos Insumos</SelectItem>
+                  <SelectItem value={DIESEL_VIRTUAL_ID}>🛢️ Diesel (Combustible)</SelectItem>
                   {inventoryItems?.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.commercial_name}

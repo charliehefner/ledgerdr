@@ -39,8 +39,6 @@ interface OperationWithInput {
       id: string;
       commercial_name: string;
       use_unit: string;
-      price_per_purchase_unit: number;
-      purchase_unit_quantity: number;
     };
   }>;
 }
@@ -131,6 +129,34 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     },
   });
 
+  // Fetch purchase history for weighted average cost per use unit
+  const { data: purchases } = useQuery({
+    queryKey: ["inventory-purchases-for-cost"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_purchases")
+        .select("item_id, quantity, total_price");
+      if (error) throw error;
+      return data as Array<{ item_id: string; quantity: number; total_price: number }>;
+    },
+  });
+
+  // Build a map of item_id -> weighted average cost per use unit
+  const costPerUnitMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!purchases) return map;
+    const grouped: Record<string, { totalCost: number; totalQty: number }> = {};
+    for (const p of purchases) {
+      if (!grouped[p.item_id]) grouped[p.item_id] = { totalCost: 0, totalQty: 0 };
+      grouped[p.item_id].totalCost += p.total_price;
+      grouped[p.item_id].totalQty += p.quantity;
+    }
+    for (const [id, g] of Object.entries(grouped)) {
+      map.set(id, g.totalQty > 0 ? g.totalCost / g.totalQty : 0);
+    }
+    return map;
+  }, [purchases]);
+
   // Fetch operations with inputs
   const { data: operations, isLoading } = useQuery({
     queryKey: ["operations-with-inputs"],
@@ -144,7 +170,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           driver,
           fields(name, farms(name)),
           fuel_equipment(name),
-          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit, price_per_purchase_unit, purchase_unit_quantity))
+          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;
@@ -196,9 +222,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         const hectares = op.hectares_done || 0;
         const amount = inputUsage.quantity_used;
         const amountPerHectare = hectares > 0 ? amount / hectares : 0;
-        const purchaseQty = inputUsage.inventory_items?.purchase_unit_quantity || 1;
-        const pricePerUnit = inputUsage.inventory_items?.price_per_purchase_unit ?? 0;
-        const costPerUnit = purchaseQty > 0 ? pricePerUnit / purchaseQty : 0;
+        const costPerUnit = costPerUnitMap.get(inputUsage.inventory_items.id) ?? 0;
 
         results.push({
           operationId: `${op.id}-${inputUsage.id}`,
@@ -221,7 +245,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       if (dateCompare !== 0) return dateCompare;
       return a.inputName.localeCompare(b.inputName);
     });
-  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched]);
+  }, [operations, fields, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap]);
 
   // Calculate totals
   const totals = useMemo(() => {

@@ -163,11 +163,14 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     if (!purchases) return map;
     const grouped: Record<string, { weightedCostSum: number; totalPackages: number }> = {};
     for (const p of purchases) {
-      const pkgQty = p.packaging_quantity || 1;
-      const costPerUseUnit = p.unit_price / pkgQty;
+      const pkgQty = Number(p.packaging_quantity) || 1;
+      const price = Number(p.unit_price) || 0;
+      const qty = Number(p.quantity) || 0;
+      if (qty === 0) continue;
+      const costPerUseUnit = pkgQty > 0 ? price / pkgQty : 0;
       if (!grouped[p.item_id]) grouped[p.item_id] = { weightedCostSum: 0, totalPackages: 0 };
-      grouped[p.item_id].weightedCostSum += costPerUseUnit * p.quantity;
-      grouped[p.item_id].totalPackages += p.quantity;
+      grouped[p.item_id].weightedCostSum += costPerUseUnit * qty;
+      grouped[p.item_id].totalPackages += qty;
     }
     for (const [id, g] of Object.entries(grouped)) {
       map.set(id, g.totalPackages > 0 ? g.weightedCostSum / g.totalPackages : 0);

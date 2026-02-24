@@ -160,7 +160,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
   // Weighted average across purchases by number of packages (quantity)
   const costPerUnitMap = useMemo(() => {
     const map = new Map<string, number>();
-    if (!purchases) return map;
+    if (!purchases || purchases.length === 0) return map;
     const grouped: Record<string, { weightedCostSum: number; totalPackages: number }> = {};
     for (const p of purchases) {
       const pkgQty = Number(p.packaging_quantity) || 1;

@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, FileSpreadsheet, FileText, Search, ChevronDown, Download } from "lucide-react";
+import { CalendarIcon, FileSpreadsheet, FileText, Search, ChevronDown, Download, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,8 @@ interface OperationWithInput {
       id: string;
       commercial_name: string;
       use_unit: string;
+      molecule_name: string | null;
+      co2_equivalent: number | null;
     };
   }>;
 }
@@ -49,6 +51,17 @@ interface InventoryItem {
   use_unit: string;
   function: string;
   is_active: boolean;
+  molecule_name: string | null;
+  co2_equivalent: number | null;
+}
+
+interface MoleculeSummaryRow {
+  moleculeName: string;
+  useUnit: string;
+  totalAmount: number;
+  costPerUnit: number;
+  totalCost: number;
+  totalCO2e: number;
 }
 
 interface Farm {
@@ -87,6 +100,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [fieldPopoverOpen, setFieldPopoverOpen] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Fetch inventory items (inputs)
   const { data: inventoryItems } = useQuery({
@@ -94,7 +108,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_items")
-        .select("id, commercial_name, use_unit, function, is_active")
+        .select("id, commercial_name, use_unit, function, is_active, molecule_name, co2_equivalent")
         .order("commercial_name");
       if (error) throw error;
       return data as InventoryItem[];
@@ -170,7 +184,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           driver,
           fields(name, farms(name)),
           fuel_equipment(name),
-          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit))
+          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit, molecule_name, co2_equivalent))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;
@@ -255,6 +269,56 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     const totalCost = usageData.reduce((sum, row) => sum + row.costPerUnit * row.amount, 0);
     return { totalAmount, totalHectares, avgPerHectare, totalCost };
   }, [usageData]);
+
+  // Molecule summary: consolidate by molecule_name
+  const moleculeSummary = useMemo((): MoleculeSummaryRow[] => {
+    if (!operations || !startDate || !endDate || !hasSearched || !inventoryItems) return [];
+
+    const grouped: Record<string, { totalAmount: number; totalCost: number; totalCO2e: number; useUnit: string }> = {};
+
+    operations.forEach((op) => {
+      const opDate = parseDateLocal(op.operation_date);
+      const inDateRange = isWithinInterval(opDate, {
+        start: startOfDay(startDate),
+        end: endOfDay(endDate),
+      });
+      if (!inDateRange) return;
+
+      const field = fields?.find((f) => f.name === op.fields?.name);
+      if (selectedFarm !== "all" && field?.farm_id !== selectedFarm) return;
+      if (selectedFields.length > 0 && field && !selectedFields.includes(field.id)) return;
+
+      const inputsToProcess = selectedInput === "all"
+        ? op.operation_inputs || []
+        : (op.operation_inputs || []).filter((input) => input.inventory_items.id === selectedInput);
+
+      inputsToProcess.forEach((inputUsage) => {
+        const item = inputUsage.inventory_items;
+        const moleculeName = item.molecule_name || item.commercial_name;
+        const amount = inputUsage.quantity_used;
+        const costPerUnit = costPerUnitMap.get(item.id) ?? 0;
+        const co2e = item.co2_equivalent ?? 0;
+
+        if (!grouped[moleculeName]) {
+          grouped[moleculeName] = { totalAmount: 0, totalCost: 0, totalCO2e: 0, useUnit: item.use_unit };
+        }
+        grouped[moleculeName].totalAmount += amount;
+        grouped[moleculeName].totalCost += costPerUnit * amount;
+        grouped[moleculeName].totalCO2e += co2e * amount;
+      });
+    });
+
+    return Object.entries(grouped)
+      .map(([name, g]) => ({
+        moleculeName: name,
+        useUnit: g.useUnit,
+        totalAmount: g.totalAmount,
+        costPerUnit: g.totalAmount > 0 ? g.totalCost / g.totalAmount : 0,
+        totalCost: g.totalCost,
+        totalCO2e: g.totalCO2e,
+      }))
+      .sort((a, b) => a.moleculeName.localeCompare(b.moleculeName));
+  }, [operations, fields, inventoryItems, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap]);
 
   const handleFarmChange = (farmId: string) => {
     setSelectedFarm(farmId);
@@ -548,25 +612,34 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
             {/* Export */}
             {usageData.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-popover">
-                  <DropdownMenuItem onClick={exportToExcel} className="text-excel">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Exportar a Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportToPDF}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Exportar a PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <Button
+                  variant={showSummary ? "default" : "outline"}
+                  onClick={() => setShowSummary((v) => !v)}
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Resumen Moléculas
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-popover">
+                    <DropdownMenuItem onClick={exportToExcel} className="text-excel">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Exportar a Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPDF}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Exportar a PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             )}
           </div>
         </CardContent>
@@ -590,7 +663,47 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
               <div className="text-center py-8 text-muted-foreground">
                 No se encontró uso de este insumo para los filtros seleccionados.
               </div>
+            ) : showSummary ? (
+              /* Molecule Summary View */
+              <div className="space-y-4">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Molécula</TableHead>
+                        <TableHead className="text-right">Cantidad Usada</TableHead>
+                        <TableHead className="text-right">Costo/Unidad</TableHead>
+                        <TableHead className="text-right">Costo Total</TableHead>
+                        <TableHead className="text-right">CO₂-e (kg)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {moleculeSummary.map((row) => (
+                        <TableRow key={row.moleculeName}>
+                          <TableCell className="font-medium">{row.moleculeName}</TableCell>
+                          <TableCell className="text-right">{row.totalAmount.toFixed(2)} {row.useUnit}</TableCell>
+                          <TableCell className="text-right">{row.costPerUnit.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{row.totalCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{row.totalCO2e.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="font-bold bg-muted/50">
+                        <TableCell>TOTALES</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right">
+                          {moleculeSummary.reduce((s, r) => s + r.totalCost, 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {moleculeSummary.reduce((s, r) => s + r.totalCO2e, 0).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             ) : (
+              /* Detail View */
               <div className="space-y-4">
                 <div className="rounded-md border">
                   <Table>

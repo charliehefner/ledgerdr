@@ -132,7 +132,7 @@ export function TractorHistoryView() {
           comparison = parseDateLocal(a.transaction_date).getTime() - parseDateLocal(b.transaction_date).getTime();
           break;
         case "tank":
-          comparison = a.fuel_tanks.name.localeCompare(b.fuel_tanks.name);
+          comparison = (a.fuel_tanks?.name ?? "").localeCompare(b.fuel_tanks?.name ?? "");
           break;
         case "gallons":
           comparison = a.gallons - b.gallons;

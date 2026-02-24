@@ -39,6 +39,8 @@ interface OperationWithInput {
       id: string;
       commercial_name: string;
       use_unit: string;
+      price_per_purchase_unit: number;
+      purchase_unit_quantity: number;
     };
   }>;
 }
@@ -65,13 +67,13 @@ interface Field {
 interface UsageRow {
   operationId: string;
   date: string;
-  farmName: string;
   fieldName: string;
   inputName: string;
   inputUnit: string;
   amount: number;
   hectares: number;
   amountPerHectare: number;
+  costPerUnit: number;
   tractor: string;
 }
 
@@ -142,7 +144,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           driver,
           fields(name, farms(name)),
           fuel_equipment(name),
-          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit))
+          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit, price_per_purchase_unit, purchase_unit_quantity))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;
@@ -194,17 +196,19 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         const hectares = op.hectares_done || 0;
         const amount = inputUsage.quantity_used;
         const amountPerHectare = hectares > 0 ? amount / hectares : 0;
+        const purchaseQty = inputUsage.inventory_items.purchase_unit_quantity || 1;
+        const costPerUnit = inputUsage.inventory_items.price_per_purchase_unit / purchaseQty;
 
         results.push({
           operationId: `${op.id}-${inputUsage.id}`,
           date: op.operation_date,
-          farmName: op.fields?.farms?.name || "Unknown",
           fieldName: op.fields?.name || "Unknown",
           inputName: inputUsage.inventory_items.commercial_name,
           inputUnit: inputUsage.inventory_items.use_unit,
           amount,
           hectares,
           amountPerHectare,
+          costPerUnit,
           tractor: op.fuel_equipment?.name || op.driver || "-",
         });
       });
@@ -223,7 +227,8 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     const totalAmount = usageData.reduce((sum, row) => sum + row.amount, 0);
     const totalHectares = usageData.reduce((sum, row) => sum + row.hectares, 0);
     const avgPerHectare = totalHectares > 0 ? totalAmount / totalHectares : 0;
-    return { totalAmount, totalHectares, avgPerHectare };
+    const totalCost = usageData.reduce((sum, row) => sum + row.costPerUnit * row.amount, 0);
+    return { totalAmount, totalHectares, avgPerHectare, totalCost };
   }, [usageData]);
 
   const handleFarmChange = (farmId: string) => {
@@ -267,19 +272,19 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     const worksheet = workbook.addWorksheet("Uso de Insumo");
 
     // Add title
-    worksheet.mergeCells("A1:G1");
+    worksheet.mergeCells("A1:H1");
     worksheet.getCell("A1").value = `Reporte de Uso: ${selectedInputDetails?.commercial_name || ""}`;
     worksheet.getCell("A1").font = { bold: true, size: 14 };
     worksheet.getCell("A1").alignment = { horizontal: "center" };
 
     // Add date range
-    worksheet.mergeCells("A2:G2");
+    worksheet.mergeCells("A2:H2");
     worksheet.getCell("A2").value = `Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     // Add headers
     const unit = selectedInputDetails?.use_unit || "units";
-    const headers = ["Fecha", "Finca", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, "Tractor/Operador"];
+    const headers = ["Fecha", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, `Costo/${unit}`, "Costo Total", "Tractor/Operador"];
     worksheet.addRow([]);
     const headerRow = worksheet.addRow(headers);
     headerRow.eachCell((cell) => {
@@ -301,11 +306,12 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     usageData.forEach((row) => {
       worksheet.addRow([
         format(parseDateLocal(row.date), "dd/MM/yyyy"),
-        row.farmName,
         row.fieldName,
         row.amount.toFixed(2),
         row.hectares.toFixed(2),
         row.amountPerHectare.toFixed(2),
+        row.costPerUnit.toFixed(2),
+        (row.costPerUnit * row.amount).toFixed(2),
         row.tractor,
       ]);
     });
@@ -315,10 +321,11 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     const totalsRow = worksheet.addRow([
       "TOTALES",
       "",
-      "",
       totals.totalAmount.toFixed(2),
       totals.totalHectares.toFixed(2),
       totals.avgPerHectare.toFixed(2),
+      "",
+      totals.totalCost.toFixed(2),
       "",
     ]);
     totalsRow.eachCell((cell) => {
@@ -351,20 +358,21 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     doc.text(`Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
 
     autoTable(doc, {
-      head: [["Fecha", "Finca", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, "Tractor/Operador"]],
+      head: [["Fecha", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, `Costo/${unit}`, "Costo Total", "Tractor/Operador"]],
       body: usageData.map((row) => [
         format(parseDateLocal(row.date), "dd/MM/yyyy"),
-        row.farmName,
         row.fieldName,
         row.amount.toFixed(2),
         row.hectares.toFixed(2),
         row.amountPerHectare.toFixed(2),
+        row.costPerUnit.toFixed(2),
+        (row.costPerUnit * row.amount).toFixed(2),
         row.tractor,
       ]),
       startY: 28,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [59, 130, 246] },
-      foot: [["TOTALES", "", "", totals.totalAmount.toFixed(2), totals.totalHectares.toFixed(2), totals.avgPerHectare.toFixed(2), ""]],
+      foot: [["TOTALES", "", totals.totalAmount.toFixed(2), totals.totalHectares.toFixed(2), totals.avgPerHectare.toFixed(2), "", totals.totalCost.toFixed(2), ""]],
       footStyles: { fontStyle: "bold" },
     });
 
@@ -565,11 +573,12 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                       <TableRow>
                         <TableHead>Fecha</TableHead>
                         {selectedInput === "all" && <TableHead>Insumo</TableHead>}
-                        <TableHead>Finca</TableHead>
                         <TableHead>Campo</TableHead>
                         <TableHead className="text-right">Cantidad</TableHead>
                         <TableHead className="text-right">Hectáreas</TableHead>
                         <TableHead className="text-right">Unidad/Ha</TableHead>
+                        <TableHead className="text-right">Costo/Unidad</TableHead>
+                        <TableHead className="text-right">Costo Total</TableHead>
                         <TableHead>Tractor/Operador</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -578,20 +587,23 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableRow key={row.operationId}>
                           <TableCell>{format(parseDateLocal(row.date), "dd/MM/yyyy")}</TableCell>
                           {selectedInput === "all" && <TableCell>{row.inputName}</TableCell>}
-                          <TableCell>{row.farmName}</TableCell>
                           <TableCell>{row.fieldName}</TableCell>
                           <TableCell className="text-right">{row.amount.toFixed(2)} {row.inputUnit}</TableCell>
                           <TableCell className="text-right">{row.hectares.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{row.amountPerHectare.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{row.costPerUnit.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{(row.costPerUnit * row.amount).toFixed(2)}</TableCell>
                           <TableCell>{row.tractor}</TableCell>
                         </TableRow>
                       ))}
                       {/* Totals Row */}
                       <TableRow className="font-bold bg-muted/50">
-                        <TableCell colSpan={selectedInput === "all" ? 4 : 3}>TOTALES</TableCell>
+                        <TableCell colSpan={selectedInput === "all" ? 3 : 2}>TOTALES</TableCell>
                         <TableCell className="text-right">{totals.totalAmount.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.totalHectares.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.avgPerHectare.toFixed(2)}</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right">{totals.totalCost.toFixed(2)}</TableCell>
                         <TableCell></TableCell>
                       </TableRow>
                     </TableBody>

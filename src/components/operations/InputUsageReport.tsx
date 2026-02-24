@@ -149,24 +149,28 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_purchases")
-        .select("item_id, quantity, total_price");
+        .select("item_id, quantity, unit_price, packaging_quantity");
       if (error) throw error;
-      return data as Array<{ item_id: string; quantity: number; total_price: number }>;
+      return data as Array<{ item_id: string; quantity: number; unit_price: number; packaging_quantity: number }>;
     },
   });
 
   // Build a map of item_id -> weighted average cost per use unit
+  // Formula: cost_per_use_unit = unit_price / packaging_quantity
+  // Weighted average across purchases by number of packages (quantity)
   const costPerUnitMap = useMemo(() => {
     const map = new Map<string, number>();
     if (!purchases) return map;
-    const grouped: Record<string, { totalCost: number; totalQty: number }> = {};
+    const grouped: Record<string, { weightedCostSum: number; totalPackages: number }> = {};
     for (const p of purchases) {
-      if (!grouped[p.item_id]) grouped[p.item_id] = { totalCost: 0, totalQty: 0 };
-      grouped[p.item_id].totalCost += p.total_price;
-      grouped[p.item_id].totalQty += p.quantity;
+      const pkgQty = p.packaging_quantity || 1;
+      const costPerUseUnit = p.unit_price / pkgQty;
+      if (!grouped[p.item_id]) grouped[p.item_id] = { weightedCostSum: 0, totalPackages: 0 };
+      grouped[p.item_id].weightedCostSum += costPerUseUnit * p.quantity;
+      grouped[p.item_id].totalPackages += p.quantity;
     }
     for (const [id, g] of Object.entries(grouped)) {
-      map.set(id, g.totalQty > 0 ? g.totalCost / g.totalQty : 0);
+      map.set(id, g.totalPackages > 0 ? g.weightedCostSum / g.totalPackages : 0);
     }
     return map;
   }, [purchases]);

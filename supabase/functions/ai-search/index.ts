@@ -39,7 +39,9 @@ serve(async (req) => {
       employeesRes,
       rainfallRes,
       dayLaborRes,
-      inventoryRes
+      inventoryRes,
+      purchasesRes,
+      opInputsRes
     ] = await Promise.all([
       supabase.from("farms").select("id, name").eq("is_active", true),
       supabase.from("fields").select("id, name, farm_id, hectares").eq("is_active", true),
@@ -54,7 +56,16 @@ serve(async (req) => {
       supabase.from("employees_safe").select("id, name, position, is_active"),
       supabase.from("rainfall_records").select("record_date, solar, caoba, palmarito, virgencita").order("record_date", { ascending: false }).limit(60),
       supabase.from("day_labor_entries").select("work_date, worker_name, workers_count, field_name, operation_description, amount").order("work_date", { ascending: false }).limit(100),
-      supabase.from("inventory_items").select("commercial_name, molecule_name, function, current_quantity, use_unit").eq("is_active", true),
+      supabase.from("inventory_items").select("commercial_name, molecule_name, function, current_quantity, use_unit, price_per_purchase_unit, purchase_unit_type, purchase_unit_quantity, supplier, co2_equivalent").eq("is_active", true),
+      supabase.from("inventory_purchases").select(`
+        purchase_date, quantity, unit_price, total_price, supplier, packaging_unit, packaging_quantity,
+        inventory_items(commercial_name)
+      `).order("purchase_date", { ascending: false }).limit(200),
+      supabase.from("operation_inputs").select(`
+        quantity_used,
+        inventory_items(commercial_name, use_unit),
+        operations(operation_date, fields(name, farms(name)))
+      `).order("created_at", { ascending: false }).limit(200),
     ]);
 
     // Build context for the AI
@@ -66,6 +77,8 @@ serve(async (req) => {
     const rainfall = rainfallRes.data || [];
     const dayLabor = dayLaborRes.data || [];
     const inventory = inventoryRes.data || [];
+    const purchases = purchasesRes.data || [];
+    const opInputs = opInputsRes.data || [];
 
     const systemPrompt = `Eres un asistente de datos para una empresa agrícola en República Dominicana llamada Dallas Agro / Jord Dominicana.
 Tu trabajo es responder preguntas sobre las operaciones, empleados y datos de la empresa basándote en los datos proporcionados.
@@ -102,8 +115,30 @@ ${rainfall.slice(0, 30).map((r: any) => `- ${r.record_date}: Solar=${r.solar || 
 JORNALES (Day Labor, últimos 100 registros):
 ${dayLabor.slice(0, 50).map((d: any) => `- ${d.work_date}: ${d.workers_count} trabajador(es)${d.worker_name ? ` (${d.worker_name})` : ""}, ${d.operation_description}${d.field_name ? ` en ${d.field_name}` : ""}, RD$${d.amount}`).join("\n")}
 
-INVENTARIO (Items activos, sin precios):
-${inventory.map((i: any) => `- ${i.commercial_name}${i.molecule_name ? ` (${i.molecule_name})` : ""}: ${i.current_quantity} ${i.use_unit}, Función: ${i.function}`).join("\n")}
+INVENTARIO (Items activos con precios y proveedores):
+${inventory.map((i: any) => {
+  let line = `- ${i.commercial_name}${i.molecule_name ? ` (${i.molecule_name})` : ""}: ${i.current_quantity} ${i.use_unit}, Función: ${i.function}`;
+  if (i.price_per_purchase_unit) line += `, Precio: RD$${i.price_per_purchase_unit}/${i.purchase_unit_type || "unit"}`;
+  if (i.supplier) line += `, Proveedor: ${i.supplier}`;
+  if (i.co2_equivalent) line += `, CO2eq: ${i.co2_equivalent}`;
+  return line;
+}).join("\n")}
+
+COMPRAS DE INVENTARIO (últimas 200):
+${purchases.slice(0, 100).map((p: any) => {
+  const itemName = p.inventory_items?.commercial_name || "?";
+  return `- ${p.purchase_date}: ${itemName} x${p.quantity} a RD$${p.unit_price}/u = RD$${p.total_price}${p.supplier ? ` (Proveedor: ${p.supplier})` : ""}${p.packaging_quantity ? `, ${p.packaging_quantity} ${p.packaging_unit}` : ""}`;
+}).join("\n")}
+
+USO DE INSUMOS (últimos 200 registros):
+${opInputs.slice(0, 100).map((oi: any) => {
+  const itemName = oi.inventory_items?.commercial_name || "?";
+  const unit = oi.inventory_items?.use_unit || "";
+  const opDate = oi.operations?.operation_date || "?";
+  const fieldName = oi.operations?.fields?.name || "?";
+  const farmName = oi.operations?.fields?.farms?.name || "?";
+  return `- ${opDate}: ${itemName} ${oi.quantity_used} ${unit} en ${fieldName} (${farmName})`;
+}).join("\n")}
 
 INSTRUCCIONES:
 - Responde siempre en español
@@ -113,7 +148,7 @@ INSTRUCCIONES:
 - Sé conciso pero informativo - una o dos oraciones claras son mejores que listas largas
 - Si no tienes datos suficientes para responder, indícalo claramente
 - Para cálculos de totales, suma los valores y presenta el resultado en una oración
-- Si la pregunta es sobre datos que no tienes (transacciones financieras, precios de inventario, préstamos de empleados), indica que esos datos no están disponibles
+- Si la pregunta es sobre datos que no tienes (transacciones financieras, préstamos de empleados), indica que esos datos no están disponibles
 - Formatea números con separadores de miles cuando sea apropiado`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

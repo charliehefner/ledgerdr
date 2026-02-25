@@ -26,7 +26,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
 import NotFound from "./pages/NotFound";
-
+import InstallApp from "./pages/InstallApp";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -56,6 +56,7 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
               <Routes>
+                <Route path="/install" element={<InstallApp />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

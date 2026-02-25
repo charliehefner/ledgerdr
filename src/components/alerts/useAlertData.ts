@@ -404,19 +404,21 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
     enabled: !!configs,
   });
 
-  // Track history for Alert 4 — fetch for recent ops with GPS tractors
-  const recentGpsOps = (opsQuery.data ?? []).filter((op: any) => {
+  // Track history for Alerts 3 & 4 — fetch for recent mechanical ops with GPS tractors
+  const gpsTractorIds = new Set((tractorsQuery.data ?? []).map((t) => t.id));
+
+  const recentMechGpsOps = (opsQuery.data ?? []).filter((op: any) => {
     if (!op.tractor_id || !op.operation_types?.is_mechanical) return false;
-    if (!op.hectares_done || op.hectares_done <= 0) return false;
+    if (!gpsTractorIds.has(op.tractor_id)) return false;
     const opDate = op.operation_date;
     return opDate === todayStr || opDate === yesterdayStr;
   });
 
-  const gpsTractorIds = new Set((tractorsQuery.data ?? []).map((t) => t.id));
-  const opsNeedingTracks = recentGpsOps.filter((op: any) => gpsTractorIds.has(op.tractor_id));
+  // Subset with hectares for Alert 4
+  const recentGpsOpsWithHa = recentMechGpsOps.filter((op: any) => op.hectares_done && op.hectares_done > 0);
 
-  // Fetch tracks for each unique tractor/date combo
-  const trackKeys = opsNeedingTracks.map((op: any) => `${op.tractor_id}|${op.operation_date}`);
+  // Fetch tracks for each unique tractor/date combo (used by Alerts 3 & 4)
+  const trackKeys = recentMechGpsOps.map((op: any) => `${op.tractor_id}|${op.operation_date}`);
   const uniqueTrackKeys = [...new Set(trackKeys)];
 
   const tracksQuery = useQuery({
@@ -464,7 +466,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
       if (error) throw error;
       return data as { id: string; name: string; hectares: number; boundary: any }[];
     },
-    enabled: !!configs && opsNeedingTracks.length > 0,
+    enabled: !!configs && recentGpsOpsWithHa.length > 0,
   });
 
   const isLoading =
@@ -531,27 +533,17 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
     }
   }
 
-  // ── Alert 3: Operation without GPS movement ──
+  // ── Alert 3: Operation without GPS movement (uses track history) ──
   const noMovementConfig = getConfig(configs, "gps_no_movement");
-  if (noMovementConfig?.is_active && liveQuery.data && tractorsQuery.data) {
-    const recentMechOps = opsQuery.data.filter(
-      (op: any) =>
-        op.operation_types?.is_mechanical &&
-        op.tractor_id &&
-        gpsTractorIds.has(op.tractor_id) &&
-        (op.operation_date === todayStr || op.operation_date === yesterdayStr)
-    );
+  if (noMovementConfig?.is_active && tracksQuery.data && tractorsQuery.data) {
+    for (const op of recentMechGpsOps) {
+      const key = `${op.tractor_id}|${op.operation_date}`;
+      const trackData = tracksQuery.data[key];
 
-    for (const op of recentMechOps) {
-      const gpsPos = liveQuery.data.find((p) => p.tractorId === op.tractor_id);
-      if (!gpsPos) continue;
-
-      const lastUpdateDate = new Date(gpsPos.lastUpdate);
-      const lastUpdateStr = format(lastUpdateDate, "yyyy-MM-dd");
-
-      // If GPS last update is NOT on the operation date, tractor likely didn't move
-      if (lastUpdateStr !== op.operation_date) {
-        const tractor = tractorsQuery.data.find((t) => t.id === op.tractor_id);
+      // If no track data or zero track points, tractor had no GPS movement
+      const hasMovement = trackData?.tracks?.length > 0;
+      if (!hasMovement) {
+        const tractor = tractorsQuery.data.find((t: any) => t.id === op.tractor_id);
         alerts.push({
           severity: "warning",
           title: `${tractor?.name || "Tractor"} registra operación el ${format(parseDateLocal(op.operation_date), "dd/MM")} pero GPS no muestra movimiento`,
@@ -568,7 +560,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
     const fieldMap = new Map(fieldsWithBoundaryQuery.data.map((f) => [f.id, f]));
     const implementMap = new Map(implementsQuery.data.map((i) => [i.id, i]));
 
-    for (const op of opsNeedingTracks) {
+    for (const op of recentGpsOpsWithHa) {
       const key = `${op.tractor_id}|${op.operation_date}`;
       const trackData = tracksQuery.data[key];
       if (!trackData?.tracks?.length) continue;

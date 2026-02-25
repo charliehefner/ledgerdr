@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Pencil, FileSpreadsheet, FileText, Download, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -525,21 +524,18 @@ export function DayLaborView() {
               </div>
               <div className="space-y-1 min-w-[180px]">
                 <label className="text-sm font-medium">Jornalero *</label>
-                <Select
+                <select
                   value={newEntry.worker_name}
-                  onValueChange={(value) => setNewEntry({ ...newEntry, worker_name: value })}
+                  onChange={(e) => setNewEntry({ ...newEntry, worker_name: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar jornalero..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {jornaleros.map((j) => (
-                      <SelectItem key={j.id} value={j.name}>
-                        {j.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="">Seleccionar jornalero...</option>
+                  {jornaleros.map((j) => (
+                    <option key={j.id} value={j.name}>
+                      {j.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1 min-w-[140px]">
                 <label className="text-sm font-medium">Campo (opcional)</label>
@@ -747,21 +743,18 @@ export function DayLaborView() {
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Jornalero *</label>
-                <Select
+                <select
                   value={editingEntry.worker_name}
-                  onValueChange={(value) => setEditingEntry({ ...editingEntry, worker_name: value })}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, worker_name: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar jornalero..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {jornaleros.map((j) => (
-                      <SelectItem key={j.id} value={j.name}>
-                        {j.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="">Seleccionar jornalero...</option>
+                  {jornaleros.map((j) => (
+                    <option key={j.id} value={j.name}>
+                      {j.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Campo (opcional)</label>

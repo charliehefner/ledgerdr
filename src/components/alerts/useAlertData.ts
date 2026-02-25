@@ -431,27 +431,26 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
       if (!accessToken) return {};
 
       const results: Record<string, { tracks: any[]; operations: any[] }> = {};
-      await Promise.all(
-        uniqueTrackKeys.map(async (key) => {
-          const [tractorId, date] = key.split("|");
-          try {
-            const res = await fetch(
-              `https://${projectId}.supabase.co/functions/v1/gpsgate-proxy?action=tracks&tractorId=${tractorId}&dateFrom=${date}&dateTo=${date}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  apikey: anonKey,
-                },
-              }
-            );
-            if (res.ok) {
-              results[key] = await res.json();
+      // Serialize requests to avoid GPSGate rate limiting (429)
+      for (const key of uniqueTrackKeys) {
+        const [tractorId, date] = key.split("|");
+        try {
+          const res = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/gpsgate-proxy?action=tracks&tractorId=${tractorId}&dateFrom=${date}&dateTo=${date}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                apikey: anonKey,
+              },
             }
-          } catch {
-            // skip failed track fetches
+          );
+          if (res.ok) {
+            results[key] = await res.json();
           }
-        })
-      );
+        } catch {
+          // skip failed track fetches
+        }
+      }
       return results;
     },
     enabled: !!configs && uniqueTrackKeys.length > 0 && !!tractorsQuery.data?.length,

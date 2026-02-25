@@ -217,15 +217,29 @@ Deno.serve(async (req) => {
         const dateStr = currentDate.toISOString().split("T")[0];
         const trackUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users/${gpsUserId}/tracks?Date=${dateStr}`;
 
-        const res = await fetch(trackUrl, { headers: gpsHeaders });
-        if (res.ok) {
-          const dayData = await res.json();
-          if (Array.isArray(dayData)) {
-            allPoints.push(...dayData);
+        let attempts = 0;
+        const maxAttempts = 3;
+        let success = false;
+
+        while (attempts < maxAttempts && !success) {
+          const res = await fetch(trackUrl, { headers: gpsHeaders });
+          if (res.ok) {
+            const dayData = await res.json();
+            if (Array.isArray(dayData)) {
+              console.log(`Date ${dateStr} returned ${dayData.length} points`);
+              allPoints.push(...dayData);
+            }
+            success = true;
+          } else if (res.status === 429) {
+            attempts++;
+            const delay = 1000 * attempts; // 1s, 2s, 3s backoff
+            console.log(`Rate limited for ${dateStr}, retry ${attempts}/${maxAttempts} after ${delay}ms`);
+            await new Promise(r => setTimeout(r, delay));
+          } else {
+            const errText = await res.text();
+            console.error("GPSGate tracks error for", dateStr, ":", res.status, errText);
+            break;
           }
-        } else {
-          const errText = await res.text();
-          console.error("GPSGate tracks error for", dateStr, ":", res.status, errText);
         }
         currentDate.setDate(currentDate.getDate() + 1);
       }

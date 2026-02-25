@@ -535,19 +535,33 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
 
   // ── Alert 3: Operation without GPS movement (uses track history) ──
   const noMovementConfig = getConfig(configs, "gps_no_movement");
-  if (noMovementConfig?.is_active && tracksQuery.data && tractorsQuery.data) {
+  if (noMovementConfig?.is_active && tracksQuery.data && !tracksQuery.isFetching && tractorsQuery.data) {
+    // Deduplicate by tractor+date — one alert per tractor per day
+    const checkedKeys = new Set<string>();
     for (const op of recentMechGpsOps) {
       const key = `${op.tractor_id}|${op.operation_date}`;
+      if (checkedKeys.has(key)) continue;
+      checkedKeys.add(key);
+
       const trackData = tracksQuery.data[key];
 
-      // If no track data or zero track points, tractor had no GPS movement
+      // Only flag if we explicitly fetched this key and got no tracks
+      // (undefined means the fetch hasn't happened yet — don't flag)
+      if (trackData === undefined) continue;
+
       const hasMovement = trackData?.tracks?.length > 0;
       if (!hasMovement) {
         const tractor = tractorsQuery.data.find((t: any) => t.id === op.tractor_id);
+        // Collect field names for this tractor/date
+        const fieldNames = recentMechGpsOps
+          .filter((o: any) => o.tractor_id === op.tractor_id && o.operation_date === op.operation_date)
+          .map((o: any) => o.fields?.name)
+          .filter(Boolean);
+        const uniqueFields = [...new Set(fieldNames)].join(", ");
         alerts.push({
           severity: "warning",
           title: `${tractor?.name || "Tractor"} registra operación el ${format(parseDateLocal(op.operation_date), "dd/MM")} pero GPS no muestra movimiento`,
-          detail: `${op.operation_types?.name || "Operación"} — ${op.fields?.name || ""}`,
+          detail: uniqueFields || "Sin campo",
         });
       }
     }

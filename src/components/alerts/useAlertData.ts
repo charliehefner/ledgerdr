@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, addYears, isBefore, differenceInDays, format } from "date-fns";
+import { parseDateLocal } from "@/lib/dateUtils";
 import type { AlertSeverity } from "./AlertCard";
 
 export interface AlertItem {
@@ -482,7 +483,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
         alerts.push({
           severity: "warning",
           title: `${op.fields.name}: ${op.hectares_done} ha registradas pero el campo tiene ${fieldHa} ha`,
-          detail: `${op.operation_types?.name || "Operación"} — ${format(new Date(op.operation_date), "dd/MM/yyyy")}`,
+          detail: `${op.operation_types?.name || "Operación"} — ${format(parseDateLocal(op.operation_date), "dd/MM/yyyy")}`,
         });
       }
     }
@@ -553,7 +554,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
         const tractor = tractorsQuery.data.find((t) => t.id === op.tractor_id);
         alerts.push({
           severity: "warning",
-          title: `${tractor?.name || "Tractor"} registra operación el ${format(new Date(op.operation_date), "dd/MM")} pero GPS no muestra movimiento`,
+          title: `${tractor?.name || "Tractor"} registra operación el ${format(parseDateLocal(op.operation_date), "dd/MM")} pero GPS no muestra movimiento`,
           detail: `${op.operation_types?.name || "Operación"} — ${op.fields?.name || ""}`,
         });
       }
@@ -594,7 +595,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
         alerts.push({
           severity: "warning",
           title: `${op.fields?.name || "Campo"} ${op.operation_types?.name || ""}: ${op.hectares_done} ha registradas vs ~${gpsHectares.toFixed(1)} ha estimadas por GPS`,
-          detail: `${format(new Date(op.operation_date), "dd/MM/yyyy")} · Diferencia: ${(diff * 100).toFixed(0)}%`,
+          detail: `${format(parseDateLocal(op.operation_date), "dd/MM/yyyy")} · Diferencia: ${(diff * 100).toFixed(0)}%`,
         });
       }
     }

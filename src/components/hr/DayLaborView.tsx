@@ -711,12 +711,12 @@ export function DayLaborView() {
       )}
 
       {/* Edit Entry Dialog */}
-      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Entrada</DialogTitle>
-          </DialogHeader>
-          {editingEntry && (
+      {editingEntry && (
+        <Dialog open={true} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Entrada</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Fecha</label>
@@ -781,17 +781,17 @@ export function DayLaborView() {
                 />
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingEntry(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={updateEntry.isPending}>
-              Guardar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingEntry(null)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={updateEntry.isPending}>
+                Guardar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

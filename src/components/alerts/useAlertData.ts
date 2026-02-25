@@ -548,7 +548,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
       // (undefined means the fetch hasn't happened yet — don't flag)
       if (trackData === undefined) continue;
 
-      const hasMovement = trackData?.tracks?.length > 0;
+      const hasMovement = trackData?.tracks?.some((t: any) => t.speed > 0);
       if (!hasMovement) {
         const tractor = tractorsQuery.data.find((t: any) => t.id === op.tractor_id);
         // Collect field names for this tractor/date

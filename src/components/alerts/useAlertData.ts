@@ -84,7 +84,7 @@ export function useHrAlerts(configs: AlertConfig[] | undefined) {
   for (const emp of employeesQuery.data) {
     const lastEnd = latestVacation.get(emp.id);
     const baseDate = lastEnd || emp.date_of_hire;
-    const nextDue = addYears(new Date(baseDate), 1);
+    const nextDue = addYears(parseDateLocal(baseDate), 1);
     const daysUntil = differenceInDays(nextDue, today);
 
     if (daysUntil < 0) {
@@ -294,7 +294,7 @@ export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
   for (const entry of entriesQuery.data) {
     if (closedWeeks.has(entry.week_ending_date)) continue;
 
-    const weekEnd = new Date(entry.week_ending_date);
+    const weekEnd = parseDateLocal(entry.week_ending_date);
     const scheduledDate = addDays(weekEnd, entry.day_of_week - 5);
 
     const daysUntil = differenceInDays(scheduledDate, today);

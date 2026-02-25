@@ -1,33 +1,19 @@
 
 
-## Hour Meter Sequence Tracker
+# Plan: Update Logo + Enable PWA
 
-### Problem
-When you get an alert about a gap in the hour meter (e.g., MF4297), there's nowhere to go review the full sequence of readings. The gap warning only appears as a brief notification when entering data — it's not saved and can't be reviewed later.
+## Steps
 
-### Solution
-Add an **"Horómetro" (Hour Meter) tab** to the Equipment page that shows the chronological sequence of hour meter readings per tractor, with gaps highlighted visually.
+1. **Copy the uploaded logo** to `src/assets/Logo_Jord.png` (replacing the existing `jord-logo.png` reference) and to `public/logo-192.png` and `public/logo-512.png` for PWA icons
+2. **Update `index.html`** — replace favicon with the new logo, add PWA meta tags (theme-color, apple-touch-icon, manifest link)
+3. **Update the sidebar** — change the logo import from `jord-logo.png` to `Logo_Jord.png`
+4. **Install `vite-plugin-pwa`** and configure it in `vite.config.ts` with manifest (name: "LedgerDR", icons, theme color, display: standalone) and service worker (NetworkFirst for API, exclude OAuth routes)
+5. **Update `index.html` title** from "Lovable App" to "LedgerDR"
 
-### What You'll See
+## Technical Details
 
-- A new **"Horómetro"** tab on the Equipment page (alongside the existing Tractors and Implements tabs)
-- **Tractor selector** dropdown to pick which tractor to inspect
-- A **table** showing all operations for that tractor in chronological order:
-  - Date | Operation | Field | Start Hours | End Hours | Hours Worked | Gap
-- **Gap column** highlights in red/amber when there's a mismatch between one operation's end_hours and the next operation's start_hours
-- **Summary card** at the top showing: current hour meter, total gaps found, total gap hours
-
-### Data Source
-All data comes from existing operations records (the `operations` table already stores `start_hours` and `end_hours` per tractor). No database changes needed.
-
-### Technical Details
-
-1. **New file**: `src/components/equipment/HourMeterSequenceView.tsx`
-   - Query operations filtered by tractor, sorted by date and start_hours
-   - Compare each operation's `start_hours` with the previous operation's `end_hours`
-   - Flag gaps > 0.1 hours with a red badge showing the gap size
-   - Include tractor selector and date range filters
-
-2. **Modified file**: `src/pages/Equipment.tsx`
-   - Add "Horómetro" tab pointing to the new component
+- Service worker strategy: `NetworkFirst` for API calls, `StaleWhileRevalidate` for static assets
+- OAuth route `/~oauth` excluded from SW precaching
+- Manifest: `name: "LedgerDR"`, `short_name: "LedgerDR"`, `display: "standalone"`, `start_url: "/"`
+- The uploaded PNG will be used as favicon and PWA icons (copied to public/ for HTML/manifest references, and to src/assets/ for the React sidebar import)
 

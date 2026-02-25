@@ -21,7 +21,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import jordLogo from "@/assets/jord-logo.png";
+import jordLogo from "@/assets/Logo_Jord.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useLanguage } from "@/contexts/LanguageContext";

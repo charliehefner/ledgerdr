@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -986,22 +985,21 @@ export function OperationsLogView() {
             onToggle={toggleColumn}
             onReset={resetToDefaults}
           />
-          <Dialog
-            open={isDialogOpen}
-            onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) {
-                requestAnimationFrame(() => resetOperationFormState());
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                {t("operations.recordOperation")}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <Button onClick={() => { resetOperationFormState(); setIsDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("operations.recordOperation")}
+          </Button>
+          {isDialogOpen && (
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) {
+                  requestAnimationFrame(() => resetOperationFormState());
+                }
+              }}
+            >
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingOperation ? t("operations.editOperation") : t("operations.recordFieldOperation")}
@@ -1270,11 +1268,11 @@ export function OperationsLogView() {
                   </Button>
                 </div>
               </form>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
-
       {/* Operations Table */}
       {isLoading ? (
         <div className="text-center py-8">{t("operations.loading")}</div>

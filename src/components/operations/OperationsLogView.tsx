@@ -788,15 +788,73 @@ export function OperationsLogView() {
         return;
       }
     }
+
+    // If user typed an input but didn't press "+", include it on save
+    const normalizedInputs = [...inputs];
+    if (newInput.inventory_item_id || newInput.quantity_used) {
+      if (!newInput.inventory_item_id || !newInput.quantity_used) {
+        toast({
+          title: "Error de Validación",
+          description: "Complete artículo y cantidad del insumo pendiente o limpie ambos campos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const pendingQty = parseFloat(newInput.quantity_used);
+      if (isNaN(pendingQty) || pendingQty <= 0) {
+        toast({
+          title: "Error de Validación",
+          description: "La cantidad del insumo debe ser mayor que cero.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const pendingItem = inventoryItems?.find(i => i.id === newInput.inventory_item_id);
+      if (!pendingItem) {
+        toast({
+          title: "Error de Validación",
+          description: "El insumo seleccionado no está disponible.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const existingIndex = normalizedInputs.findIndex(i => i.inventory_item_id === newInput.inventory_item_id);
+      const existingQty = existingIndex >= 0 ? normalizedInputs[existingIndex].quantity_used : 0;
+      const maxAllowed = pendingItem.current_quantity + existingQty;
+
+      if (pendingQty > maxAllowed) {
+        toast({
+          title: "Stock Insuficiente",
+          description: `Solo ${maxAllowed} ${pendingItem.use_unit} disponibles para guardar este cambio.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (existingIndex >= 0) {
+        normalizedInputs[existingIndex] = {
+          ...normalizedInputs[existingIndex],
+          quantity_used: pendingQty,
+        };
+      } else {
+        normalizedInputs.push({
+          inventory_item_id: newInput.inventory_item_id,
+          quantity_used: pendingQty,
+        });
+      }
+    }
     
     if (editingOperation) {
       const originalInputs = editingOperation.operation_inputs?.map(input => ({
         inventory_item_id: input.inventory_item_id,
         quantity_used: input.quantity_used,
       })) || [];
-      updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs, currentInputs: inputs });
+      updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs, currentInputs: normalizedInputs });
     } else {
-      mutation.mutate({ data: form, currentInputs: inputs });
+      mutation.mutate({ data: form, currentInputs: normalizedInputs });
     }
   };
 

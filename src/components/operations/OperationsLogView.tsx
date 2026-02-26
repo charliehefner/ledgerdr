@@ -503,9 +503,10 @@ export function OperationsLogView() {
       handleCloseDialog();
     },
     onError: (error) => {
+      console.error("[Operations] Create mutation error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error al registrar operación",
+        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
         variant: "destructive",
       });
     },
@@ -602,9 +603,10 @@ export function OperationsLogView() {
       handleCloseDialog();
     },
     onError: (error) => {
+      console.error("[Operations] Update mutation error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error al actualizar operación",
+        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
         variant: "destructive",
       });
     },
@@ -660,9 +662,10 @@ export function OperationsLogView() {
       setDeleteOperationId(null);
     },
     onError: (error) => {
+      console.error("[Operations] Delete mutation error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error al eliminar operación",
+        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
         variant: "destructive",
       });
     },
@@ -1093,41 +1096,35 @@ export function OperationsLogView() {
 
                   <div>
                     <Label>{t("operations.form.field")} *</Label>
-                    <Select
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       value={form.field_id}
-                      onValueChange={(value) => setForm({ ...form, field_id: value })}
+                      onChange={(e) => setForm({ ...form, field_id: e.target.value })}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("operations.form.selectField")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fields?.filter(f => f.farms?.name).map((field) => (
-                          <SelectItem key={field.id} value={field.id}>
-                            {field.name} ({field.farms?.name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="">{t("operations.form.selectField")}</option>
+                      {fields?.filter(f => f.farms?.name).map((field) => (
+                        <option key={field.id} value={field.id}>
+                          {field.name} ({field.farms?.name})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
                 <div>
                   <Label>{t("operations.form.operationType")} *</Label>
-                  <Select
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     value={form.operation_type_id}
-                    onValueChange={(value) => setForm({ ...form, operation_type_id: value })}
+                    onChange={(e) => setForm({ ...form, operation_type_id: e.target.value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("operations.form.selectOperation")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {operationTypes?.map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.name} ({type.is_mechanical ? t("operations.form.mechanical") : t("operations.form.manual")})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="">{t("operations.form.selectOperation")}</option>
+                    {operationTypes?.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name} ({type.is_mechanical ? t("operations.form.mechanical") : t("operations.form.manual")})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {isMechanical ? (
@@ -1135,39 +1132,33 @@ export function OperationsLogView() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>{t("operations.form.tractor")} *</Label>
-                        <Select
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           value={form.tractor_id}
-                          onValueChange={(value) => setForm({ ...form, tractor_id: value })}
+                          onChange={(e) => setForm({ ...form, tractor_id: e.target.value })}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("operations.form.selectTractor")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {tractors?.map((tr) => (
-                              <SelectItem key={tr.id} value={tr.id}>
-                                {tr.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <option value="">{t("operations.form.selectTractor")}</option>
+                          {tractors?.map((tr) => (
+                            <option key={tr.id} value={tr.id}>
+                              {tr.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <Label>{t("operations.form.implement")} *</Label>
-                        <Select
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           value={form.implement_id}
-                          onValueChange={(value) => setForm({ ...form, implement_id: value })}
+                          onChange={(e) => setForm({ ...form, implement_id: e.target.value })}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("operations.form.selectImplement")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {implements_?.map((i) => (
-                              <SelectItem key={i.id} value={i.id}>
-                                {i.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <option value="">{t("operations.form.selectImplement")}</option>
+                          {implements_?.map((i) => (
+                            <option key={i.id} value={i.id}>
+                              {i.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     
@@ -1251,21 +1242,18 @@ export function OperationsLogView() {
                     {t("operations.form.inputsUsed")}
                   </Label>
                   <div className="flex gap-2">
-                    <Select
+                    <select
+                      className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       value={newInput.inventory_item_id}
-                      onValueChange={(value) => setNewInput({ ...newInput, inventory_item_id: value })}
+                      onChange={(e) => setNewInput({ ...newInput, inventory_item_id: e.target.value })}
                     >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder={t("operations.form.selectInput")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inventoryItems?.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.commercial_name} ({item.current_quantity} {item.use_unit} {t("operations.form.available")})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="">{t("operations.form.selectInput")}</option>
+                      {inventoryItems?.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.commercial_name} ({item.current_quantity} {item.use_unit} {t("operations.form.available")})
+                        </option>
+                      ))}
+                    </select>
                     <Input
                       type="number"
                       step="0.01"

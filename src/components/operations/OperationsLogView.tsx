@@ -413,7 +413,7 @@ export function OperationsLogView() {
   };
 
   const mutation = useMutation({
-    mutationFn: async (data: typeof form): Promise<{ followUpMessage?: string }> => {
+    mutationFn: async ({ data, currentInputs }: { data: typeof form; currentInputs: OperationInput[] }): Promise<{ followUpMessage?: string }> => {
       const record = {
         operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
@@ -455,8 +455,8 @@ export function OperationsLogView() {
       }
 
       // Insert inputs and deduct from inventory
-      if (inputs.length > 0) {
-        const inputRecords = inputs.map(input => ({
+      if (currentInputs.length > 0) {
+        const inputRecords = currentInputs.map(input => ({
           operation_id: operation.id,
           inventory_item_id: input.inventory_item_id,
           quantity_used: input.quantity_used,
@@ -469,7 +469,7 @@ export function OperationsLogView() {
         if (inputError) throw inputError;
 
         // Deduct from inventory
-        for (const input of inputs) {
+        for (const input of currentInputs) {
           const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
           if (item) {
             const newQuantity = item.current_quantity - input.quantity_used;
@@ -514,7 +514,7 @@ export function OperationsLogView() {
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ operationId, data, originalInputs }: { operationId: string; data: typeof form; originalInputs: OperationInput[] }) => {
+    mutationFn: async ({ operationId, data, originalInputs, currentInputs }: { operationId: string; data: typeof form; originalInputs: OperationInput[]; currentInputs: OperationInput[] }) => {
       const record = {
         operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
@@ -559,8 +559,8 @@ export function OperationsLogView() {
       if (deleteInputsError) throw deleteInputsError;
 
       // Insert new inputs and deduct from inventory
-      if (inputs.length > 0) {
-        const inputRecords = inputs.map(input => ({
+      if (currentInputs.length > 0) {
+        const inputRecords = currentInputs.map(input => ({
           operation_id: operationId,
           inventory_item_id: input.inventory_item_id,
           quantity_used: input.quantity_used,
@@ -573,7 +573,7 @@ export function OperationsLogView() {
         if (inputError) throw inputError;
 
         // Deduct from inventory (use fresh data after restore)
-        for (const input of inputs) {
+        for (const input of currentInputs) {
           const { data: currentItem, error: fetchError } = await supabase
             .from("inventory_items")
             .select("current_quantity")
@@ -790,9 +790,9 @@ export function OperationsLogView() {
         inventory_item_id: input.inventory_item_id,
         quantity_used: input.quantity_used,
       })) || [];
-      updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs });
+      updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs, currentInputs: inputs });
     } else {
-      mutation.mutate(form);
+      mutation.mutate({ data: form, currentInputs: inputs });
     }
   };
 
@@ -981,7 +981,7 @@ export function OperationsLogView() {
             onToggle={toggleColumn}
             onReset={resetToDefaults}
           />
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setIsDialogOpen(true); }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />

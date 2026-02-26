@@ -669,8 +669,7 @@ export function OperationsLogView() {
     },
   });
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
+  const resetOperationFormState = () => {
     setEditingOperation(null);
     setForm({
       operation_date: new Date(),
@@ -687,6 +686,12 @@ export function OperationsLogView() {
     });
     setInputs([]);
     setNewInput({ inventory_item_id: "", quantity_used: "" });
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    // Defer reset until after Radix portal close to avoid removeChild race
+    requestAnimationFrame(() => resetOperationFormState());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -981,7 +986,15 @@ export function OperationsLogView() {
             onToggle={toggleColumn}
             onReset={resetToDefaults}
           />
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setIsDialogOpen(true); }}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                requestAnimationFrame(() => resetOperationFormState());
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />

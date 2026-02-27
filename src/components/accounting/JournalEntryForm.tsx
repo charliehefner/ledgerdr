@@ -29,6 +29,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
   const [journalDate, setJournalDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [currency, setCurrency] = useState("DOP");
+  const [journalType, setJournalType] = useState("GJ");
   const [lines, setLines] = useState<NewLine[]>([
     { key: "1", account_id: "", debit: "", credit: "" },
     { key: "2", account_id: "", debit: "", credit: "" },
@@ -84,6 +85,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
     setJournalDate(new Date().toISOString().slice(0, 10));
     setDescription("");
     setCurrency("DOP");
+    setJournalType("GJ");
     setLines([
       { key: "1", account_id: "", debit: "", credit: "" },
       { key: "2", account_id: "", debit: "", credit: "" },
@@ -115,7 +117,8 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
           currency,
           created_by: user?.id,
           posted: false,
-        })
+          journal_type: journalType,
+        } as any)
         .select("id")
         .single();
       if (jErr) throw jErr;
@@ -151,10 +154,24 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
         </DialogHeader>
 
         {/* Header fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">Fecha</label>
             <Input type="date" value={journalDate} onChange={(e) => setJournalDate(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Tipo</label>
+            <Select value={journalType} onValueChange={setJournalType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GJ">GJ – General</SelectItem>
+                <SelectItem value="PJ">PJ – Compras</SelectItem>
+                <SelectItem value="SJ">SJ – Ventas</SelectItem>
+                <SelectItem value="PRJ">PRJ – Nómina</SelectItem>
+                <SelectItem value="CDJ">CDJ – Desembolsos</SelectItem>
+                <SelectItem value="CRJ">CRJ – Recibos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Moneda</label>

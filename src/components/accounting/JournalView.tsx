@@ -40,6 +40,7 @@ type Journal = {
 };
 
 type StatusFilter = "all" | "draft" | "posted";
+type TypeFilter = "all" | "GJ" | "PJ" | "SJ" | "PRJ" | "CDJ" | "CRJ";
 
 export function JournalView() {
   const { t } = useLanguage();
@@ -48,6 +49,7 @@ export function JournalView() {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -59,7 +61,7 @@ export function JournalView() {
       const { data, error } = await supabase
         .from("journals")
         .select(`
-          id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id,
+          id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
           journal_lines (
             id, debit, credit, account_id, cbs_code, project_code,
             chart_of_accounts:account_id ( account_code, account_name )
@@ -74,8 +76,9 @@ export function JournalView() {
   });
 
   const filtered = journals.filter((j) => {
-    if (statusFilter === "draft") return !j.posted;
-    if (statusFilter === "posted") return j.posted;
+    if (statusFilter === "draft" && j.posted) return false;
+    if (statusFilter === "posted" && !j.posted) return false;
+    if (typeFilter !== "all" && (j as any).journal_type !== typeFilter) return false;
     return true;
   });
 
@@ -105,17 +108,36 @@ export function JournalView() {
     { key: "posted", label: "Publicados" },
   ];
 
+  const typeButtons: { key: TypeFilter; label: string }[] = [
+    { key: "all", label: "Todos" },
+    { key: "GJ", label: "GJ" },
+    { key: "PJ", label: "PJ" },
+    { key: "SJ", label: "SJ" },
+    { key: "PRJ", label: "PRJ" },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {filterButtons.map((f) => (
             <Button
               key={f.key}
               variant={statusFilter === f.key ? "default" : "outline"}
               size="sm"
               onClick={() => setStatusFilter(f.key)}
+            >
+              {f.label}
+            </Button>
+          ))}
+          <div className="w-px bg-border mx-1" />
+          {typeButtons.map((f) => (
+            <Button
+              key={f.key}
+              variant={typeFilter === f.key ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setTypeFilter(f.key)}
             >
               {f.label}
             </Button>
@@ -148,6 +170,7 @@ export function JournalView() {
               <TableRow>
                 <TableHead className="w-[40px]" />
                 <TableHead className="w-[120px]">Número</TableHead>
+                <TableHead className="w-[60px]">Tipo</TableHead>
                 <TableHead className="w-[110px]">Fecha</TableHead>
                 <TableHead>Descripción</TableHead>
                 <TableHead className="w-[80px]">Moneda</TableHead>
@@ -175,6 +198,9 @@ export function JournalView() {
                           ))}
                       </TableCell>
                       <TableCell className="font-mono text-sm">{j.journal_number || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-[10px] px-1.5">{(j as any).journal_type || "GJ"}</Badge>
+                      </TableCell>
                       <TableCell>{format(new Date(j.journal_date), "dd/MM/yyyy")}</TableCell>
                       <TableCell>{j.description || "—"}</TableCell>
                       <TableCell>{j.currency || "DOP"}</TableCell>
@@ -193,7 +219,7 @@ export function JournalView() {
                     </TableRow>
                     {expanded.has(j.id) && j.journal_lines.length > 0 && (
                       <TableRow key={`${j.id}-lines`}>
-                        <TableCell colSpan={6} className="p-0">
+                        <TableCell colSpan={7} className="p-0">
                           <div className="bg-muted/30 px-8 py-3">
                             <table className="w-full text-sm">
                               <thead>

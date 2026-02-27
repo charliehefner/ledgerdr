@@ -61,7 +61,7 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
-  const [purchaseTotalsPeriod, setPurchaseTotalsPeriod] = useState("current_month");
+  const [purchaseTotalsPeriod, setPurchaseTotalsPeriod] = useState("current_month"); // kept for accountCbsTotals reference
 
   const columnVisibility = useColumnVisibility("reports-table", REPORT_COLUMNS);
 
@@ -446,49 +446,6 @@ export default function Reports() {
       }
     >
       <div className="space-y-6 animate-fade-in">
-        {/* Account/CBS Pair Totals */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle>Purchase Totals by Account & CBS</CardTitle>
-            <Select value={purchaseTotalsPeriod} onValueChange={setPurchaseTotalsPeriod}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="current_month">Mes Actual</SelectItem>
-                <SelectItem value="past_month">Mes Anterior</SelectItem>
-                <SelectItem value="ytd">Año en Curso</SelectItem>
-                <SelectItem value="prior_year">Año Anterior</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account / CBS Pair</TableHead>
-                  <TableHead className="text-right">Transactions</TableHead>
-                  <TableHead className="text-right">Total DOP</TableHead>
-                  <TableHead className="text-right">Total USD</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {accountCbsTotals.map((row, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{row.label}</TableCell>
-                    <TableCell className="text-right font-mono">{row.count}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(row.totalDOP, "DOP")}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(row.totalUSD, "USD")}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
 
         {/* Filters Bar */}
         <Card>

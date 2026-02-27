@@ -2201,6 +2201,7 @@ export type Database = {
           created_at: string
           english_description: string
           id: string
+          is_active: boolean
           spanish_description: string
         }
         Insert: {
@@ -2208,6 +2209,7 @@ export type Database = {
           created_at?: string
           english_description: string
           id?: string
+          is_active?: boolean
           spanish_description: string
         }
         Update: {
@@ -2215,6 +2217,7 @@ export type Database = {
           created_at?: string
           english_description?: string
           id?: string
+          is_active?: boolean
           spanish_description?: string
         }
         Relationships: []

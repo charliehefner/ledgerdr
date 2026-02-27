@@ -39,6 +39,7 @@ import { formatCurrency, formatDate } from "@/lib/formatters";
 import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ProfitLossView } from "./ProfitLossView";
 import { BalanceSheetView } from "./BalanceSheetView";
+import { PowerBIExportButton } from "./PowerBIExportButton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ExcelJS from "exceljs";
@@ -342,7 +343,7 @@ export function AccountingReportsView() {
   return (
     <div className="space-y-4">
       {/* Report Type Selector */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
           <SelectTrigger className="w-64">
             <SelectValue />
@@ -353,6 +354,7 @@ export function AccountingReportsView() {
             <SelectItem value="bs">{t("bs.title")}</SelectItem>
           </SelectContent>
         </Select>
+        <PowerBIExportButton />
       </div>
 
       {reportType === "pl" ? (

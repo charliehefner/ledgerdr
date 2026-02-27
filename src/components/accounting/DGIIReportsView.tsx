@@ -9,6 +9,7 @@ import { DGII607Table } from "./DGII607Table";
 import { DGII608Table } from "./DGII608Table";
 import { IT1ReportView } from "./IT1ReportView";
 import { IR3ReportView } from "@/components/hr/IR3ReportView";
+import { IR17ReportView } from "@/components/hr/IR17ReportView";
 import { Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -133,6 +134,7 @@ export function DGIIReportsView() {
                 <TabsTrigger value="608" className="gap-1">608 - Anulados ({voided.length}) <InfoTooltip translationKey="help.dgii608" /></TabsTrigger>
                 <TabsTrigger value="it1" className="gap-1">IT-1 - ITBIS <InfoTooltip translationKey="help.it1" /></TabsTrigger>
                 <TabsTrigger value="ir3" className="gap-1">IR-3 - ISR <InfoTooltip translationKey="help.ir3" /></TabsTrigger>
+                <TabsTrigger value="ir17" className="gap-1">IR-17 - Retenciones</TabsTrigger>
               </TabsList>
               <TabsContent value="606">
                 <DGII606Table transactions={purchases} month={month} year={year} />
@@ -148,6 +150,9 @@ export function DGIIReportsView() {
               </TabsContent>
               <TabsContent value="ir3">
                 <IR3ReportView />
+              </TabsContent>
+              <TabsContent value="ir17">
+                <IR17ReportView />
               </TabsContent>
             </Tabs>
           )}

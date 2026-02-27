@@ -46,7 +46,7 @@ type SectionType = "revenue" | "cogs" | "opex" | "financial";
 interface PLCategory {
   prefixMin: number;
   prefixMax: number;
-  labelKey: string;          // translation key
+  labelKey: string;
   section: SectionType;
 }
 
@@ -87,6 +87,8 @@ interface AcctLine {
   name: string;
   rd: number;
   us: number;
+  compRd: number;
+  compUs: number;
 }
 
 interface CategoryBlock {
@@ -95,23 +97,35 @@ interface CategoryBlock {
   accounts: AcctLine[];
   rdTotal: number;
   usTotal: number;
+  compRdTotal: number;
+  compUsTotal: number;
 }
 
 // Row types for rendering
 type StatementRow =
   | { type: "sectionHeader"; label: string }
   | { type: "categoryHeader"; label: string }
-  | { type: "account"; code: string; name: string; rd: number; us: number }
-  | { type: "categorySubtotal"; label: string; rd: number; us: number }
-  | { type: "sectionTotal"; label: string; rd: number; us: number }
-  | { type: "intermediateTotal"; label: string; rd: number; us: number }
-  | { type: "netIncome"; label: string; rd: number; us: number }
+  | { type: "account"; code: string; name: string; rd: number; us: number; compRd: number; compUs: number }
+  | { type: "categorySubtotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
+  | { type: "sectionTotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
+  | { type: "intermediateTotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
+  | { type: "netIncome"; label: string; rd: number; us: number; compRd: number; compUs: number }
   | { type: "blank" };
 
 function getAcctName(a: AccountRow, language: Language) {
   return language === "en"
     ? (a.english_description || a.account_name)
     : (a.spanish_description || a.account_name);
+}
+
+function fmtVar(current: number, prior: number): string {
+  return formatCurrency(current - prior, "DOP");
+}
+
+function fmtVarPct(current: number, prior: number): string {
+  if (Math.abs(prior) < 0.01) return "—";
+  const pct = ((current - prior) / Math.abs(prior)) * 100;
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
 export function ProfitLossView() {
@@ -163,7 +177,6 @@ export function ProfitLossView() {
     },
   });
 
-  // Comparison period transactions
   const { data: compTransactions = [] } = useQuery({
     queryKey: ["pl-transactions-comp", compStartDate, compEndDate],
     queryFn: async () => {
@@ -212,7 +225,6 @@ export function ProfitLossView() {
 
   // Build the full categorized statement
   const { statementRows, hasUsd } = useMemo(() => {
-    // Group accounts into categories
     const catMap = new Map<PLCategory, AcctLine[]>();
     PL_CATEGORIES.forEach(c => catMap.set(c, []));
 
@@ -220,16 +232,16 @@ export function ProfitLossView() {
       const cat = findCategory(a.account_code);
       if (!cat) return;
       const t = accountTotals[a.account_code] || { rd: 0, us: 0 };
-      if (t.rd === 0 && t.us === 0) return;
+      const ct = compAccountTotals[a.account_code] || { rd: 0, us: 0 };
+      if (t.rd === 0 && t.us === 0 && ct.rd === 0 && ct.us === 0) return;
       catMap.get(cat)!.push({
         code: a.account_code,
         name: getAcctName(a, language),
-        rd: t.rd,
-        us: t.us,
+        rd: t.rd, us: t.us,
+        compRd: ct.rd, compUs: ct.us,
       });
     });
 
-    // Build category blocks
     const blocks: CategoryBlock[] = [];
     PL_CATEGORIES.forEach(cat => {
       const accts = catMap.get(cat)!;
@@ -240,15 +252,18 @@ export function ProfitLossView() {
         accounts: accts.sort((a, b) => a.code.localeCompare(b.code)),
         rdTotal: accts.reduce((s, a) => s + a.rd, 0),
         usTotal: accts.reduce((s, a) => s + a.us, 0),
+        compRdTotal: accts.reduce((s, a) => s + a.compRd, 0),
+        compUsTotal: accts.reduce((s, a) => s + a.compUs, 0),
       });
     });
 
-    // Compute section totals
     const sumSection = (section: SectionType) => {
       const sectionBlocks = blocks.filter(b => b.category.section === section);
       return {
         rd: sectionBlocks.reduce((s, b) => s + b.rdTotal, 0),
         us: sectionBlocks.reduce((s, b) => s + b.usTotal, 0),
+        compRd: sectionBlocks.reduce((s, b) => s + b.compRdTotal, 0),
+        compUs: sectionBlocks.reduce((s, b) => s + b.compUsTotal, 0),
         blocks: sectionBlocks,
       };
     };
@@ -260,53 +275,42 @@ export function ProfitLossView() {
 
     const grossProfitRd = revenue.rd - cogs.rd;
     const grossProfitUs = revenue.us - cogs.us;
+    const compGrossProfitRd = revenue.compRd - cogs.compRd;
+    const compGrossProfitUs = revenue.compUs - cogs.compUs;
     const ebitRd = grossProfitRd - opex.rd;
     const ebitUs = grossProfitUs - opex.us;
-    // Financial items: income accounts (70-79) add, expense accounts (80-89) subtract
-    // Since all are already signed by type (income = positive via transaction amounts), 
-    // we treat financial section net as: income items - expense items
-    // But since they're all stored as positive amounts regardless of type, 
-    // we need to check: revenue-type financial items add, expense-type subtract
-    // Actually, based on account_type in chart_of_accounts, INCOME accounts in financial 
-    // section add value, EXPENSE accounts subtract.
-    // But in this simplified approach, all financial section amounts come from transactions 
-    // which are already signed appropriately. Let's just net them:
-    // Financial income (70-79) - Financial expenses (80-89)
-    const financialNetRd = financial.blocks.reduce((s, b) => {
-      const prefix = b.category.prefixMin;
-      // 70-84 range includes both income (70-79) and expenses (80-84)
-      // Check account types from the original accounts data
-      return s + b.rdTotal; // Already computed as positive amounts
-    }, 0);
-    const financialNetUs = financial.blocks.reduce((s, b) => s + b.usTotal, 0);
-    
-    // For financial items, income accounts should be positive, expense accounts negative for net
-    // Let's recalculate based on account types
+    const compEbitRd = compGrossProfitRd - opex.compRd;
+    const compEbitUs = compGrossProfitUs - opex.compUs;
+
     let financialIncomeRd = 0, financialIncomeUs = 0;
     let financialExpenseRd = 0, financialExpenseUs = 0;
+    let compFinancialIncomeRd = 0, compFinancialIncomeUs = 0;
+    let compFinancialExpenseRd = 0, compFinancialExpenseUs = 0;
     financial.blocks.forEach(b => {
       b.accounts.forEach(acct => {
         const origAccount = accounts.find(a => a.account_code === acct.code);
         if (origAccount?.account_type === "INCOME") {
-          financialIncomeRd += acct.rd;
-          financialIncomeUs += acct.us;
+          financialIncomeRd += acct.rd; financialIncomeUs += acct.us;
+          compFinancialIncomeRd += acct.compRd; compFinancialIncomeUs += acct.compUs;
         } else {
-          financialExpenseRd += acct.rd;
-          financialExpenseUs += acct.us;
+          financialExpenseRd += acct.rd; financialExpenseUs += acct.us;
+          compFinancialExpenseRd += acct.compRd; compFinancialExpenseUs += acct.compUs;
         }
       });
     });
     const netFinancialRd = financialIncomeRd - financialExpenseRd;
     const netFinancialUs = financialIncomeUs - financialExpenseUs;
+    const compNetFinancialRd = compFinancialIncomeRd - compFinancialExpenseRd;
+    const compNetFinancialUs = compFinancialIncomeUs - compFinancialExpenseUs;
 
     const netIncomeRd = ebitRd + netFinancialRd;
     const netIncomeUs = ebitUs + netFinancialUs;
+    const compNetIncomeRd = compEbitRd + compNetFinancialRd;
+    const compNetIncomeUs = compEbitUs + compNetFinancialUs;
 
-    // Check if any USD present
     const allBlocks = [...revenue.blocks, ...cogs.blocks, ...opex.blocks, ...financial.blocks];
-    const hasUsd = allBlocks.some(b => b.usTotal !== 0);
+    const hasUsd = allBlocks.some(b => b.usTotal !== 0 || b.compUsTotal !== 0);
 
-    // Build statement rows
     const rows: StatementRow[] = [];
 
     // ─── REVENUE ───
@@ -315,7 +319,7 @@ export function ProfitLossView() {
       revenue.blocks.forEach(b => {
         b.accounts.forEach(a => rows.push({ type: "account", ...a }));
       });
-      rows.push({ type: "sectionTotal", label: t("pl.totalIncome"), rd: revenue.rd, us: revenue.us });
+      rows.push({ type: "sectionTotal", label: t("pl.totalIncome"), rd: revenue.rd, us: revenue.us, compRd: revenue.compRd, compUs: revenue.compUs });
       rows.push({ type: "blank" });
     }
 
@@ -325,12 +329,12 @@ export function ProfitLossView() {
       cogs.blocks.forEach(b => {
         b.accounts.forEach(a => rows.push({ type: "account", ...a }));
       });
-      rows.push({ type: "sectionTotal", label: t("pl.totalCogs"), rd: cogs.rd, us: cogs.us });
+      rows.push({ type: "sectionTotal", label: t("pl.totalCogs"), rd: cogs.rd, us: cogs.us, compRd: cogs.compRd, compUs: cogs.compUs });
       rows.push({ type: "blank" });
     }
 
     // ─── GROSS PROFIT ───
-    rows.push({ type: "intermediateTotal", label: t("pl.grossProfit"), rd: grossProfitRd, us: grossProfitUs });
+    rows.push({ type: "intermediateTotal", label: t("pl.grossProfit"), rd: grossProfitRd, us: grossProfitUs, compRd: compGrossProfitRd, compUs: compGrossProfitUs });
     rows.push({ type: "blank" });
 
     // ─── OPERATING EXPENSES ───
@@ -340,15 +344,15 @@ export function ProfitLossView() {
       opex.blocks.forEach(b => {
         rows.push({ type: "categoryHeader", label: b.label });
         b.accounts.forEach(a => rows.push({ type: "account", ...a }));
-        rows.push({ type: "categorySubtotal", label: t("pl.subtotal"), rd: b.rdTotal, us: b.usTotal });
+        rows.push({ type: "categorySubtotal", label: t("pl.subtotal"), rd: b.rdTotal, us: b.usTotal, compRd: b.compRdTotal, compUs: b.compUsTotal });
         rows.push({ type: "blank" });
       });
-      rows.push({ type: "sectionTotal", label: t("pl.totalOpex"), rd: opex.rd, us: opex.us });
+      rows.push({ type: "sectionTotal", label: t("pl.totalOpex"), rd: opex.rd, us: opex.us, compRd: opex.compRd, compUs: opex.compUs });
       rows.push({ type: "blank" });
     }
 
     // ─── EBIT ───
-    rows.push({ type: "intermediateTotal", label: t("pl.ebit"), rd: ebitRd, us: ebitUs });
+    rows.push({ type: "intermediateTotal", label: t("pl.ebit"), rd: ebitRd, us: ebitUs, compRd: compEbitRd, compUs: compEbitUs });
     rows.push({ type: "blank" });
 
     // ─── FINANCIAL / OTHER ───
@@ -358,20 +362,35 @@ export function ProfitLossView() {
         b.accounts.forEach(acct => {
           const origAccount = accounts.find(a => a.account_code === acct.code);
           const sign = origAccount?.account_type === "EXPENSE" ? -1 : 1;
-          rows.push({ type: "account", code: acct.code, name: acct.name, rd: acct.rd * sign, us: acct.us * sign });
+          rows.push({ type: "account", code: acct.code, name: acct.name, rd: acct.rd * sign, us: acct.us * sign, compRd: acct.compRd * sign, compUs: acct.compUs * sign });
         });
       });
-      rows.push({ type: "sectionTotal", label: t("pl.totalFinancial"), rd: netFinancialRd, us: netFinancialUs });
+      rows.push({ type: "sectionTotal", label: t("pl.totalFinancial"), rd: netFinancialRd, us: netFinancialUs, compRd: compNetFinancialRd, compUs: compNetFinancialUs });
       rows.push({ type: "blank" });
     }
 
     // ─── NET INCOME ───
-    rows.push({ type: "netIncome", label: t("pl.netIncome"), rd: netIncomeRd, us: netIncomeUs });
+    rows.push({ type: "netIncome", label: t("pl.netIncome"), rd: netIncomeRd, us: netIncomeUs, compRd: compNetIncomeRd, compUs: compNetIncomeUs });
 
     return { statementRows: rows, hasUsd };
-  }, [accounts, accountTotals, language, t]);
+  }, [accounts, accountTotals, compAccountTotals, language, t]);
 
-  const colCount = hasUsd ? 4 : 3;
+  const baseCols = hasUsd ? 4 : 3;
+  const compCols = compareEnabled ? 3 : 0;
+  const colCount = baseCols + compCols;
+
+  // Variance cells helper
+  const VarCells = ({ rd, compRd }: { rd: number; compRd: number }) => {
+    if (!compareEnabled) return null;
+    const variance = rd - compRd;
+    return (
+      <>
+        <TableCell className="text-right">{formatCurrency(compRd, "DOP")}</TableCell>
+        <TableCell className={`text-right ${variance >= 0 ? "" : "text-destructive"}`}>{formatCurrency(variance, "DOP")}</TableCell>
+        <TableCell className={`text-right ${variance >= 0 ? "" : "text-destructive"}`}>{fmtVarPct(rd, compRd)}</TableCell>
+      </>
+    );
+  };
 
   // ─── EXCEL EXPORT ───
   const exportToExcel = async () => {
@@ -379,27 +398,44 @@ export function ProfitLossView() {
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet(t("pl.title"));
       
-      // Title
       ws.mergeCells("A1:D1");
       ws.getCell("A1").value = t("pl.title");
       ws.getCell("A1").font = { bold: true, size: 16 };
       ws.mergeCells("A2:D2");
       ws.getCell("A2").value = `${t("pl.period")}: ${startDate} — ${endDate}`;
       ws.getCell("A2").font = { size: 10 };
+      if (compareEnabled) {
+        ws.mergeCells("A3:D3");
+        ws.getCell("A3").value = `${t("pl.compare")}: ${compStartDate} — ${compEndDate}`;
+        ws.getCell("A3").font = { size: 10 };
+      }
       
-      let row = 4;
+      let row = compareEnabled ? 5 : 4;
       const colA = 1, colB = 2, colC = 3, colD = 4;
+      const colE = 5, colF = 6, colG = 7;
       ws.getColumn(colA).width = 14;
       ws.getColumn(colB).width = 40;
       ws.getColumn(colC).width = 18;
       ws.getColumn(colD).width = 18;
+      if (compareEnabled) {
+        ws.getColumn(colE).width = 18;
+        ws.getColumn(colF).width = 18;
+        ws.getColumn(colG).width = 14;
+      }
 
-      const addRow = (code: string, name: string, rd?: number, us?: number, style?: Partial<ExcelJS.Style>) => {
+      const addRow = (code: string, name: string, rd?: number, us?: number, compRd?: number, style?: Partial<ExcelJS.Style>) => {
         const r = ws.getRow(row);
         r.getCell(colA).value = code;
         r.getCell(colB).value = name;
         if (rd !== undefined) r.getCell(colC).value = rd;
         if (us !== undefined && hasUsd) r.getCell(colD).value = us;
+        if (compareEnabled && compRd !== undefined && rd !== undefined) {
+          const varCol = hasUsd ? colE : colD;
+          r.getCell(varCol).value = compRd;
+          r.getCell(varCol + 1).value = rd - compRd;
+          r.getCell(varCol + 2).value = Math.abs(compRd) > 0.01 ? ((rd - compRd) / Math.abs(compRd)) : null;
+          r.getCell(varCol + 2).numFmt = '0.0"%"';
+        }
         if (style?.font) r.font = style.font;
         if (style?.fill) r.fill = style.fill as ExcelJS.Fill;
         row++;
@@ -408,31 +444,31 @@ export function ProfitLossView() {
       statementRows.forEach(sr => {
         switch (sr.type) {
           case "sectionHeader":
-            addRow("", sr.label, undefined, undefined, { 
+            addRow("", sr.label, undefined, undefined, undefined, { 
               font: { bold: true, size: 12 },
               fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF4" } } as ExcelJS.Fill 
             });
             break;
           case "categoryHeader":
-            addRow("", `  ${sr.label}`, undefined, undefined, { font: { bold: true, italic: true } });
+            addRow("", `  ${sr.label}`, undefined, undefined, undefined, { font: { bold: true, italic: true } });
             break;
           case "account":
-            addRow(`    ${sr.code}`, `    ${sr.name}`, sr.rd, sr.us);
+            addRow(`    ${sr.code}`, `    ${sr.name}`, sr.rd, sr.us, sr.compRd);
             break;
           case "categorySubtotal":
-            addRow("", `        ${sr.label}`, sr.rd, sr.us, { font: { italic: true } });
+            addRow("", `        ${sr.label}`, sr.rd, sr.us, sr.compRd, { font: { italic: true } });
             break;
           case "sectionTotal":
-            addRow("", sr.label, sr.rd, sr.us, { font: { bold: true } });
+            addRow("", sr.label, sr.rd, sr.us, sr.compRd, { font: { bold: true } });
             break;
           case "intermediateTotal":
-            addRow("", sr.label, sr.rd, sr.us, { 
+            addRow("", sr.label, sr.rd, sr.us, sr.compRd, { 
               font: { bold: true, size: 12 },
               fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F1" } } as ExcelJS.Fill
             });
             break;
           case "netIncome":
-            addRow("", sr.label, sr.rd, sr.us, { 
+            addRow("", sr.label, sr.rd, sr.us, sr.compRd, { 
               font: { bold: true, size: 14 },
               fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFC5D9F1" } } as ExcelJS.Fill
             });
@@ -443,7 +479,6 @@ export function ProfitLossView() {
         }
       });
 
-      // Format number columns
       ws.getColumn(colC).numFmt = '#,##0.00';
       if (hasUsd) ws.getColumn(colD).numFmt = '#,##0.00';
 
@@ -459,48 +494,55 @@ export function ProfitLossView() {
 
   // ─── PDF EXPORT ───
   const exportToPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: compareEnabled ? "landscape" : "portrait" });
     doc.setFontSize(16);
     doc.text(t("pl.title"), 14, 20);
     doc.setFontSize(10);
     doc.text(`${t("pl.period")}: ${startDate} — ${endDate}`, 14, 28);
     let y = 34;
+    if (compareEnabled) { doc.text(`${t("pl.compare")}: ${compStartDate} — ${compEndDate}`, 14, y); y += 6; }
     if (costCenter !== "all") { doc.text(`${t("acctReport.costCenter")}: ${ccLabels[costCenter]}`, 14, y); y += 6; }
     if (hasUsd) { doc.text(`${t("pl.exchangeRate")}: ${exchangeRate}`, 14, y); y += 6; }
 
     const headers = [t("acctReport.col.account"), t("acctReport.col.description"), "RD$"];
     if (hasUsd) headers.push("US$");
+    if (compareEnabled) headers.push(t("pl.priorRd"), t("pl.variance"), t("pl.variancePct"));
 
     const body: any[][] = [];
     const sectionHeaderIndices: number[] = [];
     const intermediateIndices: number[] = [];
     const netIncomeIndex: number[] = [];
 
+    const fmtCompCells = (rd: number, compRd: number) => {
+      if (!compareEnabled) return [];
+      return [formatCurrency(compRd, "DOP"), fmtVar(rd, compRd), fmtVarPct(rd, compRd)];
+    };
+
     statementRows.forEach(sr => {
       switch (sr.type) {
         case "sectionHeader":
           sectionHeaderIndices.push(body.length);
-          body.push([sr.label, "", "", ...(hasUsd ? [""] : [])]);
+          body.push([sr.label, "", "", ...(hasUsd ? [""] : []), ...(compareEnabled ? ["", "", ""] : [])]);
           break;
         case "categoryHeader":
-          body.push(["", sr.label, "", ...(hasUsd ? [""] : [])]);
+          body.push(["", sr.label, "", ...(hasUsd ? [""] : []), ...(compareEnabled ? ["", "", ""] : [])]);
           break;
         case "account":
-          body.push([`  ${sr.code}`, `  ${sr.name}`, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [sr.us ? formatCurrency(sr.us, "USD") : "—"] : [])]);
+          body.push([`  ${sr.code}`, `  ${sr.name}`, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [sr.us ? formatCurrency(sr.us, "USD") : "—"] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
           break;
         case "categorySubtotal":
-          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [sr.us ? formatCurrency(sr.us, "USD") : "—"] : [])]);
+          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [sr.us ? formatCurrency(sr.us, "USD") : "—"] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
           break;
         case "sectionTotal":
-          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : [])]);
+          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
           break;
         case "intermediateTotal":
           intermediateIndices.push(body.length);
-          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : [])]);
+          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
           break;
         case "netIncome":
           netIncomeIndex.push(body.length);
-          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : [])]);
+          body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
           break;
         case "blank":
           body.push(Array(headers.length).fill(""));
@@ -610,6 +652,13 @@ export function ProfitLossView() {
                 <TableHead>{t("acctReport.col.description")}</TableHead>
                 <TableHead className="text-right w-36">RD$</TableHead>
                 {hasUsd && <TableHead className="text-right w-36">US$</TableHead>}
+                {compareEnabled && (
+                  <>
+                    <TableHead className="text-right w-36">{t("pl.priorRd")}</TableHead>
+                    <TableHead className="text-right w-32">{t("pl.variance")}</TableHead>
+                    <TableHead className="text-right w-24">{t("pl.variancePct")}</TableHead>
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -639,6 +688,7 @@ export function ProfitLossView() {
                         <TableCell className="pl-8">{row.name}</TableCell>
                         <TableCell className="text-right">{formatCurrency(row.rd, "DOP")}</TableCell>
                         {hasUsd && <TableCell className="text-right">{row.us !== 0 ? formatCurrency(row.us, "USD") : "—"}</TableCell>}
+                        <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
                   case "categorySubtotal":
@@ -648,6 +698,7 @@ export function ProfitLossView() {
                         <TableCell className="text-right italic text-sm text-muted-foreground pr-4">{row.label}</TableCell>
                         <TableCell className="text-right italic text-sm">{formatCurrency(row.rd, "DOP")}</TableCell>
                         {hasUsd && <TableCell className="text-right italic text-sm">{row.us !== 0 ? formatCurrency(row.us, "USD") : "—"}</TableCell>}
+                        <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
                   case "sectionTotal":
@@ -657,6 +708,7 @@ export function ProfitLossView() {
                         <TableCell className="font-bold">{row.label}</TableCell>
                         <TableCell className="text-right font-bold">{formatCurrency(row.rd, "DOP")}</TableCell>
                         {hasUsd && <TableCell className="text-right font-bold">{formatCurrency(row.us, "USD")}</TableCell>}
+                        <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
                   case "intermediateTotal":
@@ -672,6 +724,7 @@ export function ProfitLossView() {
                             {formatCurrency(row.us, "USD")}
                           </TableCell>
                         )}
+                        <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
                   case "netIncome":
@@ -687,6 +740,7 @@ export function ProfitLossView() {
                             {formatCurrency(row.us, "USD")}
                           </TableCell>
                         )}
+                        <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
                   case "blank":

@@ -768,6 +768,9 @@ export const es = {
   "pl.compare": "Comparar",
   "pl.priorStart": "Inicio Anterior",
   "pl.priorEnd": "Fin Anterior",
+  "pl.priorRd": "Anterior RD$",
+  "pl.variance": "Var $",
+  "pl.variancePct": "Var %",
   "bs.title": "Balance General",
   "bs.assets": "ACTIVOS",
   "bs.liabilities": "PASIVOS",
@@ -780,6 +783,11 @@ export const es = {
   "bs.asOf": "Al",
   "bs.balanced": "Cuadrado",
   "bs.unbalanced": "Descuadrado",
+  "bs.compare": "Comparar",
+  "bs.priorAsOf": "Al Anterior",
+  "bs.priorRd": "Anterior RD$",
+  "bs.variance": "Var $",
+  "bs.variancePct": "Var %",
 
   // Flujo de Efectivo
   "cf.title": "Estado de Flujo de Efectivo",

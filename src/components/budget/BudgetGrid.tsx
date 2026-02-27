@@ -189,7 +189,8 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       totals.months[mi] += bl?.[mk] ?? 0;
     });
   });
-  const totalVariance = totals.forecast - totals.actual;
+   const totalMonthsSum = totals.months.reduce((a, b) => a + b, 0);
+   const totalToDistribute = totals.forecast - totals.actual - totalMonthsSum;
 
   // Export logic
   const tabLabel = budgetType === "pl" ? t("budget.pl") : projectCode || "";
@@ -206,7 +207,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       { key: "budget", header: t("budget.annual"), width: 14 },
       { key: "forecast", header: t("budget.forecast"), width: 14 },
       { key: "actual", header: t("budget.actual"), width: 14 },
-      { key: "variance", header: t("budget.variance"), width: 14 },
+      { key: "toDistribute", header: t("budget.toDistribute"), width: 14 },
       ...monthLabels.map((m, i) => ({ key: `m${i}`, header: m, width: 12 })),
     ];
 
@@ -219,7 +220,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         budget: bl?.annual_budget ?? 0,
         forecast: forecastVal,
         actual: actualVal,
-        variance: forecastVal - actualVal,
+        toDistribute: forecastVal - actualVal - MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0),
       };
       MONTH_KEYS.forEach((mk, mi) => { row[`m${mi}`] = bl?.[mk] ?? 0; });
       return row;
@@ -230,12 +231,12 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       budget: totals.budget,
       forecast: totals.forecast,
       actual: totals.actual,
-      variance: totalVariance,
+      toDistribute: totalToDistribute,
     };
     totals.months.forEach((mv, mi) => { totalsRow[`m${mi}`] = mv; });
 
     return { columns, rows, totalsRow };
-  }, [lineCodes, lineMap, actuals, totals, totalVariance, monthLabels, t]);
+  }, [lineCodes, lineMap, actuals, totals, totalToDistribute, monthLabels, t]);
 
   return (
     <div className="relative">
@@ -279,7 +280,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                 {t("budget.actual")}
               </th>
               <th className="sticky z-30 bg-muted/50 border-r border-b px-3 py-2 text-right font-medium whitespace-nowrap" style={{ left: stickyLeft[4], minWidth: COL_W[4], width: COL_W[4] }}>
-                {t("budget.variance")}
+                {t("budget.toDistribute")}
               </th>
               {/* Month columns */}
               {monthLabels.map((m, i) => (
@@ -294,7 +295,8 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
               const bl = lineMap[lc.code];
               const actualVal = actuals[lc.code] ?? 0;
               const forecastVal = bl?.current_forecast ?? 0;
-              const variance = forecastVal - actualVal;
+              const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0);
+              const toDistribute = forecastVal - actualVal - monthsSum;
 
               return (
                 <tr key={lc.code} className="border-b hover:bg-muted/30">
@@ -333,15 +335,15 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                       <Search className="h-3 w-3" />
                     </button>
                   </td>
-                  {/* Col 5: Variance */}
-                  <td
-                    className={cn(
-                      "sticky z-20 bg-background border-r px-3 py-1.5 text-right font-mono text-xs font-semibold",
-                      variance >= 0 ? "text-green-600" : "text-red-600"
-                    )}
-                    style={{ left: stickyLeft[4], minWidth: COL_W[4] }}
-                  >
-                    {variance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                   {/* Col 5: To Distribute */}
+                   <td
+                     className={cn(
+                       "sticky z-20 bg-background border-r px-3 py-1.5 text-right font-mono text-xs font-semibold",
+                       toDistribute >= 0 ? "text-green-600" : "text-red-600"
+                     )}
+                     style={{ left: stickyLeft[4], minWidth: COL_W[4] }}
+                   >
+                     {toDistribute.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </td>
                   {/* Months */}
                   {MONTH_KEYS.map((mk, mi) => (
@@ -373,10 +375,10 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                 {totals.actual.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </td>
               <td className={cn(
-                "sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs",
-                totalVariance >= 0 ? "text-green-600" : "text-red-600"
-              )} style={{ left: stickyLeft[4], minWidth: COL_W[4] }}>
-                {totalVariance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                 "sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs",
+                 totalToDistribute >= 0 ? "text-green-600" : "text-red-600"
+               )} style={{ left: stickyLeft[4], minWidth: COL_W[4] }}>
+                 {totalToDistribute.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </td>
               {totals.months.map((mv, mi) => (
                 <td key={mi} className="px-3 py-2 text-right font-mono text-xs" style={{ minWidth: 100 }}>

@@ -1443,6 +1443,7 @@ export type Database = {
           id: string
           journal_date: string
           journal_number: string | null
+          journal_type: string
           period_id: string | null
           posted: boolean | null
           posted_at: string | null
@@ -1461,6 +1462,7 @@ export type Database = {
           id?: string
           journal_date: string
           journal_number?: string | null
+          journal_type?: string
           period_id?: string | null
           posted?: boolean | null
           posted_at?: string | null
@@ -1479,6 +1481,7 @@ export type Database = {
           id?: string
           journal_date?: string
           journal_number?: string | null
+          journal_type?: string
           period_id?: string | null
           posted?: boolean | null
           posted_at?: string | null
@@ -2714,15 +2717,26 @@ export type Database = {
       }
     }
     Functions: {
-      create_journal_from_transaction: {
-        Args: {
-          p_created_by?: string
-          p_date: string
-          p_description: string
-          p_transaction_id: string
-        }
-        Returns: string
-      }
+      create_journal_from_transaction:
+        | {
+            Args: {
+              p_created_by?: string
+              p_date: string
+              p_description: string
+              p_transaction_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_created_by?: string
+              p_date: string
+              p_description: string
+              p_journal_type?: string
+              p_transaction_id: string
+            }
+            Returns: string
+          }
       create_reversal_journal: {
         Args: {
           p_created_by: string

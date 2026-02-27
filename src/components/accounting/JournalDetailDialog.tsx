@@ -57,6 +57,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const isEditable = canWrite && isDraft;
 
   const [description, setDescription] = useState("");
+  const [journalType, setJournalType] = useState("GJ");
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -78,6 +79,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   useEffect(() => {
     if (journal) {
       setDescription(journal.description || "");
+      setJournalType((journal as any).journal_type || "GJ");
       setLines(
         journal.journal_lines.map((l) => ({
           id: l.id,
@@ -135,10 +137,10 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
     setSaving(true);
     try {
-      // Update journal description
+      // Update journal description and type
       const { error: jErr } = await supabase
         .from("journals")
-        .update({ description })
+        .update({ description, journal_type: journalType } as any)
         .eq("id", journal.id);
       if (jErr) throw jErr;
 
@@ -230,10 +232,11 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <DialogTitle className="text-lg">
               {journal.journal_number || "Sin número"}
             </DialogTitle>
+            <Badge variant="secondary">{(journal as any).journal_type || "GJ"}</Badge>
             <Badge variant={journal.posted ? "default" : "outline"}>
               {journal.posted ? "Publicado" : "Borrador"}
             </Badge>
@@ -249,6 +252,24 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Journal Type (editable for drafts) */}
+        {isEditable && (
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Tipo de Asiento</label>
+            <Select value={journalType} onValueChange={setJournalType}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GJ">GJ – General</SelectItem>
+                <SelectItem value="PJ">PJ – Compras</SelectItem>
+                <SelectItem value="SJ">SJ – Ventas</SelectItem>
+                <SelectItem value="PRJ">PRJ – Nómina</SelectItem>
+                <SelectItem value="CDJ">CDJ – Desembolsos</SelectItem>
+                <SelectItem value="CRJ">CRJ – Recibos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Description */}
         <div className="space-y-1">

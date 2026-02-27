@@ -127,13 +127,14 @@ export function useJournalGeneration(userId?: string) {
             continue;
           }
 
-          const { data: journalId, error: jErr } = await supabase.rpc(
+        const { data: journalId, error: jErr } = await supabase.rpc(
             "create_journal_from_transaction",
             {
               p_transaction_id: txn.id,
               p_date: txn.transaction_date,
               p_description: `${txn.description || "Inversión"}${txn.cost_center && txn.cost_center !== 'general' ? ` [${txn.cost_center === 'agricultural' ? 'Agrícola' : 'Industrial'}]` : ''}`,
               p_created_by: userId || null,
+              p_journal_type: 'PJ',
             }
           );
           if (jErr) {
@@ -183,6 +184,7 @@ export function useJournalGeneration(userId?: string) {
         }
 
         // Create journal via DB function
+        const journalType = txn.transaction_direction === 'sale' ? 'SJ' : 'PJ';
         const { data: journalId, error: jErr } = await supabase.rpc(
           "create_journal_from_transaction",
           {
@@ -190,6 +192,7 @@ export function useJournalGeneration(userId?: string) {
             p_date: txn.transaction_date,
             p_description: `${txn.description || "Transacción"}${txn.cost_center && txn.cost_center !== 'general' ? ` [${txn.cost_center === 'agricultural' ? 'Agrícola' : 'Industrial'}]` : ''}`,
             p_created_by: userId || null,
+            p_journal_type: journalType,
           }
         );
         if (jErr) {

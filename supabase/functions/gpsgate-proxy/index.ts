@@ -82,7 +82,6 @@ Deno.serve(async (req) => {
       const gpsUrl = `${GPSGATE_BASE}/applications/${APP_ID}/users?FromIndex=0&PageSize=1000&Kind=Asset`;
       const res = await fetch(gpsUrl, { headers: gpsHeaders });
       if (!res.ok) {
-      if (!res.ok) {
         const errText = await res.text();
         console.error("GPSGate API error:", res.status, errText);
         return new Response(

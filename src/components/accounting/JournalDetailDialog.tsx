@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Plus, Trash2, Lock, Save, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX } from "lucide-react";
 
 type JournalLine = {
   id: string;
@@ -33,6 +33,11 @@ type Journal = {
   posted_by: string | null;
   posted_at: string | null;
   journal_lines: JournalLine[];
+  approval_status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  created_by?: string | null;
 };
 
 type EditableLine = {
@@ -55,6 +60,8 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const canWrite = canWriteSection("accounting");
   const isDraft = !journal?.posted;
   const isEditable = canWrite && isDraft;
+  const isApproved = journal?.approval_status === "approved";
+  const canApprove = canWrite && isDraft && journal?.created_by !== user?.id; // maker-checker
 
   const [description, setDescription] = useState("");
   const [journalType, setJournalType] = useState("GJ");
@@ -206,6 +213,56 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
     }
   };
 
+  const handleApprove = async () => {
+    if (!journal || !canApprove) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("journals")
+        .update({
+          approval_status: "approved",
+          approved_by: user?.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: null,
+        } as any)
+        .eq("id", journal.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      toast({ title: "Aprobado", description: "Asiento aprobado. Puede ser publicado." });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!journal || !canApprove) return;
+    const reason = window.prompt("Motivo de rechazo:");
+    if (!reason) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("journals")
+        .update({
+          approval_status: "rejected",
+          approved_by: user?.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: reason,
+        } as any)
+        .eq("id", journal.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      toast({ title: "Rechazado", description: "Asiento rechazado." });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!journal || !canWrite) return;
     setSaving(true);
@@ -240,6 +297,15 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             <Badge variant={journal.posted ? "default" : "outline"}>
               {journal.posted ? "Publicado" : "Borrador"}
             </Badge>
+            {!journal.posted && (
+              <Badge variant="outline" className={
+                journal.approval_status === "approved" ? "bg-green-100 text-green-800 border-green-200" :
+                journal.approval_status === "rejected" ? "bg-red-100 text-red-800 border-red-200" :
+                "bg-yellow-100 text-yellow-800 border-yellow-200"
+              }>
+                {journal.approval_status === "approved" ? "Aprobado" : journal.approval_status === "rejected" ? "Rechazado" : "Pendiente"}
+              </Badge>
+            )}
           </div>
           <DialogDescription className="flex gap-4 text-sm">
             <span>{format(new Date(journal.journal_date), "dd/MM/yyyy")}</span>
@@ -398,6 +464,13 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
           </Button>
         )}
 
+        {/* Approval status info */}
+        {journal && !journal.posted && journal.rejection_reason && (
+          <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
+            Rechazado: {journal.rejection_reason}
+          </p>
+        )}
+
         <DialogFooter className="flex-col sm:flex-row gap-2">
           {isEditable && (
             <>
@@ -427,23 +500,35 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                 <Save className="h-3.5 w-3.5 mr-1" /> Guardar cambios
               </Button>
 
-              {/* Post */}
+              {/* Approve / Reject (maker-checker) */}
+              {canApprove && !isApproved && (
+                <>
+                  <Button size="sm" variant="outline" onClick={handleReject} disabled={saving}>
+                    <ShieldX className="h-3.5 w-3.5 mr-1" /> Rechazar
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={handleApprove} disabled={saving || !totals.balanced}>
+                    <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Aprobar
+                  </Button>
+                </>
+              )}
+
+              {/* Post - only if approved */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" disabled={saving || !totals.balanced}>
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Aprobar y Publicar
+                  <Button size="sm" disabled={saving || !totals.balanced || !isApproved}>
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Publicar
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Aprobar y publicar?</AlertDialogTitle>
+                    <AlertDialogTitle>¿Publicar asiento?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Una vez publicado, el asiento no se podrá modificar. Esta acción es irreversible.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handlePost}>Aprobar y Publicar</AlertDialogAction>
+                    <AlertDialogAction onClick={handlePost}>Publicar</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

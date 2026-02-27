@@ -22,6 +22,7 @@ import Rainfall from "./pages/Rainfall";
 import Cronograma from "./pages/Cronograma";
 import Alerts from "./pages/Alerts";
 import Accounting from "./pages/Accounting";
+import AccountsPayableReceivable from "./pages/AccountsPayableReceivable";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
+                <Route path="/accounts" element={<ProtectedRoute><AccountsPayableReceivable /></ProtectedRoute>} />
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

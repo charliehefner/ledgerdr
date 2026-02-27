@@ -19,6 +19,7 @@ import {
   CalendarClock,
   Beaker,
   BookOpen,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";
@@ -57,7 +58,8 @@ const sectionColors: Record<Section, string> = {
   alerts: "",
   settings: "",
   accounting: "",
-  "driver-portal": "", // Not shown in sidebar - drivers have minimal UI
+  "ap-ar": "",
+  "driver-portal": "",
 };
 
 const navigation: NavItem[] = [
@@ -66,6 +68,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
   { nameKey: "nav.reports", href: "/reports", icon: BarChart3, section: "reports" },
   { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
+  { nameKey: "nav.apar", href: "/accounts", icon: Receipt, section: "ap-ar" },
   { nameKey: "nav.hr", href: "/hr", icon: Users, section: "hr" },
   { nameKey: "nav.inventory", href: "/inventory", icon: Package, section: "inventory" },
   { nameKey: "nav.fuel", href: "/fuel", icon: Fuel, section: "fuel" },

@@ -1,78 +1,41 @@
 
 
-## Plan: Add Journal Types (GJ, PJ, SJ, PRJ) with Prefix-Based Numbering
-
-### Current State
-- 161 journals exist (all from transactions, all GJ-prefixed)
-- Single sequence `journals_journal_number_seq` at 322
-- All transactions currently have `transaction_direction = 'purchase'`
-- `create_journal_from_transaction` RPC accepts 4 params, no journal_type
+## Plan: Add "Generate Depreciation" Button to Accounting Fixed Assets Tab
 
 ### Database Migration
 
-**1. Add column + new sequences**
-```sql
-ALTER TABLE journals ADD COLUMN journal_type varchar(3) NOT NULL DEFAULT 'GJ';
-CREATE SEQUENCE journal_seq_pj START 1;
-CREATE SEQUENCE journal_seq_sj START 1;
-CREATE SEQUENCE journal_seq_prj START 1;
-CREATE SEQUENCE journal_seq_cdj START 1;
-CREATE SEQUENCE journal_seq_crj START 1;
-```
+1. **Add `DEP` journal type sequence** and update `generate_journal_number()` trigger to handle `'DEP'` prefix
+2. No new tables needed — `depreciation_schedule` already exists with `asset_id`, `period_date`, `depreciation_amount`, `journal_id`
 
-**2. Replace `generate_journal_number()` trigger function**
-Reads `NEW.journal_type`, picks the matching sequence, formats as `{TYPE}-000001`. Existing GJ sequence continues for GJ entries.
+### New File: `src/components/equipment/useDepreciationGeneration.ts`
 
-**3. Update `create_journal_from_transaction` RPC**
-Add `p_journal_type varchar DEFAULT 'GJ'` parameter, pass it into the INSERT.
-
-**4. Backfill existing journals**
-Set `journal_type = 'PJ'` for all journals that have a `transaction_source_id` (since all current transactions are purchases). Keep existing GJ- numbers unchanged.
+Hook that:
+- Fetches active fixed assets with `in_service_date` set, remaining book value > 0, and `depreciation_expense_account` + `accumulated_depreciation_account` configured
+- Checks `depreciation_schedule` to skip already-processed period/asset combos
+- For each eligible asset, calculates: `monthly = (acquisition_value - salvage_value) / (useful_life_years * 12)`
+- Creates a DEP draft journal with two lines (debit expense account, credit accumulated depreciation account)
+- Inserts `depreciation_schedule` record linking asset → journal
+- Updates `fixed_assets.accumulated_depreciation += amount`
+- Shows progress and returns created/skipped counts
 
 ### Frontend Changes
 
-**`src/components/accounting/useJournalGeneration.ts`**
-- Pass `journal_type: 'PJ'` for purchases/investments, `'SJ'` for sales to the updated RPC
-
-**`src/components/accounting/JournalEntryForm.tsx`**
-- Add journal type selector (GJ default) in the header fields grid
-- Pass `journal_type` in the insert call
-
-**`src/components/accounting/JournalDetailDialog.tsx`**
-- Display journal type badge next to journal number
-- Allow editing journal_type via dropdown for draft journals (saves on handleSave)
+**`src/components/equipment/FixedAssetsView.tsx`**
+- Add "Generar Depreciación" button next to "Agregar Activo"
+- Month/year picker dialog to select the depreciation period
+- Frequency selector: monthly or quarterly (quarterly = 3× monthly amount)
+- Confirmation dialog with count of eligible assets, progress bar during generation, summary on completion
 
 **`src/components/accounting/JournalView.tsx`**
-- Add journal_type to the query select
-- Add type filter buttons (All, GJ, PJ, SJ, PRJ) or a dropdown alongside existing status filter
-- Display journal_type in the table
+- Add `'DEP'` to the `TypeFilter` type and filter buttons
 
-### Technical Detail: Updated Trigger
-
-```sql
-CREATE OR REPLACE FUNCTION generate_journal_number()
-RETURNS trigger AS $$
-DECLARE seq_num bigint; prefix text;
-BEGIN
-  prefix := COALESCE(NEW.journal_type, 'GJ');
-  CASE prefix
-    WHEN 'PJ'  THEN SELECT nextval('journal_seq_pj') INTO seq_num;
-    WHEN 'SJ'  THEN SELECT nextval('journal_seq_sj') INTO seq_num;
-    WHEN 'PRJ' THEN SELECT nextval('journal_seq_prj') INTO seq_num;
-    WHEN 'CDJ' THEN SELECT nextval('journal_seq_cdj') INTO seq_num;
-    WHEN 'CRJ' THEN SELECT nextval('journal_seq_crj') INTO seq_num;
-    ELSE SELECT nextval('journals_journal_number_seq') INTO seq_num;
-  END CASE;
-  NEW.journal_number := prefix || '-' || LPAD(seq_num::text, 6, '0');
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SET search_path TO 'public';
-```
+**`src/components/accounting/JournalEntryForm.tsx`**
+- Add `'DEP'` option to the journal type selector
 
 ### Files Modified
-- 1 database migration (column, sequences, trigger, RPC, backfill)
-- `src/components/accounting/useJournalGeneration.ts`
-- `src/components/accounting/JournalEntryForm.tsx`
-- `src/components/accounting/JournalDetailDialog.tsx`
+- 1 database migration (new sequence, trigger update)
+- `src/components/equipment/useDepreciationGeneration.ts` (new)
+- `src/components/equipment/FixedAssetsView.tsx`
 - `src/components/accounting/JournalView.tsx`
+- `src/components/accounting/JournalEntryForm.tsx`
 

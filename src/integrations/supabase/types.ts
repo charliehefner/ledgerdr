@@ -1015,6 +1015,7 @@ export type Database = {
           created_at: string
           current_hour_meter: number
           equipment_type: string
+          front_tire_size: string | null
           gpsgate_user_id: number | null
           hp: number | null
           id: string
@@ -1024,6 +1025,7 @@ export type Database = {
           name: string
           purchase_date: string | null
           purchase_price: number | null
+          rear_tire_size: string | null
           serial_number: string | null
           updated_at: string
         }
@@ -1032,6 +1034,7 @@ export type Database = {
           created_at?: string
           current_hour_meter?: number
           equipment_type: string
+          front_tire_size?: string | null
           gpsgate_user_id?: number | null
           hp?: number | null
           id?: string
@@ -1041,6 +1044,7 @@ export type Database = {
           name: string
           purchase_date?: string | null
           purchase_price?: number | null
+          rear_tire_size?: string | null
           serial_number?: string | null
           updated_at?: string
         }
@@ -1049,6 +1053,7 @@ export type Database = {
           created_at?: string
           current_hour_meter?: number
           equipment_type?: string
+          front_tire_size?: string | null
           gpsgate_user_id?: number | null
           hp?: number | null
           id?: string
@@ -1058,6 +1063,7 @@ export type Database = {
           name?: string
           purchase_date?: string | null
           purchase_price?: number | null
+          rear_tire_size?: string | null
           serial_number?: string | null
           updated_at?: string
         }

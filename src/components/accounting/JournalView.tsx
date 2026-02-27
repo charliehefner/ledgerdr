@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
@@ -102,49 +103,56 @@ export function JournalView() {
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;
 
-  const filterButtons: { key: StatusFilter; label: string }[] = [
+  const statusButtons: { key: StatusFilter; label: string }[] = [
     { key: "all", label: "Todos" },
     { key: "draft", label: "Borradores" },
     { key: "posted", label: "Publicados" },
   ];
 
-  const typeButtons: { key: TypeFilter; label: string }[] = [
-    { key: "all", label: "Todos" },
-    { key: "GJ", label: "GJ" },
-    { key: "PJ", label: "PJ" },
-    { key: "SJ", label: "SJ" },
-    { key: "PRJ", label: "PRJ" },
-    { key: "DEP", label: "DEP" },
-    { key: "RJ", label: "RJ" },
-    { key: "CLJ", label: "CLJ" },
+  const typeOptions: { key: TypeFilter; label: string }[] = [
+    { key: "all", label: "Todos los tipos" },
+    { key: "GJ", label: "GJ – General" },
+    { key: "PJ", label: "PJ – Compras" },
+    { key: "SJ", label: "SJ – Ventas" },
+    { key: "PRJ", label: "PRJ – Nómina" },
+    { key: "CDJ", label: "CDJ – Desembolsos" },
+    { key: "CRJ", label: "CRJ – Cobros" },
+    { key: "DEP", label: "DEP – Depreciación" },
+    { key: "RJ", label: "RJ – Recurrente" },
+    { key: "CLJ", label: "CLJ – Cierre" },
   ];
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex gap-1 flex-wrap">
-          {filterButtons.map((f) => (
-            <Button
-              key={f.key}
-              variant={statusFilter === f.key ? "default" : "outline"}
-              size="sm"
-              onClick={() => setStatusFilter(f.key)}
-            >
-              {f.label}
-            </Button>
-          ))}
-          <div className="w-px bg-border mx-1" />
-          {typeButtons.map((f) => (
-            <Button
-              key={f.key}
-              variant={typeFilter === f.key ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setTypeFilter(f.key)}
-            >
-              {f.label}
-            </Button>
-          ))}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Estado:</span>
+            {statusButtons.map((f) => (
+              <Button
+                key={f.key}
+                variant={statusFilter === f.key ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Tipo:</span>
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+              <SelectTrigger className="h-8 w-[180px] text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {typeOptions.map((t) => (
+                  <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {canWrite && (
           <div className="flex gap-1">
@@ -186,9 +194,8 @@ export function JournalView() {
                 const totalCredit = j.journal_lines.reduce((s, l) => s + (l.credit || 0), 0);
 
                 return (
-                  <>
+                  <React.Fragment key={j.id}>
                     <TableRow
-                      key={j.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => openDetail(j)}
                     >
@@ -257,7 +264,7 @@ export function JournalView() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </TableBody>

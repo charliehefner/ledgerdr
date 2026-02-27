@@ -4,6 +4,7 @@ import { InventoryList } from "@/components/inventory/InventoryList";
 import { InventoryItemDialog } from "@/components/inventory/InventoryItemDialog";
 import { PurchaseDialog } from "@/components/inventory/PurchaseDialog";
 import { InventoryMovementReport } from "@/components/inventory/InventoryMovementReport";
+import { PurchaseTotalsByAccount } from "@/components/inventory/PurchaseTotalsByAccount";
 import { Button } from "@/components/ui/button";
 import { Plus, ShoppingCart, Leaf } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -56,6 +57,8 @@ export default function Inventory() {
             </Button>
           </div>
         </div>
+
+        <PurchaseTotalsByAccount />
 
         <InventoryList onEditItem={handleEditItem} />
 

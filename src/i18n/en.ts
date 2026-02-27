@@ -768,6 +768,9 @@ export const en = {
   "pl.compare": "Compare",
   "pl.priorStart": "Prior Start",
   "pl.priorEnd": "Prior End",
+  "pl.priorRd": "Prior RD$",
+  "pl.variance": "Var $",
+  "pl.variancePct": "Var %",
   "bs.title": "Balance Sheet",
   "bs.assets": "ASSETS",
   "bs.liabilities": "LIABILITIES",
@@ -780,6 +783,11 @@ export const en = {
   "bs.asOf": "As of",
   "bs.balanced": "Balanced",
   "bs.unbalanced": "Unbalanced",
+  "bs.compare": "Compare",
+  "bs.priorAsOf": "Prior As-of",
+  "bs.priorRd": "Prior RD$",
+  "bs.variance": "Var $",
+  "bs.variancePct": "Var %",
 
   // Cash Flow Statement
   "cf.title": "Cash Flow Statement",

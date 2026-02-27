@@ -861,7 +861,7 @@ export const es = {
   "budget.annual": "Presupuesto",
   "budget.forecast": "Pronóstico",
   "budget.actual": "Real",
-  "budget.variance": "Varianza",
+  "budget.toDistribute": "Por Distribuir",
   "budget.code": "Código / Descripción",
   "budget.actualDetail": "Detalle Real",
 };

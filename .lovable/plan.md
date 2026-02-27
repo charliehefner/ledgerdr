@@ -1,41 +1,37 @@
 
 
-## Plan: Add "Generate Depreciation" Button to Accounting Fixed Assets Tab
+## Plan: Power BI Excel Export for Accounting Data
 
-### Database Migration
+### Overview
 
-1. **Add `DEP` journal type sequence** and update `generate_journal_number()` trigger to handle `'DEP'` prefix
-2. No new tables needed — `depreciation_schedule` already exists with `asset_id`, `period_date`, `depreciation_amount`, `journal_id`
+Add an "Exportar Power BI" button to the Accounting Reports tab that exports four flat, denormalized Excel worksheets in a single `.xlsx` file -- optimized for Power BI import.
 
-### New File: `src/components/equipment/useDepreciationGeneration.ts`
+### Datasets (one worksheet each)
 
-Hook that:
-- Fetches active fixed assets with `in_service_date` set, remaining book value > 0, and `depreciation_expense_account` + `accumulated_depreciation_account` configured
-- Checks `depreciation_schedule` to skip already-processed period/asset combos
-- For each eligible asset, calculates: `monthly = (acquisition_value - salvage_value) / (useful_life_years * 12)`
-- Creates a DEP draft journal with two lines (debit expense account, credit accumulated depreciation account)
-- Inserts `depreciation_schedule` record linking asset → journal
-- Updates `fixed_assets.accumulated_depreciation += amount`
-- Shows progress and returns created/skipped counts
+1. **ChartOfAccounts** -- `account_code`, `account_name`, `account_type`, `currency`, `allow_posting`, `parent_code`, `english_description`, `spanish_description`
+2. **JournalLines** -- Denormalized: `journal_number`, `journal_type`, `journal_date`, `currency`, `exchange_rate`, `posted`, `description`, `account_code`, `account_name`, `project_code`, `cbs_code`, `debit`, `credit`, `debit_base`, `credit_base` (base = amount × exchange_rate)
+3. **GeneralLedger** -- Direct from the `general_ledger` view: `journal_date`, `journal_number`, `account_code`, `account_name`, `description`, `debit`, `credit`, `debit_base`, `credit_base`, `running_balance_base`
+4. **Transactions** -- Flat transaction export: `legacy_id`, `transaction_date`, `master_acct_code`, `project_code`, `cbs_code`, `cost_center`, `description`, `name`, `currency`, `amount`, `itbis`, `pay_method`, `document`, `rnc`
 
-### Frontend Changes
+### Implementation
 
-**`src/components/equipment/FixedAssetsView.tsx`**
-- Add "Generar Depreciación" button next to "Agregar Activo"
-- Month/year picker dialog to select the depreciation period
-- Frequency selector: monthly or quarterly (quarterly = 3× monthly amount)
-- Confirmation dialog with count of eligible assets, progress bar during generation, summary on completion
+**New file: `src/components/accounting/PowerBIExportButton.tsx`**
+- Button with BarChart3 icon labeled "Exportar Power BI"
+- On click: fetches all four datasets in parallel, builds a multi-sheet ExcelJS workbook with proper column types (dates as dates, numbers as numbers), uses the existing `saveFileWithPicker` pattern from `useExport.ts`
+- Shows loading spinner during export
+- Handles the 1000-row limit by paginating queries for journals/transactions
 
-**`src/components/accounting/JournalView.tsx`**
-- Add `'DEP'` to the `TypeFilter` type and filter buttons
+**Modified: `src/components/accounting/AccountingReportsView.tsx`**
+- Import and render `PowerBIExportButton` in the toolbar area (visible regardless of report type selected)
 
-**`src/components/accounting/JournalEntryForm.tsx`**
-- Add `'DEP'` option to the journal type selector
+### Technical Details
+- All numeric columns use Excel number format so Power BI auto-detects types
+- Date columns stored as proper Excel dates
+- `debit_base`/`credit_base` calculated client-side as `amount × exchange_rate` for journal lines
+- Filename: `PowerBI_Accounting_YYYY-MM-DD.xlsx`
+- No database changes needed
 
-### Files Modified
-- 1 database migration (new sequence, trigger update)
-- `src/components/equipment/useDepreciationGeneration.ts` (new)
-- `src/components/equipment/FixedAssetsView.tsx`
-- `src/components/accounting/JournalView.tsx`
-- `src/components/accounting/JournalEntryForm.tsx`
+### Files
+- `src/components/accounting/PowerBIExportButton.tsx` (new)
+- `src/components/accounting/AccountingReportsView.tsx` (add button)
 

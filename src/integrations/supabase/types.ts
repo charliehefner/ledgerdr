@@ -137,6 +137,69 @@ export type Database = {
         }
         Relationships: []
       }
+      ap_ar_documents: {
+        Row: {
+          amount_paid: number
+          balance_remaining: number | null
+          contact_name: string
+          contact_rnc: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          direction: string
+          document_date: string
+          document_number: string | null
+          document_type: string
+          due_date: string | null
+          id: string
+          linked_transaction_ids: string[] | null
+          notes: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          balance_remaining?: number | null
+          contact_name: string
+          contact_rnc?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          direction: string
+          document_date?: string
+          document_number?: string | null
+          document_type?: string
+          due_date?: string | null
+          id?: string
+          linked_transaction_ids?: string[] | null
+          notes?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          balance_remaining?: number | null
+          contact_name?: string
+          contact_rnc?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          direction?: string
+          document_date?: string
+          document_number?: string | null
+          document_type?: string
+          due_date?: string | null
+          id?: string
+          linked_transaction_ids?: string[] | null
+          notes?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       asset_depreciation_rules: {
         Row: {
           accumulated_depreciation_account: string | null
@@ -1542,6 +1605,9 @@ export type Database = {
       }
       journals: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -1556,11 +1622,15 @@ export type Database = {
           posted: boolean | null
           posted_at: string | null
           posted_by: string | null
+          rejection_reason: string | null
           reversal_of_id: string | null
           transaction_source_id: string | null
           updated_at: string | null
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -1575,11 +1645,15 @@ export type Database = {
           posted?: boolean | null
           posted_at?: string | null
           posted_by?: string | null
+          rejection_reason?: string | null
           reversal_of_id?: string | null
           transaction_source_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -1594,6 +1668,7 @@ export type Database = {
           posted?: boolean | null
           posted_at?: string | null
           posted_by?: string | null
+          rejection_reason?: string | null
           reversal_of_id?: string | null
           transaction_source_id?: string | null
           updated_at?: string | null

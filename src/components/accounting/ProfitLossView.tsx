@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -122,6 +123,9 @@ export function ProfitLossView() {
   const [endDate, setEndDate] = useState(format(now, "yyyy-MM-dd"));
   const [costCenter, setCostCenter] = useState("all");
   const [exchangeRate, setExchangeRate] = useState(60);
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const [compStartDate, setCompStartDate] = useState(format(new Date(now.getFullYear() - 1, 0, 1), "yyyy-MM-dd"));
+  const [compEndDate, setCompEndDate] = useState(format(new Date(now.getFullYear() - 1, 11, 31), "yyyy-MM-dd"));
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["coa-pl"],
@@ -159,14 +163,36 @@ export function ProfitLossView() {
     },
   });
 
+  // Comparison period transactions
+  const { data: compTransactions = [] } = useQuery({
+    queryKey: ["pl-transactions-comp", compStartDate, compEndDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("master_acct_code, amount, currency, transaction_direction, cost_center")
+        .eq("is_void", false)
+        .gte("transaction_date", compStartDate)
+        .lte("transaction_date", compEndDate);
+      if (error) throw error;
+      return data as PLTransaction[];
+    },
+    enabled: compareEnabled,
+  });
+
   const filteredTx = useMemo(() => {
     if (costCenter === "all") return transactions;
     return transactions.filter((tx) => (tx.cost_center || "general") === costCenter);
   }, [transactions, costCenter]);
 
-  const accountTotals = useMemo(() => {
+  const filteredCompTx = useMemo(() => {
+    if (!compareEnabled) return [];
+    if (costCenter === "all") return compTransactions;
+    return compTransactions.filter((tx) => (tx.cost_center || "general") === costCenter);
+  }, [compTransactions, costCenter, compareEnabled]);
+
+  const buildAccountTotals = (txs: PLTransaction[]) => {
     const totals: Record<string, { rd: number; us: number }> = {};
-    filteredTx.forEach((tx) => {
+    txs.forEach((tx) => {
       const code = tx.master_acct_code;
       if (!code) return;
       const amount = parseFloat(String(tx.amount)) || 0;
@@ -179,7 +205,10 @@ export function ProfitLossView() {
       }
     });
     return totals;
-  }, [filteredTx, exchangeRate]);
+  };
+
+  const accountTotals = useMemo(() => buildAccountTotals(filteredTx), [filteredTx, exchangeRate]);
+  const compAccountTotals = useMemo(() => buildAccountTotals(filteredCompTx), [filteredCompTx, exchangeRate]);
 
   // Build the full categorized statement
   const { statementRows, hasUsd } = useMemo(() => {
@@ -533,15 +562,25 @@ export function ProfitLossView() {
         </div>
         <div className="space-y-1">
           <Label>{t("pl.exchangeRate")} (USD→DOP)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="1"
-            value={exchangeRate}
-            onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)}
-            className="w-28"
-          />
+          <Input type="number" step="0.01" min="1" value={exchangeRate}
+            onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)} className="w-28" />
         </div>
+        <div className="flex items-center gap-2 self-end pb-1">
+          <Switch checked={compareEnabled} onCheckedChange={setCompareEnabled} className="scale-75" />
+          <span className="text-xs text-muted-foreground">{t("pl.compare")}</span>
+        </div>
+        {compareEnabled && (
+          <>
+            <div className="space-y-1">
+              <Label className="text-xs">{t("pl.priorStart")}</Label>
+              <Input type="date" value={compStartDate} onChange={e => setCompStartDate(e.target.value)} className="w-36" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">{t("pl.priorEnd")}</Label>
+              <Input type="date" value={compEndDate} onChange={e => setCompEndDate(e.target.value)} className="w-36" />
+            </div>
+          </>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" variant="outline">

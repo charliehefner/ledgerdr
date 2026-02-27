@@ -38,6 +38,10 @@ type Journal = {
   posted_at: string | null;
   transaction_source_id: string | null;
   journal_lines: JournalLine[];
+  approval_status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
 };
 
 type StatusFilter = "all" | "draft" | "posted";
@@ -63,6 +67,7 @@ export function JournalView() {
         .from("journals")
         .select(`
           id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
+          approval_status, approved_by, approved_at, rejection_reason,
           journal_lines (
             id, debit, credit, account_id, cbs_code, project_code,
             chart_of_accounts:account_id ( account_code, account_name )
@@ -215,10 +220,19 @@ export function JournalView() {
                       <TableCell>{j.description || "—"}</TableCell>
                       <TableCell>{j.currency || "DOP"}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant={j.posted ? "default" : "outline"}>
-                            {j.posted ? "Publicado" : "Borrador"}
+                            {j.posted ? t("accounting.statusPosted") : t("accounting.statusDraft")}
                           </Badge>
+                          {!j.posted && (
+                            <Badge variant="outline" className={
+                              j.approval_status === "approved" ? "bg-green-100 text-green-800 border-green-200" :
+                              j.approval_status === "rejected" ? "bg-red-100 text-red-800 border-red-200" :
+                              "bg-yellow-100 text-yellow-800 border-yellow-200"
+                            }>
+                              {t(`accounting.approval${j.approval_status.charAt(0).toUpperCase() + j.approval_status.slice(1)}`)}
+                            </Badge>
+                          )}
                           {j.transaction_source_id && (
                             <Badge variant="secondary" className="text-[10px] px-1.5">
                               <FileText className="h-3 w-3 mr-0.5" />Txn

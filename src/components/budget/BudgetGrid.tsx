@@ -306,6 +306,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                   {/* Col 2: Annual budget */}
                   <td className="sticky z-20 bg-background border-r px-1 py-1" style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
                     <Input
+                      key={`${lc.code}-budget-${bl?.annual_budget ?? 0}`}
                       type="number"
                       defaultValue={bl?.annual_budget ?? 0}
                       className="h-7 text-right text-xs font-mono"
@@ -315,6 +316,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                   {/* Col 3: Forecast */}
                   <td className="sticky z-20 bg-background border-r px-1 py-1" style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
                     <Input
+                      key={`${lc.code}-forecast-${bl?.current_forecast ?? 0}`}
                       type="number"
                       defaultValue={bl?.current_forecast ?? 0}
                       className="h-7 text-right text-xs font-mono"
@@ -345,6 +347,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                   {MONTH_KEYS.map((mk, mi) => (
                     <td key={mi} className="px-1 py-1" style={{ minWidth: 100 }}>
                       <Input
+                        key={`${lc.code}-${mk}-${bl?.[mk] ?? 0}`}
                         type="number"
                         defaultValue={bl?.[mk] ?? 0}
                         className="h-7 text-right text-xs font-mono"

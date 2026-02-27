@@ -5,8 +5,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDescription } from "@/lib/getDescription";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { ActualDetailDialog } from "./ActualDetailDialog";
+import { useExport } from "@/hooks/useExport";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -32,10 +35,13 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   const { language, t } = useLanguage();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { exportToExcel, exportToPDF } = useExport();
   const monthLabels = language === "en" ? MONTH_LABELS_EN : MONTH_LABELS_ES;
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailCode, setDetailCode] = useState("");
+
+  
 
   // Fetch line codes (CBS or expense accounts used in transactions)
   const { data: lineCodes = [] } = useQuery({
@@ -185,8 +191,75 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   });
   const totalVariance = totals.forecast - totals.actual;
 
+  // Export logic
+  const tabLabel = budgetType === "pl" ? t("budget.pl") : projectCode || "";
+  const exportConfig = {
+    filename: `presupuesto-${tabLabel}-${fiscalYear}`,
+    title: `${t("page.budget.title")} — ${tabLabel} ${fiscalYear}`,
+    orientation: "landscape" as const,
+    fontSize: 6,
+  };
+
+  const buildExportData = useCallback(() => {
+    const columns = [
+      { key: "code", header: t("budget.code"), width: 30 },
+      { key: "budget", header: t("budget.annual"), width: 14 },
+      { key: "forecast", header: t("budget.forecast"), width: 14 },
+      { key: "actual", header: t("budget.actual"), width: 14 },
+      { key: "variance", header: t("budget.variance"), width: 14 },
+      ...monthLabels.map((m, i) => ({ key: `m${i}`, header: m, width: 12 })),
+    ];
+
+    const rows = lineCodes.map(lc => {
+      const bl = lineMap[lc.code];
+      const actualVal = actuals[lc.code] ?? 0;
+      const forecastVal = bl?.current_forecast ?? 0;
+      const row: Record<string, string | number> = {
+        code: `${lc.code} — ${lc.desc}`,
+        budget: bl?.annual_budget ?? 0,
+        forecast: forecastVal,
+        actual: actualVal,
+        variance: forecastVal - actualVal,
+      };
+      MONTH_KEYS.forEach((mk, mi) => { row[`m${mi}`] = bl?.[mk] ?? 0; });
+      return row;
+    });
+
+    const totalsRow: Record<string, string | number> = {
+      code: t("common.total"),
+      budget: totals.budget,
+      forecast: totals.forecast,
+      actual: totals.actual,
+      variance: totalVariance,
+    };
+    totals.months.forEach((mv, mi) => { totalsRow[`m${mi}`] = mv; });
+
+    return { columns, rows, totalsRow };
+  }, [lineCodes, lineMap, actuals, totals, totalVariance, monthLabels, t]);
+
   return (
     <div className="relative">
+      {/* Export button */}
+      <div className="flex justify-end mb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-1" />
+              {t("common.export")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportToExcel(buildExportData(), exportConfig)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportToPDF(buildExportData(), exportConfig)}>
+              <FileText className="h-4 w-4 mr-2" />
+              PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       {/* Scrollable wrapper */}
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-max min-w-full text-sm border-collapse">

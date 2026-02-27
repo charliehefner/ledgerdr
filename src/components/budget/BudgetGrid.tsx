@@ -291,22 +291,23 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
             </tr>
           </thead>
           <tbody>
-            {lineCodes.map(lc => {
+            {lineCodes.map((lc, rowIdx) => {
               const bl = lineMap[lc.code];
               const actualVal = actuals[lc.code] ?? 0;
               const forecastVal = bl?.current_forecast ?? 0;
               const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0);
               const toDistribute = forecastVal - actualVal - monthsSum;
+              const stripeBg = rowIdx % 2 === 1 ? "bg-muted/40" : "";
 
               return (
-                <tr key={lc.code} className="border-b hover:bg-muted/30">
+                <tr key={lc.code} className={cn("border-b hover:bg-muted/60", stripeBg)}>
                   {/* Col 1: Code + description */}
-                  <td className="sticky left-0 z-20 bg-background border-r px-3 py-1.5 whitespace-nowrap" style={{ minWidth: COL_W[0] }}>
+                  <td className={cn("sticky left-0 z-20 border-r px-3 py-1.5 whitespace-nowrap", stripeBg || "bg-background")} style={{ minWidth: COL_W[0] }}>
                     <span className="font-mono text-xs">{lc.code}</span>
                     <span className="ml-2 text-muted-foreground text-xs truncate">{lc.desc}</span>
                   </td>
                   {/* Col 2: Annual budget */}
-                  <td className="sticky z-20 bg-background border-r px-1 py-1" style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
+                  <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
                     <Input
                       key={`${lc.code}-budget-${bl?.annual_budget ?? 0}`}
                       type="number"
@@ -316,7 +317,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                     />
                   </td>
                   {/* Col 3: Forecast */}
-                  <td className="sticky z-20 bg-background border-r px-1 py-1" style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
+                  <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
                     <Input
                       key={`${lc.code}-forecast-${bl?.current_forecast ?? 0}`}
                       type="number"
@@ -326,7 +327,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                     />
                   </td>
                   {/* Col 4: Actual */}
-                  <td className="sticky z-20 bg-background border-r px-3 py-1.5 text-right font-mono text-xs" style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
+                  <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs", stripeBg || "bg-background")} style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
                     <button
                       onClick={() => { setDetailCode(lc.code); setDetailOpen(true); }}
                       className="inline-flex items-center gap-1 hover:text-primary transition-colors"
@@ -338,7 +339,8 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                    {/* Col 5: To Distribute */}
                    <td
                      className={cn(
-                       "sticky z-20 bg-background border-r px-3 py-1.5 text-right font-mono text-xs font-semibold",
+                       "sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs font-semibold",
+                       stripeBg || "bg-background",
                        toDistribute >= 0 ? "text-green-600" : "text-red-600"
                      )}
                      style={{ left: stickyLeft[4], minWidth: COL_W[4] }}

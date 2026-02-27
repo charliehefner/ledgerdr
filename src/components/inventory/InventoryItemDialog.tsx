@@ -47,6 +47,7 @@ const useUnits = [
   { value: "gallon", label: "Gallon (gal)" },
   { value: "sack", label: "Sack" },
   { value: "unit", label: "Unit" },
+  { value: "carreta", label: "Carreta (unit)" },
 ];
 
 const initialFormState = {

@@ -141,7 +141,7 @@ export function JournalView() {
             ))}
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-xs font-medium text-muted-foreground mr-1">Tipo:</span>
+            <span className="text-xs font-medium text-muted-foreground mr-1">{t("accounting.journalType")}</span>
             <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
               <SelectTrigger className="h-8 w-[180px] text-sm">
                 <SelectValue />

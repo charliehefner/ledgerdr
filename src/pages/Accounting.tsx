@@ -7,6 +7,7 @@ import { PeriodsView } from "@/components/accounting/PeriodsView";
 import { DGIIReportsView } from "@/components/accounting/DGIIReportsView";
 import { RecurringEntriesView } from "@/components/accounting/RecurringEntriesView";
 import { BankReconciliationView } from "@/components/accounting/BankReconciliationView";
+import { AuditLogView } from "@/components/accounting/AuditLogView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Accounting() {
@@ -56,6 +57,11 @@ export default function Accounting() {
               value: "dgii",
               label: "DGII",
               content: <DGIIReportsView />,
+            },
+            {
+              value: "audit",
+              label: t("audit.tab"),
+              content: <AuditLogView />,
             },
           ],
         },

@@ -1,6 +1,6 @@
 export const en = {
   // Sidebar navigation
-  "nav.dashboard": "Dashboard",
+  "nav.dashboard": "Pending Docs",
   "nav.transactions": "Transactions",
   "nav.reports": "Financial (Ledger)",
   "nav.hr": "Human Resources",
@@ -142,7 +142,7 @@ export const en = {
   "payroll.receiptsWillDownload": "PDF receipts will be downloaded automatically.",
 
   // Page titles and subtitles
-  "page.dashboard.title": "Dashboard",
+  "page.dashboard.title": "Pending Docs",
   "page.dashboard.subtitle": "Summary of your expense invoices",
   "page.transactions.title": "Transactions",
   "page.transactions.subtitle": "Manage expenses and income",

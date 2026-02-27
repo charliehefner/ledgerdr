@@ -1,6 +1,6 @@
 export const es = {
   // Sidebar navigation
-  "nav.dashboard": "Panel",
+  "nav.dashboard": "Docs Pendientes",
   "nav.transactions": "Transacciones",
   "nav.reports": "Financiero (Ledger)",
   "nav.hr": "Recursos Humanos",
@@ -142,7 +142,7 @@ export const es = {
   "payroll.receiptsWillDownload": "Los recibos PDF se descargarán automáticamente.",
 
   // Page titles and subtitles
-  "page.dashboard.title": "Panel",
+  "page.dashboard.title": "Docs Pendientes",
   "page.dashboard.subtitle": "Resumen de sus facturas de gastos",
   "page.transactions.title": "Transacciones",
   "page.transactions.subtitle": "Gestionar gastos e ingresos",

@@ -16,6 +16,7 @@ export interface ExportConfig {
   title: string;
   subtitle?: string;
   orientation?: "portrait" | "landscape";
+  fontSize?: number;
 }
 
 export interface ExportData {
@@ -218,7 +219,7 @@ export function useExport() {
         head: [headers],
         body: rows,
         startY,
-        styles: { fontSize: 8, cellPadding: 2 },
+        styles: { fontSize: config.fontSize || 8, cellPadding: 2 },
         headStyles: { fillColor: [79, 129, 189], textColor: 255, fontStyle: "bold" },
         alternateRowStyles: { fillColor: [245, 245, 245] },
         didParseCell: (cellData) => {

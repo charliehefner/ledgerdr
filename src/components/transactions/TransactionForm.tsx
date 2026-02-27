@@ -69,6 +69,7 @@ const initialFormState = {
   transaction_direction: 'purchase' as 'purchase' | 'sale' | 'investment',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
+  due_date: '',
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -233,6 +234,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         transaction_direction: form.transaction_direction,
         destination_acct_code: form.transaction_direction === 'investment' ? form.destination_acct_code || undefined : undefined,
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
+        due_date: form.due_date || undefined,
       });
 
       // Save all attachments to local database
@@ -717,6 +719,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 value={form.rnc}
                 onChange={(e) => updateField('rnc', e.target.value)}
                 placeholder={t('txForm.rncPlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Fecha Vencimiento</Label>
+              <Input
+                type="date"
+                value={form.due_date || ''}
+                onChange={(e) => updateField('due_date', e.target.value)}
               />
             </div>
           </div>

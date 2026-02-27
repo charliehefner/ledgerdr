@@ -104,22 +104,22 @@ export function JournalView() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;
 
   const statusButtons: { key: StatusFilter; label: string }[] = [
-    { key: "all", label: "Todos" },
-    { key: "draft", label: "Borradores" },
-    { key: "posted", label: "Publicados" },
+    { key: "all", label: t("accounting.statusAll") },
+    { key: "draft", label: t("accounting.statusDraft") },
+    { key: "posted", label: t("accounting.statusPosted") },
   ];
 
   const typeOptions: { key: TypeFilter; label: string }[] = [
-    { key: "all", label: "Todos los tipos" },
-    { key: "GJ", label: "GJ – General" },
-    { key: "PJ", label: "PJ – Compras" },
-    { key: "SJ", label: "SJ – Ventas" },
-    { key: "PRJ", label: "PRJ – Nómina" },
-    { key: "CDJ", label: "CDJ – Desembolsos" },
-    { key: "CRJ", label: "CRJ – Cobros" },
-    { key: "DEP", label: "DEP – Depreciación" },
-    { key: "RJ", label: "RJ – Recurrente" },
-    { key: "CLJ", label: "CLJ – Cierre" },
+    { key: "all", label: t("accounting.allTypes") },
+    { key: "GJ", label: t("accounting.type.GJ") },
+    { key: "PJ", label: t("accounting.type.PJ") },
+    { key: "SJ", label: t("accounting.type.SJ") },
+    { key: "PRJ", label: t("accounting.type.PRJ") },
+    { key: "CDJ", label: t("accounting.type.CDJ") },
+    { key: "CRJ", label: t("accounting.type.CRJ") },
+    { key: "DEP", label: t("accounting.type.DEP") },
+    { key: "RJ", label: t("accounting.type.RJ") },
+    { key: "CLJ", label: t("accounting.type.CLJ") },
   ];
 
   return (

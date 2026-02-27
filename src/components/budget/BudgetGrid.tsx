@@ -297,7 +297,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
               const forecastVal = bl?.current_forecast ?? 0;
               const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0);
               const toDistribute = forecastVal - actualVal - monthsSum;
-              const stripeBg = rowIdx % 2 === 1 ? "bg-muted/40" : "";
+              const stripeBg = rowIdx % 2 === 1 ? "bg-muted" : "";
 
               return (
                 <tr key={lc.code} className={cn("border-b hover:bg-muted/60", stripeBg)}>

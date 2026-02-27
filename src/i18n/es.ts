@@ -852,4 +852,16 @@ export const es = {
   "accounting.approvedBy": "Aprobado por",
   "accounting.rejectedBy": "Rechazado por",
   "accounting.approvalRequired": "Se requiere aprobación antes de publicar",
+
+  // Módulo de Presupuesto
+  "nav.budget": "Presupuesto",
+  "page.budget.title": "Presupuesto / Pronóstico",
+  "page.budget.subtitle": "Gestionar presupuestos y pronósticos por proyecto o P&L",
+  "budget.pl": "P&L",
+  "budget.annual": "Presupuesto",
+  "budget.forecast": "Pronóstico",
+  "budget.actual": "Real",
+  "budget.variance": "Varianza",
+  "budget.code": "Código / Descripción",
+  "budget.actualDetail": "Detalle Real",
 };

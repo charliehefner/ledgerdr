@@ -852,4 +852,16 @@ export const en = {
   "accounting.approvedBy": "Approved by",
   "accounting.rejectedBy": "Rejected by",
   "accounting.approvalRequired": "Approval required before posting",
+
+  // Budget Module
+  "nav.budget": "Budget",
+  "page.budget.title": "Budget / Forecast",
+  "page.budget.subtitle": "Manage budgets and forecasts by project or P&L",
+  "budget.pl": "P&L",
+  "budget.annual": "Budget",
+  "budget.forecast": "Forecast",
+  "budget.actual": "Actual",
+  "budget.variance": "Variance",
+  "budget.code": "Code / Description",
+  "budget.actualDetail": "Actual Detail",
 };

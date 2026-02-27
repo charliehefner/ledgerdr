@@ -31,6 +31,7 @@ export type Section =
   | "settings"
   | "accounting"
   | "ap-ar"
+  | "budget"
   | "driver-portal";
 
 // HR sub-tabs for granular access control
@@ -102,6 +103,7 @@ export const routeToSection: Record<string, Section> = {
   "/settings": "settings",
   "/accounting": "accounting",
   "/accounts": "ap-ar",
+  "/budget": "budget",
   "/driver-portal": "driver-portal",
 };
 
@@ -123,6 +125,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   settings: ["admin"],
   accounting: ["admin", "management", "accountant", "viewer"],
   "ap-ar": ["admin", "management", "accountant"],
+  budget: ["admin", "management", "accountant"],
   "driver-portal": ["driver"],
 };
 
@@ -146,6 +149,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   settings: ["admin"],
   accounting: ["admin", "management", "accountant"],
   "ap-ar": ["admin", "management", "accountant"],
+  budget: ["admin", "management", "accountant"],
   "driver-portal": ["driver"],
 };
 

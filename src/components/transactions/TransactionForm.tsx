@@ -312,6 +312,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       if (result.itbis != null && !prev.itbis) updated.itbis = result.itbis.toString();
       if (result.document && !prev.document) updated.document = result.document;
       if (result.pay_method && !prev.pay_method) updated.pay_method = result.pay_method;
+      if (result.master_acct_code && !prev.master_acct_code) updated.master_acct_code = result.master_acct_code;
 
       // Auto-fill description from OCR
       if (result.description && !updated.description) {

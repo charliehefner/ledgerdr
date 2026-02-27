@@ -123,8 +123,9 @@ serve(async (req) => {
   "amount": numeric total amount,
   "itbis": numeric tax/ITBIS amount,
   "document": "NCF or receipt number (e.g. B0100000123, E310000000001)",
-  "pay_method": "cash" or "cc_management" or "bank_transfer" or null,
-  "description": "short summary of items purchased, e.g. '8.45 gal diesel', 'office supplies', 'materiales de oficina'"
+  "pay_method": "cash" or "cc_management" or "cc_agri" or "cc_industry" or "bank_transfer" or null,
+  "description": "short summary of items purchased, e.g. '8.45 gal diesel', 'office supplies', 'materiales de oficina'",
+  "master_acct_code": "4-digit account code if handwritten on receipt, or null"
 }
 
 Rules:
@@ -133,6 +134,10 @@ Rules:
 - For RNC, look for patterns like "RNC: 123456789" or "R.N.C. 123456789".
 - For document/NCF, look for patterns starting with B01, B02, B04, B14, B15, B16, B17, E31, E32, E33, E34, E41, E43, E44, E45, E46, E47.
 - For pay_method, if you see credit card info return "cc_management", if cash/efectivo return "cash", if transfer/transferencia return "bank_transfer", otherwise null.
+- HANDWRITTEN NOTES (important — these are pen annotations, not printed text):
+  - TOP-LEFT CORNER: Look for a handwritten credit card identifier. Map as follows: "cc industria" → "cc_industry", "cc agri" → "cc_agri", "cc management" → "cc_management". If found, use this value for pay_method instead of the default.
+  - UPPER-RIGHT QUADRANT: Look for a handwritten 4-digit number (e.g. 5611, 7010, 7690). This is the account code — return it as master_acct_code.
+  - Do NOT confuse handwritten annotations with printed receipt data.
 - If you cannot determine a field, use null for strings and null for numbers.
 - Return ONLY the JSON object, no markdown, no explanation.`,
           },
@@ -208,6 +213,7 @@ Rules:
       document: extracted.document || "",
       pay_method: extracted.pay_method || null,
       description: extracted.description || "",
+      master_acct_code: extracted.master_acct_code || null,
       raw_text: rawContent.substring(0, 500),
     };
 

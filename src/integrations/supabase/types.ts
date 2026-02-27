@@ -332,6 +332,81 @@ export type Database = {
           },
         ]
       }
+      budget_lines: {
+        Row: {
+          annual_budget: number
+          budget_type: string
+          created_at: string
+          created_by: string | null
+          current_forecast: number
+          fiscal_year: number
+          id: string
+          line_code: string
+          month_1: number
+          month_10: number
+          month_11: number
+          month_12: number
+          month_2: number
+          month_3: number
+          month_4: number
+          month_5: number
+          month_6: number
+          month_7: number
+          month_8: number
+          month_9: number
+          project_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          annual_budget?: number
+          budget_type: string
+          created_at?: string
+          created_by?: string | null
+          current_forecast?: number
+          fiscal_year: number
+          id?: string
+          line_code: string
+          month_1?: number
+          month_10?: number
+          month_11?: number
+          month_12?: number
+          month_2?: number
+          month_3?: number
+          month_4?: number
+          month_5?: number
+          month_6?: number
+          month_7?: number
+          month_8?: number
+          month_9?: number
+          project_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          annual_budget?: number
+          budget_type?: string
+          created_at?: string
+          created_by?: string | null
+          current_forecast?: number
+          fiscal_year?: number
+          id?: string
+          line_code?: string
+          month_1?: number
+          month_10?: number
+          month_11?: number
+          month_12?: number
+          month_2?: number
+          month_3?: number
+          month_4?: number
+          month_5?: number
+          month_6?: number
+          month_7?: number
+          month_8?: number
+          month_9?: number
+          project_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cbs_codes: {
         Row: {
           code: string

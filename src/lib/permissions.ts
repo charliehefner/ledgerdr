@@ -125,7 +125,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   settings: ["admin"],
   accounting: ["admin", "management", "accountant", "viewer"],
   "ap-ar": ["admin", "management", "accountant"],
-  budget: ["admin", "management", "accountant"],
+  budget: ["admin"],
   "driver-portal": ["driver"],
 };
 
@@ -149,7 +149,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   settings: ["admin"],
   accounting: ["admin", "management", "accountant"],
   "ap-ar": ["admin", "management", "accountant"],
-  budget: ["admin", "management", "accountant"],
+  budget: ["admin"],
   "driver-portal": ["driver"],
 };
 

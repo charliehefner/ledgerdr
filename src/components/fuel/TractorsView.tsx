@@ -48,6 +48,8 @@ interface TractorEquipment {
   purchase_date: string | null;
   purchase_price: number | null;
   maintenance_interval_hours: number;
+  front_tire_size: string | null;
+  rear_tire_size: string | null;
 }
 
 interface MaintenanceRecord {
@@ -70,6 +72,8 @@ export function TractorsView() {
     purchase_date: "",
     purchase_price: "",
     maintenance_interval_hours: "500",
+    front_tire_size: "",
+    rear_tire_size: "",
   });
 
   const { toast } = useToast();
@@ -80,6 +84,8 @@ export function TractorsView() {
     { key: "brand_model", label: t("equipment.col.brandModel"), defaultVisible: true },
     { key: "serial", label: t("equipment.col.serial"), defaultVisible: false },
     { key: "hp", label: t("equipment.col.hp"), defaultVisible: true },
+    { key: "front_tire", label: "Gomas Del.", defaultVisible: false },
+    { key: "rear_tire", label: "Gomas Tras.", defaultVisible: false },
     { key: "hour_meter", label: t("equipment.col.hourMeter"), defaultVisible: true },
     { key: "maintenance", label: "Mantenimiento", defaultVisible: true },
     { key: "purchase_date", label: t("equipment.col.purchaseDate"), defaultVisible: false },
@@ -161,6 +167,8 @@ export function TractorsView() {
         purchase_date: data.purchase_date || null,
         purchase_price: data.purchase_price ? parseFloat(data.purchase_price) : null,
         maintenance_interval_hours: parseInt(data.maintenance_interval_hours) || 500,
+        front_tire_size: data.front_tire_size || null,
+        rear_tire_size: data.rear_tire_size || null,
       };
 
       if (editingTractor) {
@@ -204,6 +212,8 @@ export function TractorsView() {
       purchase_date: tractor.purchase_date || "",
       purchase_price: tractor.purchase_price?.toString() || "",
       maintenance_interval_hours: tractor.maintenance_interval_hours?.toString() || "500",
+      front_tire_size: tractor.front_tire_size || "",
+      rear_tire_size: tractor.rear_tire_size || "",
     });
     setIsDialogOpen(true);
   };
@@ -221,6 +231,8 @@ export function TractorsView() {
       purchase_date: "",
       purchase_price: "",
       maintenance_interval_hours: "500",
+      front_tire_size: "",
+      rear_tire_size: "",
     });
   };
 
@@ -360,6 +372,26 @@ export function TractorsView() {
                       {form.brand?.toLowerCase().includes("volvo") ? "Volvo: recomendado 250 hrs" : "Estándar: 500 hrs"}
                     </p>
                   </div>
+
+                  <div>
+                    <Label>Gomas Delanteras</Label>
+                    <Input
+                      value={form.front_tire_size}
+                      onChange={(e) => setForm({ ...form, front_tire_size: e.target.value })}
+                      placeholder="ej. 600/50 R22.5"
+                      className="w-40"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Gomas Traseras</Label>
+                    <Input
+                      value={form.rear_tire_size}
+                      onChange={(e) => setForm({ ...form, rear_tire_size: e.target.value })}
+                      placeholder="ej. 710/70 R38"
+                      className="w-40"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2">
@@ -389,6 +421,8 @@ export function TractorsView() {
                 {isVisible("brand_model") && <TableHead>{t("equipment.col.brandModel")}</TableHead>}
                 {isVisible("serial") && <TableHead>{t("equipment.col.serial")}</TableHead>}
                 {isVisible("hp") && <TableHead>{t("equipment.col.hp")}</TableHead>}
+                {isVisible("front_tire") && <TableHead>Gomas Del.</TableHead>}
+                {isVisible("rear_tire") && <TableHead>Gomas Tras.</TableHead>}
                 {isVisible("hour_meter") && <TableHead>{t("equipment.col.hourMeter")}</TableHead>}
                 {isVisible("maintenance") && <TableHead>Mantenimiento</TableHead>}
                 {isVisible("purchase_date") && <TableHead>{t("equipment.col.purchaseDate")}</TableHead>}
@@ -412,6 +446,8 @@ export function TractorsView() {
                     )}
                     {isVisible("serial") && <TableCell>{tractor.serial_number || "-"}</TableCell>}
                     {isVisible("hp") && <TableCell>{tractor.hp ? `${tractor.hp} HP` : "-"}</TableCell>}
+                    {isVisible("front_tire") && <TableCell>{tractor.front_tire_size || "-"}</TableCell>}
+                    {isVisible("rear_tire") && <TableCell>{tractor.rear_tire_size || "-"}</TableCell>}
                     {isVisible("hour_meter") && <TableCell>{tractor.current_hour_meter} hrs</TableCell>}
                     {isVisible("maintenance") && (
                       <TableCell>

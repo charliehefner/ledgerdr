@@ -170,6 +170,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                 <SelectItem value="PRJ">PRJ – Nómina</SelectItem>
                 <SelectItem value="CDJ">CDJ – Desembolsos</SelectItem>
                 <SelectItem value="CRJ">CRJ – Recibos</SelectItem>
+                <SelectItem value="DEP">DEP – Depreciación</SelectItem>
               </SelectContent>
             </Select>
           </div>

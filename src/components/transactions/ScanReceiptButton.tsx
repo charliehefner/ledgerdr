@@ -33,6 +33,7 @@ export interface OcrResult {
   document: string;
   pay_method: string | null;
   description?: string;
+  master_acct_code?: string;
   raw_text?: string;
   image_base64?: string;
 }

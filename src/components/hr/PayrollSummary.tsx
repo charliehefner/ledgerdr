@@ -257,7 +257,9 @@ export function PayrollSummary({
 
       if (t.start_time && t.end_time) {
         const start = parseTimeToMinutes(t.start_time);
-        const end = parseTimeToMinutes(t.end_time);
+        let end = parseTimeToMinutes(t.end_time);
+        // Handle cross-midnight shifts (e.g., 07:30 to 00:30)
+        if (end < start) end += 24 * 60;
         const workDate = parseDateLocal(t.work_date);
         const isSundayWork = isSunday(workDate);
         const isSaturdayWork = workDate.getDay() === 6; // Saturday = 6

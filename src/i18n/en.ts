@@ -171,6 +171,7 @@ export const en = {
   "accounting.reports": "Reports",
   "accounting.fixedAssets": "Fixed Assets",
   "accounting.journal": "Journal",
+  "accounting.journalType": "Journal type:",
   "accounting.periods": "Periods",
 
   // Accounting Reports

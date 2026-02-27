@@ -40,7 +40,7 @@ type Journal = {
 };
 
 type StatusFilter = "all" | "draft" | "posted";
-type TypeFilter = "all" | "GJ" | "PJ" | "SJ" | "PRJ" | "CDJ" | "CRJ" | "DEP";
+type TypeFilter = "all" | "GJ" | "PJ" | "SJ" | "PRJ" | "CDJ" | "CRJ" | "DEP" | "RJ" | "CLJ";
 
 export function JournalView() {
   const { t } = useLanguage();
@@ -115,6 +115,8 @@ export function JournalView() {
     { key: "SJ", label: "SJ" },
     { key: "PRJ", label: "PRJ" },
     { key: "DEP", label: "DEP" },
+    { key: "RJ", label: "RJ" },
+    { key: "CLJ", label: "CLJ" },
   ];
 
   return (

@@ -161,6 +161,114 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string | null
+          bank_name: string
+          chart_account_id: string | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number?: string | null
+          bank_name: string
+          chart_account_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string | null
+          bank_name?: string
+          chart_account_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_chart_account_id_fkey"
+            columns: ["chart_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_statement_lines: {
+        Row: {
+          amount: number
+          balance: number | null
+          bank_account_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_reconciled: boolean | null
+          matched_journal_id: string | null
+          matched_transaction_id: string | null
+          reference: string | null
+          statement_date: string
+        }
+        Insert: {
+          amount?: number
+          balance?: number | null
+          bank_account_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_reconciled?: boolean | null
+          matched_journal_id?: string | null
+          matched_transaction_id?: string | null
+          reference?: string | null
+          statement_date: string
+        }
+        Update: {
+          amount?: number
+          balance?: number | null
+          bank_account_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_reconciled?: boolean | null
+          matched_journal_id?: string | null
+          matched_transaction_id?: string | null
+          reference?: string | null
+          statement_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statement_lines_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_matched_journal_id_fkey"
+            columns: ["matched_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_matched_transaction_id_fkey"
+            columns: ["matched_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cbs_codes: {
         Row: {
           code: string
@@ -1994,6 +2102,93 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_journal_template_lines: {
+        Row: {
+          account_id: string
+          cbs_code: string | null
+          created_at: string | null
+          credit: number | null
+          debit: number | null
+          id: string
+          project_code: string | null
+          template_id: string
+        }
+        Insert: {
+          account_id: string
+          cbs_code?: string | null
+          created_at?: string | null
+          credit?: number | null
+          debit?: number | null
+          id?: string
+          project_code?: string | null
+          template_id: string
+        }
+        Update: {
+          account_id?: string
+          cbs_code?: string | null
+          created_at?: string | null
+          credit?: number | null
+          debit?: number | null
+          id?: string
+          project_code?: string | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_journal_template_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_journal_template_lines_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_journal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_journal_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          next_run_date: string
+          template_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          next_run_date: string
+          template_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          next_run_date?: string
+          template_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       scheduled_user_deletions: {
         Row: {
           cancelled_at: string | null
@@ -2468,6 +2663,7 @@ export type Database = {
           dgii_tipo_bienes_servicios: string | null
           dgii_tipo_ingreso: string | null
           document: string | null
+          due_date: string | null
           id: string
           is_internal: boolean
           is_void: boolean
@@ -2502,6 +2698,7 @@ export type Database = {
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
           document?: string | null
+          due_date?: string | null
           id?: string
           is_internal?: boolean
           is_void?: boolean
@@ -2536,6 +2733,7 @@ export type Database = {
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
           document?: string | null
+          due_date?: string | null
           id?: string
           is_internal?: boolean
           is_void?: boolean

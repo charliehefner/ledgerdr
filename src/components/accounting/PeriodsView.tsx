@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarDays } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+import { PeriodClosingButton } from "./PeriodClosingButton";
 
 type PeriodStatus = "open" | "closed" | "reported" | "locked";
 
@@ -125,6 +126,7 @@ export function PeriodsView() {
                 <TableHead>Fin</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[140px]">Cambiar Estado</TableHead>
+                <TableHead className="w-[120px]">Cierre</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -153,6 +155,15 @@ export function PeriodsView() {
                         <SelectItem value="locked">Bloqueado</SelectItem>
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell>
+                    <PeriodClosingButton
+                      periodId={p.id}
+                      periodName={p.period_name}
+                      startDate={p.start_date}
+                      endDate={p.end_date}
+                      status={p.status}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

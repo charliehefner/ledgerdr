@@ -40,6 +40,8 @@ import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown,
 import { ProfitLossView } from "./ProfitLossView";
 import { BalanceSheetView } from "./BalanceSheetView";
 import { PowerBIExportButton } from "./PowerBIExportButton";
+import { TrialBalanceView } from "./TrialBalanceView";
+import { AgingReportView } from "./AgingReportView";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ExcelJS from "exceljs";
@@ -74,7 +76,7 @@ const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
   en: { general: "General", agricultural: "Agricultural", industrial: "Industrial" },
 };
 
-type ReportType = "detail" | "pl" | "bs";
+type ReportType = "detail" | "pl" | "bs" | "tb" | "aging";
 
 export function AccountingReportsView() {
   const { t, language } = useLanguage();
@@ -352,6 +354,8 @@ export function AccountingReportsView() {
             <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
             <SelectItem value="pl">{t("pl.title")}</SelectItem>
             <SelectItem value="bs">{t("bs.title")}</SelectItem>
+            <SelectItem value="tb">Balanza de Comprobación</SelectItem>
+            <SelectItem value="aging">Antigüedad de Saldos</SelectItem>
           </SelectContent>
         </Select>
         <PowerBIExportButton />
@@ -361,6 +365,10 @@ export function AccountingReportsView() {
         <ProfitLossView />
       ) : reportType === "bs" ? (
         <BalanceSheetView />
+      ) : reportType === "tb" ? (
+        <TrialBalanceView />
+      ) : reportType === "aging" ? (
+        <AgingReportView />
       ) : (
       <>
       {!activeFilters ? (

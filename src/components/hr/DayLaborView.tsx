@@ -353,21 +353,66 @@ export function DayLaborView() {
     },
   });
 
-  // Detect duplicate entries (same worker + same operation + same date)
+  // Levenshtein distance for fuzzy matching
+  const levenshtein = (a: string, b: string): number => {
+    const m = a.length, n = b.length;
+    const dp: number[][] = Array.from({ length: m + 1 }, (_, i) => {
+      const row = new Array(n + 1).fill(0);
+      row[0] = i;
+      return row;
+    });
+    for (let j = 1; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++)
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        );
+    return dp[m][n];
+  };
+
+  const isSimilar = (a: string, b: string): boolean => {
+    const na = a.trim().toLowerCase();
+    const nb = b.trim().toLowerCase();
+    if (na === nb) return true;
+    const maxLen = Math.max(na.length, nb.length);
+    if (maxLen === 0) return true;
+    const dist = levenshtein(na, nb);
+    // Allow up to ~30% edit distance, minimum 2 edits
+    return dist <= Math.max(2, Math.floor(maxLen * 0.3));
+  };
+
+  // Detect duplicate entries (same worker + same/similar operation + same date)
   const duplicates = useMemo(() => {
-    const seen = new Map<string, DayLaborEntry[]>();
-    entries.forEach((entry) => {
-      const key = `${entry.worker_name}||${entry.operation_description.trim().toLowerCase()}||${entry.work_date}`;
-      if (!seen.has(key)) seen.set(key, []);
-      seen.get(key)!.push(entry);
-    });
-    const dupes: { worker: string; operation: string; date: string; ids: string[] }[] = [];
-    seen.forEach((group, key) => {
-      if (group.length > 1) {
-        const [worker, , date] = key.split("||");
-        dupes.push({ worker, operation: group[0].operation_description, date, ids: group.map(e => e.id) });
+    const dupes: { worker: string; operations: string[]; date: string; ids: string[] }[] = [];
+    const matched = new Set<string>();
+
+    for (let i = 0; i < entries.length; i++) {
+      if (matched.has(entries[i].id)) continue;
+      const group = [entries[i]];
+      for (let j = i + 1; j < entries.length; j++) {
+        if (matched.has(entries[j].id)) continue;
+        if (
+          entries[i].worker_name === entries[j].worker_name &&
+          entries[i].work_date === entries[j].work_date &&
+          isSimilar(entries[i].operation_description, entries[j].operation_description)
+        ) {
+          group.push(entries[j]);
+          matched.add(entries[j].id);
+        }
       }
-    });
+      if (group.length > 1) {
+        matched.add(entries[i].id);
+        const uniqueOps = [...new Set(group.map(e => e.operation_description))];
+        dupes.push({
+          worker: entries[i].worker_name,
+          operations: uniqueOps,
+          date: entries[i].work_date,
+          ids: group.map(e => e.id),
+        });
+      }
+    }
     return dupes;
   }, [entries]);
 
@@ -595,7 +640,7 @@ export function DayLaborView() {
             <ul className="list-disc list-inside mt-1 space-y-0.5">
               {duplicates.map((d, i) => (
                 <li key={i}>
-                  <strong>{d.worker}</strong> — "{d.operation}" el{" "}
+                  <strong>{d.worker}</strong> — "{d.operations.join('" / "')}" el{" "}
                   {format(parseDateLocal(d.date), "dd MMM", { locale: es })} ({d.ids.length} entradas)
                 </li>
               ))}

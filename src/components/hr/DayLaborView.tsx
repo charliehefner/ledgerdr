@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Pencil, FileSpreadsheet, FileText, Download, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileDown, Lock, AlertCircle, Pencil, FileSpreadsheet, FileText, Download, ChevronDown, TriangleAlert } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -352,6 +353,26 @@ export function DayLaborView() {
     },
   });
 
+  // Detect duplicate entries (same worker + same operation + same date)
+  const duplicates = useMemo(() => {
+    const seen = new Map<string, DayLaborEntry[]>();
+    entries.forEach((entry) => {
+      const key = `${entry.worker_name}||${entry.operation_description.trim().toLowerCase()}||${entry.work_date}`;
+      if (!seen.has(key)) seen.set(key, []);
+      seen.get(key)!.push(entry);
+    });
+    const dupes: { worker: string; operation: string; date: string; ids: string[] }[] = [];
+    seen.forEach((group, key) => {
+      if (group.length > 1) {
+        const [worker, , date] = key.split("||");
+        dupes.push({ worker, operation: group[0].operation_description, date, ids: group.map(e => e.id) });
+      }
+    });
+    return dupes;
+  }, [entries]);
+
+  const duplicateIds = useMemo(() => new Set(duplicates.flatMap(d => d.ids)), [duplicates]);
+
   // Calculate summary grouped by worker name
   const summaryByWorker = useMemo(() => {
     const grouped: Record<string, { entries: DayLaborEntry[]; subtotal: number }> = {};
@@ -565,6 +586,24 @@ export function DayLaborView() {
         </Card>
       )}
 
+      {/* Duplicate Warning */}
+      {duplicates.length > 0 && (
+        <Alert variant="destructive" className="border-warning/50 bg-warning/10 text-warning-foreground">
+          <TriangleAlert className="h-4 w-4 !text-warning" />
+          <AlertTitle className="text-warning">Entradas duplicadas detectadas</AlertTitle>
+          <AlertDescription className="text-warning/80">
+            <ul className="list-disc list-inside mt-1 space-y-0.5">
+              {duplicates.map((d, i) => (
+                <li key={i}>
+                  <strong>{d.worker}</strong> — "{d.operation}" el{" "}
+                  {format(parseDateLocal(d.date), "dd MMM", { locale: es })} ({d.ids.length} entradas)
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Entries Table */}
       <Card>
         <CardContent className="p-0">
@@ -597,7 +636,7 @@ export function DayLaborView() {
               ) : (
                 <>
                   {entries.map((entry) => (
-                    <TableRow key={entry.id}>
+                    <TableRow key={entry.id} className={duplicateIds.has(entry.id) ? "bg-warning/10" : ""}>
                       <TableCell className="font-medium">
                         {format(parseDateLocal(entry.work_date), "EEE dd/MM", { locale: es })}
                       </TableCell>

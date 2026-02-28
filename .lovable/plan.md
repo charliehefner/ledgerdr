@@ -1,35 +1,43 @@
 
 
-## Plan: Fix "To Distribute" calculation
+## Plan: Bank Reconciliation — OFX Import + Quick Journal Creation
 
-**Current formula (wrong):** `Variance = Forecast - Actual`
+### 1. Add OFX parser to `BankReconciliationView.tsx`
 
-**Correct formula:** `To Distribute = Forecast - Actual - Sum(month_1..month_12)`
+- Add a `parseOFX(text: string)` function that:
+  - Splits content on `<STMTTRN>` blocks
+  - Extracts `DTPOSTED` (→ YYYY-MM-DD), `NAME`/`MEMO` (→ description), `TRNAMT` (→ amount, already signed), `FITID` (→ reference), `TRNTYPE` (informational)
+  - Extracts account metadata from `BANKID`, `ACCTID`, `LEDGERBAL` for an import summary toast
+- Update file input `accept` from `.csv` to `.csv,.ofx` (line 236)
+- Rename button label from "Importar CSV" to "Importar Estado" (line 238)
+- Add a `handleFileImport` dispatcher that checks file extension — routes `.ofx` to `handleOFXImport`, `.csv` to existing `handleCSVImport`
+- OFX import deduplicates by checking existing `reference` values for the selected bank account before inserting
 
-When fully distributed across months, To Distribute = 0.
+### 2. Add "Crear Entrada" button on unmatched lines
 
-### Changes
+- Add a new column in the table for an action button (visible only when `!line.is_reconciled`)
+- Button opens a new `QuickEntryDialog` that:
+  - Pre-fills date from `statement_date`, amount from `amount`, description from `description`
+  - Shows an account selector (from `chart_of_accounts` where `allow_posting = true`)
+  - On submit: creates a journal (via `create_journal_from_transaction` or direct insert) with two lines — the selected expense/income account and the bank's mapped GL account
+  - Auto-marks the bank line as reconciled and links it via `matched_journal_id`
 
-**`src/components/budget/BudgetGrid.tsx`**
+### 3. Auto-categorization rules for bank charges
 
-1. **Row-level calculation** (line ~297): Change variance computation to:
-   ```
-   const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0);
-   const toDistribute = forecastVal - actualVal - monthsSum;
-   ```
+- Add a helper map of common BDI description patterns to suggested account codes:
+  - `COMISION` → 6520 (Bank Charges)
+  - `IMPUESTO LEY` → 6530 (Taxes & Fees)
+  - `ITBIS` → 1650 (ITBIS)
+  - `INTERES` → 6510 (Interest Expense)
+- When the QuickEntryDialog opens, auto-select the matching account if the description matches a pattern
+- User can always override the suggestion
 
-2. **Totals row** (line ~192): Change `totalVariance` to:
-   ```
-   const totalToDistribute = totals.forecast - totals.actual - totals.months.reduce((a,b) => a+b, 0);
-   ```
+### Files changed
 
-3. **Header label** (line ~281-283): Change `t("budget.variance")` to `t("budget.toDistribute")`
+- **`src/components/accounting/BankReconciliationView.tsx`** — OFX parser, file dispatcher, button rename, "Crear Entrada" column, QuickEntryDialog integration
+- **New: `src/components/accounting/QuickEntryDialog.tsx`** — Dialog component for creating a journal entry from a bank line with auto-categorization
 
-4. **Export data** (lines ~209, 222, 233): Update column header key and formula in `buildExportData` to use `toDistribute` with the new formula.
+### No database changes needed
 
-5. **All variable names**: Rename `variance`/`totalVariance` to `toDistribute`/`totalToDistribute` throughout.
-
-**`src/i18n/en.ts`** — Change `"budget.variance"` to `"budget.toDistribute": "To Distribute"`
-
-**`src/i18n/es.ts`** — Change `"budget.variance"` to `"budget.toDistribute": "Por Distribuir"`
+The existing `bank_statement_lines` and `journals`/`journal_lines` tables already have all required columns.
 

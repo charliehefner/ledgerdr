@@ -68,6 +68,8 @@ export function EditTransactionDialog({
   const [originalPayMethod, setOriginalPayMethod] = useState("");
   const [editedTipoBienes, setEditedTipoBienes] = useState("");
   const [originalTipoBienes, setOriginalTipoBienes] = useState("");
+  const [editedCostCenter, setEditedCostCenter] = useState("");
+  const [originalCostCenter, setOriginalCostCenter] = useState("");
 
   const [formData, setFormData] = useState({
     transaction_date: "",
@@ -106,6 +108,7 @@ export function EditTransactionDialog({
       const isrRetValue = String(transaction.isr_retenido || "");
       const payMethodValue = transaction.pay_method || "";
       const tipoBienesValue = transaction.dgii_tipo_bienes_servicios || "";
+      const costCenterValue = (transaction as any).cost_center || "general";
 
       setFormData({
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
@@ -135,6 +138,8 @@ export function EditTransactionDialog({
       setOriginalPayMethod(payMethodValue);
       setEditedTipoBienes(tipoBienesValue);
       setOriginalTipoBienes(tipoBienesValue);
+      setEditedCostCenter(costCenterValue);
+      setOriginalCostCenter(costCenterValue);
     }
   }, [transaction, open]);
 
@@ -167,6 +172,7 @@ export function EditTransactionDialog({
       if (editedIsrRetenido !== originalIsrRetenido) updates.isr_retenido = editedIsrRetenido ? parseFloat(editedIsrRetenido) : null;
       if (editedPayMethod !== originalPayMethod) updates.pay_method = editedPayMethod || null;
       if (editedTipoBienes !== originalTipoBienes) updates.dgii_tipo_bienes_servicios = editedTipoBienes || null;
+      if (editedCostCenter !== originalCostCenter) updates.cost_center = editedCostCenter;
 
       await updateTransaction(String(transaction.legacy_id), updates);
 
@@ -179,6 +185,7 @@ export function EditTransactionDialog({
       setOriginalIsrRetenido(editedIsrRetenido);
       setOriginalPayMethod(editedPayMethod);
       setOriginalTipoBienes(editedTipoBienes);
+      setOriginalCostCenter(editedCostCenter);
 
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
@@ -200,7 +207,8 @@ export function EditTransactionDialog({
     editedItbisRetenido !== originalItbisRetenido ||
     editedIsrRetenido !== originalIsrRetenido ||
     editedPayMethod !== originalPayMethod ||
-    editedTipoBienes !== originalTipoBienes;
+    editedTipoBienes !== originalTipoBienes ||
+    editedCostCenter !== originalCostCenter;
 
   if (!transaction) return null;
 
@@ -396,6 +404,21 @@ export function EditTransactionDialog({
                   </Select>
                 </div>
               )}
+            </div>
+
+            {/* Cost Center - EDITABLE */}
+            <div className="space-y-2">
+              <Label>Centro de Costo</Label>
+              <Select value={editedCostCenter} onValueChange={setEditedCostCenter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar centro de costo" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="agricultural">Agrícola</SelectItem>
+                  <SelectItem value="industrial">Industrial</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Comments */}

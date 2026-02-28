@@ -524,7 +524,7 @@ export function PayrollSummary({
     setIsExporting(true);
     try {
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet("Reporte de Nómina");
+      const sheet = workbook.addWorksheet(`Nómina ${nominaNumber}`);
 
       // Header
       sheet.columns = [
@@ -609,7 +609,7 @@ export function PayrollSummary({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Nomina_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`;
+      a.download = `Nomina_${nominaNumber}_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -630,7 +630,7 @@ export function PayrollSummary({
       
       // Title
       doc.setFontSize(16);
-      doc.text("Reporte de Nómina", 14, 15);
+      doc.text(`Reporte de Nómina ${nominaNumber}`, 14, 15);
       doc.setFontSize(10);
       doc.text(`Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`, 14, 22);
 
@@ -697,7 +697,7 @@ export function PayrollSummary({
         },
       });
 
-      doc.save(`Nomina_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.pdf`);
+      doc.save(`Nomina_${nominaNumber}_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.pdf`);
       toast.success("Reporte PDF exportado");
     } catch (error) {
       toast.error("Error al exportar PDF");

@@ -271,6 +271,10 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     });
 
     // For each fuel dispense, find matching operations and distribute gallons
+    // Look up diesel cost from inventory purchases
+    const dieselItem = inventoryItems?.find((item) => item.function === 'fuel');
+    const dieselCostPerUnit = dieselItem ? (costPerUnitMap.get(dieselItem.id) ?? 0) : 0;
+
     fuelTransactions.forEach((ft) => {
       if (!ft.equipment_id) return;
       const txDate = ft.transaction_date.substring(0, 10); // extract date part
@@ -295,7 +299,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           amount: Number(ft.gallons) || 0,
           hectares: 0,
           amountPerHectare: 0,
-          costPerUnit: 0,
+          costPerUnit: dieselCostPerUnit,
           tractor: "-",
         });
         return;
@@ -324,14 +328,14 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           amount: share,
           hectares,
           amountPerHectare: hectares > 0 ? share / hectares : 0,
-          costPerUnit: 0, // TODO: diesel cost per gallon if needed
+          costPerUnit: dieselCostPerUnit,
           tractor: op.fuel_equipment?.name || op.driver || "-",
         });
       });
     });
 
     return results;
-  }, [fuelTransactions, operations, startDate, endDate, hasSearched, selectedInput, fields, selectedFarm, selectedFields]);
+  }, [fuelTransactions, operations, startDate, endDate, hasSearched, selectedInput, fields, selectedFarm, selectedFields, costPerUnitMap, inventoryItems]);
 
   // Calculate usage data based on filters
   const usageData = useMemo(() => {

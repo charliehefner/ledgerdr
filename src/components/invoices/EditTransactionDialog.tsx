@@ -80,7 +80,7 @@ export function EditTransactionDialog({
     amount: "",
     name: "",
     comments: "",
-    transaction_direction: "purchase" as "purchase" | "sale" | "investment",
+    transaction_direction: "purchase" as "purchase" | "sale" | "investment" | "payment",
   });
 
   const { data: accounts = [] } = useQuery({

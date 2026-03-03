@@ -66,7 +66,7 @@ const initialFormState = {
   comments: '',
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
-  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'investment',
+  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'investment' | 'payment',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   due_date: '',
@@ -415,7 +415,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Label>{t('txForm.direction')}</Label>
               <Select
                 value={form.transaction_direction}
-                onValueChange={(value: 'purchase' | 'sale' | 'investment') => {
+                onValueChange={(value: 'purchase' | 'sale' | 'investment' | 'payment') => {
                   updateField('transaction_direction', value);
                   if (value !== 'investment') {
                     updateField('destination_acct_code', '');
@@ -428,6 +428,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 <SelectContent className="bg-popover">
                   <SelectItem value="purchase">{t('txForm.purchase')}</SelectItem>
                   <SelectItem value="sale">{t('txForm.sale')}</SelectItem>
+                  <SelectItem value="payment">{t('txForm.payment')}</SelectItem>
                   <SelectItem value="investment">{t('txForm.investment')}</SelectItem>
                 </SelectContent>
               </Select>

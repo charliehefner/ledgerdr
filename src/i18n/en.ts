@@ -711,6 +711,7 @@ export const en = {
   "txForm.namePlaceholderSale": "Customer",
   "txForm.cliente": "Customer",
   "txForm.credit": "Credit",
+  "txForm.payment": "Payment",
   "txForm.investment": "Investment",
   "txForm.destinationAccount": "Destination Account",
   "txForm.selectDestinationAccount": "Select destination account",

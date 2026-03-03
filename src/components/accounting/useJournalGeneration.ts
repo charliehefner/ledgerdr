@@ -168,7 +168,7 @@ export function useJournalGeneration(userId?: string) {
           continue;
         }
 
-        // Standard purchase/sale logic
+        // Standard purchase/sale/payment logic
         const expenseAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
         const payAccountId = txn.pay_method ? mappingMap.get(txn.pay_method) : null;
 
@@ -184,7 +184,7 @@ export function useJournalGeneration(userId?: string) {
         }
 
         // Create journal via DB function
-        const journalType = txn.transaction_direction === 'sale' ? 'SJ' : 'PJ';
+        const journalType = txn.transaction_direction === 'payment' ? 'CDJ' : txn.transaction_direction === 'sale' ? 'SJ' : 'PJ';
         const { data: journalId, error: jErr } = await supabase.rpc(
           "create_journal_from_transaction",
           {

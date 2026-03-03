@@ -1,38 +1,22 @@
 
 
-## Plan: Add Pay Method Filter to Financial (Ledger) Report
+## Problem
 
-The Accounting Reports "Transaction Detail" view (`AccountingReportsView.tsx`) has a filter dialog with date range, cost center, account, project, CBS, and supplier filters. You need a **Pay Method** filter added to this dialog so you can filter transactions by payment method (e.g., `cc_management`) within a date range.
+The Input Usage Report shows **$0 cost for diesel** because on lines 298 and 327 of `InputUsageReport.tsx`, `costPerUnit` is hardcoded to `0` with a TODO comment. The `costPerUnitMap` already has diesel pricing from `inventory_purchases` (Diesel Agrícola has purchases at RD$224 and RD$242.10 per gallon), but this map is never used for diesel rows.
 
-### Changes to `src/components/accounting/AccountingReportsView.tsx`
+## Fix
 
-1. **Add `payMethod` to the `Filters` type and `emptyFilters`** — default value `"all"`.
+In `src/components/operations/InputUsageReport.tsx`, replace the hardcoded `costPerUnit: 0` with the weighted average cost from `costPerUnitMap` using the Diesel Agrícola inventory item ID.
 
-2. **Add `payMethod` filter to the Supabase query** — when not `"all"`, add `.eq("pay_method", activeFilters.payMethod)` to the query builder (server-side filter, like account/project).
+### Changes
 
-3. **Add Pay Method column to the results table** — add `"pay_method"` to `colHeaders` and render it in each row, also make it sortable.
+1. **Look up diesel inventory item ID** — in the `dieselUsageRows` memo, find the diesel item from `inventoryItems` where `function === 'fuel'` to get its ID, then use `costPerUnitMap.get(dieselItemId) ?? 0` for `costPerUnit`.
 
-4. **Add Pay Method to the filter dialog** — add a `<Select>` dropdown in the 4-column grid with options:
-   - All
-   - Transfer BDI
-   - Transfer BHD
-   - Cash / Efectivo
-   - CC Management
-   - CC Agrícola
-   - CC Industrial
+2. **Line 298** (no-operation diesel rows): change `costPerUnit: 0` → `costPerUnit: dieselCostPerUnit`
 
-5. **Add Pay Method to active filter labels** — show the selected pay method as a badge when active.
+3. **Line 327** (matched operation diesel rows): change `costPerUnit: 0` → `costPerUnit: dieselCostPerUnit`
 
-6. **Include Pay Method in Excel and PDF exports** — add a column for pay method in both export functions.
+4. **Add `costPerUnitMap` and `inventoryItems` to the `dieselUsageRows` dependency array** (they're already available in scope).
 
-### Summary of touched areas
-- `Filters` type: add `payMethod: string`
-- `emptyFilters`: add `payMethod: "all"`
-- Query builder: add `.eq("pay_method", ...)` condition
-- `SortKey` type: add `"pay_method"`
-- `colHeaders`: add pay_method column
-- Filter dialog: add Select dropdown
-- `activeFilterLabels`: add pay method label
-- Excel export: add pay_method column
-- PDF export: add pay_method column
+This is a ~5-line change. No database modifications needed — the purchase data already exists.
 

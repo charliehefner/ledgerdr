@@ -6,7 +6,7 @@ import { JournalView } from "@/components/accounting/JournalView";
 import { PeriodsView } from "@/components/accounting/PeriodsView";
 import { DGIIReportsView } from "@/components/accounting/DGIIReportsView";
 import { RecurringEntriesView } from "@/components/accounting/RecurringEntriesView";
-import { BankReconciliationView } from "@/components/accounting/BankReconciliationView";
+import { TreasuryView } from "@/components/accounting/TreasuryView";
 import { AuditLogView } from "@/components/accounting/AuditLogView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -44,9 +44,9 @@ export default function Accounting() {
               content: <RecurringEntriesView />,
             },
             {
-              value: "bank-recon",
-              label: "Conciliación",
-              content: <BankReconciliationView />,
+              value: "treasury",
+              label: "Tesorería",
+              content: <TreasuryView />,
             },
             {
               value: "periods",

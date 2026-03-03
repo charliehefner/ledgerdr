@@ -1,36 +1,40 @@
 
 
-## Add "Pago" (Payment) Transaction Direction
+## Make All Transaction Fields Editable Until Journal is Posted
 
 ### Problem
-"Inversión" was designed for head office capital contributions. Using it for routine internal payments (petty cash replenishment, credit card payments) is semantically wrong and confusing. A dedicated **"Pago"** (Payment) direction makes the intent clear.
+The Edit Transaction dialog currently has many fields locked as read-only (date, account, project, CBS, amount, currency, name, comments, direction). Users need to correct all fields until the associated journal entry is posted.
 
-### How It Works
-A new `transaction_direction` value: **`payment`**
+### Approach
 
-When recording a petty cash replenishment or credit card payment:
-- **Direction**: Pago
-- **Master Account**: The target balance sheet account (e.g., Petty Cash asset account, Credit Card liability account)
-- **Payment Method**: The funding source (e.g., Transfer BDI, Transfer BHD)
+**1. Check journal lock status**
+When opening the edit dialog, query `journals` table for any entry linked via `transaction_source_id` with `status = 'posted'`. If posted → all fields read-only. If draft/pending/no journal → all fields editable.
 
-The journal mechanics are identical to a purchase (Debit master account, Credit payment method account), but the journal type becomes **CDJ** (Cash Disbursements) and no NCF/attachment is required.
+**2. Make all fields editable in `EditTransactionDialog.tsx`**
+Convert these currently read-only fields to editable:
+- Transaction date
+- Master account (dropdown)
+- Project (dropdown)
+- CBS code (dropdown)
+- Currency (dropdown)
+- Amount
+- Name/vendor
+- Comments
+- Transaction direction
+- Destination account (when direction = investment/payment)
 
-### File Changes
+Add state tracking (edited/original pattern already used) for all newly editable fields, and include them in the `updateTransaction` save payload.
+
+**3. Expand `updateTransaction` in `src/lib/api.ts`**
+Add support for updating all fields: `transaction_date`, `master_acct_code`, `project_code`, `cbs_code`, `currency`, `amount`, `name`, `comments`, `transaction_direction`, `destination_acct_code`, `cost_center`. Also resolve FK IDs (account_id, project_id, cbs_id) when those codes change.
+
+**4. Visual indicator**
+When journal is posted, show a banner: "Esta transacción tiene un asiento contable publicado y no puede ser editada." All fields become read-only with `bg-muted` styling.
+
+### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/components/transactions/TransactionForm.tsx` | Add `payment` to direction dropdown as "Pago"; exempt from NCF requirements like internal transfers |
-| `src/components/accounting/useJournalGeneration.ts` | Map `payment` direction to journal type `CDJ`; use same debit/credit logic as purchase |
-| `src/lib/api.ts` | Add `'payment'` to `transaction_direction` type union |
-| `src/i18n/es.ts` | Add `"txForm.payment": "Pago"` |
-| `src/i18n/en.ts` | Add `"txForm.payment": "Payment"` |
-
-### Journal Generation Logic for "Pago"
-- **Debit**: Master account (credit card liability, petty cash asset, etc.)
-- **Credit**: Payment method mapped account (bank)
-- **Journal type**: CDJ (Cash Disbursements)
-- Same ITBIS handling as purchase (unlikely for payments, but supported)
-
-### No Database Migration Needed
-`transaction_direction` is already a free-text column — no schema change required.
+| `src/components/invoices/EditTransactionDialog.tsx` | Add journal-posted check; make all fields editable with conditional lock |
+| `src/lib/api.ts` | Expand `updateTransaction` to accept all fields + resolve FK IDs |
 

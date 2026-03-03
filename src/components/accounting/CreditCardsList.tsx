@@ -1,0 +1,206 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/empty-state";
+import { toast } from "sonner";
+import { Plus, Pencil, CreditCard } from "lucide-react";
+
+type CreditCardAccount = {
+  id: string;
+  account_name: string;
+  bank_name: string;
+  account_number: string | null;
+  currency: string | null;
+  is_active: boolean | null;
+  chart_account_id: string | null;
+  account_type: string;
+};
+
+type ChartAccount = { id: string; account_code: string; account_name: string };
+
+const emptyForm = { account_name: "", bank_name: "", account_number: "", currency: "DOP", chart_account_id: "" };
+
+export function CreditCardsList() {
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const { data: accounts = [], isLoading } = useQuery({
+    queryKey: ["treasury-credit-cards"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bank_accounts" as any)
+        .select("*")
+        .eq("account_type", "credit_card")
+        .order("account_name");
+      if (error) throw error;
+      return data as unknown as CreditCardAccount[];
+    },
+  });
+
+  const { data: chartAccounts = [] } = useQuery({
+    queryKey: ["chart-accounts-postable"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("id, account_code, account_name")
+        .eq("allow_posting", true)
+        .is("deleted_at", null)
+        .order("account_code");
+      if (error) throw error;
+      return data as ChartAccount[];
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const payload: any = {
+        account_name: form.account_name,
+        bank_name: form.bank_name,
+        account_number: form.account_number || null,
+        currency: form.currency,
+        chart_account_id: form.chart_account_id || null,
+        account_type: "credit_card",
+      };
+      if (editingId) {
+        const { error } = await supabase.from("bank_accounts").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("bank_accounts").insert(payload as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["treasury-credit-cards"] });
+      toast.success(editingId ? "Tarjeta actualizada" : "Tarjeta creada");
+      setDialogOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleActive = async (acct: CreditCardAccount) => {
+    const { error } = await supabase
+      .from("bank_accounts")
+      .update({ is_active: !acct.is_active } as any)
+      .eq("id", acct.id);
+    if (error) { toast.error(error.message); return; }
+    queryClient.invalidateQueries({ queryKey: ["treasury-credit-cards"] });
+  };
+
+  const openNew = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
+  const openEdit = (acct: CreditCardAccount) => {
+    setEditingId(acct.id);
+    setForm({
+      account_name: acct.account_name,
+      bank_name: acct.bank_name,
+      account_number: acct.account_number || "",
+      currency: acct.currency || "DOP",
+      chart_account_id: acct.chart_account_id || "",
+    });
+    setDialogOpen(true);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Tarjetas de Crédito</h3>
+        <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nueva Tarjeta</Button>
+      </div>
+
+      {isLoading ? (
+        <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+      ) : accounts.length === 0 ? (
+        <EmptyState icon={CreditCard} title="Sin tarjetas de crédito" description="Agregue su primera tarjeta de crédito." />
+      ) : (
+        <div className="border rounded-lg overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Emisor</TableHead>
+                <TableHead>Últimos 4</TableHead>
+                <TableHead>Moneda</TableHead>
+                <TableHead>Cuenta Contable</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="w-[80px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map(acct => (
+                <TableRow key={acct.id}>
+                  <TableCell className="font-medium">{acct.account_name}</TableCell>
+                  <TableCell>{acct.bank_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{acct.account_number || "—"}</TableCell>
+                  <TableCell>{acct.currency || "DOP"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={acct.is_active ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleActive(acct)}>
+                      {acct.is_active ? "Activa" : "Inactiva"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingId ? "Editar Tarjeta" : "Nueva Tarjeta de Crédito"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div><Label>Nombre *</Label><Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder="Ej: Visa Corporativa" /></div>
+            <div><Label>Emisor / Banco *</Label><Input value={form.bank_name} onChange={e => setForm(f => ({ ...f, bank_name: e.target.value }))} placeholder="Ej: BHD León" /></div>
+            <div><Label>Últimos 4 dígitos</Label><Input value={form.account_number} onChange={e => setForm(f => ({ ...f, account_number: e.target.value }))} maxLength={4} placeholder="1234" /></div>
+            <div>
+              <Label>Moneda</Label>
+              <Select value={form.currency} onValueChange={v => setForm(f => ({ ...f, currency: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="DOP">DOP</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Cuenta Contable (GL)</Label>
+              <Select value={form.chart_account_id} onValueChange={v => setForm(f => ({ ...f, chart_account_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
+                <SelectContent className="bg-popover max-h-[200px]">
+                  {chartAccounts.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.account_code} — {c.account_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => saveMutation.mutate()} disabled={!form.account_name || !form.bank_name || saveMutation.isPending}>
+              {saveMutation.isPending ? "Guardando..." : editingId ? "Actualizar" : "Crear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

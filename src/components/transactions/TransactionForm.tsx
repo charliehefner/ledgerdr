@@ -687,6 +687,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <SelectItem value="transfer_bdi">{t('txForm.transferBdi')}</SelectItem>
                   <SelectItem value="transfer_bhd">{t('txForm.transferBhd')}</SelectItem>
                   <SelectItem value="cash">{t('txForm.cash')}</SelectItem>
+                  <SelectItem value="petty_cash">{t('txForm.pettyCash')}</SelectItem>
                   <SelectItem value="cc_management">{t('txForm.ccManagement')}</SelectItem>
                   <SelectItem value="cc_agri">{t('txForm.ccAgri')}</SelectItem>
                   <SelectItem value="cc_industry">{t('txForm.ccIndustry')}</SelectItem>

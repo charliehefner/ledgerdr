@@ -875,4 +875,12 @@ export const en = {
   "budget.hideInactive": "Hide Inactive",
   "budget.deactivate": "Deactivate",
   "budget.activate": "Activate",
+
+  // Treasury
+  "txForm.pettyCash": "Petty Cash",
+  "treasury.title": "Treasury",
+  "treasury.reconciliation": "Reconciliation",
+  "treasury.bankAccounts": "Bank Accounts",
+  "treasury.creditCards": "Credit Cards",
+  "treasury.pettyCash": "Petty Cash",
 };

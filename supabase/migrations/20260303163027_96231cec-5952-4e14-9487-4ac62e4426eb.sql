@@ -1,0 +1,1 @@
+ALTER TABLE bank_accounts ADD COLUMN account_type text NOT NULL DEFAULT 'bank';

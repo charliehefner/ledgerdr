@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX } from "lucide-react";
+import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX, CheckCircle2 } from "lucide-react";
 
 type JournalLine = {
   id: string;
@@ -38,6 +38,8 @@ type Journal = {
   approved_at: string | null;
   rejection_reason: string | null;
   created_by?: string | null;
+  is_reconciled?: boolean | null;
+  reference_description?: string | null;
 };
 
 type EditableLine = {
@@ -45,6 +47,8 @@ type EditableLine = {
   account_id: string;
   debit: string;
   credit: string;
+  project_code: string;
+  cbs_code: string;
   isNew?: boolean;
 };
 
@@ -61,9 +65,10 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const isDraft = !journal?.posted;
   const isEditable = canWrite && isDraft;
   const isApproved = journal?.approval_status === "approved";
-  const canApprove = canWrite && isDraft && journal?.created_by !== user?.id; // maker-checker
+  const canApprove = canWrite && isDraft && journal?.created_by !== user?.id;
 
   const [description, setDescription] = useState("");
+  const [referenceDescription, setReferenceDescription] = useState("");
   const [journalType, setJournalType] = useState("GJ");
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [saving, setSaving] = useState(false);
@@ -86,6 +91,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   useEffect(() => {
     if (journal) {
       setDescription(journal.description || "");
+      setReferenceDescription(journal.reference_description || "");
       setJournalType((journal as any).journal_type || "GJ");
       setLines(
         journal.journal_lines.map((l) => ({
@@ -93,6 +99,8 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
           account_id: l.account_id,
           debit: l.debit ? String(l.debit) : "",
           credit: l.credit ? String(l.credit) : "",
+          project_code: l.project_code || "",
+          cbs_code: l.cbs_code || "",
         }))
       );
     }
@@ -110,7 +118,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const addLine = () => {
     setLines((prev) => [
       ...prev,
-      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", isNew: true },
+      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", isNew: true },
     ]);
   };
 
@@ -123,7 +131,6 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
       prev.map((l, i) => {
         if (i !== idx) return l;
         const updated = { ...l, [field]: value };
-        // If setting debit, clear credit and vice versa
         if (field === "debit" && value) updated.credit = "";
         if (field === "credit" && value) updated.debit = "";
         return updated;
@@ -144,10 +151,10 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
     setSaving(true);
     try {
-      // Update journal description and type
+      // Update journal description, type, and reference
       const { error: jErr } = await supabase
         .from("journals")
-        .update({ description, journal_type: journalType } as any)
+        .update({ description, journal_type: journalType, reference_description: referenceDescription || null } as any)
         .eq("id", journal.id);
       if (jErr) throw jErr;
 
@@ -161,12 +168,14 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         if (delErr) throw delErr;
       }
 
-      // Insert all lines
+      // Insert all lines with project_code and cbs_code
       const newLines = lines.map((l) => ({
         journal_id: journal.id,
         account_id: l.account_id,
         debit: parseFloat(l.debit) || 0,
         credit: parseFloat(l.credit) || 0,
+        project_code: l.project_code || null,
+        cbs_code: l.cbs_code || null,
       }));
       const { error: insErr } = await supabase.from("journal_lines").insert(newLines);
       if (insErr) throw insErr;
@@ -190,7 +199,6 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
     setSaving(true);
     try {
-      // Save changes first if any
       await handleSave();
 
       const { error } = await supabase
@@ -287,7 +295,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3 flex-wrap">
             <DialogTitle className="text-lg">
@@ -304,6 +312,11 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                 "bg-yellow-100 text-yellow-800 border-yellow-200"
               }>
                 {journal.approval_status === "approved" ? "Aprobado" : journal.approval_status === "rejected" ? "Rechazado" : "Pendiente"}
+              </Badge>
+            )}
+            {journal.is_reconciled && (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Conciliado
               </Badge>
             )}
           </div>
@@ -351,14 +364,30 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
           )}
         </div>
 
+        {/* Reference Description */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Referencia</label>
+          {isEditable ? (
+            <Input
+              value={referenceDescription}
+              onChange={(e) => setReferenceDescription(e.target.value)}
+              placeholder="Ej: Factura #001, Cheque #123"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">{referenceDescription || "—"}</p>
+          )}
+        </div>
+
         {/* Lines Table */}
         <div className="border rounded-lg overflow-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left p-2 font-medium">Cuenta</th>
-                <th className="text-right p-2 font-medium w-[140px]">Débito</th>
-                <th className="text-right p-2 font-medium w-[140px]">Crédito</th>
+                <th className="text-left p-2 font-medium w-[100px]">Proyecto</th>
+                <th className="text-left p-2 font-medium w-[80px]">CBS</th>
+                <th className="text-right p-2 font-medium w-[130px]">Débito</th>
+                <th className="text-right p-2 font-medium w-[130px]">Crédito</th>
                 {isEditable && <th className="w-[40px]" />}
               </tr>
             </thead>
@@ -392,6 +421,30 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                           journal.journal_lines[idx]?.chart_of_accounts?.account_name ||
                           ""}
                       </span>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Input
+                        className="h-8 text-xs"
+                        value={line.project_code}
+                        onChange={(e) => updateLine(idx, "project_code", e.target.value)}
+                        placeholder="Proyecto"
+                      />
+                    ) : (
+                      <span className="text-xs">{line.project_code || ""}</span>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Input
+                        className="h-8 text-xs"
+                        value={line.cbs_code}
+                        onChange={(e) => updateLine(idx, "cbs_code", e.target.value)}
+                        placeholder="CBS"
+                      />
+                    ) : (
+                      <span className="text-xs">{line.cbs_code || ""}</span>
                     )}
                   </td>
                   <td className="p-2">
@@ -439,7 +492,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             </tbody>
             <tfoot>
               <tr className="font-medium bg-muted/30">
-                <td className="p-2 text-right">Totales</td>
+                <td colSpan={3} className="p-2 text-right">Totales</td>
                 <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
                   {fmtNum(totals.totalDebit)}
                 </td>

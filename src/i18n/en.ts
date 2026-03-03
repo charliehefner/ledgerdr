@@ -89,6 +89,7 @@ export const en = {
   "common.noPendingTx": "No transactions pending journal entry.",
   "common.willGenerateDrafts": "{count} journal entries will be generated as drafts for review.",
   "common.completeClosing": "Complete Closing",
+  "common.clear": "Clear",
 
   // HR - Services
   "services.editService": "Edit Service",

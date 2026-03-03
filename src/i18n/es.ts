@@ -89,6 +89,7 @@ export const es = {
   "common.noPendingTx": "No hay transacciones pendientes de asiento contable.",
   "common.willGenerateDrafts": "Se generarán {count} asientos como borradores para revisión.",
   "common.completeClosing": "Completar Cierre",
+  "common.clear": "Limpiar",
 
   // HR - Services
   "services.editService": "Editar Servicio",

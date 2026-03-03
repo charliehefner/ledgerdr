@@ -1,38 +1,63 @@
 
 
-## Add Project, CBS, Reconciliation Status, and Reference to Journals
+## Tesorería Tab & Petty Cash Payment Method
 
-### Problem
-The journal list and detail views don't show project codes, CBS codes, reconciliation status, or a reference description — all of which the accountant needs.
+### Overview
+Move Bank Reconciliation (Conciliación) out of the Accounting tab group into a new **Tesorería** (Treasury) tab. This tab will contain sub-tabs for managing all cash/bank/card accounts and their reconciliation. Also add "Petty Cash" as a new payment method.
 
-### Database Changes
+### 1. New Tesorería Tab in Accounting Page
 
-**Add two columns to `journals` table:**
-- `is_reconciled` (boolean, default false) — tracks whether this journal has been reconciled in bank reconciliation
-- `reference_description` (text, nullable) — free-text reference field (e.g., invoice number, check number)
+**File: `src/pages/Accounting.tsx`**
+- Replace the `bank-recon` / "Conciliación" tab with a new `treasury` / "Tesorería" tab
+- The content component will be a new `TreasuryView`
 
-No changes needed for project/CBS — `journal_lines` already has `project_code` and `cbs_code` columns.
+### 2. New TreasuryView Component
 
-### UI Changes
+**File: `src/components/accounting/TreasuryView.tsx`** (new)
 
-**1. Journal List (`JournalView.tsx`)**
-- Add columns: **Proyecto** (aggregated from lines), **CBS** (aggregated from lines), **Ref.**, **Conc.** (reconciliation badge)
-- Query must now include `is_reconciled` and `reference_description` from journals
-- Project/CBS display: show unique values from journal lines, comma-separated if multiple
+A sub-tabbed view with 4 sections:
+- **Conciliación** — moves the existing `BankReconciliationView` here as-is
+- **Cuentas Bancarias** — CRUD for `bank_accounts` table (already exists in DB). List bank accounts with name, bank, account number, currency, linked GL account, active status. Add/edit/deactivate.
+- **Tarjetas de Crédito** — Similar CRUD for credit card accounts. Will need a new `credit_card_accounts` table OR we can reuse `bank_accounts` with a `type` column to distinguish bank vs credit card.
+- **Caja Chica** — Petty cash management. Shows petty cash fund balance, replenishments, and linked transactions.
 
-**2. Journal Detail Dialog (`JournalDetailDialog.tsx`)**
-- Add **Reference Description** text field (editable for drafts, read-only for posted)
-- Add **Reconciled** badge in the header
-- Show **Project** and **CBS** columns in the lines table (editable for drafts via text inputs)
-- Persist `project_code` and `cbs_code` per line when saving
-- Persist `reference_description` on the journal when saving
+### 3. Database Changes
 
-**3. Journal Entry Form (`JournalEntryForm.tsx`)**
-- Add **Reference Description** field
-- Add **Project** and **CBS** input fields per line
+**Add `account_type` column to `bank_accounts`:**
+```sql
+ALTER TABLE bank_accounts ADD COLUMN account_type text NOT NULL DEFAULT 'bank';
+-- values: 'bank', 'credit_card', 'petty_cash'
+```
 
-### Technical Details
-- The `is_reconciled` field on journals will also be set to `true` when a bank statement line is matched to a journal (update `QuickEntryDialog.tsx` and `BankReconciliationView.tsx` to set this)
-- Project/CBS are free-text fields on `journal_lines` already — just need UI exposure
-- Migration: `ALTER TABLE journals ADD COLUMN is_reconciled boolean DEFAULT false; ALTER TABLE journals ADD COLUMN reference_description text;`
+This avoids creating separate tables — all treasury accounts live in `bank_accounts` with a type discriminator. The reconciliation view already queries this table.
+
+### 4. Add Petty Cash Payment Method
+
+**File: `src/components/transactions/TransactionForm.tsx`**
+- Add `<SelectItem value="petty_cash">` to the pay_method dropdown (after "cash")
+
+**Files: `src/i18n/es.ts` and `src/i18n/en.ts`**
+- Add `"txForm.pettyCash": "Caja Chica"` / `"Petty Cash"`
+
+**Payment method mapping:** The accountant will need to map `petty_cash` to the appropriate GL account via the existing Payment Method Mapping dialog in Settings.
+
+### 5. Treasury Sub-Components
+
+- **BankAccountsList** — table of `bank_accounts` where `account_type = 'bank'`, with add/edit dialog
+- **CreditCardsList** — table of `bank_accounts` where `account_type = 'credit_card'`, with add/edit dialog  
+- **PettyCashView** — table of `bank_accounts` where `account_type = 'petty_cash'`, plus a summary of linked transactions filtered by `pay_method = 'petty_cash'`
+
+### 6. Summary of File Changes
+
+| File | Change |
+|------|--------|
+| `src/pages/Accounting.tsx` | Replace bank-recon tab with treasury tab |
+| `src/components/accounting/TreasuryView.tsx` | New — sub-tabbed treasury container |
+| `src/components/accounting/BankAccountsList.tsx` | New — bank accounts CRUD |
+| `src/components/accounting/CreditCardsList.tsx` | New — credit cards CRUD |
+| `src/components/accounting/PettyCashView.tsx` | New — petty cash management |
+| `src/components/transactions/TransactionForm.tsx` | Add petty_cash option |
+| `src/i18n/es.ts` | Add petty cash + treasury translations |
+| `src/i18n/en.ts` | Add petty cash + treasury translations |
+| DB migration | Add `account_type` column to `bank_accounts` |
 

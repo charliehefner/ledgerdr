@@ -57,6 +57,7 @@ type Filters = {
   projectCode: string;
   cbsCode: string;
   supplierName: string;
+  payMethod: string;
 };
 
 const emptyFilters: Filters = {
@@ -67,9 +68,19 @@ const emptyFilters: Filters = {
   projectCode: "all",
   cbsCode: "all",
   supplierName: "",
+  payMethod: "all",
 };
 
-type SortKey = "legacy_id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis";
+type SortKey = "legacy_id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis" | "pay_method";
+
+const PAY_METHOD_LABELS: Record<string, string> = {
+  transfer_bdi: "Transfer BDI",
+  transfer_bhd: "Transfer BHD",
+  cash: "Efectivo",
+  cc_management: "CC Management",
+  cc_agricultural: "CC Agrícola",
+  cc_industrial: "CC Industrial",
+};
 type SortDir = "asc" | "desc" | null;
 
 const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
@@ -146,6 +157,7 @@ export function AccountingReportsView() {
       if (activeFilters.projectCode !== "all") query = query.eq("project_code", activeFilters.projectCode);
       if (activeFilters.cbsCode !== "all") query = query.eq("cbs_code", activeFilters.cbsCode);
       if (activeFilters.supplierName) query = query.ilike("name", `%${activeFilters.supplierName}%`);
+      if (activeFilters.payMethod !== "all") query = query.eq("pay_method", activeFilters.payMethod);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -224,6 +236,7 @@ export function AccountingReportsView() {
     if (activeFilters.projectCode !== "all") parts.push(`${t("acctReport.project")}: ${activeFilters.projectCode}`);
     if (activeFilters.cbsCode !== "all") parts.push(`CBS: ${activeFilters.cbsCode}`);
     if (activeFilters.supplierName) parts.push(`${t("acctReport.supplier").split(" /")[0]}: ${activeFilters.supplierName}`);
+    if (activeFilters.payMethod !== "all") parts.push(`Método Pago: ${PAY_METHOD_LABELS[activeFilters.payMethod] || activeFilters.payMethod}`);
     return parts;
   }, [activeFilters, t, ccLabels]);
 
@@ -239,6 +252,7 @@ export function AccountingReportsView() {
     ["currency", t("acctReport.col.currency")],
     ["amount", t("acctReport.col.amount")],
     ["itbis", "ITBIS"],
+    ["pay_method", "Método Pago"],
   ];
 
   const exportToExcel = async () => {
@@ -258,6 +272,7 @@ export function AccountingReportsView() {
         { header: t("acctReport.col.currency"), key: "currency", width: 10 },
         { header: t("acctReport.col.amount"), key: "amount", width: 14 },
         { header: "ITBIS", key: "itbis", width: 12 },
+        { header: "Método Pago", key: "pay_method", width: 16 },
       ];
       sorted.forEach((tx: any) => {
         ws.addRow({
@@ -272,6 +287,7 @@ export function AccountingReportsView() {
           currency: tx.currency,
           amount: parseFloat(tx.amount) || 0,
           itbis: tx.itbis ? parseFloat(tx.itbis) : "",
+          pay_method: PAY_METHOD_LABELS[tx.pay_method] || tx.pay_method || "-",
         });
       });
       ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -325,6 +341,7 @@ export function AccountingReportsView() {
       tx.currency,
       formatCurrency(parseFloat(tx.amount) || 0, tx.currency),
       tx.itbis ? formatCurrency(parseFloat(tx.itbis), tx.currency) : "-",
+      PAY_METHOD_LABELS[tx.pay_method] || tx.pay_method || "-",
     ]);
 
     autoTable(doc, {
@@ -465,6 +482,7 @@ export function AccountingReportsView() {
                       <TableCell>{tx.currency}</TableCell>
                       <TableCell className="text-right">{formatCurrency(parseFloat(tx.amount) || 0, tx.currency)}</TableCell>
                       <TableCell className="text-right">{tx.itbis ? formatCurrency(parseFloat(tx.itbis), tx.currency) : "-"}</TableCell>
+                      <TableCell>{PAY_METHOD_LABELS[tx.pay_method] || tx.pay_method || "-"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -545,6 +563,22 @@ export function AccountingReportsView() {
                       <SelectItem key={c.code} value={c.code}>
                         {c.code} – {getDesc(c)}
                       </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Pay Method */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <Label>Método de Pago</Label>
+                <Select value={filters.payMethod} onValueChange={v => setFilters(f => ({ ...f, payMethod: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="all">{t("common.all")}</SelectItem>
+                    {Object.entries(PAY_METHOD_LABELS).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

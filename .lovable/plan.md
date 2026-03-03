@@ -1,40 +1,47 @@
 
 
-## Make All Transaction Fields Editable Until Journal is Posted
+## Add EUR Currency Option System-Wide
 
-### Problem
-The Edit Transaction dialog currently has many fields locked as read-only (date, account, project, CBS, amount, currency, name, comments, direction). Users need to correct all fields until the associated journal entry is posted.
+### Scope
+EUR needs to be added as a third currency option everywhere DOP and USD currently appear. This touches **14 files** across transactions, accounting, treasury, HR, reports, and the type system.
 
-### Approach
+### Changes by Category
 
-**1. Check journal lock status**
-When opening the edit dialog, query `journals` table for any entry linked via `transaction_source_id` with `status = 'posted'`. If posted → all fields read-only. If draft/pending/no journal → all fields editable.
+**1. Type definition** — `src/lib/api.ts`
+- Change `currency: 'DOP' | 'USD'` to `'DOP' | 'USD' | 'EUR'` in the `Transaction` interface
+- Update all `as 'DOP' | 'USD'` casts to include `'EUR'`
 
-**2. Make all fields editable in `EditTransactionDialog.tsx`**
-Convert these currently read-only fields to editable:
-- Transaction date
-- Master account (dropdown)
-- Project (dropdown)
-- CBS code (dropdown)
-- Currency (dropdown)
-- Amount
-- Name/vendor
-- Comments
-- Transaction direction
-- Destination account (when direction = investment/payment)
+**2. Currency dropdowns** — Add `<SelectItem value="EUR">EUR</SelectItem>` in all 13 locations:
+| File | Context |
+|------|---------|
+| `src/components/transactions/TransactionForm.tsx` | New transaction form |
+| `src/components/invoices/EditTransactionDialog.tsx` | Edit transaction dialog |
+| `src/components/accounting/ChartOfAccountsView.tsx` | Account currency |
+| `src/components/accounting/ApArDocumentList.tsx` | AP/AR documents |
+| `src/components/accounting/PettyCashView.tsx` | Petty cash |
+| `src/components/accounting/CreditCardsList.tsx` | Credit cards |
+| `src/components/accounting/BankAccountsList.tsx` | Bank accounts |
+| `src/components/accounting/BankReconciliationView.tsx` | Bank reconciliation (native `<option>`) |
+| `src/components/accounting/JournalEntryForm.tsx` | Manual journal entries |
+| `src/components/accounting/RecurringEntriesView.tsx` | Recurring entries (native `<option>`) |
+| `src/components/hr/ServicesView.tsx` | Service provider entries |
+| `src/components/hr/ServiceProvidersView.tsx` | Service provider form |
+| `src/pages/Reports.tsx` | Currency filter dropdown |
 
-Add state tracking (edited/original pattern already used) for all newly editable fields, and include them in the `updateTransaction` save payload.
+**3. Financial statements** — `ProfitLossView.tsx`, `BalanceSheetView.tsx`, `CashFlowView.tsx`
+- EUR transactions should be converted to RD$ using the exchange rate (same pattern as USD)
+- Add an `EUR` column in reports when EUR transactions exist (mirroring the `hasUsd` / `US$` pattern with `hasEur` / `€`)
 
-**3. Expand `updateTransaction` in `src/lib/api.ts`**
-Add support for updating all fields: `transaction_date`, `master_acct_code`, `project_code`, `cbs_code`, `currency`, `amount`, `name`, `comments`, `transaction_direction`, `destination_acct_code`, `cost_center`. Also resolve FK IDs (account_id, project_id, cbs_id) when those codes change.
+**4. Display helpers**
+- `src/lib/numberToWords.ts` — Add "euros" label for EUR
+- `src/components/hr/ServicesView.tsx` — Add `€` symbol alongside existing `RD$` / `US$` logic
+- `src/components/dashboard/FiscalDocumentsReport.tsx` — Add EUR accumulator
+- `src/components/inventory/PurchaseTotalsByAccount.tsx` — Add EUR total
+- `src/pages/Reports.tsx` — Add EUR total in account summaries
 
-**4. Visual indicator**
-When journal is posted, show a banner: "Esta transacción tiene un asiento contable publicado y no puede ser editada." All fields become read-only with `bg-muted` styling.
+**5. Localization** — `src/i18n/es.ts` and `src/i18n/en.ts`
+- No new keys needed (EUR is a universal abbreviation)
 
-### Files to Change
-
-| File | Change |
-|------|--------|
-| `src/components/invoices/EditTransactionDialog.tsx` | Add journal-posted check; make all fields editable with conditional lock |
-| `src/lib/api.ts` | Expand `updateTransaction` to accept all fields + resolve FK IDs |
+### No Database Migration Needed
+The `currency` column in `transactions` is a VARCHAR/text field, not an enum — it already accepts any string value.
 

@@ -1,43 +1,38 @@
 
 
-## Plan: Bank Reconciliation — OFX Import + Quick Journal Creation
+## Plan: Add Pay Method Filter to Financial (Ledger) Report
 
-### 1. Add OFX parser to `BankReconciliationView.tsx`
+The Accounting Reports "Transaction Detail" view (`AccountingReportsView.tsx`) has a filter dialog with date range, cost center, account, project, CBS, and supplier filters. You need a **Pay Method** filter added to this dialog so you can filter transactions by payment method (e.g., `cc_management`) within a date range.
 
-- Add a `parseOFX(text: string)` function that:
-  - Splits content on `<STMTTRN>` blocks
-  - Extracts `DTPOSTED` (→ YYYY-MM-DD), `NAME`/`MEMO` (→ description), `TRNAMT` (→ amount, already signed), `FITID` (→ reference), `TRNTYPE` (informational)
-  - Extracts account metadata from `BANKID`, `ACCTID`, `LEDGERBAL` for an import summary toast
-- Update file input `accept` from `.csv` to `.csv,.ofx` (line 236)
-- Rename button label from "Importar CSV" to "Importar Estado" (line 238)
-- Add a `handleFileImport` dispatcher that checks file extension — routes `.ofx` to `handleOFXImport`, `.csv` to existing `handleCSVImport`
-- OFX import deduplicates by checking existing `reference` values for the selected bank account before inserting
+### Changes to `src/components/accounting/AccountingReportsView.tsx`
 
-### 2. Add "Crear Entrada" button on unmatched lines
+1. **Add `payMethod` to the `Filters` type and `emptyFilters`** — default value `"all"`.
 
-- Add a new column in the table for an action button (visible only when `!line.is_reconciled`)
-- Button opens a new `QuickEntryDialog` that:
-  - Pre-fills date from `statement_date`, amount from `amount`, description from `description`
-  - Shows an account selector (from `chart_of_accounts` where `allow_posting = true`)
-  - On submit: creates a journal (via `create_journal_from_transaction` or direct insert) with two lines — the selected expense/income account and the bank's mapped GL account
-  - Auto-marks the bank line as reconciled and links it via `matched_journal_id`
+2. **Add `payMethod` filter to the Supabase query** — when not `"all"`, add `.eq("pay_method", activeFilters.payMethod)` to the query builder (server-side filter, like account/project).
 
-### 3. Auto-categorization rules for bank charges
+3. **Add Pay Method column to the results table** — add `"pay_method"` to `colHeaders` and render it in each row, also make it sortable.
 
-- Add a helper map of common BDI description patterns to suggested account codes:
-  - `COMISION` → 6520 (Bank Charges)
-  - `IMPUESTO LEY` → 6530 (Taxes & Fees)
-  - `ITBIS` → 1650 (ITBIS)
-  - `INTERES` → 6510 (Interest Expense)
-- When the QuickEntryDialog opens, auto-select the matching account if the description matches a pattern
-- User can always override the suggestion
+4. **Add Pay Method to the filter dialog** — add a `<Select>` dropdown in the 4-column grid with options:
+   - All
+   - Transfer BDI
+   - Transfer BHD
+   - Cash / Efectivo
+   - CC Management
+   - CC Agrícola
+   - CC Industrial
 
-### Files changed
+5. **Add Pay Method to active filter labels** — show the selected pay method as a badge when active.
 
-- **`src/components/accounting/BankReconciliationView.tsx`** — OFX parser, file dispatcher, button rename, "Crear Entrada" column, QuickEntryDialog integration
-- **New: `src/components/accounting/QuickEntryDialog.tsx`** — Dialog component for creating a journal entry from a bank line with auto-categorization
+6. **Include Pay Method in Excel and PDF exports** — add a column for pay method in both export functions.
 
-### No database changes needed
-
-The existing `bank_statement_lines` and `journals`/`journal_lines` tables already have all required columns.
+### Summary of touched areas
+- `Filters` type: add `payMethod: string`
+- `emptyFilters`: add `payMethod: "all"`
+- Query builder: add `.eq("pay_method", ...)` condition
+- `SortKey` type: add `"pay_method"`
+- `colHeaders`: add pay_method column
+- Filter dialog: add Select dropdown
+- `activeFilterLabels`: add pay method label
+- Excel export: add pay_method column
+- PDF export: add pay_method column
 

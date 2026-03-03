@@ -24,6 +24,7 @@ import Alerts from "./pages/Alerts";
 import Accounting from "./pages/Accounting";
 import AccountsPayableReceivable from "./pages/AccountsPayableReceivable";
 import Budget from "./pages/Budget";
+import Treasury from "./pages/Treasury";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
@@ -77,6 +78,7 @@ const App = () => (
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
                 <Route path="/accounts" element={<ProtectedRoute><AccountsPayableReceivable /></ProtectedRoute>} />
                 <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
+                <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

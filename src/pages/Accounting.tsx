@@ -6,7 +6,6 @@ import { JournalView } from "@/components/accounting/JournalView";
 import { PeriodsView } from "@/components/accounting/PeriodsView";
 import { DGIIReportsView } from "@/components/accounting/DGIIReportsView";
 import { RecurringEntriesView } from "@/components/accounting/RecurringEntriesView";
-import { TreasuryView } from "@/components/accounting/TreasuryView";
 import { AuditLogView } from "@/components/accounting/AuditLogView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -42,11 +41,6 @@ export default function Accounting() {
               value: "recurring",
               label: "Recurrentes",
               content: <RecurringEntriesView />,
-            },
-            {
-              value: "treasury",
-              label: "Tesorería",
-              content: <TreasuryView />,
             },
             {
               value: "periods",

@@ -855,6 +855,9 @@ export const en = {
   "accounting.approvalRequired": "Approval required before posting",
 
   // Budget Module
+  "nav.treasury": "Treasury",
+  "page.treasury.title": "Treasury",
+  "page.treasury.subtitle": "Bank reconciliation, accounts, cards, and petty cash",
   "nav.budget": "Budget",
   "page.budget.title": "Budget / Forecast",
   "page.budget.subtitle": "Manage budgets and forecasts by project or P&L",

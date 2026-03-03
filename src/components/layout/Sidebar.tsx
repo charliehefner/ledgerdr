@@ -21,6 +21,7 @@ import {
   BookOpen,
   Receipt,
   Wallet,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";
@@ -61,6 +62,7 @@ const sectionColors: Record<Section, string> = {
   accounting: "",
   "ap-ar": "",
   budget: "",
+  treasury: "",
   "driver-portal": "",
 };
 
@@ -72,6 +74,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
   { nameKey: "nav.apar", href: "/accounts", icon: Receipt, section: "ap-ar" },
   { nameKey: "nav.budget", href: "/budget", icon: Wallet, section: "budget" },
+  { nameKey: "nav.treasury", href: "/treasury", icon: Landmark, section: "treasury" },
   { nameKey: "nav.hr", href: "/hr", icon: Users, section: "hr" },
   { nameKey: "nav.inventory", href: "/inventory", icon: Package, section: "inventory" },
   { nameKey: "nav.fuel", href: "/fuel", icon: Fuel, section: "fuel" },

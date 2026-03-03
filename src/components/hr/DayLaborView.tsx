@@ -24,6 +24,7 @@ import autoTable from "jspdf-autotable";
 import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
 import { DayLaborAttachment } from "./DayLaborAttachment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { generateDayLaborReceiptsZip } from "@/lib/dayLaborReceipts";
 
 interface Jornalero {
   id: string;
@@ -340,8 +341,9 @@ export function DayLaborView() {
         comments: `Jornales de la semana terminando ${fridayStr}. ${entries.length} entradas.`,
       });
 
-      // Generate PDF
+      // Generate PDF + Receipts
       generatePDF();
+      await generateDayLaborReceiptsZip(summaryByWorker, jornaleros, selectedFriday, weekStart, weekEnd);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
@@ -542,6 +544,10 @@ export function DayLaborView() {
                   <DropdownMenuItem onClick={generatePDF}>
                     <FileText className="mr-2 h-4 w-4" />
                     Exportar a PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => generateDayLaborReceiptsZip(summaryByWorker, jornaleros, selectedFriday, weekStart, weekEnd)}>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Descargar Recibos
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -1690,6 +1690,7 @@ export type Database = {
           description: string | null
           exchange_rate: number | null
           id: string
+          is_reconciled: boolean | null
           journal_date: string
           journal_number: string | null
           journal_type: string
@@ -1697,6 +1698,7 @@ export type Database = {
           posted: boolean | null
           posted_at: string | null
           posted_by: string | null
+          reference_description: string | null
           rejection_reason: string | null
           reversal_of_id: string | null
           transaction_source_id: string | null
@@ -1713,6 +1715,7 @@ export type Database = {
           description?: string | null
           exchange_rate?: number | null
           id?: string
+          is_reconciled?: boolean | null
           journal_date: string
           journal_number?: string | null
           journal_type?: string
@@ -1720,6 +1723,7 @@ export type Database = {
           posted?: boolean | null
           posted_at?: string | null
           posted_by?: string | null
+          reference_description?: string | null
           rejection_reason?: string | null
           reversal_of_id?: string | null
           transaction_source_id?: string | null
@@ -1736,6 +1740,7 @@ export type Database = {
           description?: string | null
           exchange_rate?: number | null
           id?: string
+          is_reconciled?: boolean | null
           journal_date?: string
           journal_number?: string | null
           journal_type?: string
@@ -1743,6 +1748,7 @@ export type Database = {
           posted?: boolean | null
           posted_at?: string | null
           posted_by?: string | null
+          reference_description?: string | null
           rejection_reason?: string | null
           reversal_of_id?: string | null
           transaction_source_id?: string | null

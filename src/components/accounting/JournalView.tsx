@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
-import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { JournalDetailDialog } from "./JournalDetailDialog";
@@ -42,6 +42,8 @@ type Journal = {
   approved_by: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
+  is_reconciled: boolean | null;
+  reference_description: string | null;
 };
 
 type StatusFilter = "all" | "draft" | "posted";
@@ -67,7 +69,7 @@ export function JournalView() {
         .from("journals")
         .select(`
           id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
-          approval_status, approved_by, approved_at, rejection_reason,
+          approval_status, approved_by, approved_at, rejection_reason, is_reconciled, reference_description,
           journal_lines (
             id, debit, credit, account_id, cbs_code, project_code,
             chart_of_accounts:account_id ( account_code, account_name )
@@ -126,6 +128,12 @@ export function JournalView() {
     { key: "RJ", label: t("accounting.type.RJ") },
     { key: "CLJ", label: t("accounting.type.CLJ") },
   ];
+
+  /** Aggregate unique project/cbs codes from journal lines */
+  const getAggregated = (lines: JournalLine[], field: "project_code" | "cbs_code") => {
+    const values = [...new Set(lines.map(l => l[field]).filter(Boolean))] as string[];
+    return values.length > 0 ? values.join(", ") : "";
+  };
 
   return (
     <div className="space-y-4">
@@ -189,7 +197,11 @@ export function JournalView() {
                 <TableHead className="w-[60px]">Tipo</TableHead>
                 <TableHead className="w-[110px]">Fecha</TableHead>
                 <TableHead>Descripción</TableHead>
+                <TableHead className="w-[100px]">Proyecto</TableHead>
+                <TableHead className="w-[80px]">CBS</TableHead>
+                <TableHead className="w-[120px]">Ref.</TableHead>
                 <TableHead className="w-[80px]">Moneda</TableHead>
+                <TableHead className="w-[50px]">Conc.</TableHead>
                 <TableHead className="w-[100px]">Estado</TableHead>
               </TableRow>
             </TableHeader>
@@ -197,6 +209,8 @@ export function JournalView() {
               {filtered.map((j) => {
                 const totalDebit = j.journal_lines.reduce((s, l) => s + (l.debit || 0), 0);
                 const totalCredit = j.journal_lines.reduce((s, l) => s + (l.credit || 0), 0);
+                const projectCodes = getAggregated(j.journal_lines, "project_code");
+                const cbsCodes = getAggregated(j.journal_lines, "cbs_code");
 
                 return (
                   <React.Fragment key={j.id}>
@@ -218,7 +232,15 @@ export function JournalView() {
                       </TableCell>
                       <TableCell>{format(new Date(j.journal_date), "dd/MM/yyyy")}</TableCell>
                       <TableCell>{j.description || "—"}</TableCell>
+                      <TableCell className="text-xs">{projectCodes || "—"}</TableCell>
+                      <TableCell className="text-xs">{cbsCodes || "—"}</TableCell>
+                      <TableCell className="text-xs">{j.reference_description || "—"}</TableCell>
                       <TableCell>{j.currency || "DOP"}</TableCell>
+                      <TableCell>
+                        {j.is_reconciled && (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant={j.posted ? "default" : "outline"}>
@@ -243,13 +265,15 @@ export function JournalView() {
                     </TableRow>
                     {expanded.has(j.id) && j.journal_lines.length > 0 && (
                       <TableRow key={`${j.id}-lines`}>
-                        <TableCell colSpan={7} className="p-0">
+                        <TableCell colSpan={11} className="p-0">
                           <div className="bg-muted/30 px-8 py-3">
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="text-muted-foreground">
                                   <th className="text-left py-1 font-medium">Cuenta</th>
                                   <th className="text-left py-1 font-medium">Nombre</th>
+                                  <th className="text-left py-1 font-medium">Proyecto</th>
+                                  <th className="text-left py-1 font-medium">CBS</th>
                                   <th className="text-right py-1 font-medium">Débito</th>
                                   <th className="text-right py-1 font-medium">Crédito</th>
                                 </tr>
@@ -261,6 +285,8 @@ export function JournalView() {
                                       {line.chart_of_accounts?.account_code || "—"}
                                     </td>
                                     <td className="py-1">{line.chart_of_accounts?.account_name || "—"}</td>
+                                    <td className="py-1 text-xs">{line.project_code || ""}</td>
+                                    <td className="py-1 text-xs">{line.cbs_code || ""}</td>
                                     <td className="py-1 text-right">{fmtNum(line.debit)}</td>
                                     <td className="py-1 text-right">{fmtNum(line.credit)}</td>
                                   </tr>
@@ -268,7 +294,7 @@ export function JournalView() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t font-medium">
-                                  <td colSpan={2} className="py-1 text-right">Totales</td>
+                                  <td colSpan={4} className="py-1 text-right">Totales</td>
                                   <td className="py-1 text-right">{fmtNum(totalDebit)}</td>
                                   <td className="py-1 text-right">{fmtNum(totalCredit)}</td>
                                 </tr>

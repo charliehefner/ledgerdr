@@ -15,6 +15,8 @@ type NewLine = {
   account_id: string;
   debit: string;
   credit: string;
+  project_code: string;
+  cbs_code: string;
 };
 
 interface JournalEntryFormProps {
@@ -28,11 +30,12 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
 
   const [journalDate, setJournalDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
+  const [referenceDescription, setReferenceDescription] = useState("");
   const [currency, setCurrency] = useState("DOP");
   const [journalType, setJournalType] = useState("GJ");
   const [lines, setLines] = useState<NewLine[]>([
-    { key: "1", account_id: "", debit: "", credit: "" },
-    { key: "2", account_id: "", debit: "", credit: "" },
+    { key: "1", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
+    { key: "2", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
   ]);
   const [saving, setSaving] = useState(false);
 
@@ -61,7 +64,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
     n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const addLine = () => {
-    setLines((prev) => [...prev, { key: String(Date.now()), account_id: "", debit: "", credit: "" }]);
+    setLines((prev) => [...prev, { key: String(Date.now()), account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" }]);
   };
 
   const removeLine = (idx: number) => {
@@ -84,11 +87,12 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
   const reset = () => {
     setJournalDate(new Date().toISOString().slice(0, 10));
     setDescription("");
+    setReferenceDescription("");
     setCurrency("DOP");
     setJournalType("GJ");
     setLines([
-      { key: "1", account_id: "", debit: "", credit: "" },
-      { key: "2", account_id: "", debit: "", credit: "" },
+      { key: "1", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
+      { key: "2", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
     ]);
   };
 
@@ -108,12 +112,12 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
 
     setSaving(true);
     try {
-      // Create journal
       const { data: journal, error: jErr } = await supabase
         .from("journals")
         .insert({
           journal_date: journalDate,
           description,
+          reference_description: referenceDescription || null,
           currency,
           created_by: user?.id,
           posted: false,
@@ -123,12 +127,13 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
         .single();
       if (jErr) throw jErr;
 
-      // Insert lines
       const newLines = lines.map((l) => ({
         journal_id: journal.id,
         account_id: l.account_id,
         debit: parseFloat(l.debit) || 0,
         credit: parseFloat(l.credit) || 0,
+        project_code: l.project_code || null,
+        cbs_code: l.cbs_code || null,
         created_by: user?.id,
       }));
       const { error: lErr } = await supabase.from("journal_lines").insert(newLines);
@@ -147,7 +152,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuevo Asiento Contable</DialogTitle>
           <DialogDescription>Se creará como borrador para revisión.</DialogDescription>
@@ -186,9 +191,15 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Descripción</label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Descripción</label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Referencia</label>
+            <Input value={referenceDescription} onChange={(e) => setReferenceDescription(e.target.value)} placeholder="Ej: Factura #001, Cheque #123" />
+          </div>
         </div>
 
         {/* Lines */}
@@ -197,8 +208,10 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left p-2 font-medium">Cuenta</th>
-                <th className="text-right p-2 font-medium w-[140px]">Débito</th>
-                <th className="text-right p-2 font-medium w-[140px]">Crédito</th>
+                <th className="text-left p-2 font-medium w-[100px]">Proyecto</th>
+                <th className="text-left p-2 font-medium w-[80px]">CBS</th>
+                <th className="text-right p-2 font-medium w-[130px]">Débito</th>
+                <th className="text-right p-2 font-medium w-[130px]">Crédito</th>
                 <th className="w-[40px]" />
               </tr>
             </thead>
@@ -218,6 +231,22 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                         ))}
                       </SelectContent>
                     </Select>
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      className="h-8 text-xs"
+                      value={line.project_code}
+                      onChange={(e) => updateLine(idx, "project_code", e.target.value)}
+                      placeholder="Proyecto"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      className="h-8 text-xs"
+                      value={line.cbs_code}
+                      onChange={(e) => updateLine(idx, "cbs_code", e.target.value)}
+                      placeholder="CBS"
+                    />
                   </td>
                   <td className="p-2">
                     <Input
@@ -255,7 +284,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
             </tbody>
             <tfoot>
               <tr className="font-medium bg-muted/30">
-                <td className="p-2 text-right">Totales</td>
+                <td colSpan={3} className="p-2 text-right">Totales</td>
                 <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
                   {fmtNum(totals.totalDebit)}
                 </td>

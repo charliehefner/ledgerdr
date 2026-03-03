@@ -99,7 +99,7 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
       const absAmount = Math.abs(line.amount);
       const isExpense = line.amount < 0; // negative = bank withdrawal = expense
 
-      // Create journal
+      // Create journal (mark as reconciled since it comes from bank statement)
       const { data: journal, error: jErr } = await supabase
         .from("journals")
         .insert({
@@ -107,6 +107,7 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
           journal_type: "GJ",
           description: description || line.description || "Cargo bancario",
           approval_status: "pending",
+          is_reconciled: true,
         } as any)
         .select("id")
         .single();

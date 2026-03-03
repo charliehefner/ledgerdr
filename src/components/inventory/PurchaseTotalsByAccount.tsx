@@ -59,7 +59,10 @@ export function PurchaseTotalsByAccount() {
     const totalUSD = matchingTx
       .filter((tx) => tx.currency === "USD")
       .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
-    return { label: pair.label, count: matchingTx.length, totalDOP, totalUSD };
+    const totalEUR = matchingTx
+      .filter((tx) => tx.currency === "EUR")
+      .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
+    return { label: pair.label, count: matchingTx.length, totalDOP, totalUSD, totalEUR };
   });
 
   return (
@@ -86,6 +89,7 @@ export function PurchaseTotalsByAccount() {
               <TableHead className="text-right">Transactions</TableHead>
               <TableHead className="text-right">Total DOP</TableHead>
               <TableHead className="text-right">Total USD</TableHead>
+              <TableHead className="text-right">Total EUR</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,6 +102,9 @@ export function PurchaseTotalsByAccount() {
                 </TableCell>
                 <TableCell className="text-right font-mono">
                   {formatCurrency(row.totalUSD, "USD")}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {formatCurrency(row.totalEUR, "EUR")}
                 </TableCell>
               </TableRow>
             ))}

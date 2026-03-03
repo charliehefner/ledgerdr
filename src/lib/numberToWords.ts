@@ -61,7 +61,7 @@ export function numberToSpanishWords(amount: number, currency: string = "DOP"): 
     words += convertGroup(remainder) + " ";
   }
 
-  const currencyLabel = currency === "USD" ? "dólares" : "pesos";
+  const currencyLabel = currency === "USD" ? "dólares" : currency === "EUR" ? "euros" : "pesos";
   words += currencyLabel;
 
   if (decPart > 0) {

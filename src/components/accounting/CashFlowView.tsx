@@ -155,7 +155,7 @@ export function CashFlowView() {
       const code = tx.master_acct_code;
       if (!code) return;
       const amount = parseFloat(String(tx.amount)) || 0;
-      const rd = tx.currency === "USD" ? amount * exchangeRate : amount;
+      const rd = (tx.currency === "USD" || tx.currency === "EUR") ? amount * exchangeRate : amount;
       totals[code] = (totals[code] || 0) + rd;
     });
     return totals;

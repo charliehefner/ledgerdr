@@ -186,6 +186,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
               <SelectContent>
                 <SelectItem value="DOP">DOP</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="EUR">EUR</SelectItem>
               </SelectContent>
             </Select>
           </div>

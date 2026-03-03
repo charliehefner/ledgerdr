@@ -27,7 +27,7 @@ export interface Transaction {
   cbs_code?: string;
   purchase_date?: string;
   description: string;
-  currency: 'DOP' | 'USD';
+  currency: 'DOP' | 'USD' | 'EUR';
   amount: number;
   itbis?: number;
   itbis_retenido?: number;
@@ -117,7 +117,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
   
   return (data || []).map(t => ({
     ...t,
-    currency: t.currency as 'DOP' | 'USD',
+    currency: t.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: t.is_internal ?? false,
     cost_center: (t.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (t.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
@@ -199,7 +199,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
   
   return {
     ...data,
-    currency: data.currency as 'DOP' | 'USD',
+    currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'investment' | 'payment',
@@ -286,7 +286,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
   
   return {
     ...data,
-    currency: data.currency as 'DOP' | 'USD',
+    currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
@@ -327,7 +327,7 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
   
   return {
     ...data,
-    currency: data.currency as 'DOP' | 'USD',
+    currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',

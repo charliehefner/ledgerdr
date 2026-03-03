@@ -145,6 +145,8 @@ export function BalanceSheetView() {
       if (tx.currency === "USD") {
         totals[code].us += amount;
         totals[code].rd += amount * exchangeRate;
+      } else if (tx.currency === "EUR") {
+        totals[code].rd += amount * exchangeRate;
       } else {
         totals[code].rd += amount;
       }

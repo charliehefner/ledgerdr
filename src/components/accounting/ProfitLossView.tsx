@@ -213,6 +213,9 @@ export function ProfitLossView() {
       if (tx.currency === "USD") {
         totals[code].us += amount;
         totals[code].rd += amount * exchangeRate;
+      } else if (tx.currency === "EUR") {
+        totals[code].us += 0; // EUR shown separately if needed, converted to RD$ for totals
+        totals[code].rd += amount * exchangeRate; // EUR uses same exchange rate input
       } else {
         totals[code].rd += amount;
       }

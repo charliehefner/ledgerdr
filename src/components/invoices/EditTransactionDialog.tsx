@@ -81,7 +81,7 @@ export function EditTransactionDialog({
     master_acct_code: "",
     project_code: "",
     cbs_code: "",
-    currency: "DOP" as "DOP" | "USD",
+    currency: "DOP" as "DOP" | "USD" | "EUR",
     amount: "",
     name: "",
     comments: "",
@@ -307,7 +307,7 @@ export function EditTransactionDialog({
                 ) : (
                   <Select
                     value={formData.currency}
-                    onValueChange={(v) => setFormData(f => ({ ...f, currency: v as "DOP" | "USD" }))}
+                    onValueChange={(v) => setFormData(f => ({ ...f, currency: v as "DOP" | "USD" | "EUR" }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -315,6 +315,7 @@ export function EditTransactionDialog({
                     <SelectContent className="bg-popover">
                       <SelectItem value="DOP">DOP</SelectItem>
                       <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

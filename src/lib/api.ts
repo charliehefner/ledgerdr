@@ -221,6 +221,53 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
   if (transaction.isr_retenido !== undefined) updatePayload.isr_retenido = transaction.isr_retenido;
   if (transaction.pay_method !== undefined) updatePayload.pay_method = transaction.pay_method;
   if (transaction.dgii_tipo_bienes_servicios !== undefined) updatePayload.dgii_tipo_bienes_servicios = transaction.dgii_tipo_bienes_servicios;
+  if (transaction.transaction_date !== undefined) updatePayload.transaction_date = transaction.transaction_date;
+  if (transaction.currency !== undefined) updatePayload.currency = transaction.currency;
+  if (transaction.amount !== undefined) updatePayload.amount = transaction.amount;
+  if (transaction.name !== undefined) updatePayload.name = transaction.name;
+  if (transaction.comments !== undefined) updatePayload.comments = transaction.comments;
+  if (transaction.transaction_direction !== undefined) updatePayload.transaction_direction = transaction.transaction_direction;
+  if (transaction.destination_acct_code !== undefined) updatePayload.destination_acct_code = transaction.destination_acct_code;
+  if (transaction.cost_center !== undefined) updatePayload.cost_center = transaction.cost_center;
+
+  // Resolve FK IDs when code fields change
+  if (transaction.master_acct_code !== undefined) {
+    updatePayload.master_acct_code = transaction.master_acct_code;
+    if (transaction.master_acct_code) {
+      const { data: acct } = await supabase
+        .from('chart_of_accounts')
+        .select('id')
+        .eq('account_code', transaction.master_acct_code)
+        .maybeSingle();
+      if (acct) updatePayload.account_id = acct.id;
+    }
+  }
+  if (transaction.project_code !== undefined) {
+    updatePayload.project_code = transaction.project_code || null;
+    if (transaction.project_code) {
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('code', transaction.project_code)
+        .maybeSingle();
+      if (proj) updatePayload.project_id = proj.id;
+    } else {
+      updatePayload.project_id = null;
+    }
+  }
+  if (transaction.cbs_code !== undefined) {
+    updatePayload.cbs_code = transaction.cbs_code || null;
+    if (transaction.cbs_code) {
+      const { data: cbs } = await supabase
+        .from('cbs_codes')
+        .select('id')
+        .eq('code', transaction.cbs_code)
+        .maybeSingle();
+      if (cbs) updatePayload.cbs_id = cbs.id;
+    } else {
+      updatePayload.cbs_id = null;
+    }
+  }
 
   // Try legacy_id first, fall back to UUID
   let query = supabase.from('transactions').update(updatePayload);

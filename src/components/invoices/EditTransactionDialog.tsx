@@ -269,7 +269,7 @@ export function EditTransactionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {locked ? "Ver" : "Editar"} Transacción #{transaction.legacy_id}
@@ -285,9 +285,9 @@ export function EditTransactionDialog({
             </Alert>
           )}
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Date */}
+          <div className="space-y-6">
+            {/* Row 1: Date */}
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Fecha de Transacción</Label>
                 <Input
@@ -298,222 +298,10 @@ export function EditTransactionDialog({
                   className={locked ? "bg-muted" : ""}
                 />
               </div>
-
-              {/* Currency */}
-              <div className="space-y-2">
-                <Label>Moneda</Label>
-                {locked ? (
-                  <Input value={formData.currency} readOnly className="bg-muted" />
-                ) : (
-                  <Select
-                    value={formData.currency}
-                    onValueChange={(v) => setFormData(f => ({ ...f, currency: v as "DOP" | "USD" | "EUR" }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="DOP">DOP</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Account */}
-              <div className="space-y-2">
-                <Label>Cuenta Principal</Label>
-                {locked ? (
-                  <Input
-                    value={formData.master_acct_code ? `${formData.master_acct_code} - ${getDescription(accounts.find(a => a.code === formData.master_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
-                    readOnly
-                    className="bg-muted"
-                  />
-                ) : (
-                  <Select
-                    value={formData.master_acct_code}
-                    onValueChange={(v) => setFormData(f => ({ ...f, master_acct_code: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cuenta" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover max-h-60">
-                      {accounts.map((a) => (
-                        <SelectItem key={a.code} value={a.code}>
-                          {a.code} - {getDescription(a)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Project */}
-              <div className="space-y-2">
-                <Label>Proyecto</Label>
-                {locked ? (
-                  <Input
-                    value={formData.project_code ? `${formData.project_code} - ${getDescription(projects.find(p => p.code === formData.project_code) || { english_description: '', spanish_description: '' })}` : 'Ninguno'}
-                    readOnly
-                    className="bg-muted"
-                  />
-                ) : (
-                  <Select
-                    value={formData.project_code || "__none__"}
-                    onValueChange={(v) => setFormData(f => ({ ...f, project_code: v === "__none__" ? "" : v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ninguno" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover max-h-60">
-                      <SelectItem value="__none__">Ninguno</SelectItem>
-                      {projects.map((p) => (
-                        <SelectItem key={p.code} value={p.code}>
-                          {p.code} - {getDescription(p)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* CBS Code */}
-              <div className="space-y-2">
-                <Label>Código CBS</Label>
-                {locked ? (
-                  <Input
-                    value={formData.cbs_code ? `${formData.cbs_code} - ${getDescription(cbsCodes.find(c => c.code === formData.cbs_code) || { english_description: '', spanish_description: '' })}` : 'Ninguno'}
-                    readOnly
-                    className="bg-muted"
-                  />
-                ) : (
-                  <Select
-                    value={formData.cbs_code || "__none__"}
-                    onValueChange={(v) => setFormData(f => ({ ...f, cbs_code: v === "__none__" ? "" : v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ninguno" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover max-h-60">
-                      <SelectItem value="__none__">Ninguno</SelectItem>
-                      {cbsCodes.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.code} - {getDescription(c)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Amount */}
-              <div className="space-y-2">
-                <Label>Monto</Label>
-                <Input
-                  type={locked ? "text" : "number"}
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) => setFormData(f => ({ ...f, amount: e.target.value }))}
-                  readOnly={locked}
-                  className={locked ? "bg-muted" : ""}
-                />
-              </div>
             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label>Descripción</Label>
-              <Input
-                value={editedDescription}
-                onChange={(e) => setEditedDescription(e.target.value)}
-                placeholder="Descripción"
-                readOnly={locked}
-                className={locked ? "bg-muted" : ""}
-              />
-            </div>
-
-            {/* Name and RNC */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Proveedor/Nombre</Label>
-                <Input
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Nombre"
-                  readOnly={locked}
-                  className={locked ? "bg-muted" : ""}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>RNC</Label>
-                <Input
-                  value={editedRnc}
-                  onChange={(e) => setEditedRnc(e.target.value)}
-                  placeholder="RNC / Cédula"
-                  readOnly={locked}
-                  className={locked ? "bg-muted" : ""}
-                />
-              </div>
-            </div>
-
-            {/* Document */}
-            <div className="space-y-2">
-              <Label>Documento # (NCF)</Label>
-              <Input
-                value={editedDocument}
-                onChange={(e) => setEditedDocument(e.target.value)}
-                placeholder="Ingrese número de documento/NCF"
-                readOnly={locked}
-                className={locked ? "bg-muted" : ""}
-              />
-            </div>
-
-            {/* ITBIS fields */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>ITBIS</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editedItbis}
-                  onChange={(e) => setEditedItbis(e.target.value)}
-                  placeholder="0.00"
-                  readOnly={locked}
-                  className={locked ? "bg-muted" : ""}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>ITBIS Retenido</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editedItbisRetenido}
-                  onChange={(e) => setEditedItbisRetenido(e.target.value)}
-                  placeholder="0.00"
-                  readOnly={locked}
-                  className={locked ? "bg-muted" : ""}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>ISR Retenido</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editedIsrRetenido}
-                  onChange={(e) => setEditedIsrRetenido(e.target.value)}
-                  placeholder="0.00"
-                  readOnly={locked}
-                  className={locked ? "bg-muted" : ""}
-                />
-              </div>
-            </div>
-
-            {/* Transaction Direction */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Row 2: Direction, Cost Center, Account, Project, CBS (5-col like TransactionForm) */}
+            <div className="grid gap-4 md:grid-cols-5">
               <div className="space-y-2">
                 <Label>Dirección</Label>
                 {locked ? (
@@ -545,40 +333,235 @@ export function EditTransactionDialog({
                 )}
               </div>
 
-              {/* Destination Account - shown for investment/payment */}
-              {(formData.transaction_direction === 'investment' || formData.transaction_direction === 'payment') && (
-                <div className="space-y-2">
-                  <Label>Cuenta Destino</Label>
-                  {locked ? (
-                    <Input
-                      value={formData.destination_acct_code ? `${formData.destination_acct_code} - ${getDescription(accounts.find(a => a.code === formData.destination_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
-                      readOnly
-                      className="bg-muted"
-                    />
-                  ) : (
-                    <Select
-                      value={formData.destination_acct_code || "__none__"}
-                      onValueChange={(v) => setFormData(f => ({ ...f, destination_acct_code: v === "__none__" ? "" : v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar cuenta" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover max-h-60">
-                        <SelectItem value="__none__">Ninguno</SelectItem>
-                        {accounts.map((a) => (
-                          <SelectItem key={a.code} value={a.code}>
-                            {a.code} - {getDescription(a)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label>Centro de Costo</Label>
+                {locked ? (
+                  <Input value={editedCostCenter === 'agricultural' ? 'Agrícola' : editedCostCenter === 'industrial' ? 'Industrial' : 'General'} readOnly className="bg-muted" />
+                ) : (
+                  <Select value={editedCostCenter} onValueChange={setEditedCostCenter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="agricultural">Agrícola</SelectItem>
+                      <SelectItem value="industrial">Industrial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cuenta Principal</Label>
+                {locked ? (
+                  <Input
+                    value={formData.master_acct_code ? `${formData.master_acct_code} - ${getDescription(accounts.find(a => a.code === formData.master_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
+                    readOnly
+                    className="bg-muted"
+                  />
+                ) : (
+                  <Select
+                    value={formData.master_acct_code}
+                    onValueChange={(v) => setFormData(f => ({ ...f, master_acct_code: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar cuenta" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover max-h-60">
+                      {accounts.map((a) => (
+                        <SelectItem key={a.code} value={a.code}>
+                          {a.code} - {getDescription(a)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Proyecto</Label>
+                {locked ? (
+                  <Input
+                    value={formData.project_code ? `${formData.project_code} - ${getDescription(projects.find(p => p.code === formData.project_code) || { english_description: '', spanish_description: '' })}` : 'Ninguno'}
+                    readOnly
+                    className="bg-muted"
+                  />
+                ) : (
+                  <Select
+                    value={formData.project_code || "__none__"}
+                    onValueChange={(v) => setFormData(f => ({ ...f, project_code: v === "__none__" ? "" : v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ninguno" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover max-h-60">
+                      <SelectItem value="__none__">Ninguno</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.code} value={p.code}>
+                          {p.code} - {getDescription(p)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Código CBS</Label>
+                {locked ? (
+                  <Input
+                    value={formData.cbs_code ? `${formData.cbs_code} - ${getDescription(cbsCodes.find(c => c.code === formData.cbs_code) || { english_description: '', spanish_description: '' })}` : 'Ninguno'}
+                    readOnly
+                    className="bg-muted"
+                  />
+                ) : (
+                  <Select
+                    value={formData.cbs_code || "__none__"}
+                    onValueChange={(v) => setFormData(f => ({ ...f, cbs_code: v === "__none__" ? "" : v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ninguno" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover max-h-60">
+                      <SelectItem value="__none__">Ninguno</SelectItem>
+                      {cbsCodes.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.code} - {getDescription(c)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
 
-            {/* Pay Method and Tipo Bienes */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Destination Account - shown for investment/payment */}
+            {(formData.transaction_direction === 'investment' || formData.transaction_direction === 'payment') && (
+              <div className="space-y-2">
+                <Label>Cuenta Destino</Label>
+                {locked ? (
+                  <Input
+                    value={formData.destination_acct_code ? `${formData.destination_acct_code} - ${getDescription(accounts.find(a => a.code === formData.destination_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
+                    readOnly
+                    className="bg-muted"
+                  />
+                ) : (
+                  <Select
+                    value={formData.destination_acct_code || "__none__"}
+                    onValueChange={(v) => setFormData(f => ({ ...f, destination_acct_code: v === "__none__" ? "" : v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar cuenta" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover max-h-60">
+                      <SelectItem value="__none__">Ninguno</SelectItem>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.code} value={a.code}>
+                          {a.code} - {getDescription(a)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label>Descripción</Label>
+              <Input
+                value={editedDescription}
+                onChange={(e) => setEditedDescription(e.target.value)}
+                placeholder="Descripción"
+                readOnly={locked}
+                className={locked ? "bg-muted" : ""}
+              />
+            </div>
+
+            {/* Row: Currency, Amount, ITBIS (4-col like TransactionForm) */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <Label>Moneda</Label>
+                {locked ? (
+                  <Input value={formData.currency} readOnly className="bg-muted" />
+                ) : (
+                  <Select
+                    value={formData.currency}
+                    onValueChange={(v) => setFormData(f => ({ ...f, currency: v as "DOP" | "USD" | "EUR" }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="DOP">DOP</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Monto</Label>
+                <Input
+                  type={locked ? "text" : "number"}
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData(f => ({ ...f, amount: e.target.value }))}
+                  readOnly={locked}
+                  className={`font-mono ${locked ? "bg-muted" : ""}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>ITBIS</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editedItbis}
+                  onChange={(e) => setEditedItbis(e.target.value)}
+                  placeholder="0.00"
+                  readOnly={locked}
+                  className={`font-mono ${locked ? "bg-muted" : ""}`}
+                />
+              </div>
+
+              <div className="space-y-2 invisible">
+                {/* Spacer to match 4-col layout */}
+              </div>
+            </div>
+
+            {/* ITBIS Retenido / ISR Retenido */}
+            <div className="grid gap-4 md:grid-cols-2 max-w-md">
+              <div className="space-y-2">
+                <Label>ITBIS Retenido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editedItbisRetenido}
+                  onChange={(e) => setEditedItbisRetenido(e.target.value)}
+                  placeholder="0.00"
+                  readOnly={locked}
+                  className={`font-mono ${locked ? "bg-muted" : ""}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>ISR Retenido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editedIsrRetenido}
+                  onChange={(e) => setEditedIsrRetenido(e.target.value)}
+                  placeholder="0.00"
+                  readOnly={locked}
+                  className={`font-mono ${locked ? "bg-muted" : ""}`}
+                />
+              </div>
+            </div>
+
+            {/* Row: Pay Method, Document, Name, RNC (4-col like TransactionForm) */}
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <Label>{t('txForm.payMethod')}</Label>
                 {locked ? (
@@ -595,6 +578,7 @@ export function EditTransactionDialog({
                       <SelectItem value="transfer_bdi">{t('txForm.transferBdi')}</SelectItem>
                       <SelectItem value="transfer_bhd">{t('txForm.transferBhd')}</SelectItem>
                       <SelectItem value="cash">{t('txForm.cash')}</SelectItem>
+                      <SelectItem value="petty_cash">{t('txForm.pettyCash') || 'Caja Chica'}</SelectItem>
                       <SelectItem value="cc_management">{t('txForm.ccManagement')}</SelectItem>
                       <SelectItem value="cc_agri">{t('txForm.ccAgri')}</SelectItem>
                       <SelectItem value="cc_industry">{t('txForm.ccIndustry')}</SelectItem>
@@ -604,50 +588,65 @@ export function EditTransactionDialog({
                 )}
               </div>
 
-              {formData.transaction_direction === 'purchase' && (
-                <div className="space-y-2">
-                  <Label>Tipo Bienes/Servicios</Label>
-                  {locked ? (
-                    <Input value={editedTipoBienes} readOnly className="bg-muted" />
-                  ) : (
-                    <Select
-                      value={editedTipoBienes}
-                      onValueChange={setEditedTipoBienes}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
-                          <SelectItem key={code} value={code}>
-                            {code} - {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label>Documento # (NCF)</Label>
+                <Input
+                  value={editedDocument}
+                  onChange={(e) => setEditedDocument(e.target.value)}
+                  placeholder="Documento/NCF"
+                  readOnly={locked}
+                  className={locked ? "bg-muted" : ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Proveedor/Nombre</Label>
+                <Input
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Nombre"
+                  readOnly={locked}
+                  className={locked ? "bg-muted" : ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>RNC</Label>
+                <Input
+                  value={editedRnc}
+                  onChange={(e) => setEditedRnc(e.target.value)}
+                  placeholder="RNC / Cédula"
+                  readOnly={locked}
+                  className={locked ? "bg-muted" : ""}
+                />
+              </div>
             </div>
 
-            {/* Cost Center */}
-            <div className="space-y-2">
-              <Label>Centro de Costo</Label>
-              {locked ? (
-                <Input value={editedCostCenter} readOnly className="bg-muted" />
-              ) : (
-                <Select value={editedCostCenter} onValueChange={setEditedCostCenter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar centro de costo" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="agricultural">Agrícola</SelectItem>
-                    <SelectItem value="industrial">Industrial</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
+            {/* Tipo Bienes/Servicios - only for purchases */}
+            {formData.transaction_direction === 'purchase' && (
+              <div className="space-y-2 max-w-xs">
+                <Label>Tipo Bienes/Servicios</Label>
+                {locked ? (
+                  <Input value={editedTipoBienes} readOnly className="bg-muted" />
+                ) : (
+                  <Select
+                    value={editedTipoBienes}
+                    onValueChange={setEditedTipoBienes}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
+                        <SelectItem key={code} value={code}>
+                          {code} - {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
 
             {/* Comments */}
             <div className="space-y-2">

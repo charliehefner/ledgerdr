@@ -61,6 +61,7 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
+  const [payMethodFilter, setPayMethodFilter] = useState<string>("all");
   const [purchaseTotalsPeriod, setPurchaseTotalsPeriod] = useState("current_month"); // kept for accountCbsTotals reference
 
   const columnVisibility = useColumnVisibility("reports-table", REPORT_COLUMNS);
@@ -133,9 +134,14 @@ export default function Reports() {
     if (currencyFilter !== "all") {
       filtered = filtered.filter(tx => tx.currency === currencyFilter);
     }
+
+    // Pay method filter
+    if (payMethodFilter !== "all") {
+      filtered = filtered.filter(tx => tx.pay_method === payMethodFilter);
+    }
     
     return filtered;
-  }, [nonVoidedTransactions, startDate, endDate, searchTerm, accountFilter, currencyFilter]);
+  }, [nonVoidedTransactions, startDate, endDate, searchTerm, accountFilter, currencyFilter, payMethodFilter]);
 
   // Get transaction IDs to fetch attachments
   const transactionIds = transactions.map(tx => tx.id).filter(Boolean) as string[];
@@ -380,6 +386,7 @@ export default function Reports() {
     if (endDate) filterParts.push(`To: ${format(endDate, "dd/MM/yyyy")}`);
     if (accountFilter !== "all") filterParts.push(`Account: ${accountFilter}`);
     if (currencyFilter !== "all") filterParts.push(`Currency: ${currencyFilter}`);
+    if (payMethodFilter !== "all") filterParts.push(`Pay Method: ${payMethodFilter}`);
     if (filterParts.length > 0) {
       doc.text(`Filters: ${filterParts.join(" | ")}`, 14, yPos);
       yPos += 6;
@@ -487,6 +494,23 @@ export default function Reports() {
                   <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="DOP">DOP</SelectItem>
                   <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Pay Method Filter */}
+              <Select value={payMethodFilter} onValueChange={setPayMethodFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Método Pago" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">Todos los Métodos</SelectItem>
+                  <SelectItem value="transfer_bdi">Transfer BDI</SelectItem>
+                  <SelectItem value="transfer_bhd">Transfer BHD</SelectItem>
+                  <SelectItem value="cash">Efectivo</SelectItem>
+                  <SelectItem value="cc_management">CC Management</SelectItem>
+                  <SelectItem value="cc_agricultural">CC Agrícola</SelectItem>
+                  <SelectItem value="cc_industrial">CC Industrial</SelectItem>
                 </SelectContent>
               </Select>
 

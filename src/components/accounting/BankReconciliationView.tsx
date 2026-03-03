@@ -52,6 +52,45 @@ interface ParsedOFXLine {
   balance: number | null;
 }
 
+/* ── TXT Parser (BDI semicolon-delimited) ── */
+function parseTXT(text: string): ParsedOFXLine[] {
+  const rows = text.split("\n").filter(r => r.trim());
+  if (rows.length < 2) return [];
+
+  // Expected header: Fecha;Hora;Referencia;Codigo Transaccion;Descripcion;Monto;Tipo Operacion;
+  const lines: ParsedOFXLine[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i].split(";").map(c => c.trim());
+    if (cols.length < 7 || !cols[0]) continue;
+
+    // Parse date DD/MM/YY or DD/MM/YYYY
+    const dateParts = cols[0].split("/");
+    if (dateParts.length !== 3) continue;
+    let year = dateParts[2];
+    if (year.length === 2) year = (parseInt(year) > 50 ? "19" : "20") + year;
+    const dateStr = `${year}-${dateParts[1].padStart(2, "0")}-${dateParts[0].padStart(2, "0")}`;
+
+    const rawAmount = parseFloat(cols[5]?.replace(/[^0-9.-]/g, "")) || 0;
+    if (rawAmount === 0) continue;
+
+    // Tipo Operacion: D = debit (withdrawal), C = credit (deposit)
+    const tipoOp = cols[6]?.toUpperCase();
+    const amount = tipoOp === "D" ? -rawAmount : rawAmount;
+
+    const description = cols[4] || null; // Descripcion
+    const reference = cols[2] || null;   // Referencia
+
+    lines.push({
+      statement_date: dateStr,
+      description,
+      amount,
+      reference,
+      balance: null,
+    });
+  }
+  return lines;
+}
+
 function parseOFX(text: string): { lines: ParsedOFXLine[]; bankId?: string; acctId?: string; ledgerBal?: number } {
   const extract = (tag: string, block: string) => {
     const re = new RegExp(`<${tag}>([^<\\r\\n]+)`, "i");
@@ -294,6 +333,33 @@ export function BankReconciliationView() {
       let count = 0;
       if (ext === "ofx") {
         count = (await handleOFXImport(text)) ?? 0;
+      } else if (ext === "txt") {
+        // TXT semicolon-delimited (BDI format)
+        const parsed = parseTXT(text);
+        if (parsed.length === 0) throw new Error("No se encontraron transacciones válidas en el archivo TXT.");
+
+        // Dedup by reference
+        const { data: existing } = await supabase
+          .from("bank_statement_lines" as any)
+          .select("reference")
+          .eq("bank_account_id", selectedBank)
+          .not("reference", "is", null) as any;
+        const existingRefs = new Set((existing || []).map((r: any) => r.reference));
+        const newLines = parsed.filter(l => !l.reference || !existingRefs.has(l.reference));
+
+        if (newLines.length === 0) {
+          toast({ title: "Sin líneas nuevas", description: "Todas las transacciones ya fueron importadas." });
+        } else {
+          const linesToInsert = newLines.map(l => ({ bank_account_id: selectedBank, ...l }));
+          const { error } = await supabase.from("bank_statement_lines" as any).insert(linesToInsert as any);
+          if (error) throw error;
+          count = newLines.length;
+          const skipped = parsed.length - newLines.length;
+          toast({
+            title: "Importación TXT exitosa",
+            description: `${count} líneas importadas${skipped > 0 ? `, ${skipped} duplicadas omitidas` : ""}.`,
+          });
+        }
       } else {
         count = (await handleCSVImport(text)) ?? 0;
         if (count > 0) {
@@ -345,7 +411,7 @@ export function BankReconciliationView() {
           <div className="flex items-center gap-2">
             <Badge variant="default">{reconciledCount} conciliadas</Badge>
             <Badge variant="outline">{unreconciledCount} pendientes</Badge>
-            <input ref={fileRef} type="file" accept=".csv,.ofx" className="hidden" onChange={handleFileImport} />
+            <input ref={fileRef} type="file" accept=".csv,.ofx,.txt" className="hidden" onChange={handleFileImport} />
             <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
               <Upload className="h-4 w-4 mr-1" /> Importar Estado
             </Button>
@@ -369,7 +435,7 @@ export function BankReconciliationView() {
         <EmptyState
           icon={Landmark}
           title="Sin movimientos"
-          description="Importe un estado de cuenta (CSV/OFX) o agregue líneas manualmente."
+          description="Importe un estado de cuenta (CSV/OFX/TXT) o agregue líneas manualmente."
         />
       ) : (
         <div className="border rounded-lg overflow-auto">

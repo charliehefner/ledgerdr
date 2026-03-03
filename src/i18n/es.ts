@@ -855,6 +855,9 @@ export const es = {
   "accounting.approvalRequired": "Se requiere aprobación antes de publicar",
 
   // Módulo de Presupuesto
+  "nav.treasury": "Tesorería",
+  "page.treasury.title": "Tesorería",
+  "page.treasury.subtitle": "Conciliación bancaria, cuentas, tarjetas y caja chica",
   "nav.budget": "Presupuesto",
   "page.budget.title": "Presupuesto / Pronóstico",
   "page.budget.subtitle": "Gestionar presupuestos y pronósticos por proyecto o P&L",

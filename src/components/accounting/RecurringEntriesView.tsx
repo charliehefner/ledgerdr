@@ -330,6 +330,7 @@ export function RecurringEntriesView() {
                   <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
                     <option value="DOP">DOP</option>
                     <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
                   </select>
                 </div>
               </div>

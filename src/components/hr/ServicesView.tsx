@@ -143,7 +143,7 @@ export function ServicesView() {
         transaction_date: entry.service_date,
         master_acct_code: entry.master_acct_code || "",
         description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
-        currency: entry.currency as "DOP" | "USD",
+        currency: entry.currency as "DOP" | "USD" | "EUR",
         amount: Number(entry.amount),
         is_internal: false,
       });
@@ -168,7 +168,7 @@ export function ServicesView() {
   const generateReceipt = (entry: ServiceEntry) => {
     const doc = new jsPDF();
     const amount = Number(entry.amount);
-    const currencySymbol = entry.currency === "USD" ? "US$" : "RD$";
+    const currencySymbol = entry.currency === "USD" ? "US$" : entry.currency === "EUR" ? "€" : "RD$";
 
     // Greyscale header
     doc.setFillColor(240, 240, 240);
@@ -392,6 +392,7 @@ export function ServicesView() {
                   <SelectContent>
                     <SelectItem value="DOP">DOP</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -125,13 +125,16 @@ export function FiscalDocumentsReport() {
       if (tx.currency === "DOP") {
         acc.dopAmount += tx.amount;
         acc.dopItbis += tx.itbis || 0;
+      } else if (tx.currency === "EUR") {
+        acc.eurAmount += tx.amount;
+        acc.eurItbis += tx.itbis || 0;
       } else {
         acc.usdAmount += tx.amount;
         acc.usdItbis += tx.itbis || 0;
       }
       return acc;
     },
-    { dopAmount: 0, dopItbis: 0, usdAmount: 0, usdItbis: 0 }
+    { dopAmount: 0, dopItbis: 0, usdAmount: 0, usdItbis: 0, eurAmount: 0, eurItbis: 0 }
   );
 
   const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
@@ -351,6 +354,12 @@ export function FiscalDocumentsReport() {
                 <p className="text-xs text-muted-foreground">Total USD</p>
                 <p className="text-xl font-bold">{formatCurrency(totals.usdAmount, "USD")}</p>
               </div>
+              {totals.eurAmount > 0 && (
+                <div className="bg-card rounded-lg p-3 border">
+                  <p className="text-xs text-muted-foreground">Total EUR</p>
+                  <p className="text-xl font-bold">{formatCurrency(totals.eurAmount, "EUR")}</p>
+                </div>
+              )}
             </div>
 
             {/* Table */}

@@ -54,7 +54,7 @@ const initialFormState = {
   cbs_code: '',
   purchase_date: undefined as Date | undefined,
   description: '',
-  currency: 'DOP' as 'DOP' | 'USD',
+  currency: 'DOP' as 'DOP' | 'USD' | 'EUR',
   amount: '',
   itbis: '',
   itbis_retenido: '',
@@ -586,7 +586,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Label>{t('txForm.currency')}</Label>
               <Select
                 value={form.currency}
-                onValueChange={(value: 'DOP' | 'USD') => updateField('currency', value)}
+                onValueChange={(value: 'DOP' | 'USD' | 'EUR') => updateField('currency', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -594,6 +594,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 <SelectContent className="bg-popover">
                   <SelectItem value="DOP">DOP</SelectItem>
                   <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
                 </SelectContent>
               </Select>
             </div>

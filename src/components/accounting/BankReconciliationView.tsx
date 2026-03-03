@@ -445,6 +445,7 @@ export function BankReconciliationView() {
                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={bankForm.currency} onChange={e => setBankForm(f => ({ ...f, currency: e.target.value }))}>
                   <option value="DOP">DOP</option>
                   <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
                 </select>
               </div>
             </div>

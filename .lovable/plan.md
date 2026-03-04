@@ -1,47 +1,31 @@
 
 
-## Add EUR Currency Option System-Wide
+## Two Payroll Adjustments
 
-### Scope
-EUR needs to be added as a third currency option everywhere DOP and USD currently appear. This touches **14 files** across transactions, accounting, treasury, HR, reports, and the type system.
+### 1. Reorder columns: Ausencias before TSS/ISR
 
-### Changes by Category
+Currently the table column order is: Salario Base → Pago Neto → Beneficios → Préstamo → **TSS** → **ISR** → **Ausencias** → Hrs...
 
-**1. Type definition** — `src/lib/api.ts`
-- Change `currency: 'DOP' | 'USD'` to `'DOP' | 'USD' | 'EUR'` in the `Transaction` interface
-- Update all `as 'DOP' | 'USD'` casts to include `'EUR'`
+The correct order should be: Salario Base → Pago Neto → Beneficios → Préstamo → **Ausencias** → **TSS** → **ISR** → Hrs...
 
-**2. Currency dropdowns** — Add `<SelectItem value="EUR">EUR</SelectItem>` in all 13 locations:
-| File | Context |
-|------|---------|
-| `src/components/transactions/TransactionForm.tsx` | New transaction form |
-| `src/components/invoices/EditTransactionDialog.tsx` | Edit transaction dialog |
-| `src/components/accounting/ChartOfAccountsView.tsx` | Account currency |
-| `src/components/accounting/ApArDocumentList.tsx` | AP/AR documents |
-| `src/components/accounting/PettyCashView.tsx` | Petty cash |
-| `src/components/accounting/CreditCardsList.tsx` | Credit cards |
-| `src/components/accounting/BankAccountsList.tsx` | Bank accounts |
-| `src/components/accounting/BankReconciliationView.tsx` | Bank reconciliation (native `<option>`) |
-| `src/components/accounting/JournalEntryForm.tsx` | Manual journal entries |
-| `src/components/accounting/RecurringEntriesView.tsx` | Recurring entries (native `<option>`) |
-| `src/components/hr/ServicesView.tsx` | Service provider entries |
-| `src/components/hr/ServiceProvidersView.tsx` | Service provider form |
-| `src/pages/Reports.tsx` | Currency filter dropdown |
+This affects three places in `PayrollSummary.tsx`:
+- **Table header** (lines 869-884): Move `Ausencias` column before `TSS`
+- **Table body** (lines 887-933): Move absence cell before TSS/ISR cells
+- **Table footer** (lines 935-981): Same reorder in totals row
+- **Excel export** (lines 530-545): Reorder columns so Ausencias comes before TSS/ISR
+- **PDF export** (lines 638-641): Reorder headers array
 
-**3. Financial statements** — `ProfitLossView.tsx`, `BalanceSheetView.tsx`, `CashFlowView.tsx`
-- EUR transactions should be converted to RD$ using the exchange rate (same pattern as USD)
-- Add an `EUR` column in reports when EUR transactions exist (mirroring the `hasUsd` / `US$` pattern with `hasEur` / `€`)
+### 2. Monthly consolidated Excel export
 
-**4. Display helpers**
-- `src/lib/numberToWords.ts` — Add "euros" label for EUR
-- `src/components/hr/ServicesView.tsx` — Add `€` symbol alongside existing `RD$` / `US$` logic
-- `src/components/dashboard/FiscalDocumentsReport.tsx` — Add EUR accumulator
-- `src/components/inventory/PurchaseTotalsByAccount.tsx` — Add EUR total
-- `src/pages/Reports.tsx` — Add EUR total in account summaries
+Add a new export option "Exportar Mes Completo" that:
+- Fetches **both payroll periods** for the current month (1-15 and 16-end)
+- Pulls snapshot data from `payroll_snapshots` joined with employees
+- **Sums** each employee's values across the two periods (base pay, overtime, benefits, deductions, net pay)
+- Exports a single Excel file with one row per employee showing monthly totals
+- Filename: `Nomina_Mensual_YYYY-MM.xlsx`
 
-**5. Localization** — `src/i18n/es.ts` and `src/i18n/en.ts`
-- No new keys needed (EUR is a universal abbreviation)
+This will be added as a third item in the existing Export dropdown menu in `PayrollSummary.tsx`.
 
-### No Database Migration Needed
-The `currency` column in `transactions` is a VARCHAR/text field, not an enum — it already accepts any string value.
+### Files Modified
+- `src/components/hr/PayrollSummary.tsx` — column reorder + new monthly export function
 

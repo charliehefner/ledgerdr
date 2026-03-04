@@ -5,7 +5,7 @@ import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Download, Lock, Loader2, FileText, FileSpreadsheet } from "lucide-react";
+import { Download, Lock, Loader2, FileText, FileSpreadsheet, Calendar } from "lucide-react";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -434,6 +434,198 @@ export function PayrollSummary({
     };
   };
 
+  // Export monthly consolidated Excel (both periods of the month)
+  const handleExportMonthly = async () => {
+    setIsExporting(true);
+    try {
+      // Determine the month from the current period's start date
+      const year = startDate.getFullYear();
+      const month = startDate.getMonth(); // 0-indexed
+      const monthStart = format(new Date(year, month, 1), "yyyy-MM-dd");
+      const monthEnd = format(new Date(year, month + 1, 0), "yyyy-MM-dd");
+
+      // Fetch all payroll periods for this month
+      const { data: monthPeriods, error: periodError } = await supabase
+        .from("payroll_periods")
+        .select("id, start_date, end_date")
+        .gte("start_date", monthStart)
+        .lte("end_date", monthEnd)
+        .eq("status", "closed");
+
+      if (periodError) throw periodError;
+
+      if (!monthPeriods || monthPeriods.length === 0) {
+        toast.error("No hay períodos cerrados en este mes para exportar.");
+        return;
+      }
+
+      const periodIds = monthPeriods.map((p) => p.id);
+
+      // Fetch all snapshots for these periods
+      const { data: allSnapshots, error: snapError } = await supabase
+        .from("payroll_snapshots")
+        .select("*")
+        .in("period_id", periodIds);
+
+      if (snapError) throw snapError;
+      if (!allSnapshots || allSnapshots.length === 0) {
+        toast.error("No hay datos de nómina para este mes.");
+        return;
+      }
+
+      // Aggregate by employee
+      const employeeMap = new Map<string, {
+        name: string;
+        basePay: number;
+        overtimePay: number;
+        holidayPay: number;
+        sundayPay: number;
+        totalBenefits: number;
+        tss: number;
+        isr: number;
+        absenceDeduction: number;
+        vacationDeduction: number;
+        loanDeduction: number;
+        grossPay: number;
+        netPay: number;
+      }>();
+
+      for (const s of allSnapshots) {
+        const emp = employees.find((e) => e.id === s.employee_id);
+        if (!emp) continue;
+
+        const existing = employeeMap.get(s.employee_id);
+        if (existing) {
+          existing.basePay += Number(s.base_pay);
+          existing.overtimePay += Number(s.overtime_pay);
+          existing.holidayPay += Number(s.holiday_pay);
+          existing.sundayPay += Number(s.sunday_pay);
+          existing.totalBenefits += Number(s.total_benefits);
+          existing.tss += Number(s.tss);
+          existing.isr += Number(s.isr);
+          existing.absenceDeduction += Number(s.absence_deduction);
+          existing.vacationDeduction += Number(s.vacation_deduction);
+          existing.loanDeduction += Number(s.loan_deduction);
+          existing.grossPay += Number(s.gross_pay);
+          existing.netPay += Number(s.net_pay);
+        } else {
+          employeeMap.set(s.employee_id, {
+            name: emp.name,
+            basePay: Number(s.base_pay),
+            overtimePay: Number(s.overtime_pay),
+            holidayPay: Number(s.holiday_pay),
+            sundayPay: Number(s.sunday_pay),
+            totalBenefits: Number(s.total_benefits),
+            tss: Number(s.tss),
+            isr: Number(s.isr),
+            absenceDeduction: Number(s.absence_deduction),
+            vacationDeduction: Number(s.vacation_deduction),
+            loanDeduction: Number(s.loan_deduction),
+            grossPay: Number(s.gross_pay),
+            netPay: Number(s.net_pay),
+          });
+        }
+      }
+
+      const monthName = format(startDate, "MMMM yyyy", { locale: es });
+      const periodsCount = monthPeriods.length;
+
+      // Build Excel
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet(`Nómina Mensual`);
+
+      sheet.columns = [
+        { header: "Nombre", key: "name", width: 25 },
+        { header: "Salario Base", key: "basePay", width: 15 },
+        { header: "Pago Neto", key: "netPay", width: 15 },
+        { header: "Beneficios", key: "benefits", width: 15 },
+        { header: "Préstamo", key: "loan", width: 12 },
+        { header: "Ausencias", key: "absence", width: 12 },
+        { header: "TSS", key: "tss", width: 12 },
+        { header: "ISR", key: "isr", width: 12 },
+        { header: "Hrs Extra", key: "otPay", width: 15 },
+        { header: "Pago Fer", key: "holPay", width: 15 },
+        { header: "Pago Dom", key: "sunPay", width: 15 },
+        { header: "Bruto", key: "grossPay", width: 15 },
+      ];
+
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+
+      const fmtExcel = (v: number) => v > 0 ? v.toFixed(2) : "-";
+
+      const grandTotals = {
+        basePay: 0, netPay: 0, benefits: 0, loan: 0, absence: 0,
+        tss: 0, isr: 0, otPay: 0, holPay: 0, sunPay: 0, grossPay: 0,
+      };
+
+      const sortedEmployees = Array.from(employeeMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedEmployees.forEach((emp) => {
+        sheet.addRow({
+          name: emp.name,
+          basePay: emp.basePay.toFixed(2),
+          netPay: emp.netPay.toFixed(2),
+          benefits: fmtExcel(emp.totalBenefits),
+          loan: fmtExcel(emp.loanDeduction),
+          absence: fmtExcel(emp.absenceDeduction),
+          tss: fmtExcel(emp.tss),
+          isr: fmtExcel(emp.isr),
+          otPay: fmtExcel(emp.overtimePay),
+          holPay: fmtExcel(emp.holidayPay),
+          sunPay: fmtExcel(emp.sundayPay),
+          grossPay: emp.grossPay.toFixed(2),
+        });
+        grandTotals.basePay += emp.basePay;
+        grandTotals.netPay += emp.netPay;
+        grandTotals.benefits += emp.totalBenefits;
+        grandTotals.loan += emp.loanDeduction;
+        grandTotals.absence += emp.absenceDeduction;
+        grandTotals.tss += emp.tss;
+        grandTotals.isr += emp.isr;
+        grandTotals.otPay += emp.overtimePay;
+        grandTotals.holPay += emp.holidayPay;
+        grandTotals.sunPay += emp.sundayPay;
+        grandTotals.grossPay += emp.grossPay;
+      });
+
+      const totRow = sheet.addRow({
+        name: "TOTALES",
+        basePay: grandTotals.basePay.toFixed(2),
+        netPay: grandTotals.netPay.toFixed(2),
+        benefits: fmtExcel(grandTotals.benefits),
+        loan: fmtExcel(grandTotals.loan),
+        absence: fmtExcel(grandTotals.absence),
+        tss: fmtExcel(grandTotals.tss),
+        isr: fmtExcel(grandTotals.isr),
+        otPay: fmtExcel(grandTotals.otPay),
+        holPay: fmtExcel(grandTotals.holPay),
+        sunPay: fmtExcel(grandTotals.sunPay),
+        grossPay: grandTotals.grossPay.toFixed(2),
+      });
+      totRow.font = { bold: true };
+      totRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Nomina_Mensual_${format(startDate, "yyyy-MM")}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Nómina mensual exportada (${periodsCount} período${periodsCount > 1 ? "s" : ""} - ${monthName})`);
+    } catch (error) {
+      toast.error("Error al exportar nómina mensual");
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // When period is closed, use immutable snapshots instead of recalculating
   const payrollData = (() => {
@@ -533,6 +725,7 @@ export function PayrollSummary({
         { header: "Pago Neto", key: "netPay", width: 15 },
         { header: "Beneficios", key: "benefits", width: 15 },
         { header: "Préstamo", key: "loan", width: 12 },
+        { header: "Ausencias", key: "absence", width: 12 },
         { header: "TSS", key: "tss", width: 12 },
         { header: "ISR", key: "isr", width: 12 },
         { header: "Hrs Reg", key: "regHours", width: 12 },
@@ -565,6 +758,7 @@ export function PayrollSummary({
           netPay: p.netPay.toFixed(2),
           benefits: fmtExcel(p.totalBenefits),
           loan: fmtExcel(p.loanDeduction),
+          absence: fmtExcel(p.absenceDeduction),
           tss: fmtExcel(p.tss),
           isr: fmtExcel(p.isr),
           regHours: fmtHrs(p.regularHours),
@@ -584,6 +778,7 @@ export function PayrollSummary({
         netPay: totals.netPay.toFixed(2),
         benefits: fmtExcel(totals.totalBenefits),
         loan: fmtExcel(totals.loanDeduction),
+        absence: fmtExcel(totals.absenceDeduction),
         tss: fmtExcel(totals.tss),
         isr: fmtExcel(totals.isr),
         regHours: fmtHrs(totals.regularHours),
@@ -637,7 +832,7 @@ export function PayrollSummary({
       // Table data
       const headers = [
         "Nombre", "Salario Base", "Pago Neto", "Beneficios", "Préstamo",
-        "TSS", "ISR", "Hrs Reg", "Hrs Extra", "Pago Extra",
+        "Ausencias", "TSS", "ISR", "Hrs Reg", "Hrs Extra", "Pago Extra",
         "Hrs Fer", "Pago Fer", "Hrs Dom", "Pago Dom"
       ];
 
@@ -652,6 +847,7 @@ export function PayrollSummary({
         formatCurrency(p.netPay),
         fmtV(p.totalBenefits, true),
         fmtV(p.loanDeduction, true),
+        fmtV(p.absenceDeduction, true),
         fmtV(p.tss, true),
         fmtV(p.isr, true),
         fmtV(p.regularHours),
@@ -670,6 +866,7 @@ export function PayrollSummary({
         formatCurrency(totals.netPay),
         fmtV(totals.totalBenefits, true),
         fmtV(totals.loanDeduction, true),
+        fmtV(totals.absenceDeduction, true),
         fmtV(totals.tss, true),
         fmtV(totals.isr, true),
         fmtV(totals.regularHours),
@@ -836,6 +1033,10 @@ export function PayrollSummary({
                 <FileText className="mr-2 h-4 w-4" />
                 Exportar a PDF
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportMonthly}>
+                <Calendar className="mr-2 h-4 w-4" />
+                Exportar Mes Completo
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -871,9 +1072,9 @@ export function PayrollSummary({
               <TableHead className="text-right font-bold whitespace-nowrap">Pago Neto</TableHead>
               <TableHead className="text-right whitespace-nowrap">Beneficios</TableHead>
               <TableHead className="text-right text-purple-600 whitespace-nowrap">Préstamo</TableHead>
+              <TableHead className="text-right text-red-600 whitespace-nowrap">Ausencias</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">TSS</TableHead>
               <TableHead className="text-right text-red-600 whitespace-nowrap">ISR</TableHead>
-              <TableHead className="text-right text-red-600 whitespace-nowrap">Ausencias</TableHead>
               <TableHead className="text-right whitespace-nowrap">Hrs Reg</TableHead>
               <TableHead className="text-right whitespace-nowrap bg-green-50">Hrs Extra</TableHead>
               <TableHead className="text-right whitespace-nowrap bg-green-50">Pago Extra</TableHead>
@@ -900,13 +1101,13 @@ export function PayrollSummary({
                   {p.loanDeduction > 0 ? formatCurrency(p.loanDeduction) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
+                  {p.absenceDeduction > 0 ? formatCurrency(p.absenceDeduction) : "-"}
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-600">
                   {p.tss > 0 ? formatCurrency(p.tss) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-red-600">
                   {p.isr > 0 ? formatCurrency(p.isr) : "-"}
-                </TableCell>
-                <TableCell className="text-right font-mono text-red-600">
-                  {p.absenceDeduction > 0 ? formatCurrency(p.absenceDeduction) : "-"}
                 </TableCell>
                 <TableCell className="text-right font-mono">
                   {p.regularHours > 0 ? p.regularHours.toFixed(1) : "-"}
@@ -948,13 +1149,13 @@ export function PayrollSummary({
                 {totals.loanDeduction > 0 ? formatCurrency(totals.loanDeduction) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
+                {totals.absenceDeduction > 0 ? formatCurrency(totals.absenceDeduction) : "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono text-red-600">
                 {totals.tss > 0 ? formatCurrency(totals.tss) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono text-red-600">
                 {totals.isr > 0 ? formatCurrency(totals.isr) : "-"}
-              </TableCell>
-              <TableCell className="text-right font-mono text-red-600">
-                {totals.absenceDeduction > 0 ? formatCurrency(totals.absenceDeduction) : "-"}
               </TableCell>
               <TableCell className="text-right font-mono">
                 {totals.regularHours > 0 ? totals.regularHours.toFixed(1) : "-"}

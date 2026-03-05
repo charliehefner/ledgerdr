@@ -275,8 +275,6 @@ export function useJournalGeneration(userId?: string) {
             lines.push({ journal_id: journalId, account_id: sourceChartAccountId, debit: 0, credit: creditAmount, created_by: userId });
           }
 
-
-
           const { error: lErr } = await supabase.from("journal_lines").insert(lines);
           if (lErr) {
             skipped.push(`${txn.description || txn.id}: líneas: ${lErr.message}`);

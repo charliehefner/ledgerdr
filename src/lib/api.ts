@@ -187,7 +187,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       transaction_direction: transaction.transaction_direction || 'purchase',
       destination_acct_code: transaction.destination_acct_code || null,
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
-      due_date: (transaction as any).due_date || null,
+      due_date: transaction.due_date || null,
       destination_amount: transaction.destination_amount || null,
       ...fkFields,
     })

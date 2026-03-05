@@ -20,7 +20,10 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -87,6 +90,9 @@ export function EditTransactionDialog({
     comments: "",
     transaction_direction: "purchase" as "purchase" | "sale" | "investment" | "payment",
     destination_acct_code: "",
+    transfer_from_account: "",
+    transfer_to_account: "",
+    transfer_dest_amount: "",
   });
   const [originalFormData, setOriginalFormData] = useState(formData);
 
@@ -103,6 +109,49 @@ export function EditTransactionDialog({
   const { data: cbsCodes = [] } = useQuery({
     queryKey: ["cbsCodes"],
     queryFn: fetchCbsCodes,
+  });
+
+  // Fetch active bank accounts for transfer From/To dropdowns
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['bankAccountsForTransfer'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, account_name, account_type, bank_name, chart_account_id, currency')
+        .eq('is_active', true)
+        .order('account_type, account_name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch JORD AB head office account for transfer destination
+  const { data: headOfficeAccounts = [] } = useQuery({
+    queryKey: ['headOfficeAccount'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chart_of_accounts')
+        .select('id, account_code, account_name')
+        .eq('account_code', '2160')
+        .is('deleted_at', null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch postable chart of accounts for investment destination
+  const { data: chartOfAccounts = [] } = useQuery({
+    queryKey: ['chartOfAccountsPostable'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chart_of_accounts')
+        .select('id, account_code, account_name')
+        .eq('allow_posting', true)
+        .is('deleted_at', null)
+        .order('account_code');
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   // Check journal posted status
@@ -136,6 +185,7 @@ export function EditTransactionDialog({
       const tipoBienesValue = transaction.dgii_tipo_bienes_servicios || "";
       const costCenterValue = (transaction as any).cost_center || "general";
 
+      const isTransfer = (transaction.transaction_direction || "purchase") === "payment";
       const newFormData = {
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
@@ -147,6 +197,9 @@ export function EditTransactionDialog({
         comments: transaction.comments || "",
         transaction_direction: transaction.transaction_direction || "purchase",
         destination_acct_code: transaction.destination_acct_code || "",
+        transfer_from_account: isTransfer ? (transaction.pay_method || "") : "",
+        transfer_to_account: isTransfer ? (transaction.destination_acct_code || "") : "",
+        transfer_dest_amount: isTransfer ? String(transaction.destination_amount || "") : "",
       };
       setFormData(newFormData);
       setOriginalFormData(newFormData);
@@ -213,7 +266,19 @@ export function EditTransactionDialog({
       if (formData.name !== originalFormData.name) updates.name = formData.name || null;
       if (formData.comments !== originalFormData.comments) updates.comments = formData.comments || null;
       if (formData.transaction_direction !== originalFormData.transaction_direction) updates.transaction_direction = formData.transaction_direction;
-      if (formData.destination_acct_code !== originalFormData.destination_acct_code) updates.destination_acct_code = formData.destination_acct_code || null;
+      
+      // Handle transfer-specific field mapping
+      if (formData.transaction_direction === 'payment') {
+        if (formData.transfer_from_account !== originalFormData.transfer_from_account) updates.pay_method = formData.transfer_from_account || null;
+        if (formData.transfer_to_account !== originalFormData.transfer_to_account) {
+          let destCode = formData.transfer_to_account;
+          if (destCode?.startsWith('coa:')) destCode = destCode.replace('coa:', '');
+          updates.destination_acct_code = destCode || null;
+        }
+        if (formData.transfer_dest_amount !== originalFormData.transfer_dest_amount) updates.destination_amount = formData.transfer_dest_amount ? parseFloat(formData.transfer_dest_amount) : null;
+      } else {
+        if (formData.destination_acct_code !== originalFormData.destination_acct_code) updates.destination_acct_code = formData.destination_acct_code || null;
+      }
 
       await updateTransaction(String(transaction.legacy_id), updates);
 
@@ -260,7 +325,10 @@ export function EditTransactionDialog({
     formData.name !== originalFormData.name ||
     formData.comments !== originalFormData.comments ||
     formData.transaction_direction !== originalFormData.transaction_direction ||
-    formData.destination_acct_code !== originalFormData.destination_acct_code;
+    formData.destination_acct_code !== originalFormData.destination_acct_code ||
+    formData.transfer_from_account !== originalFormData.transfer_from_account ||
+    formData.transfer_to_account !== originalFormData.transfer_to_account ||
+    formData.transfer_dest_amount !== originalFormData.transfer_dest_amount;
 
   if (!transaction) return null;
 
@@ -435,13 +503,13 @@ export function EditTransactionDialog({
               </div>
             </div>
 
-            {/* Destination Account - shown for investment/payment */}
-            {(formData.transaction_direction === 'investment' || formData.transaction_direction === 'payment') && (
+            {/* Destination Account - for investment */}
+            {formData.transaction_direction === 'investment' && (
               <div className="space-y-2">
-                <Label>Cuenta Destino</Label>
+                <Label>Cuenta Destino *</Label>
                 {locked ? (
                   <Input
-                    value={formData.destination_acct_code ? `${formData.destination_acct_code} - ${getDescription(accounts.find(a => a.code === formData.destination_acct_code) || { english_description: '', spanish_description: '' })}` : ''}
+                    value={formData.destination_acct_code ? `${formData.destination_acct_code} - ${chartOfAccounts.find(a => a.account_code === formData.destination_acct_code)?.account_name || ''}` : ''}
                     readOnly
                     className="bg-muted"
                   />
@@ -455,9 +523,9 @@ export function EditTransactionDialog({
                     </SelectTrigger>
                     <SelectContent className="bg-popover max-h-60">
                       <SelectItem value="__none__">Ninguno</SelectItem>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.code} value={a.code}>
-                          {a.code} - {getDescription(a)}
+                      {chartOfAccounts.map((a) => (
+                        <SelectItem key={a.id} value={a.account_code}>
+                          {a.account_code} - {a.account_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -465,6 +533,136 @@ export function EditTransactionDialog({
                 )}
               </div>
             )}
+
+            {/* Transfer From/To - for payment (transfer) */}
+            {formData.transaction_direction === 'payment' && (() => {
+              const fromAccount = bankAccounts.find(a => a.id === formData.transfer_from_account);
+              const toAccountId = formData.transfer_to_account?.startsWith('coa:') ? null : formData.transfer_to_account;
+              const toAccount = toAccountId ? bankAccounts.find(a => a.id === toAccountId) : null;
+              const fromCurrency = fromAccount?.currency || '';
+              const toCurrency = toAccount?.currency || '';
+              const isCrossCurrency = fromCurrency && toCurrency && fromCurrency !== toCurrency;
+
+              return (
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Desde (Origen) *</Label>
+                      {locked ? (
+                        <Input value={fromAccount ? `${fromAccount.account_name} (${fromAccount.currency || 'DOP'})` : formData.transfer_from_account} readOnly className="bg-muted" />
+                      ) : (
+                        <Select
+                          value={formData.transfer_from_account}
+                          onValueChange={(v) => {
+                            setFormData(f => ({ ...f, transfer_from_account: v }));
+                            const acct = bankAccounts.find(a => a.id === v);
+                            if (acct?.currency) {
+                              setFormData(f => ({ ...f, transfer_from_account: v, currency: acct.currency as "DOP" | "USD" | "EUR" }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar cuenta origen" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover max-h-[300px]">
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
+                              {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                              ))}
+                            </SelectGroup>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
+                              {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Hacia (Destino) *</Label>
+                      {locked ? (
+                        <Input value={toAccount ? `${toAccount.account_name} (${toAccount.currency || 'DOP'})` : formData.transfer_to_account} readOnly className="bg-muted" />
+                      ) : (
+                        <Select
+                          value={formData.transfer_to_account}
+                          onValueChange={(v) => setFormData(f => ({ ...f, transfer_to_account: v }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar cuenta destino" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover max-h-[300px]">
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
+                              {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                              ))}
+                            </SelectGroup>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Tarjetas de Crédito</SelectLabel>
+                              {bankAccounts.filter(a => a.account_type === 'credit_card').map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                              ))}
+                            </SelectGroup>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
+                              {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                              ))}
+                            </SelectGroup>
+                            {headOfficeAccounts.length > 0 && (
+                              <>
+                                <SelectSeparator />
+                                <SelectGroup>
+                                  <SelectLabel className="text-xs font-semibold text-muted-foreground">Casa Matriz</SelectLabel>
+                                  {headOfficeAccounts.map(a => (
+                                    <SelectItem key={a.id} value={`coa:${a.account_code}`}>{a.account_code} - {a.account_name}</SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cross-currency destination amount */}
+                  {isCrossCurrency && !locked && (
+                    <div className="grid gap-4 md:grid-cols-3 p-3 rounded-md border border-dashed border-muted-foreground/30 bg-muted/30">
+                      <div className="space-y-2">
+                        <Label>Monto Origen ({fromCurrency})</Label>
+                        <p className="text-sm font-mono font-medium">{formData.amount || '0.00'}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Monto Destino ({toCurrency}) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.transfer_dest_amount}
+                          onChange={(e) => setFormData(f => ({ ...f, transfer_dest_amount: e.target.value }))}
+                          placeholder="0.00"
+                          className="font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tasa Implícita</Label>
+                        <p className="text-sm font-mono text-muted-foreground">
+                          {formData.amount && formData.transfer_dest_amount && parseFloat(formData.amount) > 0
+                            ? (parseFloat(formData.transfer_dest_amount) / parseFloat(formData.amount)).toFixed(4)
+                            : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Description */}
             <div className="space-y-2">

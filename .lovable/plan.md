@@ -1,65 +1,82 @@
 
 
-## Cross-Currency Transfer Support
+## Plan: Two Backend Improvements
 
-### About Account 0000 for Transfers
+I recommend implementing these in the order below — journal generation is the higher-priority fix since it currently has atomicity issues and the transfer branch is new/untested.
 
-Yes, keeping `master_acct_code = '0000'` (Transferencia Interna) for all transfers is **correct and reasonable**. It serves as a **classification marker**, not an accounting account. The actual debit/credit accounts come from the From/To selections. However, the current journal generation code has a problem: for `payment` direction transactions, it tries to look up `0000` in `chart_of_accounts` as the "expense account" — and since `0000` is not a real postable account, transfers will be **skipped during journal generation** with "cuenta gasto '0000' no encontrada."
+---
 
-This means **transfers currently fail to generate journals**. The fix requires adding a dedicated transfer branch in the journal generation logic.
+### Part 1: Move Journal Generation to a Backend Function
 
-### Current Problem
+**Problem**: The current `useJournalGeneration.ts` hook makes N sequential client-side DB calls (one journal + one journal_lines insert per transaction). If the browser disconnects mid-batch, you get orphaned journals without lines, or partially generated batches with no way to know which succeeded. There's also no transaction-level atomicity — a journal can be created but its lines fail to insert.
 
-When a cross-currency transfer is recorded (e.g., USD bank → DOP bank), the system captures only one `amount` and one `currency`. The journal would debit and credit the same number, which is incorrect — the source loses $1,000 USD but the destination gains RD$58,000 DOP. These are different values that must be recorded separately.
+**Solution**: Create an edge function `generate-journals` that runs the entire batch server-side in a single invocation, using the service role client. Each journal+lines pair is inserted atomically (if lines fail, the journal is cleaned up). The frontend becomes a thin caller with a progress indicator.
 
-### Changes
+**Edge Function: `supabase/functions/generate-journals/index.ts`**
+- Accepts `{ user_id: string }` in the request body
+- Authenticates via the standard manual JWT validation pattern (ES256)
+- Role-checks: only `admin`, `management`, `accountant` can generate
+- Runs the same logic currently in `useJournalGeneration.ts`:
+  1. Fetch payment_method_accounts, chart_of_accounts, bank_accounts
+  2. Fetch already-linked journal transaction_source_ids
+  3. Fetch unlinked transactions
+  4. For each unlinked transaction, determine type (investment / transfer / purchase / sale) and create journal + lines
+  5. **Atomicity**: For each transaction, if `journal_lines` insert fails, delete the just-created journal
+  6. Return `{ created: number, skipped: string[], total: number }`
+- Add to `config.toml` with `verify_jwt = false`
 
-**1. Add destination amount field to the Transfer form**
+**Frontend: `src/components/accounting/useJournalGeneration.ts`**
+- Replace the generate() function body with a single `supabase.functions.invoke('generate-journals', { body: { user_id } })`
+- Parse the response for `created`, `skipped`, `total`
+- Remove progress polling (the edge function returns the final result; for UX, show an indeterminate progress bar instead of per-transaction progress)
+- `countUnlinked()` can remain client-side (it's a simple read-only query)
 
-File: `src/components/transactions/TransactionForm.tsx`
-- Add `transfer_dest_amount` to form state
-- When Transfer is selected and From/To accounts have different currencies, show a second amount field: "Monto Destino" (Destination Amount)
-- Auto-calculate and display the implied exchange rate between the two amounts
-- The existing `amount` field becomes the **source amount** (what leaves the origin account)
-- The existing `currency` field stays as the **source currency**
-- Add a `transfer_dest_currency` field that auto-detects from the destination bank account's currency
+**Frontend: `src/components/accounting/GenerateJournalsButton.tsx`**
+- Switch progress bar from determinate to indeterminate while generating
+- Display results from the edge function response
 
-**2. Look up bank account currencies**
+**Files**:
+- New: `supabase/functions/generate-journals/index.ts`
+- Edit: `supabase/config.toml` (add function entry)
+- Edit: `src/components/accounting/useJournalGeneration.ts` (thin client)
+- Edit: `src/components/accounting/GenerateJournalsButton.tsx` (indeterminate progress)
 
-File: `src/components/transactions/TransactionForm.tsx`
-- Expand the `bank_accounts` query to include `currency`
-- When From or To selection changes, detect if currencies differ and show/hide the destination amount field accordingly
+---
 
-**3. Fix journal generation for transfers**
+### Part 2: Replace Legacy ID with a Database Sequence
 
-File: `src/components/accounting/useJournalGeneration.ts`
-- Add a dedicated `isTransfer` branch (where `transaction_direction === 'payment'`)
-- For transfers, the journal logic is:
-  - **Debit**: Destination account (from `destination_acct_code`) for the destination amount
-  - **Credit**: Source account (from `pay_method`, resolved via `payment_method_accounts` or directly from `bank_accounts.chart_account_id`) for the source amount
-  - If amounts differ (cross-currency): book the difference to an **exchange gain/loss account** (account `8510 - Diferencia Cambiaria` or similar)
-- Journal type remains `CDJ`
-- Skip the standard purchase/sale logic that tries to use `master_acct_code` as an expense account
+**Problem**: `createTransaction()` in `api.ts` fetches `MAX(legacy_id)` from the client, then inserts `MAX + 1`. Two concurrent users can get the same MAX, producing duplicate legacy_ids or a constraint violation.
 
-**4. Store destination amount in the transaction**
+**Solution**: Create a PostgreSQL sequence and a trigger that auto-assigns `legacy_id` on insert, removing the client-side logic entirely.
 
-- The `transactions` table needs a field to hold the destination amount. Options:
-  - Reuse `comments` or another field (not clean)
-  - Add a `destination_amount` column via migration
-- A migration adds `destination_amount NUMERIC(15,2)` to `transactions`
+**Migration**:
+```sql
+-- Create sequence starting after the current max
+DO $$
+DECLARE max_id bigint;
+BEGIN
+  SELECT COALESCE(MAX(legacy_id), 0) INTO max_id FROM transactions;
+  EXECUTE format('CREATE SEQUENCE IF NOT EXISTS transactions_legacy_id_seq START WITH %s', max_id + 1);
+END$$;
 
-**5. Ensure exchange gain/loss account exists**
+-- Set default
+ALTER TABLE transactions
+  ALTER COLUMN legacy_id SET DEFAULT nextval('transactions_legacy_id_seq');
+```
 
-- Check for account `8510` or similar in chart_of_accounts. If not present, add via migration. This is a standard "Otros Gastos / Diferencia Cambiaria" account per Dominican chart standards.
+**Code change: `src/lib/api.ts`**
+- Remove the `MAX(legacy_id)` query block in `createTransaction()`
+- Remove `legacy_id: nextLegacyId` from the insert payload — the database default handles it
+- The returned row will include the auto-assigned `legacy_id`
 
-### GAAP/Dominican Compliance
+**Files**:
+- New migration for the sequence
+- Edit: `src/lib/api.ts` (remove ~10 lines)
 
-- **NIIF (IAS 21)**: Foreign currency transactions must be recorded at the exchange rate on the transaction date. Exchange differences on settlement go to P&L (Diferencia Cambiaria).
-- **DGII**: Exchange gains/losses are reportable income/expense items. The 8510 account is standard in Dominican charts.
-- **Double-entry**: The journal balances in base currency (DOP) by using the exchange rate to convert the foreign amount and booking any difference to the FX account.
+---
 
-### Files Modified
-- `src/components/transactions/TransactionForm.tsx` — destination amount/currency fields, currency detection
-- `src/components/accounting/useJournalGeneration.ts` — dedicated transfer branch with cross-currency support
-- Migration: add `destination_amount` column to `transactions`, add exchange gain/loss account if missing
+### Implementation Order
+
+1. **Part 1 first** (journal generation edge function) — this is the more complex and higher-risk change
+2. **Part 2 second** (legacy ID sequence) — a small, safe migration + code deletion
 

@@ -310,7 +310,7 @@ export function EditTransactionDialog({
                       formData.transaction_direction === 'purchase' ? 'Compra' :
                       formData.transaction_direction === 'sale' ? 'Venta' :
                       formData.transaction_direction === 'investment' ? 'Inversión' :
-                      formData.transaction_direction === 'payment' ? 'Pago' : ''
+                      formData.transaction_direction === 'payment' ? 'Transferencia' : ''
                     }
                     readOnly
                     className="bg-muted"
@@ -327,7 +327,7 @@ export function EditTransactionDialog({
                       <SelectItem value="purchase">Compra</SelectItem>
                       <SelectItem value="sale">Venta</SelectItem>
                       <SelectItem value="investment">Inversión</SelectItem>
-                      <SelectItem value="payment">Pago</SelectItem>
+                      <SelectItem value="payment">Transferencia</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

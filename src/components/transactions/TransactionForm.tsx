@@ -30,7 +30,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -70,6 +73,8 @@ const initialFormState = {
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   due_date: '',
+  transfer_from_account: '',
+  transfer_to_account: '',
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -98,6 +103,34 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         .eq('allow_posting', true)
         .is('deleted_at', null)
         .order('account_code');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch active bank accounts for transfer From/To dropdowns
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['bankAccountsForTransfer'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, account_name, account_type, bank_name, chart_account_id')
+        .eq('is_active', true)
+        .order('account_type, account_name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch JORD AB head office account for transfer destination
+  const { data: headOfficeAccounts = [] } = useQuery({
+    queryKey: ['headOfficeAccount'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chart_of_accounts')
+        .select('id, account_code, account_name')
+        .eq('account_code', '2160')
+        .is('deleted_at', null);
       if (error) throw error;
       return data || [];
     },
@@ -177,6 +210,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (form.transaction_direction === 'investment' && !form.destination_acct_code) {
       return false;
     }
+    if (form.transaction_direction === 'payment' && (!form.transfer_from_account || !form.transfer_to_account)) {
+      return false;
+    }
     // ITBIS cannot exceed 18% of amount
     if (form.itbis && form.amount) {
       const itbisValue = parseFloat(form.itbis);
@@ -211,6 +247,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
     try {
       const isB11 = form.document?.toUpperCase().startsWith('B11');
+      const isTransfer = form.transaction_direction === 'payment';
+      
+      // For transfers, map the from/to accounts
+      // transfer_from_account = bank_accounts.id → used as pay_method identifier
+      // transfer_to_account = bank_accounts.id or coa:code → used as destination_acct_code
+      let transferDestCode: string | undefined;
+      if (isTransfer && form.transfer_to_account) {
+        if (form.transfer_to_account.startsWith('coa:')) {
+          transferDestCode = form.transfer_to_account.replace('coa:', '');
+        } else {
+          // It's a bank_accounts id — store it as destination
+          transferDestCode = form.transfer_to_account;
+        }
+      }
+
       const result = await createTransaction({
         transaction_date: formatDateLocal(form.transaction_date!),
         master_acct_code: form.master_acct_code,
@@ -223,16 +274,16 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         itbis: form.itbis ? parseFloat(form.itbis) : undefined,
         itbis_retenido: isB11 && form.itbis_retenido ? parseFloat(form.itbis_retenido) : undefined,
         isr_retenido: isB11 && form.isr_retenido ? parseFloat(form.isr_retenido) : undefined,
-        pay_method: form.pay_method || undefined,
+        pay_method: isTransfer ? form.transfer_from_account : (form.pay_method || undefined),
         document: form.document || undefined,
         name: form.name || undefined,
         rnc: form.rnc || undefined,
         comments: form.comments || undefined,
         exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
-        is_internal: form.master_acct_code === '0000',
+        is_internal: isTransfer || form.master_acct_code === '0000',
         cost_center: form.cost_center,
         transaction_direction: form.transaction_direction,
-        destination_acct_code: form.transaction_direction === 'investment' ? form.destination_acct_code || undefined : undefined,
+        destination_acct_code: isTransfer ? transferDestCode : (form.transaction_direction === 'investment' ? form.destination_acct_code || undefined : undefined),
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
         due_date: form.due_date || undefined,
       });
@@ -420,6 +471,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   if (value !== 'investment') {
                     updateField('destination_acct_code', '');
                   }
+                  if (value === 'payment') {
+                    updateField('master_acct_code', '0000');
+                  }
+                  if (value !== 'payment') {
+                    updateField('transfer_from_account', '');
+                    updateField('transfer_to_account', '');
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -547,6 +605,82 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   💡 {t('txForm.fixedAssetReminder')}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Transfer From/To - only for transfer (payment) transactions */}
+          {form.transaction_direction === 'payment' && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('txForm.transferFrom')} *</Label>
+                <Select
+                  value={form.transfer_from_account}
+                  onValueChange={(value) => updateField('transfer_from_account', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('txForm.selectFromAccount')} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover max-h-[300px]">
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
+                      {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
+                      {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('txForm.transferTo')} *</Label>
+                <Select
+                  value={form.transfer_to_account}
+                  onValueChange={(value) => updateField('transfer_to_account', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('txForm.selectToAccount')} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover max-h-[300px]">
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
+                      {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Tarjetas de Crédito</SelectLabel>
+                      {bankAccounts.filter(a => a.account_type === 'credit_card').map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
+                      {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                    {headOfficeAccounts.length > 0 && (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Casa Matriz</SelectLabel>
+                          {headOfficeAccounts.map(a => (
+                            <SelectItem key={a.id} value={`coa:${a.account_code}`}>{a.account_code} - {a.account_name}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 

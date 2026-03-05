@@ -44,7 +44,7 @@ export interface Transaction {
   void_reason?: string;
   voided_at?: string;
   attachment_url?: string;
-  transaction_direction?: 'purchase' | 'sale' | 'investment' | 'payment';
+  transaction_direction?: 'purchase' | 'sale' | 'payment';
   destination_acct_code?: string;
   dgii_tipo_ingreso?: string;
   dgii_tipo_bienes_servicios?: string;
@@ -194,7 +194,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
     currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
-    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'investment' | 'payment',
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
     destination_acct_code: data.destination_acct_code || undefined,
   };
 }

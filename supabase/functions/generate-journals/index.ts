@@ -132,46 +132,9 @@ Deno.serve(async (req) => {
 
     for (const txn of unlinked) {
       const label = txn.description || txn.id;
-      const isInvestment = txn.transaction_direction === "investment";
       const isTransfer = txn.transaction_direction === "payment";
 
       try {
-        if (isInvestment) {
-          const creditAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
-          const debitAccountId = txn.destination_acct_code ? acctByCode.get(txn.destination_acct_code) : null;
-
-          if (!creditAccountId) { skipped.push(`${label}: cuenta crédito "${txn.master_acct_code}" no encontrada`); continue; }
-          if (!debitAccountId) { skipped.push(`${label}: cuenta destino "${txn.destination_acct_code}" no encontrada`); continue; }
-
-          const { data: journalId, error: jErr } = await db.rpc("create_journal_from_transaction", {
-            p_transaction_id: txn.id,
-            p_date: txn.transaction_date,
-            p_description: `${txn.description || "Inversión"}${costCenterLabel(txn.cost_center)}`,
-            p_created_by: userId,
-            p_journal_type: "PJ",
-          });
-          if (jErr) { skipped.push(`${label}: ${jErr.message}`); continue; }
-
-          const itbisAmount = txn.itbis || 0;
-          const netAmount = txn.amount - itbisAmount;
-          const lines: any[] = [
-            { journal_id: journalId, account_id: debitAccountId, debit: netAmount, credit: 0, created_by: userId },
-          ];
-          if (itbisAmount > 0 && itbisAccountId) {
-            lines.push({ journal_id: journalId, account_id: itbisAccountId, debit: itbisAmount, credit: 0, created_by: userId });
-          }
-          lines.push({ journal_id: journalId, account_id: creditAccountId, debit: 0, credit: txn.amount, created_by: userId });
-
-          const { error: lErr } = await db.from("journal_lines").insert(lines);
-          if (lErr) {
-            await db.from("journals").delete().eq("id", journalId);
-            skipped.push(`${label}: líneas: ${lErr.message}`);
-          } else {
-            created++;
-          }
-          continue;
-        }
-
         if (isTransfer) {
           const sourceBankAcct = txn.pay_method ? bankAccountMap.get(txn.pay_method) : null;
           const sourceChartAccountId = sourceBankAcct?.chart_account_id || null;

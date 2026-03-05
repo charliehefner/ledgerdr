@@ -88,7 +88,7 @@ export function EditTransactionDialog({
     amount: "",
     name: "",
     comments: "",
-    transaction_direction: "purchase" as "purchase" | "sale" | "investment" | "payment",
+    transaction_direction: "purchase" as "purchase" | "sale" | "payment",
     destination_acct_code: "",
     transfer_from_account: "",
     transfer_to_account: "",
@@ -139,20 +139,6 @@ export function EditTransactionDialog({
     },
   });
 
-  // Fetch postable chart of accounts for investment destination
-  const { data: chartOfAccounts = [] } = useQuery({
-    queryKey: ['chartOfAccountsPostable'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('chart_of_accounts')
-        .select('id, account_code, account_name')
-        .eq('allow_posting', true)
-        .is('deleted_at', null)
-        .order('account_code');
-      if (error) throw error;
-      return data || [];
-    },
-  });
 
   // Check journal posted status
   useEffect(() => {
@@ -377,7 +363,6 @@ export function EditTransactionDialog({
                     value={
                       formData.transaction_direction === 'purchase' ? 'Compra' :
                       formData.transaction_direction === 'sale' ? 'Venta' :
-                      formData.transaction_direction === 'investment' ? 'Inversión' :
                       formData.transaction_direction === 'payment' ? 'Transferencia' : ''
                     }
                     readOnly
@@ -394,7 +379,6 @@ export function EditTransactionDialog({
                     <SelectContent className="bg-popover">
                       <SelectItem value="purchase">Compra</SelectItem>
                       <SelectItem value="sale">Venta</SelectItem>
-                      <SelectItem value="investment">Inversión</SelectItem>
                       <SelectItem value="payment">Transferencia</SelectItem>
                     </SelectContent>
                   </Select>
@@ -503,36 +487,6 @@ export function EditTransactionDialog({
               </div>
             </div>
 
-            {/* Destination Account - for investment */}
-            {formData.transaction_direction === 'investment' && (
-              <div className="space-y-2">
-                <Label>Cuenta Destino *</Label>
-                {locked ? (
-                  <Input
-                    value={formData.destination_acct_code ? `${formData.destination_acct_code} - ${chartOfAccounts.find(a => a.account_code === formData.destination_acct_code)?.account_name || ''}` : ''}
-                    readOnly
-                    className="bg-muted"
-                  />
-                ) : (
-                  <Select
-                    value={formData.destination_acct_code || "__none__"}
-                    onValueChange={(v) => setFormData(f => ({ ...f, destination_acct_code: v === "__none__" ? "" : v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cuenta" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover max-h-60">
-                      <SelectItem value="__none__">Ninguno</SelectItem>
-                      {chartOfAccounts.map((a) => (
-                        <SelectItem key={a.id} value={a.account_code}>
-                          {a.account_code} - {a.account_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            )}
 
             {/* Transfer From/To - for payment (transfer) */}
             {formData.transaction_direction === 'payment' && (() => {

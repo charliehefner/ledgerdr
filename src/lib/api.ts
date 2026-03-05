@@ -126,15 +126,6 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
 }
 
 export async function createTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
-  // Get the next legacy_id for new transactions
-  const { data: maxData } = await supabase
-    .from('transactions')
-    .select('legacy_id')
-    .order('legacy_id', { ascending: false })
-    .limit(1);
-  
-  const nextLegacyId = ((maxData?.[0]?.legacy_id || 0) as number) + 1;
-
   // Resolve FK IDs from text codes
   const fkFields: Record<string, unknown> = {};
   if (transaction.master_acct_code) {
@@ -165,7 +156,6 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
   const { data, error } = await supabase
     .from('transactions')
     .insert({
-      legacy_id: nextLegacyId,
       transaction_date: transaction.transaction_date,
       master_acct_code: transaction.master_acct_code,
       project_code: transaction.project_code || null,

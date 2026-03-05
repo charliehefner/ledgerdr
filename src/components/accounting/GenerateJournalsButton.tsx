@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function GenerateJournalsButton({ userId }: Props) {
-  const { generate, countUnlinked, generating, progress } = useJournalGeneration(userId);
+  const { generate, countUnlinked, generating } = useJournalGeneration(userId);
   const { t } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [count, setCount] = useState(0);
@@ -35,8 +35,6 @@ export function GenerateJournalsButton({ userId }: Props) {
     setConfirmOpen(false);
   };
 
-  const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
-
   return (
     <>
       <Button size="sm" variant="outline" onClick={handleClick} disabled={counting || generating}>
@@ -57,13 +55,12 @@ export function GenerateJournalsButton({ userId }: Props) {
 
           {generating && (
             <div className="space-y-2">
-              <Progress value={pct} className="h-2" />
+              <Progress className="h-2 animate-pulse" />
               <p className="text-xs text-muted-foreground text-center">
-                {progress.current} / {progress.total}
+                Procesando en servidor…
               </p>
             </div>
           )}
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={generating}>
               {t("common.cancel")}

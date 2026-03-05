@@ -76,7 +76,6 @@ const initialFormState = {
   transfer_from_account: '',
   transfer_to_account: '',
   transfer_dest_amount: '',
-  transfer_dest_currency: '' as string,
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -212,8 +211,16 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (form.transaction_direction === 'investment' && !form.destination_acct_code) {
       return false;
     }
-    if (form.transaction_direction === 'payment' && (!form.transfer_from_account || !form.transfer_to_account)) {
-      return false;
+    if (form.transaction_direction === 'payment') {
+      if (!form.transfer_from_account || !form.transfer_to_account) return false;
+      // Prevent self-transfer
+      if (form.transfer_from_account === form.transfer_to_account) return false;
+      // Require destination amount for cross-currency
+      const fromAcct = bankAccounts.find(a => a.id === form.transfer_from_account);
+      const toAcct = bankAccounts.find(a => a.id === form.transfer_to_account);
+      const fromCur = fromAcct?.currency || 'DOP';
+      const toCur = toAcct?.currency || 'DOP';
+      if (fromCur !== toCur && !form.transfer_dest_amount) return false;
     }
     // ITBIS cannot exceed 18% of amount
     if (form.itbis && form.amount) {
@@ -486,6 +493,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   if (value !== 'payment') {
                     updateField('transfer_from_account', '');
                     updateField('transfer_to_account', '');
+                    updateField('transfer_dest_amount', '');
                   }
                 }}
               >

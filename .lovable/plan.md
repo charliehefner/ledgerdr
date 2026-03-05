@@ -1,31 +1,50 @@
 
 
-## Fix: Add Transfer From/To Fields to Edit Transaction Dialog
+## Analysis: Is Investment Still Needed?
 
-### Problem
-The `EditTransactionDialog` lacks the bank-account-based From/To dropdowns that exist in `TransactionForm`. When editing a transaction to direction `payment` (Transfer), users see only a generic "Cuenta Destino" chart-of-accounts dropdown — no way to specify the source and destination treasury accounts or the cross-currency destination amount.
+You're right — with JORD AB (account 2160) now available as a "From" account in Transfers, the Investment direction is redundant. A capital contribution from JORD AB to a local bank is simply a Transfer from JORD AB → Bank.
 
-### Changes
+### Current Differences (Both Produce the Same Double Entry)
 
-**File: `src/components/invoices/EditTransactionDialog.tsx`**
+| Aspect | Investment | Transfer |
+|--------|-----------|----------|
+| Journal type | PJ (Purchase) | CDJ (Cash Disbursements) |
+| Credit source | `master_acct_code` | `pay_method` (bank account) |
+| ITBIS handling | Yes | No |
+| Cross-currency | No | Yes (`destination_amount`) |
 
-1. **Add bank accounts query** — same query as TransactionForm fetching `bank_accounts` with `id, account_name, account_type, bank_name, chart_account_id, currency`
+A JORD AB contribution should generate a CDJ (cash disbursement), not a PJ (purchase). And capital contributions don't have ITBIS. So Transfer is the correct treatment.
 
-2. **Add head office accounts query** — fetch account 2160 from chart_of_accounts (for JORD AB as a transfer destination option)
+### Plan: Remove Investment Direction
 
-3. **Add form state fields**: `transfer_from_account`, `transfer_to_account`, `transfer_dest_amount` to `formData` and `originalFormData`
+**1. Edge function `supabase/functions/generate-journals/index.ts`**
+- Remove the `isInvestment` branch entirely
+- Any remaining `investment` transactions in the DB will be skipped (or we migrate them — see step 4)
 
-4. **Initialize from existing transaction**: When editing a `payment` transaction, map `pay_method` → `transfer_from_account` and `destination_acct_code` → `transfer_to_account`, and `destination_amount` → `transfer_dest_amount`
+**2. Transaction form `src/components/transactions/TransactionForm.tsx`**
+- Remove `investment` from the direction selector
+- Remove the standalone "Destination Account" dropdown (only used by investment)
+- Remove the `chartOfAccountsPostable` query if no longer needed elsewhere
 
-5. **Replace the direction-conditional UI** (lines 438–467):
-   - For `investment`: keep the current "Cuenta Destino" dropdown from chart_of_accounts
-   - For `payment`: show From/To bank account dropdowns (grouped by type: Banco, Tarjeta, Caja Chica, plus head office option), matching TransactionForm's layout
-   - Show cross-currency destination amount field when From/To currencies differ
+**3. Edit dialog `src/components/invoices/EditTransactionDialog.tsx`**
+- Remove `investment` from direction selector
+- Remove the investment-specific destination account section
 
-6. **Update `handleSaveChanges`**: When saving a `payment` direction, map `transfer_from_account` → `pay_method` and `transfer_to_account` → `destination_acct_code`, and `transfer_dest_amount` → `destination_amount`
+**4. Data migration**
+- Convert existing `investment` transactions to `payment` direction, mapping their `master_acct_code` → `pay_method` and keeping `destination_acct_code` as-is:
+```sql
+UPDATE transactions
+SET transaction_direction = 'payment'
+WHERE transaction_direction = 'investment';
+```
 
-7. **Update `hasChanges`**: Include `transfer_from_account`, `transfer_to_account`, `transfer_dest_amount`
+**5. Type definitions `src/lib/api.ts`**
+- Remove `'investment'` from the `transaction_direction` union type
 
-### No database changes needed
-The `transactions` table already has `destination_amount`, `pay_method`, and `destination_acct_code` columns.
+**6. i18n files** — remove `txForm.investment` and `dgii.investment` keys
+
+**7. DGII report views** — remove any `investment` filter/label references
+
+### No new DB columns needed
+Existing `pay_method` + `destination_acct_code` + `destination_amount` handle everything.
 

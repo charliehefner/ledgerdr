@@ -1,82 +1,31 @@
 
 
-## Plan: Two Backend Improvements
+## Fix: Add Transfer From/To Fields to Edit Transaction Dialog
 
-I recommend implementing these in the order below — journal generation is the higher-priority fix since it currently has atomicity issues and the transfer branch is new/untested.
+### Problem
+The `EditTransactionDialog` lacks the bank-account-based From/To dropdowns that exist in `TransactionForm`. When editing a transaction to direction `payment` (Transfer), users see only a generic "Cuenta Destino" chart-of-accounts dropdown — no way to specify the source and destination treasury accounts or the cross-currency destination amount.
 
----
+### Changes
 
-### Part 1: Move Journal Generation to a Backend Function
+**File: `src/components/invoices/EditTransactionDialog.tsx`**
 
-**Problem**: The current `useJournalGeneration.ts` hook makes N sequential client-side DB calls (one journal + one journal_lines insert per transaction). If the browser disconnects mid-batch, you get orphaned journals without lines, or partially generated batches with no way to know which succeeded. There's also no transaction-level atomicity — a journal can be created but its lines fail to insert.
+1. **Add bank accounts query** — same query as TransactionForm fetching `bank_accounts` with `id, account_name, account_type, bank_name, chart_account_id, currency`
 
-**Solution**: Create an edge function `generate-journals` that runs the entire batch server-side in a single invocation, using the service role client. Each journal+lines pair is inserted atomically (if lines fail, the journal is cleaned up). The frontend becomes a thin caller with a progress indicator.
+2. **Add head office accounts query** — fetch account 2160 from chart_of_accounts (for JORD AB as a transfer destination option)
 
-**Edge Function: `supabase/functions/generate-journals/index.ts`**
-- Accepts `{ user_id: string }` in the request body
-- Authenticates via the standard manual JWT validation pattern (ES256)
-- Role-checks: only `admin`, `management`, `accountant` can generate
-- Runs the same logic currently in `useJournalGeneration.ts`:
-  1. Fetch payment_method_accounts, chart_of_accounts, bank_accounts
-  2. Fetch already-linked journal transaction_source_ids
-  3. Fetch unlinked transactions
-  4. For each unlinked transaction, determine type (investment / transfer / purchase / sale) and create journal + lines
-  5. **Atomicity**: For each transaction, if `journal_lines` insert fails, delete the just-created journal
-  6. Return `{ created: number, skipped: string[], total: number }`
-- Add to `config.toml` with `verify_jwt = false`
+3. **Add form state fields**: `transfer_from_account`, `transfer_to_account`, `transfer_dest_amount` to `formData` and `originalFormData`
 
-**Frontend: `src/components/accounting/useJournalGeneration.ts`**
-- Replace the generate() function body with a single `supabase.functions.invoke('generate-journals', { body: { user_id } })`
-- Parse the response for `created`, `skipped`, `total`
-- Remove progress polling (the edge function returns the final result; for UX, show an indeterminate progress bar instead of per-transaction progress)
-- `countUnlinked()` can remain client-side (it's a simple read-only query)
+4. **Initialize from existing transaction**: When editing a `payment` transaction, map `pay_method` → `transfer_from_account` and `destination_acct_code` → `transfer_to_account`, and `destination_amount` → `transfer_dest_amount`
 
-**Frontend: `src/components/accounting/GenerateJournalsButton.tsx`**
-- Switch progress bar from determinate to indeterminate while generating
-- Display results from the edge function response
+5. **Replace the direction-conditional UI** (lines 438–467):
+   - For `investment`: keep the current "Cuenta Destino" dropdown from chart_of_accounts
+   - For `payment`: show From/To bank account dropdowns (grouped by type: Banco, Tarjeta, Caja Chica, plus head office option), matching TransactionForm's layout
+   - Show cross-currency destination amount field when From/To currencies differ
 
-**Files**:
-- New: `supabase/functions/generate-journals/index.ts`
-- Edit: `supabase/config.toml` (add function entry)
-- Edit: `src/components/accounting/useJournalGeneration.ts` (thin client)
-- Edit: `src/components/accounting/GenerateJournalsButton.tsx` (indeterminate progress)
+6. **Update `handleSaveChanges`**: When saving a `payment` direction, map `transfer_from_account` → `pay_method` and `transfer_to_account` → `destination_acct_code`, and `transfer_dest_amount` → `destination_amount`
 
----
+7. **Update `hasChanges`**: Include `transfer_from_account`, `transfer_to_account`, `transfer_dest_amount`
 
-### Part 2: Replace Legacy ID with a Database Sequence
-
-**Problem**: `createTransaction()` in `api.ts` fetches `MAX(legacy_id)` from the client, then inserts `MAX + 1`. Two concurrent users can get the same MAX, producing duplicate legacy_ids or a constraint violation.
-
-**Solution**: Create a PostgreSQL sequence and a trigger that auto-assigns `legacy_id` on insert, removing the client-side logic entirely.
-
-**Migration**:
-```sql
--- Create sequence starting after the current max
-DO $$
-DECLARE max_id bigint;
-BEGIN
-  SELECT COALESCE(MAX(legacy_id), 0) INTO max_id FROM transactions;
-  EXECUTE format('CREATE SEQUENCE IF NOT EXISTS transactions_legacy_id_seq START WITH %s', max_id + 1);
-END$$;
-
--- Set default
-ALTER TABLE transactions
-  ALTER COLUMN legacy_id SET DEFAULT nextval('transactions_legacy_id_seq');
-```
-
-**Code change: `src/lib/api.ts`**
-- Remove the `MAX(legacy_id)` query block in `createTransaction()`
-- Remove `legacy_id: nextLegacyId` from the insert payload — the database default handles it
-- The returned row will include the auto-assigned `legacy_id`
-
-**Files**:
-- New migration for the sequence
-- Edit: `src/lib/api.ts` (remove ~10 lines)
-
----
-
-### Implementation Order
-
-1. **Part 1 first** (journal generation edge function) — this is the more complex and higher-risk change
-2. **Part 2 second** (legacy ID sequence) — a small, safe migration + code deletion
+### No database changes needed
+The `transactions` table already has `destination_amount`, `pay_method`, and `destination_acct_code` columns.
 

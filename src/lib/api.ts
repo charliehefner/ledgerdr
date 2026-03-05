@@ -49,6 +49,7 @@ export interface Transaction {
   dgii_tipo_ingreso?: string;
   dgii_tipo_bienes_servicios?: string;
   due_date?: string;
+  destination_amount?: number;
 }
 
 // ============================================
@@ -187,6 +188,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       destination_acct_code: transaction.destination_acct_code || null,
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
       due_date: (transaction as any).due_date || null,
+      destination_amount: transaction.destination_amount || null,
       ...fkFields,
     })
     .select()

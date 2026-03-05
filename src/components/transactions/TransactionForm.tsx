@@ -75,6 +75,8 @@ const initialFormState = {
   due_date: '',
   transfer_from_account: '',
   transfer_to_account: '',
+  transfer_dest_amount: '',
+  transfer_dest_currency: '' as string,
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -114,7 +116,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bank_accounts')
-        .select('id, account_name, account_type, bank_name, chart_account_id')
+        .select('id, account_name, account_type, bank_name, chart_account_id, currency')
         .eq('is_active', true)
         .order('account_type, account_name');
       if (error) throw error;
@@ -262,6 +264,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         }
       }
 
+      // Determine destination amount for cross-currency transfers
+      let destinationAmount: number | undefined;
+      if (isTransfer && form.transfer_dest_amount) {
+        destinationAmount = parseFloat(form.transfer_dest_amount);
+      }
+
       const result = await createTransaction({
         transaction_date: formatDateLocal(form.transaction_date!),
         master_acct_code: form.master_acct_code,
@@ -286,6 +294,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         destination_acct_code: isTransfer ? transferDestCode : (form.transaction_direction === 'investment' ? form.destination_acct_code || undefined : undefined),
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
         due_date: form.due_date || undefined,
+        destination_amount: destinationAmount,
       });
 
       // Save all attachments to local database
@@ -609,80 +618,125 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           )}
 
           {/* Transfer From/To - only for transfer (payment) transactions */}
-          {form.transaction_direction === 'payment' && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('txForm.transferFrom')} *</Label>
-                <Select
-                  value={form.transfer_from_account}
-                  onValueChange={(value) => updateField('transfer_from_account', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('txForm.selectFromAccount')} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover max-h-[300px]">
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
-                      {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
-                      {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('txForm.transferTo')} *</Label>
-                <Select
-                  value={form.transfer_to_account}
-                  onValueChange={(value) => updateField('transfer_to_account', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('txForm.selectToAccount')} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover max-h-[300px]">
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
-                      {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Tarjetas de Crédito</SelectLabel>
-                      {bankAccounts.filter(a => a.account_type === 'credit_card').map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
-                      {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                    {headOfficeAccounts.length > 0 && (
-                      <>
-                        <SelectSeparator />
+          {form.transaction_direction === 'payment' && (() => {
+            const fromAccount = bankAccounts.find(a => a.id === form.transfer_from_account);
+            const toAccount = bankAccounts.find(a => a.id === form.transfer_to_account);
+            const fromCurrency = fromAccount?.currency || '';
+            const toCurrency = toAccount?.currency || '';
+            const isCrossCurrency = fromCurrency && toCurrency && fromCurrency !== toCurrency;
+
+            return (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t('txForm.transferFrom')} *</Label>
+                    <Select
+                      value={form.transfer_from_account}
+                      onValueChange={(value) => {
+                        updateField('transfer_from_account', value);
+                        const acct = bankAccounts.find(a => a.id === value);
+                        if (acct?.currency) {
+                          updateField('currency', acct.currency as 'DOP' | 'USD' | 'EUR');
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('txForm.selectFromAccount')} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover max-h-[300px]">
                         <SelectGroup>
-                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Casa Matriz</SelectLabel>
-                          {headOfficeAccounts.map(a => (
-                            <SelectItem key={a.id} value={`coa:${a.account_code}`}>{a.account_code} - {a.account_name}</SelectItem>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
+                          {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
+                            <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
                           ))}
                         </SelectGroup>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
+                          {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
+                            <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('txForm.transferTo')} *</Label>
+                    <Select
+                      value={form.transfer_to_account}
+                      onValueChange={(value) => updateField('transfer_to_account', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('txForm.selectToAccount')} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover max-h-[300px]">
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
+                          {bankAccounts.filter(a => a.account_type === 'bank').map(a => (
+                            <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Tarjetas de Crédito</SelectLabel>
+                          {bankAccounts.filter(a => a.account_type === 'credit_card').map(a => (
+                            <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
+                          {bankAccounts.filter(a => a.account_type === 'petty_cash').map(a => (
+                            <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
+                          ))}
+                        </SelectGroup>
+                        {headOfficeAccounts.length > 0 && (
+                          <>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Casa Matriz</SelectLabel>
+                              {headOfficeAccounts.map(a => (
+                                <SelectItem key={a.id} value={`coa:${a.account_code}`}>{a.account_code} - {a.account_name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Cross-currency destination amount */}
+                {isCrossCurrency && (
+                  <div className="grid gap-4 md:grid-cols-3 p-3 rounded-md border border-dashed border-muted-foreground/30 bg-muted/30">
+                    <div className="space-y-2">
+                      <Label>Monto Origen ({fromCurrency})</Label>
+                      <p className="text-sm font-mono font-medium">{form.amount || '0.00'}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Monto Destino ({toCurrency}) *</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={form.transfer_dest_amount}
+                        onChange={(e) => updateField('transfer_dest_amount', e.target.value)}
+                        placeholder="0.00"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tasa Implícita</Label>
+                      <p className="text-sm font-mono text-muted-foreground">
+                        {form.amount && form.transfer_dest_amount && parseFloat(form.amount) > 0
+                          ? (parseFloat(form.transfer_dest_amount) / parseFloat(form.amount)).toFixed(4)
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Description */}
           <div className="space-y-2">

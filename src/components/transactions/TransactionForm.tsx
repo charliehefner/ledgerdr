@@ -69,7 +69,7 @@ const initialFormState = {
   comments: '',
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
-  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'investment' | 'payment',
+  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   due_date: '',
@@ -94,20 +94,6 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryFn: fetchAccounts,
   });
 
-  // Fetch postable chart of accounts for destination account (investment)
-  const { data: chartOfAccounts = [] } = useQuery({
-    queryKey: ['chartOfAccountsPostable'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('chart_of_accounts')
-        .select('id, account_code, account_name')
-        .eq('allow_posting', true)
-        .is('deleted_at', null)
-        .order('account_code');
-      if (error) throw error;
-      return data || [];
-    },
-  });
 
   // Fetch active bank accounts for transfer From/To dropdowns
   const { data: bankAccounts = [] } = useQuery({
@@ -208,9 +194,6 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
       return false;
     }
-    if (form.transaction_direction === 'investment' && !form.destination_acct_code) {
-      return false;
-    }
     if (form.transaction_direction === 'payment') {
       if (!form.transfer_from_account || !form.transfer_to_account) return false;
       // Prevent self-transfer
@@ -298,7 +281,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         is_internal: isTransfer || form.master_acct_code === '0000',
         cost_center: form.cost_center,
         transaction_direction: form.transaction_direction,
-        destination_acct_code: isTransfer ? transferDestCode : (form.transaction_direction === 'investment' ? form.destination_acct_code || undefined : undefined),
+        destination_acct_code: isTransfer ? transferDestCode : undefined,
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
         due_date: form.due_date || undefined,
         destination_amount: destinationAmount,
@@ -482,11 +465,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Label>{t('txForm.direction')}</Label>
               <Select
                 value={form.transaction_direction}
-                onValueChange={(value: 'purchase' | 'sale' | 'investment' | 'payment') => {
+                onValueChange={(value: 'purchase' | 'sale' | 'payment') => {
                   updateField('transaction_direction', value);
-                  if (value !== 'investment') {
-                    updateField('destination_acct_code', '');
-                  }
                   if (value === 'payment') {
                     updateField('master_acct_code', '0000');
                   }
@@ -504,7 +484,6 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <SelectItem value="purchase">{t('txForm.purchase')}</SelectItem>
                   <SelectItem value="sale">{t('txForm.sale')}</SelectItem>
                   <SelectItem value="payment">{t('txForm.payment')}</SelectItem>
-                  <SelectItem value="investment">{t('txForm.investment')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -598,32 +577,6 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             </div>
           </div>
 
-          {/* Destination Account - only for investment transactions */}
-          {form.transaction_direction === 'investment' && (
-            <div className="space-y-2">
-              <Label>{t('txForm.destinationAccount')} *</Label>
-              <Select
-                value={form.destination_acct_code}
-                onValueChange={(value) => updateField('destination_acct_code', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('txForm.selectDestinationAccount')} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover max-h-[300px]">
-                  {chartOfAccounts.map((acct) => (
-                    <SelectItem key={acct.id} value={acct.account_code}>
-                      {acct.account_code} - {acct.account_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.destination_acct_code?.startsWith('12') && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  💡 {t('txForm.fixedAssetReminder')}
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Transfer From/To - only for transfer (payment) transactions */}
           {form.transaction_direction === 'payment' && (() => {

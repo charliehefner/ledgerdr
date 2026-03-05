@@ -1,58 +1,65 @@
 
 
-## Rename "Payment" to "Transfer" + Show Internal Accounts
+## Cross-Currency Transfer Support
 
-### GAAP & Dominican Compliance Assessment
+### About Account 0000 for Transfers
 
-This change is **fully compliant** with both US GAAP and Dominican NIIF/DGII norms:
+Yes, keeping `master_acct_code = '0000'` (Transferencia Interna) for all transfers is **correct and reasonable**. It serves as a **classification marker**, not an accounting account. The actual debit/credit accounts come from the From/To selections. However, the current journal generation code has a problem: for `payment` direction transactions, it tries to look up `0000` in `chart_of_accounts` as the "expense account" — and since `0000` is not a real postable account, transfers will be **skipped during journal generation** with "cuenta gasto '0000' no encontrada."
 
-- **GAAP**: Internal fund movements between entity-owned accounts (bank-to-bank, bank-to-credit-card, bank-to-petty-cash) are classified as **internal transfers**, not payments. They involve only balance sheet accounts (assets ↔ liabilities) with no P&L impact. The term "Transferencia" is the standard label used in Dominican accounting software (e.g., Softland, Conta5).
-- **DGII**: Transfers between own accounts are exempt from NCF requirements (no fiscal document needed), which the system already handles correctly via the `is_internal` flag and the NCF exemption for this direction.
-- **Double-entry**: The existing CDJ journal logic (debit destination, credit source) is correct for transfers and does not need to change.
-- **JORD AB head office account**: Adding an intercompany/head office account as a transfer destination is standard practice for subsidiaries — it maps to a "Cuentas por Pagar Relacionadas" or "Casa Matriz" liability account.
+This means **transfers currently fail to generate journals**. The fix requires adding a dedicated transfer branch in the journal generation logic.
+
+### Current Problem
+
+When a cross-currency transfer is recorded (e.g., USD bank → DOP bank), the system captures only one `amount` and one `currency`. The journal would debit and credit the same number, which is incorrect — the source loses $1,000 USD but the destination gains RD$58,000 DOP. These are different values that must be recorded separately.
 
 ### Changes
 
-**1. Rename "Payment/Pago" → "Transfer/Transferencia"**
-
-Files: `src/i18n/en.ts`, `src/i18n/es.ts`
-- `txForm.payment`: "Payment" → "Transfer" / "Pago" → "Transferencia"
-
-Files: `src/components/invoices/EditTransactionDialog.tsx`
-- Update the display label from "Pago" to "Transferencia"
-
-**2. Show From/To account selectors when Transfer is selected**
+**1. Add destination amount field to the Transfer form**
 
 File: `src/components/transactions/TransactionForm.tsx`
-- When `transaction_direction === 'payment'` (internal value stays `payment` to avoid DB migration), show a **"Cuenta Origen" (From)** and **"Cuenta Destino" (To)** section
-- **From accounts**: Populated from `bank_accounts` table (banks + petty cash) — these are the source of funds
-- **To accounts**: Combined list of:
-  - All `bank_accounts` entries (bank, credit_card, petty_cash)
-  - A JORD AB head office account (from `chart_of_accounts`, likely an intercompany payable like account 2150 or similar)
-- The **From** selection replaces the Pay Method field for transfers (since the source IS a bank account)
-- The **To** selection maps to `destination_acct_code` (reusing the existing field that Investment already uses)
-- Auto-set `is_internal = true` when Transfer is selected
-- Hide NCF/attachment fields for transfers (already handled)
+- Add `transfer_dest_amount` to form state
+- When Transfer is selected and From/To accounts have different currencies, show a second amount field: "Monto Destino" (Destination Amount)
+- Auto-calculate and display the implied exchange rate between the two amounts
+- The existing `amount` field becomes the **source amount** (what leaves the origin account)
+- The existing `currency` field stays as the **source currency**
+- Add a `transfer_dest_currency` field that auto-detects from the destination bank account's currency
 
-**3. Fetch bank_accounts for the dropdowns**
+**2. Look up bank account currencies**
 
 File: `src/components/transactions/TransactionForm.tsx`
-- Add a query for `bank_accounts` with `is_active = true`
-- Each entry has `account_name`, `chart_account_code` (linked to chart_of_accounts), and `account_type`
-- Group in the dropdown: Banks, Credit Cards, Petty Cash, and Head Office
+- Expand the `bank_accounts` query to include `currency`
+- When From or To selection changes, detect if currencies differ and show/hide the destination amount field accordingly
 
-**4. Ensure JORD AB head office account exists**
-
-- Check if a head office / intercompany account exists in `chart_of_accounts`. If not, add one via migration (e.g., account 2150 "JORD AB - Casa Matriz" as a liability). This account represents amounts owed to/from the parent company.
-
-**5. Journal generation stays the same**
+**3. Fix journal generation for transfers**
 
 File: `src/components/accounting/useJournalGeneration.ts`
-- No changes needed. The CDJ logic already debits `master_acct_code` and credits the payment method account, which is correct for transfers.
+- Add a dedicated `isTransfer` branch (where `transaction_direction === 'payment'`)
+- For transfers, the journal logic is:
+  - **Debit**: Destination account (from `destination_acct_code`) for the destination amount
+  - **Credit**: Source account (from `pay_method`, resolved via `payment_method_accounts` or directly from `bank_accounts.chart_account_id`) for the source amount
+  - If amounts differ (cross-currency): book the difference to an **exchange gain/loss account** (account `8510 - Diferencia Cambiaria` or similar)
+- Journal type remains `CDJ`
+- Skip the standard purchase/sale logic that tries to use `master_acct_code` as an expense account
+
+**4. Store destination amount in the transaction**
+
+- The `transactions` table needs a field to hold the destination amount. Options:
+  - Reuse `comments` or another field (not clean)
+  - Add a `destination_amount` column via migration
+- A migration adds `destination_amount NUMERIC(15,2)` to `transactions`
+
+**5. Ensure exchange gain/loss account exists**
+
+- Check for account `8510` or similar in chart_of_accounts. If not present, add via migration. This is a standard "Otros Gastos / Diferencia Cambiaria" account per Dominican chart standards.
+
+### GAAP/Dominican Compliance
+
+- **NIIF (IAS 21)**: Foreign currency transactions must be recorded at the exchange rate on the transaction date. Exchange differences on settlement go to P&L (Diferencia Cambiaria).
+- **DGII**: Exchange gains/losses are reportable income/expense items. The 8510 account is standard in Dominican charts.
+- **Double-entry**: The journal balances in base currency (DOP) by using the exchange rate to convert the foreign amount and booking any difference to the FX account.
 
 ### Files Modified
-- `src/components/transactions/TransactionForm.tsx` — Transfer From/To dropdowns, fetch bank_accounts
-- `src/components/invoices/EditTransactionDialog.tsx` — Label update
-- `src/i18n/en.ts`, `src/i18n/es.ts` — Rename labels
-- Possible migration: Add JORD AB head office account to chart_of_accounts if not present
+- `src/components/transactions/TransactionForm.tsx` — destination amount/currency fields, currency detection
+- `src/components/accounting/useJournalGeneration.ts` — dedicated transfer branch with cross-currency support
+- Migration: add `destination_amount` column to `transactions`, add exchange gain/loss account if missing
 

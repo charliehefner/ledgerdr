@@ -168,7 +168,7 @@ function SidebarContent({
     <div className="flex h-full flex-col">
       {/* Logo & Collapse Toggle */}
       <div className={cn(
-        "flex h-16 items-center border-b border-sidebar-border bg-white/95 mx-3 mt-3 rounded-lg",
+        "flex h-16 items-center border-b border-sidebar-border/50 bg-white/95 mx-3 mt-3 rounded-lg shadow-sm",
         showCollapsed ? "justify-center px-2" : "justify-between px-3"
       )}>
         {(!showCollapsed || isMobile) && <img src={jordLogo} alt="Jord Dominicana" className="h-8" />}
@@ -252,7 +252,7 @@ function SidebarContent({
         )}>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground shrink-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground shrink-0 ring-2 ring-primary/30">
                 {user?.email?.charAt(0).toUpperCase() || "U"}
               </div>
             </TooltipTrigger>
@@ -316,7 +316,7 @@ export function Sidebar() {
   return (
     <aside 
       className={cn(
-        "flex h-screen flex-col bg-sidebar transition-all duration-300",
+        "flex h-screen flex-col bg-gradient-to-b from-sidebar to-[hsl(210,24%,12%)] transition-all duration-300",
         collapsed ? "w-16" : "w-64"
       )}
     >

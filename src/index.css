@@ -202,6 +202,14 @@
 @layer base {
   * {
     @apply border-border;
+    transition-property: background-color, border-color, box-shadow, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Opt out of global transition for elements that need instant updates */
+  input, textarea, select, [data-radix-popper-content-wrapper] * {
+    transition-duration: 0ms;
   }
 
   html {
@@ -282,7 +290,13 @@
 
   /* Stat cards */
   .stat-card {
-    @apply bg-card rounded-xl border border-border p-6 shadow-sm transition-shadow hover:shadow-md;
+    @apply bg-card rounded-xl border border-border p-6 transition-all duration-200;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
+  }
+
+  .stat-card:hover {
+    box-shadow: 0 4px 12px -2px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
   }
 
   .stat-value {
@@ -295,11 +309,11 @@
 
   /* Sidebar nav items */
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-150 border-l-2 border-transparent;
   }
 
   .nav-item.active {
-    @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium;
+    @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium border-l-2 border-primary;
   }
 
   /* Button hierarchy helpers */

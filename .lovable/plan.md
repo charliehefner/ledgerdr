@@ -1,52 +1,59 @@
 
 
-## Investigation Results: Two Separate Issues Found
+## Petty Cash Replenishment Workflow
 
-### Issue 1: Pay Method column shows raw codes / UUIDs
+### What needs to happen
 
-In `RecentTransactions.tsx` line 169, `tx.pay_method` is rendered as-is:
-```tsx
-<TableCell>{tx.pay_method || "-"}</TableCell>
-```
+The imprest system requires each petty cash fund to have a **fixed amount** (monto fijo). When expenses accumulate, a "Reponer Fondo" button calculates total unreplenished expenses and creates a transfer transaction to restore the fund to its fixed amount. Any cash over/short is recorded separately.
 
-For standard methods this shows things like `transfer_bdi`, `petty_cash`, `cash` — raw internal codes instead of human-readable labels like "Transferencia BDI" or "Caja Chica".
+### Database Change
 
-For transfers, `pay_method` stores a **bank account UUID** (the source account), which renders as an unreadable UUID string.
+Add `fixed_amount numeric` column to `bank_accounts` table (nullable, only relevant for `petty_cash` type accounts). This stores the imprest amount for each fund.
 
-**Fix**: Create a helper that maps known pay method codes to their i18n labels, and for UUIDs, looks up the bank account name. Fetch `bank_accounts` in the query and build a lookup map.
-
-### Issue 2: Transfers TO Petty Cash don't appear in Treasury > Petty Cash
-
-`PettyCashView.tsx` line 86 queries:
 ```sql
-.eq("pay_method", "petty_cash")
+ALTER TABLE public.bank_accounts ADD COLUMN fixed_amount numeric DEFAULT NULL;
 ```
 
-This only catches transactions **paid from** petty cash. A transfer TO petty cash has:
-- `transaction_direction = "payment"` (transfer)
-- `pay_method` = source bank account UUID
-- `destination_acct_code` = petty cash bank account UUID
+### UI Changes (`src/components/accounting/PettyCashView.tsx`)
 
-So transfers TO petty cash are never shown.
+**1. Fund form dialog** — Add a "Monto Fijo del Fondo" (Fixed Fund Amount) input field to the create/edit fund dialog. This is the imprest amount the fund should always return to.
 
-**Fix**: Expand the petty cash transactions query to also include transfers where `destination_acct_code` matches a petty cash bank account ID. Use an `.or()` filter combining both conditions.
+**2. Fund table** — Add a "Monto Fijo" column showing the imprest amount for each fund.
 
-### Plan
+**3. Replenishment dialog** — New "Reponer Fondo" button per fund row (or global). Opens a dialog that:
+- Shows the fund's fixed amount
+- Calculates total expenses since the last replenishment (last transfer TO this fund)
+- Shows expected cash on hand = fixed_amount - total_expenses_since_last_recharge
+- Has an "Efectivo Contado" (Cash Counted) input for the actual cash on hand
+- Auto-calculates the difference (Cash Over/Short = counted - expected)
+- Shows the replenishment amount needed = fixed_amount - counted
+- Has a "Cuenta Origen" (Source Account) dropdown to select which bank account funds the replenishment
+- On confirm: creates a transfer transaction (direction = `payment`, from = source bank, to = petty cash fund, amount = replenishment amount)
+- If there's a cash over/short, shows a note/warning (manual journal entry for now; can be automated later)
 
-**File 1: `src/components/transactions/RecentTransactions.tsx`**
-- Fetch `bank_accounts` (id, account_name, account_type) via a new useQuery
-- Create a `getPayMethodLabel(payMethod)` helper that:
-  - Maps known codes (`transfer_bdi` → t("txForm.transferBdi"), `cash` → t("txForm.cash"), `petty_cash` → t("txForm.pettyCash"), etc.)
-  - For UUIDs, looks up the bank account name from the fetched data
-  - Falls back to the raw value if no match
-- Replace line 169 with `getPayMethodLabel(tx.pay_method)`
+**4. Transaction query refinement** — Track "last replenishment date" per fund by finding the most recent transfer TO that fund, then only sum expenses since that date for the replenishment calculation.
 
-**File 2: `src/components/accounting/PettyCashView.tsx`**
-- Fetch petty cash bank account IDs from the existing `accounts` query
-- Change the transactions query to use `.or()`:
-  ```
-  pay_method.eq.petty_cash, destination_acct_code.in.(petty_cash_ids)
-  ```
-- Add a "Tipo" (Type) column to distinguish between "Gasto" (expense from petty cash) and "Recarga" (transfer into petty cash)
-- Adjust the total calculation to subtract recharges from expenses (or show them separately)
+### Flow Summary
+
+```text
+Fund: "Caja Chica Principal" — Monto Fijo: RD$10,000
+
+Since last replenishment:
+  Expenses:           RD$ 7,230.00
+  Expected cash:      RD$ 2,770.00
+  Cash counted:       RD$ 2,750.00  ← user inputs
+  ────────────────────────────────
+  Over/Short:         RD$   -20.00  (Faltante)
+  Replenishment:      RD$ 7,250.00  ← auto-calculated
+
+  [Source: Banco Popular ▼]  [Reponer Fondo ✓]
+```
+
+### Files to Edit
+
+| File | Changes |
+|------|---------|
+| **Migration** | Add `fixed_amount` column to `bank_accounts` |
+| `src/components/accounting/PettyCashView.tsx` | Add fixed_amount to form/table, add Replenishment dialog with calculation logic, create transfer transaction on confirm |
+| `src/integrations/supabase/types.ts` | Auto-regenerated after migration |
 

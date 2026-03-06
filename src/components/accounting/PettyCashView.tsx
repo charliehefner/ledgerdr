@@ -36,6 +36,7 @@ type ChartAccount = { id: string; account_code: string; account_name: string };
 
 type Transaction = {
   id: string;
+  legacy_id: number | null;
   transaction_date: string;
   description: string;
   amount: number;
@@ -89,7 +90,7 @@ export function PettyCashView() {
       if (pettyCashIds.length === 0) {
         const { data, error } = await supabase
           .from("transactions")
-          .select("id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
+          .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
           .eq("pay_method", "petty_cash")
           .order("transaction_date", { ascending: false })
           .limit(50);
@@ -99,7 +100,7 @@ export function PettyCashView() {
       const orFilter = `pay_method.eq.petty_cash,destination_acct_code.in.(${pettyCashIds.join(",")})`;
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
+        .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
         .or(orFilter)
         .order("transaction_date", { ascending: false })
         .limit(50);
@@ -260,6 +261,7 @@ export function PettyCashView() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Nombre</TableHead>
@@ -271,6 +273,7 @@ export function PettyCashView() {
               <TableBody>
                 {txWithBalance.map(tx => (
                   <TableRow key={tx.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id ?? "—"}</TableCell>
                     <TableCell>{format(new Date(tx.transaction_date + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
                     <TableCell>
                       <Badge variant={isRecharge(tx) ? "default" : "outline"}>

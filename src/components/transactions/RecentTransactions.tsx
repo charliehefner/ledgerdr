@@ -21,6 +21,7 @@ import {
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
 import { getAllAttachmentUrls, AttachmentCategory } from '@/lib/attachments';
+import { supabase } from '@/integrations/supabase/client';
 import { getDescription } from '@/lib/getDescription';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { MultiAttachmentCell } from './MultiAttachmentCell';
@@ -79,9 +80,39 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     queryFn: fetchAccounts,
   });
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['bank-accounts-lookup'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, account_name, account_type')
+        .order('account_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const getAccountDescription = (code: string) => {
     const account = accounts.find(a => a.code === code);
     return account ? getDescription(account, language) : code;
+  };
+
+  const PAY_METHOD_LABELS: Record<string, string> = {
+    transfer_bdi: t('txForm.transferBdi'),
+    transfer_bhd: t('txForm.transferBhd'),
+    cash: t('txForm.cash'),
+    petty_cash: t('txForm.pettyCash'),
+    cc_management: t('txForm.ccManagement'),
+    cc_agri: t('txForm.ccAgri'),
+  };
+
+  const getPayMethodLabel = (payMethod: string | null): string => {
+    if (!payMethod) return '-';
+    if (PAY_METHOD_LABELS[payMethod]) return PAY_METHOD_LABELS[payMethod];
+    // Check if it's a bank account UUID
+    const bankAcct = bankAccounts.find(b => b.id === payMethod);
+    if (bankAcct) return bankAcct.account_name;
+    return payMethod;
   };
 
   const getAttachmentsForTransaction = (txId: string): Record<AttachmentCategory, string | null> => {
@@ -166,7 +197,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                         {formatCurrency(tx.amount, tx.currency)}
                       </TableCell>
                     )}
-                    {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
+                    {columnVisibility.isVisible("payMethod") && <TableCell>{getPayMethodLabel(tx.pay_method)}</TableCell>}
                     {columnVisibility.isVisible("document") && (
                       <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>
                     )}

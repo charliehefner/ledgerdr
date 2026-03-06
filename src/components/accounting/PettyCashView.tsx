@@ -76,22 +76,41 @@ export function PettyCashView() {
     },
   });
 
-  // Fetch recent petty cash transactions
+  // Get petty cash account IDs for filtering transfers TO petty cash
+  const pettyCashIds = accounts.map(a => a.id);
+
+  // Fetch recent petty cash transactions (expenses FROM + transfers TO)
   const { data: recentTx = [] } = useQuery({
-    queryKey: ["petty-cash-transactions"],
+    queryKey: ["petty-cash-transactions", pettyCashIds],
     queryFn: async () => {
+      if (pettyCashIds.length === 0) {
+        // Still fetch pay_method=petty_cash even if no petty cash accounts exist
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
+          .eq("pay_method", "petty_cash")
+          .order("transaction_date", { ascending: false })
+          .limit(50);
+        if (error) throw error;
+        return data as (Transaction & { pay_method?: string; destination_acct_code?: string })[];
+      }
+      const orFilter = `pay_method.eq.petty_cash,destination_acct_code.in.(${pettyCashIds.join(",")})`;
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, transaction_date, description, amount, name, currency")
-        .eq("pay_method", "petty_cash")
+        .select("id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
+        .or(orFilter)
         .order("transaction_date", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return data as Transaction[];
+      return data as (Transaction & { pay_method?: string; destination_acct_code?: string })[];
     },
   });
 
-  const totalSpent = recentTx.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const isRecharge = (tx: { pay_method?: string; destination_acct_code?: string }) =>
+    tx.pay_method !== "petty_cash" && pettyCashIds.includes(tx.destination_acct_code || "");
+
+  const totalExpenses = recentTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const totalRecharges = recentTx.filter(tx => isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -187,9 +206,14 @@ export function PettyCashView() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Transacciones Recientes (Caja Chica)</h3>
-          <Badge variant="outline" className="text-base px-3 py-1">
-            Total: {fmtNum(totalSpent)}
-          </Badge>
+          <div className="flex gap-3">
+            <Badge variant="outline" className="text-base px-3 py-1">
+              Gastos: {fmtNum(totalExpenses)}
+            </Badge>
+            <Badge variant="outline" className="text-base px-3 py-1 border-primary/50 text-primary">
+              Recargas: {fmtNum(totalRecharges)}
+            </Badge>
+          </div>
         </div>
 
         {recentTx.length === 0 ? (
@@ -200,6 +224,7 @@ export function PettyCashView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
@@ -209,6 +234,11 @@ export function PettyCashView() {
                 {recentTx.map(tx => (
                   <TableRow key={tx.id}>
                     <TableCell>{format(new Date(tx.transaction_date + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>
+                      <Badge variant={isRecharge(tx) ? "default" : "outline"}>
+                        {isRecharge(tx) ? "Recarga" : "Gasto"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{tx.name || "—"}</TableCell>
                     <TableCell>{tx.description}</TableCell>
                     <TableCell className="text-right font-mono">{fmtNum(tx.amount)}</TableCell>

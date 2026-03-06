@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
 import { getAllAttachmentUrls, AttachmentCategory } from "@/lib/attachments";
+import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Download, FileSpreadsheet, FileText, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter } from "lucide-react";
 import { MultiAttachmentCell } from "@/components/transactions/MultiAttachmentCell";
@@ -63,6 +64,8 @@ export default function Reports() {
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
   const [payMethodFilter, setPayMethodFilter] = useState<string>("all");
   const [purchaseTotalsPeriod, setPurchaseTotalsPeriod] = useState("current_month"); // kept for accountCbsTotals reference
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const columnVisibility = useColumnVisibility("reports-table", REPORT_COLUMNS);
 
@@ -693,7 +696,7 @@ export default function Reports() {
                           : "";
 
                       return (
-                        <TableRow key={tx.id || index} className={rowClass}>
+                        <TableRow key={tx.id || index} className={cn(rowClass, "cursor-pointer")} onClick={() => { setSelectedTransaction(tx); setEditDialogOpen(true); }}>
                           {columnVisibility.isVisible("id") && (
                             <TableCell className="font-mono text-xs text-muted-foreground">
                               {tx.legacy_id || "-"}
@@ -770,6 +773,12 @@ export default function Reports() {
           </CardContent>
         </Card>
       </div>
+
+      <EditTransactionDialog
+        transaction={selectedTransaction}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </MainLayout>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.bank_accounts ADD COLUMN fixed_amount numeric DEFAULT NULL;

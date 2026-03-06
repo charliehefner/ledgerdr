@@ -64,8 +64,22 @@ export function ScanReceiptButton({ onResult, disabled }: ScanReceiptButtonProps
       });
 
       if (error) {
-        console.error('OCR error:', error);
-        toast.error('Error al escanear el recibo. Puede llenar los campos manualmente.');
+        console.error('OCR error details:', {
+          message: error.message,
+          name: error.name,
+          context: error.context,
+          status: error.status,
+          full: JSON.stringify(error),
+        });
+        const isTimeout = error.message?.includes('timed out') || error.message?.includes('timeout');
+        const isPayload = error.message?.includes('payload') || error.message?.includes('too large');
+        if (isTimeout) {
+          toast.error('El escaneo tardó demasiado. Intente con una imagen más pequeña.');
+        } else if (isPayload) {
+          toast.error('La imagen es demasiado grande. Reduzca el tamaño e intente de nuevo.');
+        } else {
+          toast.error(`Error al escanear: ${error.message || 'Error desconocido'}. Puede llenar los campos manualmente.`);
+        }
         return;
       }
 

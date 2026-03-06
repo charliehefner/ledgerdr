@@ -362,22 +362,27 @@ export function AccountingReportsView() {
 
   return (
     <div className="space-y-4">
-      {/* Report Type Selector */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
-          <SelectTrigger className="w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover">
-            <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
-            <SelectItem value="pl">{t("pl.title")}</SelectItem>
-            <SelectItem value="bs">{t("bs.title")}</SelectItem>
-            <SelectItem value="tb">Balanza de Comprobación</SelectItem>
-            <SelectItem value="aging">Antigüedad de Saldos</SelectItem>
-            <SelectItem value="cf">{t("cf.title")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <PowerBIExportButton />
+      {/* Report Type Selector — Toolbar Card */}
+      <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-muted/30 px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tipo de Informe</span>
+          <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+            <SelectTrigger className="w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover">
+              <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
+              <SelectItem value="pl">{t("pl.title")}</SelectItem>
+              <SelectItem value="bs">{t("bs.title")}</SelectItem>
+              <SelectItem value="tb">Balanza de Comprobación</SelectItem>
+              <SelectItem value="aging">Antigüedad de Saldos</SelectItem>
+              <SelectItem value="cf">{t("cf.title")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="ml-auto">
+          <PowerBIExportButton />
+        </div>
       </div>
 
       {reportType === "pl" ? (
@@ -393,19 +398,31 @@ export function AccountingReportsView() {
       ) : (
       <>
       {!activeFilters ? (
-        <EmptyState
-          icon={FileBarChart}
-          title={t("acctReport.title")}
-          description={t("acctReport.description")}
-          action={
-            <Button onClick={() => { setFilters(emptyFilters); setFiltersOpen(true); }}>
-              <Filter className="h-4 w-4 mr-1" />
-              {t("acctReport.generateReport")}
-            </Button>
-          }
-        />
+        <div className="rounded-lg border-2 border-dashed border-border bg-gradient-to-br from-muted/40 to-transparent p-2">
+          <EmptyState
+            icon={FileBarChart}
+            title={t("acctReport.title")}
+            description={t("acctReport.description")}
+            className="[&_svg]:text-primary [&_.rounded-full]:bg-primary/10"
+            action={
+              <div className="space-y-4">
+                <Button onClick={() => { setFilters(emptyFilters); setFiltersOpen(true); }}>
+                  <Filter className="h-4 w-4 mr-1" />
+                  {t("acctReport.generateReport")}
+                </Button>
+                <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-md bg-muted px-2 py-1">Estado de Resultados</span>
+                  <span className="rounded-md bg-muted px-2 py-1">Balance General</span>
+                  <span className="rounded-md bg-muted px-2 py-1">Balanza de Comprobación</span>
+                  <span className="rounded-md bg-muted px-2 py-1">Flujo de Caja</span>
+                  <span className="rounded-md bg-muted px-2 py-1">Antigüedad de Saldos</span>
+                </div>
+              </div>
+            }
+          />
+        </div>
       ) : (
-        <>
+        <div className="rounded-lg border bg-card p-4 space-y-4">
           {/* Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -489,7 +506,7 @@ export function AccountingReportsView() {
               </Table>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Filter Dialog */}

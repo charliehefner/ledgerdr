@@ -1,18 +1,18 @@
 
 
-## Add Running Balance Column to Petty Cash Transactions
+## Add Inline Edit to Financial Ledger (Reports)
 
-Add a "Balance" column to the recent transactions table that computes a running balance. Since transactions are sorted newest-first, the calculation will iterate in chronological order (reverse the array), starting from the fund's `fixed_amount`, then subtract expenses and add recharges.
+Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
 
-### Changes in `src/components/accounting/PettyCashView.tsx`
+### Changes in `src/pages/Reports.tsx`
 
-1. **Compute running balances** — After `recentTx` is loaded, create a derived array with a `balance` field:
-   - Sort transactions chronologically (oldest first)
-   - Start balance at the fund's `fixed_amount` (use the first petty cash account's fixed amount, or 0)
-   - For each transaction: if recharge, add amount; if expense, subtract amount
-   - Reverse back to newest-first for display
+1. **Import** `EditTransactionDialog` and add state:
+   - `selectedTransaction: Transaction | null`
+   - `editDialogOpen: boolean`
 
-2. **Add "Balance" column** — New `<TableHead>` and `<TableCell>` after "Monto", showing the running balance in monospace font. Negative balances shown in red.
+2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
 
-3. **Note**: As you mentioned, historical transactions won't reflect the correct starting point, but going forward the balance will track correctly from each replenishment.
+3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
+
+4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
 

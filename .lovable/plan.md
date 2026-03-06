@@ -1,77 +1,46 @@
 
 
-## Visual Polish: Making the UI Look More Commercial
+## Visual Enhancement: Accounting Page
 
-The current design is functionally solid — clean typography, consistent spacing, good color system. What's missing are the subtle details that make commercial SaaS products feel premium. Here's a focused plan:
+### Current Issues (from screenshot)
+- Page header is plain text, no visual weight or branding
+- Tab bar floats without visual grounding — no container or separator
+- Report selector + Power BI button sit loosely below tabs with no grouping
+- Empty state is visually sparse — icon is small and grey, lots of dead space
+- No cards or visual containers to create sections
+- The overall layout feels like a prototype, not a finished product
 
-### 1. Richer Shadows and Depth
+### Plan
 
-**Cards** currently use `shadow-sm`. Commercial apps use layered, softer shadows.
+**1. Page Header Enhancement (`src/pages/Accounting.tsx`)**
+- Wrap the title area in a subtle gradient card with an icon (e.g., `BookOpen` or the existing accounting icon)
+- Add a colored left border accent to the header for visual weight
 
-- Update `Card` component: `shadow-[0_1px_3px_0_rgba(0,0,0,0.04),0_1px_2px_-1px_rgba(0,0,0,0.03)]` with `hover:shadow-[0_4px_12px_-2px_rgba(0,0,0,0.08)]` transition
-- Add `transition-shadow duration-200` for smooth hover effects
+**2. Tab Bar Styling (`src/pages/Accounting.tsx` or `TabbedPageLayout`)**
+- Add a bottom border/divider below the tab bar to visually separate navigation from content
+- Consider adding small icons next to each tab label (BarChart3, Building2, BookOpen, RotateCcw, Calendar, FileText, Shield)
 
-### 2. Sidebar Polish
+**3. Report Selector Area (`AccountingReportsView.tsx`)**
+- Wrap the report type selector + Power BI button in a card/toolbar container with subtle background
+- Add a label above the selector ("Tipo de Informe")
+- Give the Power BI button a distinct secondary style so it doesn't compete with the selector
 
-The dark sidebar is a good foundation but feels flat.
+**4. Empty State Upgrade (`AccountingReportsView.tsx`)**
+- Use a larger, colored icon (primary color instead of grey)
+- Add a subtle background pattern or gradient to the empty state area
+- Wrap in a card with dashed border for visual definition
+- Add a brief list of available report types as secondary info
 
-- Add a subtle gradient: `bg-gradient-to-b from-[hsl(210,24%,16%)] to-[hsl(210,24%,12%)]`
-- Active nav item: add a left border accent (`border-l-2 border-primary`) instead of just background change
-- User avatar: add a ring/glow (`ring-2 ring-primary/30`) for visual interest
-- Logo area: subtle bottom shadow instead of hard border
-
-### 3. Header Bar Upgrade
-
-- Add a subtle bottom shadow (`shadow-[0_1px_3px_rgba(0,0,0,0.05)]`) instead of just `border-b`
-- Breadcrumb-style page title with slightly smaller, lighter text
-- User dropdown: avatar with initials in a colored circle (already exists, but add subtle ring)
-
-### 4. Button Refinements
-
-- Primary buttons: add subtle gradient `bg-gradient-to-b from-primary to-primary/90` with inner shadow
-- All buttons: slightly increase font-weight and letter-spacing for crispness
-- Add `active:scale-[0.98]` micro-interaction on click
-
-### 5. Input Fields
-
-- Increase border radius slightly and add `focus:shadow-[0_0_0_3px_rgba(30,111,92,0.1)]` for a glowing focus ring
-- Slightly taller inputs (h-11 instead of h-10) for comfort
-
-### 6. Table Upgrades
-
-- Sticky header with subtle background blur `backdrop-blur-sm bg-card/95`
-- Rounded corners on the table container with overflow hidden
-- Row hover: smooth left border accent animation
-
-### 7. Login Page
-
-- Add a subtle background pattern or gradient (e.g., radial gradient behind the card)
-- Card: larger shadow, slightly more padding, subtle top accent bar in primary color
-
-### 8. Tab Bar
-
-- Use pill-style tabs with slightly more padding and a subtle transition animation
-- Active tab: add a slight scale bump `data-[state=active]:scale-[1.02]`
-
-### 9. CSS Token Updates (index.css)
-
-- Refine `--background` to pure white or very faint warm grey `0 0% 99%` for a cleaner feel
-- Add new tokens: `--shadow-card`, `--shadow-card-hover`, `--shadow-header`
-- Add smooth global transitions: `* { transition-property: background-color, border-color, box-shadow; transition-duration: 150ms; }`
+**5. Content Area Container**
+- When reports load, wrap the table/chart content in a Card component for visual containment
+- Add consistent padding and spacing
 
 ### Files to Edit
-
 | File | Changes |
 |------|---------|
-| `src/index.css` | New shadow tokens, background tweak, global transition, gradient utilities |
-| `src/components/ui/card.tsx` | Better shadow, hover effect, transition |
-| `src/components/ui/button.tsx` | Gradient primary, active scale micro-interaction |
-| `src/components/ui/input.tsx` | Taller, glow focus ring |
-| `src/components/ui/tabs.tsx` | Pill refinement, scale animation |
-| `src/components/layout/Sidebar.tsx` | Gradient background, active border accent, avatar ring |
-| `src/components/layout/MainLayout.tsx` | Header shadow, refined spacing |
-| `src/pages/Login.tsx` | Background gradient, card accent bar, enhanced shadow |
-| `src/components/dashboard/StatCard.tsx` | Enhanced hover shadow |
+| `src/pages/Accounting.tsx` | Add icons to tab labels, header accent |
+| `src/components/accounting/AccountingReportsView.tsx` | Toolbar card, enhanced empty state, content card wrapping |
+| `src/components/layout/TabbedPageLayout.tsx` | Add bottom border to tab bar, optional header card styling |
 
-All changes are CSS/className-level. No logic or data changes.
+All changes are CSS/className and minor JSX — no logic or data changes.
 

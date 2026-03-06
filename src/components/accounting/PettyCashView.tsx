@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, Pencil, Wallet } from "lucide-react";
+import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import { ReplenishmentDialog } from "./ReplenishmentDialog";
 
 type PettyCashAccount = {
   id: string;
@@ -28,6 +29,7 @@ type PettyCashAccount = {
   is_active: boolean | null;
   chart_account_id: string | null;
   account_type: string;
+  fixed_amount: number | null;
 };
 
 type ChartAccount = { id: string; account_code: string; account_name: string };
@@ -39,15 +41,18 @@ type Transaction = {
   amount: number;
   name: string | null;
   currency: string;
+  pay_method?: string;
+  destination_acct_code?: string;
 };
 
-const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "", currency: "DOP", chart_account_id: "" };
+const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "", currency: "DOP", chart_account_id: "", fixed_amount: "" };
 
 export function PettyCashView() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [replenishFund, setReplenishFund] = useState<PettyCashAccount | null>(null);
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["treasury-petty-cash"],
@@ -76,15 +81,12 @@ export function PettyCashView() {
     },
   });
 
-  // Get petty cash account IDs for filtering transfers TO petty cash
   const pettyCashIds = accounts.map(a => a.id);
 
-  // Fetch recent petty cash transactions (expenses FROM + transfers TO)
   const { data: recentTx = [] } = useQuery({
     queryKey: ["petty-cash-transactions", pettyCashIds],
     queryFn: async () => {
       if (pettyCashIds.length === 0) {
-        // Still fetch pay_method=petty_cash even if no petty cash accounts exist
         const { data, error } = await supabase
           .from("transactions")
           .select("id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
@@ -92,7 +94,7 @@ export function PettyCashView() {
           .order("transaction_date", { ascending: false })
           .limit(50);
         if (error) throw error;
-        return data as (Transaction & { pay_method?: string; destination_acct_code?: string })[];
+        return data as Transaction[];
       }
       const orFilter = `pay_method.eq.petty_cash,destination_acct_code.in.(${pettyCashIds.join(",")})`;
       const { data, error } = await supabase
@@ -102,11 +104,11 @@ export function PettyCashView() {
         .order("transaction_date", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return data as (Transaction & { pay_method?: string; destination_acct_code?: string })[];
+      return data as Transaction[];
     },
   });
 
-  const isRecharge = (tx: { pay_method?: string; destination_acct_code?: string }) =>
+  const isRecharge = (tx: Transaction) =>
     tx.pay_method !== "petty_cash" && pettyCashIds.includes(tx.destination_acct_code || "");
 
   const totalExpenses = recentTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
@@ -121,6 +123,7 @@ export function PettyCashView() {
         currency: form.currency,
         chart_account_id: form.chart_account_id || null,
         account_type: "petty_cash",
+        fixed_amount: form.fixed_amount ? parseFloat(form.fixed_amount) : null,
       };
       if (editingId) {
         const { error } = await supabase.from("bank_accounts").update(payload).eq("id", editingId);
@@ -147,6 +150,7 @@ export function PettyCashView() {
       account_number: acct.account_number || "",
       currency: acct.currency || "DOP",
       chart_account_id: acct.chart_account_id || "",
+      fixed_amount: acct.fixed_amount?.toString() || "",
     });
     setDialogOpen(true);
   };
@@ -173,9 +177,10 @@ export function PettyCashView() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Moneda</TableHead>
+                  <TableHead className="text-right">Monto Fijo</TableHead>
                   <TableHead>Cuenta Contable</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="w-[80px]" />
+                  <TableHead className="w-[120px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -183,6 +188,9 @@ export function PettyCashView() {
                   <TableRow key={acct.id}>
                     <TableCell className="font-medium">{acct.account_name}</TableCell>
                     <TableCell>{acct.currency || "DOP"}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {acct.fixed_amount ? fmtNum(acct.fixed_amount) : "—"}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
                     </TableCell>
@@ -191,8 +199,20 @@ export function PettyCashView() {
                         {acct.is_active ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
+                    <TableCell className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {acct.fixed_amount && acct.fixed_amount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Reponer Fondo"
+                          onClick={() => setReplenishFund(acct)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -250,12 +270,25 @@ export function PettyCashView() {
         )}
       </div>
 
-      {/* Fund Dialog */}
+      {/* Fund Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingId ? "Editar Fondo" : "Nuevo Fondo de Caja Chica"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div><Label>Nombre *</Label><Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder="Ej: Caja Chica Principal" /></div>
+            <div>
+              <Label>Monto Fijo del Fondo *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.fixed_amount}
+                onChange={e => setForm(f => ({ ...f, fixed_amount: e.target.value }))}
+                placeholder="10000.00"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Monto al que se repondrá el fondo cada vez (sistema de fondo fijo).</p>
+            </div>
             <div>
               <Label>Moneda</Label>
               <Select value={form.currency} onValueChange={v => setForm(f => ({ ...f, currency: v }))}>
@@ -287,6 +320,13 @@ export function PettyCashView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Replenishment Dialog */}
+      <ReplenishmentDialog
+        open={!!replenishFund}
+        onOpenChange={open => { if (!open) setReplenishFund(null); }}
+        fund={replenishFund}
+      />
     </div>
   );
 }

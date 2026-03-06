@@ -233,6 +233,7 @@ export type Database = {
           chart_account_id: string | null
           created_at: string | null
           currency: string | null
+          fixed_amount: number | null
           id: string
           is_active: boolean | null
           updated_at: string | null
@@ -245,6 +246,7 @@ export type Database = {
           chart_account_id?: string | null
           created_at?: string | null
           currency?: string | null
+          fixed_amount?: number | null
           id?: string
           is_active?: boolean | null
           updated_at?: string | null
@@ -257,6 +259,7 @@ export type Database = {
           chart_account_id?: string | null
           created_at?: string | null
           currency?: string | null
+          fixed_amount?: number | null
           id?: string
           is_active?: boolean | null
           updated_at?: string | null

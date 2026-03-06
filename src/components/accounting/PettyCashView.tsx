@@ -114,6 +114,23 @@ export function PettyCashView() {
   const totalExpenses = recentTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
   const totalRecharges = recentTx.filter(tx => isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
+  // Compute running balances
+  const txWithBalance = (() => {
+    if (recentTx.length === 0) return [];
+    const startingBalance = accounts[0]?.fixed_amount || 0;
+    const chronological = [...recentTx].reverse();
+    let balance = startingBalance;
+    const withBal = chronological.map(tx => {
+      if (isRecharge(tx)) {
+        balance += tx.amount;
+      } else {
+        balance -= tx.amount;
+      }
+      return { ...tx, balance };
+    });
+    return withBal.reverse();
+  })();
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload: any = {
@@ -248,10 +265,11 @@ export function PettyCashView() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentTx.map(tx => (
+                {txWithBalance.map(tx => (
                   <TableRow key={tx.id}>
                     <TableCell>{format(new Date(tx.transaction_date + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
                     <TableCell>
@@ -262,6 +280,9 @@ export function PettyCashView() {
                     <TableCell>{tx.name || "—"}</TableCell>
                     <TableCell>{tx.description}</TableCell>
                     <TableCell className="text-right font-mono">{fmtNum(tx.amount)}</TableCell>
+                    <TableCell className={`text-right font-mono ${tx.balance < 0 ? "text-destructive" : ""}`}>
+                      {fmtNum(tx.balance)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

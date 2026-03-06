@@ -91,8 +91,8 @@ export default function Login() {
 
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] border-t-2 border-t-primary">
           <CardHeader className="text-center">
             <img 
               src={jordLogo} 
@@ -145,8 +145,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+      <Card className="w-full max-w-md shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] border-t-2 border-t-primary">
         <CardHeader className="text-center">
           <img 
             src={jordLogo} 

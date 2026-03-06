@@ -40,7 +40,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
       
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6">
+        <header className="h-16 border-b border-border/50 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex items-center justify-between px-4 md:px-6 sticky top-0 z-10 backdrop-blur-sm bg-card/95">
           <div className="flex items-center gap-3">
             {/* Mobile menu button */}
             <MobileSidebar />

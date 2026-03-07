@@ -106,7 +106,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       const endDate = `${fiscalYear}-12-31`;
       let query = supabase
         .from("transactions")
-        .select("cbs_code, master_acct_code, amount")
+        .select("cbs_code, master_acct_code, amount, currency, exchange_rate")
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .eq("is_void", false);

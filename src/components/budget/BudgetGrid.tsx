@@ -380,7 +380,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                      )}
                      style={{ left: stickyLeft[4], minWidth: COL_W[4] }}
                    >
-                     {toDistribute.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                     {toDistribute.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </td>
                   {/* Months */}
                   {MONTH_KEYS.map((mk, mi) => (

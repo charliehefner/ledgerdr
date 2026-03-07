@@ -154,6 +154,8 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           map[key] = (map[key] || 0) + ((tx.amount || 0) * rate);
         }
       });
+      // Round to whole numbers for budget display
+      Object.keys(map).forEach(k => { map[k] = Math.round(map[k]); });
       return map;
     },
   });

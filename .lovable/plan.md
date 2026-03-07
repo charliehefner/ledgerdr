@@ -1,18 +1,27 @@
 
 
-## Add Inline Edit to Financial Ledger (Reports)
+## Problem
 
-Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
+The Budget grid's "Actual" column sums transaction amounts without currency conversion. A USD 1,000 transaction is counted as 1,000 instead of ~60,000 DOP. The `exchange_rate` field on each transaction stores the conversion rate at time of entry.
 
-### Changes in `src/pages/Reports.tsx`
+## Solution
 
-1. **Import** `EditTransactionDialog` and add state:
-   - `selectedTransaction: Transaction | null`
-   - `editDialogOpen: boolean`
+Modify the actuals query in `BudgetGrid.tsx` to also fetch `currency` and `exchange_rate`, then multiply non-DOP amounts by their exchange rate before summing.
 
-2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
+### Changes
 
-3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
+**`src/components/budget/BudgetGrid.tsx`** (lines 107-126)
 
-4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
+- Update the `.select()` to include `currency` and `exchange_rate` alongside `cbs_code`, `master_acct_code`, and `amount`
+- In the aggregation loop, convert each transaction: if `currency !== 'DOP'`, multiply `amount` by `exchange_rate` (defaulting to 1 if missing)
+
+```text
+Before:  map[key] = (map[key] || 0) + (tx.amount || 0)
+After:   rate = (tx.currency !== 'DOP' && tx.exchange_rate) ? tx.exchange_rate : 1
+         map[key] = (map[key] || 0) + ((tx.amount || 0) * rate)
+```
+
+**`src/components/budget/ActualDetailDialog.tsx`** — Same conversion should apply there if it shows individual amounts or totals. Will check and update accordingly.
+
+This matches how financial statements already handle multi-currency conversion (multiply by exchange rate to get RD$ equivalent).
 

@@ -27,22 +27,18 @@ Deno.serve(async (req) => {
 
     const html = await response.text();
 
-    // Extract buy and sell rates from the HTML
-    // The BCRD homepage shows: Compra XX.XXXX / Venta XX.XXXX
-    // Look for patterns like "61.3359" near "Compra" and "Venta"
-    const buyMatch = html.match(
-      /Compra[\s\S]*?(\d{2}\.\d{2,4})/i
-    );
-    const sellMatch = html.match(
-      /Venta[\s\S]*?(\d{2}\.\d{2,4})/i
+    // Extract buy and sell rates from the "Tipo de cambio" section
+    // HTML structure: <small>Compra</small> <h5> 60.3088 </h5> ... <small>Venta</small> <h5> 60.7541 </h5>
+    const tcSection = html.match(
+      /Tipo de cambio[\s\S]*?<small>Compra<\/small>\s*<h5>\s*([\d.]+)\s*<\/h5>[\s\S]*?<small>Venta<\/small>\s*<h5>\s*([\d.]+)\s*<\/h5>/i
     );
 
-    if (!buyMatch || !sellMatch) {
+    if (!tcSection) {
       throw new Error("Could not parse exchange rates from BCRD page");
     }
 
-    const buyRate = parseFloat(buyMatch[1]);
-    const sellRate = parseFloat(sellMatch[1]);
+    const buyRate = parseFloat(tcSection[1]);
+    const sellRate = parseFloat(tcSection[2]);
 
     if (isNaN(buyRate) || isNaN(sellRate) || buyRate < 30 || buyRate > 120) {
       throw new Error(

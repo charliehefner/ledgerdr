@@ -581,7 +581,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handlePost}>Publicar</AlertDialogAction>
+                    <AlertDialogAction onClick={handlePost}>Contabilizar</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

@@ -569,7 +569,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" disabled={saving || !totals.balanced || !isApproved}>
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Publicar
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Contabilizar
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>

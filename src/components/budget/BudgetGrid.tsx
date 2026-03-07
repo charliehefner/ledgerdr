@@ -406,7 +406,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                 {totals.budget.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               <td className="sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs" style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
-                {totals.forecast.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {totals.forecast.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               <td className="sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs" style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
                 {totals.actual.toLocaleString("en-US", { minimumFractionDigits: 2 })}

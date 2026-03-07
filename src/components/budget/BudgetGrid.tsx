@@ -415,7 +415,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                  "sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs",
                  totalToDistribute >= 0 ? "text-green-600" : "text-red-600"
                )} style={{ left: stickyLeft[4], minWidth: COL_W[4] }}>
-                 {totalToDistribute.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                 {totalToDistribute.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               {totals.months.map((mv, mi) => (
                 <td key={mi} className="px-3 py-2 text-right font-mono text-xs" style={{ minWidth: 100 }}>

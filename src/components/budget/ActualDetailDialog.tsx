@@ -98,7 +98,7 @@ export function ActualDetailDialog({
                   <TableCell>{format(new Date(tx.transaction_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{tx.name || "—"}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {toDop(tx).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {(tx.dop_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     {tx.currency && tx.currency !== 'DOP' && (
                       <span className="text-muted-foreground text-[10px] ml-1">({tx.currency})</span>
                     )}

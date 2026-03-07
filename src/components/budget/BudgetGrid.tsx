@@ -419,7 +419,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
               </td>
               {totals.months.map((mv, mi) => (
                 <td key={mi} className="px-3 py-2 text-right font-mono text-xs" style={{ minWidth: 100 }}>
-                  {mv.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  {mv.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </td>
               ))}
             </tr>

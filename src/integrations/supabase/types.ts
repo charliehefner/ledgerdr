@@ -2384,6 +2384,54 @@ export type Database = {
         }
         Relationships: []
       }
+      revaluation_log: {
+        Row: {
+          closing_rate: number
+          created_at: string
+          created_by: string | null
+          id: string
+          journal_id: string | null
+          period_id: string
+          revaluation_date: string
+          total_adjustment: number
+        }
+        Insert: {
+          closing_rate: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          journal_id?: string | null
+          period_id: string
+          revaluation_date: string
+          total_adjustment?: number
+        }
+        Update: {
+          closing_rate?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          journal_id?: string | null
+          period_id?: string
+          revaluation_date?: string
+          total_adjustment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revaluation_log_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revaluation_log_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_user_deletions: {
         Row: {
           cancelled_at: string | null
@@ -3158,6 +3206,16 @@ export type Database = {
           itbis_withheld: number
           journal_date: string
           transaction_id: string
+        }[]
+      }
+      foreign_currency_balances: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          booked_dop_total: number
+          usd_balance: number
         }[]
       }
       get_fields_with_boundaries: {

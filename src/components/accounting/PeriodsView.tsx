@@ -167,6 +167,15 @@ export function PeriodsView() {
                       status={p.status}
                     />
                   </TableCell>
+                  <TableCell>
+                    <PeriodRevaluationButton
+                      periodId={p.id}
+                      periodName={p.period_name}
+                      startDate={p.start_date}
+                      endDate={p.end_date}
+                      status={p.status}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

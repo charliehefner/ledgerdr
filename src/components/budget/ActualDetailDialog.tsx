@@ -31,7 +31,7 @@ export function ActualDetailDialog({
     queryFn: async () => {
       let query = supabase
         .from("transactions")
-        .select("legacy_id, transaction_date, name, amount")
+        .select("legacy_id, transaction_date, name, amount, currency, exchange_rate")
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .eq("is_void", false);

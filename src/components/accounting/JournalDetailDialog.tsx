@@ -569,19 +569,19 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" disabled={saving || !totals.balanced || !isApproved}>
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Publicar
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Contabilizar
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Publicar asiento?</AlertDialogTitle>
+                    <AlertDialogTitle>¿Contabilizar asiento?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Una vez publicado, el asiento no se podrá modificar. Esta acción es irreversible.
+                      Una vez contabilizado, el asiento no se podrá modificar. Esta acción es irreversible.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handlePost}>Publicar</AlertDialogAction>
+                    <AlertDialogAction onClick={handlePost}>Contabilizar</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

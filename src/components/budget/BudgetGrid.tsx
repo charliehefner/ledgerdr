@@ -154,6 +154,8 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           map[key] = (map[key] || 0) + ((tx.amount || 0) * rate);
         }
       });
+      // Round to whole numbers for budget display
+      Object.keys(map).forEach(k => { map[k] = Math.round(map[k]); });
       return map;
     },
   });
@@ -365,7 +367,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                       onClick={() => { setDetailCode(lc.code); setDetailOpen(true); }}
                       className="inline-flex items-center gap-1 hover:text-primary transition-colors"
                     >
-                      {actualVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {actualVal.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       <Search className="h-3 w-3" />
                     </button>
                   </td>
@@ -378,7 +380,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                      )}
                      style={{ left: stickyLeft[4], minWidth: COL_W[4] }}
                    >
-                     {toDistribute.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                     {toDistribute.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </td>
                   {/* Months */}
                   {MONTH_KEYS.map((mk, mi) => (
@@ -401,23 +403,23 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                 {t("common.total")}
               </td>
               <td className="sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs" style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
-                {totals.budget.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {totals.budget.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               <td className="sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs" style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
-                {totals.forecast.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {totals.forecast.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               <td className="sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs" style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
-                {totals.actual.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {totals.actual.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               <td className={cn(
                  "sticky z-20 bg-muted/30 border-r px-3 py-2 text-right font-mono text-xs",
                  totalToDistribute >= 0 ? "text-green-600" : "text-red-600"
                )} style={{ left: stickyLeft[4], minWidth: COL_W[4] }}>
-                 {totalToDistribute.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                 {totalToDistribute.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
               {totals.months.map((mv, mi) => (
                 <td key={mi} className="px-3 py-2 text-right font-mono text-xs" style={{ minWidth: 100 }}>
-                  {mv.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  {mv.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </td>
               ))}
             </tr>

@@ -576,7 +576,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                   <AlertDialogHeader>
                     <AlertDialogTitle>¿Contabilizar asiento?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Una vez publicado, el asiento no se podrá modificar. Esta acción es irreversible.
+                      Una vez contabilizado, el asiento no se podrá modificar. Esta acción es irreversible.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

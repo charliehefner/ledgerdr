@@ -31,7 +31,7 @@ export function ActualDetailDialog({
     queryFn: async () => {
       let query = supabase
         .from("transactions")
-        .select("legacy_id, transaction_date, name, amount, currency, exchange_rate")
+        .select("id, legacy_id, transaction_date, name, amount, currency")
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .eq("is_void", false);
@@ -44,16 +44,32 @@ export function ActualDetailDialog({
 
       const { data, error } = await query.order("transaction_date", { ascending: true });
       if (error) throw error;
-      return data || [];
+      const txns = data || [];
+
+      // Fetch exchange rates from journals for foreign-currency transactions
+      const foreignIds = txns.filter(t => t.currency && t.currency !== 'DOP').map(t => t.id);
+      const rateMap: Record<string, number> = {};
+      if (foreignIds.length > 0) {
+        const { data: journals } = await supabase
+          .from("journals")
+          .select("transaction_source_id, exchange_rate")
+          .in("transaction_source_id", foreignIds);
+        (journals || []).forEach(j => {
+          if (j.transaction_source_id && j.exchange_rate) {
+            rateMap[j.transaction_source_id] = j.exchange_rate;
+          }
+        });
+      }
+
+      return txns.map(tx => ({
+        ...tx,
+        dop_amount: (tx.amount || 0) * ((tx.currency && tx.currency !== 'DOP') ? (rateMap[tx.id] || 1) : 1),
+      }));
     },
     enabled: open,
   });
 
-  const toDop = (tx: any) => {
-    const rate = (tx.currency && tx.currency !== 'DOP' && tx.exchange_rate) ? tx.exchange_rate : 1;
-    return (tx.amount || 0) * rate;
-  };
-  const total = transactions.reduce((s, t) => s + toDop(t), 0);
+  const total = transactions.reduce((s, t) => s + (t.dop_amount || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

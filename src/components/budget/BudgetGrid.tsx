@@ -98,7 +98,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     },
   });
 
-  // Fetch actuals from transactions
+  // Fetch actuals from transactions, converting foreign currencies to DOP via journal exchange_rate
   const { data: actuals = {} } = useQuery({
     queryKey: ["budget-actuals", budgetType, projectCode, fiscalYear],
     queryFn: async () => {
@@ -106,7 +106,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       const endDate = `${fiscalYear}-12-31`;
       let query = supabase
         .from("transactions")
-        .select("cbs_code, master_acct_code, amount, currency, exchange_rate")
+        .select("id, cbs_code, master_acct_code, amount, currency")
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .eq("is_void", false);
@@ -115,12 +115,29 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         query = query.eq("project_code", projectCode!);
       }
 
-      const { data } = await query;
+      const { data: txns } = await query;
+      if (!txns || txns.length === 0) return {};
+
+      // Build exchange rate map from journals linked to these transactions
+      const foreignTxIds = txns.filter(t => t.currency && t.currency !== 'DOP').map(t => t.id);
+      const rateMap: Record<string, number> = {};
+      if (foreignTxIds.length > 0) {
+        const { data: journals } = await supabase
+          .from("journals")
+          .select("transaction_source_id, exchange_rate")
+          .in("transaction_source_id", foreignTxIds);
+        (journals || []).forEach(j => {
+          if (j.transaction_source_id && j.exchange_rate) {
+            rateMap[j.transaction_source_id] = j.exchange_rate;
+          }
+        });
+      }
+
       const map: Record<string, number> = {};
-      (data || []).forEach(tx => {
+      txns.forEach(tx => {
         const key = budgetType === "project" ? tx.cbs_code : tx.master_acct_code;
         if (key) {
-          const rate = (tx.currency && tx.currency !== 'DOP' && tx.exchange_rate) ? tx.exchange_rate : 1;
+          const rate = (tx.currency && tx.currency !== 'DOP') ? (rateMap[tx.id] || 1) : 1;
           map[key] = (map[key] || 0) + ((tx.amount || 0) * rate);
         }
       });

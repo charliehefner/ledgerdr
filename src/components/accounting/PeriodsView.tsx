@@ -14,6 +14,7 @@ import { Plus, CalendarDays } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { PeriodClosingButton } from "./PeriodClosingButton";
+import { PeriodRevaluationButton } from "./PeriodRevaluationButton";
 
 type PeriodStatus = "open" | "closed" | "reported" | "locked";
 

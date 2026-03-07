@@ -128,6 +128,7 @@ export function PeriodsView() {
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[140px]">Cambiar Estado</TableHead>
                 <TableHead className="w-[120px]">Cierre</TableHead>
+                <TableHead className="w-[130px]">Revaluación</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -119,7 +119,10 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       const map: Record<string, number> = {};
       (data || []).forEach(tx => {
         const key = budgetType === "project" ? tx.cbs_code : tx.master_acct_code;
-        if (key) map[key] = (map[key] || 0) + (tx.amount || 0);
+        if (key) {
+          const rate = (tx.currency && tx.currency !== 'DOP' && tx.exchange_rate) ? tx.exchange_rate : 1;
+          map[key] = (map[key] || 0) + ((tx.amount || 0) * rate);
+        }
       });
       return map;
     },

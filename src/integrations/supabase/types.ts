@@ -1090,6 +1090,36 @@ export type Database = {
         }
         Relationships: []
       }
+      exchange_rates: {
+        Row: {
+          buy_rate: number
+          created_at: string
+          currency_pair: string
+          id: string
+          rate_date: string
+          sell_rate: number
+          source: string
+        }
+        Insert: {
+          buy_rate: number
+          created_at?: string
+          currency_pair?: string
+          id?: string
+          rate_date: string
+          sell_rate: number
+          source?: string
+        }
+        Update: {
+          buy_rate?: number
+          created_at?: string
+          currency_pair?: string
+          id?: string
+          rate_date?: string
+          sell_rate?: number
+          source?: string
+        }
+        Relationships: []
+      }
       farms: {
         Row: {
           created_at: string

@@ -367,7 +367,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
                       onClick={() => { setDetailCode(lc.code); setDetailOpen(true); }}
                       className="inline-flex items-center gap-1 hover:text-primary transition-colors"
                     >
-                      {actualVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {actualVal.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       <Search className="h-3 w-3" />
                     </button>
                   </td>

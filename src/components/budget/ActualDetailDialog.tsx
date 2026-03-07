@@ -46,24 +46,33 @@ export function ActualDetailDialog({
       if (error) throw error;
       const txns = data || [];
 
-      // Fetch exchange rates from journals for foreign-currency transactions
-      const foreignIds = txns.filter(t => t.currency && t.currency !== 'DOP').map(t => t.id);
-      const rateMap: Record<string, number> = {};
-      if (foreignIds.length > 0) {
-        const { data: journals } = await supabase
-          .from("journals")
-          .select("transaction_source_id, exchange_rate")
-          .in("transaction_source_id", foreignIds);
-        (journals || []).forEach(j => {
-          if (j.transaction_source_id && j.exchange_rate) {
-            rateMap[j.transaction_source_id] = j.exchange_rate;
-          }
-        });
-      }
+      // Fetch BCRD daily exchange rates for the fiscal year
+      const { data: rates } = await supabase
+        .from("exchange_rates")
+        .select("rate_date, sell_rate")
+        .eq("currency_pair", "USD/DOP")
+        .gte("rate_date", startDate)
+        .lte("rate_date", endDate);
+
+      const rateByDate: Record<string, number> = {};
+      (rates || []).forEach(r => {
+        rateByDate[r.rate_date] = r.sell_rate;
+      });
+
+      const sortedDates = Object.keys(rateByDate).sort();
+
+      const findRate = (dateStr: string): number => {
+        if (rateByDate[dateStr]) return rateByDate[dateStr];
+        for (let i = sortedDates.length - 1; i >= 0; i--) {
+          if (sortedDates[i] <= dateStr) return rateByDate[sortedDates[i]];
+        }
+        return sortedDates.length > 0 ? rateByDate[sortedDates[0]] : 1;
+      };
 
       return txns.map(tx => ({
         ...tx,
-        dop_amount: (tx.amount || 0) * ((tx.currency && tx.currency !== 'DOP') ? (rateMap[tx.id] || 1) : 1),
+        exchange_rate: (tx.currency && tx.currency !== 'DOP') ? findRate(tx.transaction_date) : 1,
+        dop_amount: (tx.amount || 0) * ((tx.currency && tx.currency !== 'DOP') ? findRate(tx.transaction_date) : 1),
       }));
     },
     enabled: open,
@@ -100,7 +109,9 @@ export function ActualDetailDialog({
                   <TableCell className="text-right font-mono">
                     {(tx.dop_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     {tx.currency && tx.currency !== 'DOP' && (
-                      <span className="text-muted-foreground text-[10px] ml-1">({tx.currency})</span>
+                      <span className="text-muted-foreground text-[10px] ml-1">
+                        ({tx.currency} @{tx.exchange_rate?.toFixed(2)})
+                      </span>
                     )}
                   </TableCell>
                 </TableRow>

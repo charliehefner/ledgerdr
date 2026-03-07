@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.generate-journals]
 verify_jwt = false
+
+[functions.fetch-exchange-rate]
+verify_jwt = false

@@ -14,6 +14,7 @@ import { Plus, CalendarDays } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { PeriodClosingButton } from "./PeriodClosingButton";
+import { PeriodRevaluationButton } from "./PeriodRevaluationButton";
 
 type PeriodStatus = "open" | "closed" | "reported" | "locked";
 
@@ -127,6 +128,7 @@ export function PeriodsView() {
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[140px]">Cambiar Estado</TableHead>
                 <TableHead className="w-[120px]">Cierre</TableHead>
+                <TableHead className="w-[130px]">Revaluación</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -158,6 +160,15 @@ export function PeriodsView() {
                   </TableCell>
                   <TableCell>
                     <PeriodClosingButton
+                      periodId={p.id}
+                      periodName={p.period_name}
+                      startDate={p.start_date}
+                      endDate={p.end_date}
+                      status={p.status}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <PeriodRevaluationButton
                       periodId={p.id}
                       periodName={p.period_name}
                       startDate={p.start_date}

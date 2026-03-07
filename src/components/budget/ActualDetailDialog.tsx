@@ -49,7 +49,11 @@ export function ActualDetailDialog({
     enabled: open,
   });
 
-  const total = transactions.reduce((s, t) => s + (t.amount || 0), 0);
+  const toDop = (tx: any) => {
+    const rate = (tx.currency && tx.currency !== 'DOP' && tx.exchange_rate) ? tx.exchange_rate : 1;
+    return (tx.amount || 0) * rate;
+  };
+  const total = transactions.reduce((s, t) => s + toDop(t), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -166,7 +166,7 @@ export function ServicesView() {
       generateReceipt(entry);
 
       // Create transaction with pay_method mapped to string
-      await createTransaction({
+      const txn = await createTransaction({
         transaction_date: entry.service_date,
         master_acct_code: entry.master_acct_code || "",
         description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
@@ -179,9 +179,9 @@ export function ServicesView() {
         is_internal: false,
       });
 
-      // Mark as closed
+      // Mark as closed and link the transaction
       const { error } = await supabase.from("service_entries")
-        .update({ is_closed: true }).eq("id", entry.id);
+        .update({ is_closed: true, transaction_id: txn.id } as any).eq("id", entry.id);
       if (error) throw error;
     },
     onSuccess: () => {

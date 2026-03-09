@@ -319,6 +319,7 @@ export function ServicesView() {
         amount: entry.amount != null ? String(entry.amount) : "",
         currency: entry.currency,
         comments: entry.comments || "",
+        pay_method: entry.pay_method || "",
       });
     } else {
       setEditingEntry(null);

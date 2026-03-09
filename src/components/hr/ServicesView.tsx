@@ -153,13 +153,14 @@ export function ServicesView() {
       // Generate receipt PDF
       generateReceipt(entry);
 
-      // Create transaction
+      // Create transaction with pay_method
       await createTransaction({
         transaction_date: entry.service_date,
         master_acct_code: entry.master_acct_code || "",
         description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
         currency: entry.currency as "DOP" | "USD" | "EUR",
         amount: Number(entry.amount),
+        pay_method: entry.pay_method || undefined,
         is_internal: false,
       });
 

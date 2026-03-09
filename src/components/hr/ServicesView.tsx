@@ -403,6 +403,7 @@ export function ServicesView() {
                 <TableHead>Descripción</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
+                {showClosed && <TableHead className="text-center">Trans. #</TableHead>}
                 {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
               </TableRow>
             </TableHeader>

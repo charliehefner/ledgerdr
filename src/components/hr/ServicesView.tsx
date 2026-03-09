@@ -409,9 +409,9 @@ export function ServicesView() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
               ) : entries.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">
                   No hay servicios {showClosed ? "" : "abiertos"}
                 </TableCell></TableRow>
               ) : (

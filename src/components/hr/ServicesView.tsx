@@ -127,6 +127,7 @@ export function ServicesView() {
         amount: data.amount ? parseFloat(data.amount) : null,
         currency: data.currency,
         comments: data.comments || null,
+        pay_method: data.pay_method || null,
       };
       if (data.id) {
         const { error } = await supabase.from("service_entries").update(payload).eq("id", data.id);

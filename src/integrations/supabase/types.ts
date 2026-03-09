@@ -2672,6 +2672,7 @@ export type Database = {
           id: string
           is_closed: boolean
           master_acct_code: string | null
+          pay_method: string | null
           provider_id: string
           service_date: string
           updated_at: string
@@ -2685,6 +2686,7 @@ export type Database = {
           id?: string
           is_closed?: boolean
           master_acct_code?: string | null
+          pay_method?: string | null
           provider_id: string
           service_date?: string
           updated_at?: string
@@ -2698,11 +2700,19 @@ export type Database = {
           id?: string
           is_closed?: boolean
           master_acct_code?: string | null
+          pay_method?: string | null
           provider_id?: string
           service_date?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_entries_pay_method_fkey"
+            columns: ["pay_method"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_entries_provider_id_fkey"
             columns: ["provider_id"]

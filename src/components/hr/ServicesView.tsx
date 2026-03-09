@@ -38,6 +38,7 @@ interface ServiceEntry {
   amount: number | null;
   currency: string;
   comments: string | null;
+  pay_method: string | null;
   is_closed: boolean;
   created_at: string;
   service_providers: { name: string; cedula: string };
@@ -50,11 +51,11 @@ interface Account {
 
 const emptyForm = {
   provider_id: "", service_date: formatDateLocal(new Date()),
-  master_acct_code: "", description: "", amount: "", currency: "DOP", comments: "",
+  master_acct_code: "", description: "", amount: "", currency: "DOP", comments: "", pay_method: "",
 };
 
-function isIncomplete(entry: { master_acct_code: string | null; description: string | null; amount: number | null }) {
-  return !entry.master_acct_code || !entry.description || entry.amount == null;
+function isIncomplete(entry: { master_acct_code: string | null; description: string | null; amount: number | null; pay_method: string | null }) {
+  return !entry.master_acct_code || !entry.description || entry.amount == null || !entry.pay_method;
 }
 
 export function ServicesView() {
@@ -67,6 +68,19 @@ export function ServicesView() {
   const [editingEntry, setEditingEntry] = useState<ServiceEntry | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [closingEntry, setClosingEntry] = useState<ServiceEntry | null>(null);
+
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["bank-accounts-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("bank_accounts")
+        .select("id, account_name, bank_name, account_type")
+        .eq("is_active", true)
+        .in("account_type", ["bank", "petty_cash"])
+        .order("account_name");
+      if (error) throw error;
+      return data as { id: string; account_name: string; bank_name: string; account_type: string }[];
+    },
+  });
 
   const { data: providers = [] } = useQuery({
     queryKey: ["service-providers-active"],
@@ -113,6 +127,7 @@ export function ServicesView() {
         amount: data.amount ? parseFloat(data.amount) : null,
         currency: data.currency,
         comments: data.comments || null,
+        pay_method: data.pay_method || null,
       };
       if (data.id) {
         const { error } = await supabase.from("service_entries").update(payload).eq("id", data.id);
@@ -138,13 +153,14 @@ export function ServicesView() {
       // Generate receipt PDF
       generateReceipt(entry);
 
-      // Create transaction
+      // Create transaction with pay_method
       await createTransaction({
         transaction_date: entry.service_date,
         master_acct_code: entry.master_acct_code || "",
         description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
         currency: entry.currency as "DOP" | "USD" | "EUR",
         amount: Number(entry.amount),
+        pay_method: entry.pay_method || undefined,
         is_internal: false,
       });
 
@@ -303,6 +319,7 @@ export function ServicesView() {
         amount: entry.amount != null ? String(entry.amount) : "",
         currency: entry.currency,
         comments: entry.comments || "",
+        pay_method: entry.pay_method || "",
       });
     } else {
       setEditingEntry(null);
@@ -322,7 +339,7 @@ export function ServicesView() {
 
   const handleCloseService = (entry: ServiceEntry) => {
     if (isIncomplete(entry)) {
-      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción y monto antes de cerrar.", variant: "destructive" });
+      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción, monto y método de pago antes de cerrar.", variant: "destructive" });
       return;
     }
     setClosingEntry(entry);
@@ -481,6 +498,17 @@ export function ServicesView() {
               <Input type="number" step="0.01" min="0" value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="0.00" />
+            </div>
+            <div className="space-y-2">
+              <Label>Pagado desde *</Label>
+              <Select value={formData.pay_method} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((ba) => (
+                    <SelectItem key={ba.id} value={ba.id}>{ba.account_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Comentarios</Label>

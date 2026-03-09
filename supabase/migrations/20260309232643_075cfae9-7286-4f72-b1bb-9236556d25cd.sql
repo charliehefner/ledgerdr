@@ -1,0 +1,1 @@
+ALTER TABLE public.service_entries ADD COLUMN pay_method uuid REFERENCES public.bank_accounts(id);

@@ -500,6 +500,17 @@ export function ServicesView() {
                 placeholder="0.00" />
             </div>
             <div className="space-y-2">
+              <Label>Pagado desde *</Label>
+              <Select value={formData.pay_method} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((ba) => (
+                    <SelectItem key={ba.id} value={ba.id}>{ba.account_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Comentarios</Label>
               <Textarea value={formData.comments}
                 onChange={(e) => setFormData({ ...formData, comments: e.target.value })}

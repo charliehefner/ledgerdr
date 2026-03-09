@@ -1,52 +1,18 @@
 
 
-## Upgrade Service Receipt to Match Day Labor Receipt Style
+## Add Inline Edit to Financial Ledger (Reports)
 
-### What changes
-**Single file**: `src/components/hr/ServicesView.tsx` — rewrite the `generateReceipt` function.
+Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
 
-### New receipt layout (matching Day Labor style)
-The receipt will produce **two copies per page** (company + worker), separated by a dashed "CORTAR AQUÍ" cut line, with this structure per copy:
+### Changes in `src/pages/Reports.tsx`
 
-```text
-                                           COPIA EMPRESA
-         RECIBO DE SERVICIO
-    Fecha: dd/MM/yyyy
+1. **Import** `EditTransactionDialog` and add state:
+   - `selectedTransaction: Transaction | null`
+   - `editDialogOpen: boolean`
 
-  ┌──────────────────────────────────┐
-  │ Prestador:  [Name]               │
-  │ Cédula:     [Cedula]             │
-  └──────────────────────────────────┘
+2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
 
-  ┌──────────────────────────────────┐
-  │ Cuenta    Descripción     Monto  │  (header row)
-  │ 7040      Soldadura...   RD$X,XX │  (data row)
-  └──────────────────────────────────┘
+3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
 
-  ┌══════════════════════════════════┐
-  │ TOTAL:              RD$ 5,000.00 │  (dark box, white text)
-  └══════════════════════════════════┘
-
-  (Amount in words)
-
-  _______________        _______________
-  Firma Prestador        Firma Autorizada
-
-- - - - - ✂ CORTAR AQUÍ - - - - - -
-
-         [Same layout — COPIA PRESTADOR]
-```
-
-### Key details
-- Uses `roundedRect` info box for provider name/cedula (like day labor)
-- Table-style header row with grey background for account, description, amount
-- Dark total box with white text (matching day labor)
-- Amount in Spanish words below total (already implemented, reuse `numberToSpanishWords`)
-- Two signature lines side by side
-- Two copies separated by dashed cut line with scissors icon
-- Copy labels: "COPIA EMPRESA" / "COPIA PRESTADOR"
-- Comments field rendered below description if present
-
-### No other changes
-The transaction creation logic and close flow remain identical.
+4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
 

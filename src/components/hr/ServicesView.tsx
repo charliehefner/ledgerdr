@@ -166,67 +166,130 @@ export function ServicesView() {
   });
 
   const generateReceipt = (entry: ServiceEntry) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
     const amount = Number(entry.amount);
-    const currencySymbol = entry.currency === "USD" ? "US$" : entry.currency === "EUR" ? "€" : "RD$";
+    const dateStr = format(new Date(entry.service_date + "T12:00:00"), "dd/MM/yyyy");
+    const formatCurrency = (val: number) =>
+      new Intl.NumberFormat("es-DO", { style: "currency", currency: entry.currency, minimumFractionDigits: 2 }).format(val);
 
-    // Greyscale header
-    doc.setFillColor(240, 240, 240);
-    doc.rect(0, 0, 210, 40, "F");
-    doc.setFontSize(18);
-    doc.setTextColor(50, 50, 50);
-    doc.text("RECIBO DE SERVICIO", 105, 20, { align: "center" });
-    doc.setFontSize(11);
-    doc.text(`Fecha: ${format(new Date(entry.service_date + "T12:00:00"), "dd/MM/yyyy")}`, 105, 32, { align: "center" });
+    const generateCopy = (yOffset: number) => {
+      let y = yOffset + 8;
 
-    let y = 55;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
+      // Header
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("RECIBO DE SERVICIO", pageWidth / 2, y, { align: "center" });
+      y += 6;
 
-    // Provider info
-    doc.text("Prestador:", 20, y);
-    doc.setFont("helvetica", "bold");
-    doc.text(entry.service_providers.name, 60, y);
-    doc.setFont("helvetica", "normal");
-    y += 10;
-    doc.text("Cédula:", 20, y);
-    doc.text(entry.service_providers.cedula, 60, y);
-    y += 15;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Fecha: ${dateStr}`, pageWidth / 2, y, { align: "center" });
+      y += 10;
 
-    // Description
-    doc.text("Descripción del Servicio:", 20, y);
-    y += 8;
-    doc.setFontSize(11);
-    const descLines = doc.splitTextToSize(entry.description || "", 170);
-    doc.text(descLines, 20, y);
-    y += descLines.length * 6 + 10;
+      // Provider info box
+      doc.setDrawColor(200);
+      doc.setFillColor(248, 249, 250);
+      doc.roundedRect(15, y, pageWidth - 30, 14, 2, 2, "FD");
 
-    // Amount numerical
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${currencySymbol} ${amount.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`, 20, y);
-    doc.setFont("helvetica", "normal");
-    y += 10;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text("Prestador:", 20, y + 6);
+      doc.text("Cédula:", 20, y + 11);
+      doc.setFont("helvetica", "normal");
+      doc.text(entry.service_providers.name, 50, y + 6);
+      doc.text(entry.service_providers.cedula || "—", 50, y + 11);
 
-    // Amount in words
-    doc.setFontSize(11);
-    const words = numberToSpanishWords(amount, entry.currency);
-    const wordLines = doc.splitTextToSize(`(${words})`, 170);
-    doc.text(wordLines, 20, y);
-    y += wordLines.length * 6 + 25;
+      y += 20;
 
-    // Signature box
-    doc.setDrawColor(150, 150, 150);
-    doc.line(20, y, 100, y);
-    y += 6;
-    doc.setFontSize(10);
-    doc.text("Firma", 20, y);
-    y += 10;
-    doc.text(`Nombre: ${entry.service_providers.name}`, 20, y);
-    y += 6;
-    doc.text(`Cédula: ${entry.service_providers.cedula}`, 20, y);
+      // Table header
+      doc.setFillColor(235, 235, 235);
+      doc.roundedRect(15, y, pageWidth - 30, 7, 1, 1, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text("Cuenta", 20, y + 5);
+      doc.text("Descripción", 55, y + 5);
+      doc.text("Monto", pageWidth - 20, y + 5, { align: "right" });
+      y += 9;
 
-    doc.save(`Recibo_Servicio_${entry.service_providers.name.replace(/\s/g, "_")}_${entry.service_date}.pdf`);
+      // Data row
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(entry.master_acct_code || "—", 20, y);
+      const descText = doc.splitTextToSize(entry.description || "—", 90);
+      doc.text(descText, 55, y);
+      doc.text(formatCurrency(amount), pageWidth - 20, y, { align: "right" });
+      y += Math.max(descText.length * 4, 5);
+
+      // Comments if present
+      if (entry.comments) {
+        y += 2;
+        doc.setFontSize(7);
+        doc.setTextColor(100);
+        const commentLines = doc.splitTextToSize(`Nota: ${entry.comments}`, pageWidth - 40);
+        doc.text(commentLines, 20, y);
+        doc.setTextColor(0);
+        y += commentLines.length * 3.5;
+      }
+
+      // Total box
+      y += 4;
+      doc.setFillColor(160, 160, 160);
+      doc.roundedRect(15, y, pageWidth - 30, 12, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("TOTAL:", 25, y + 8);
+      doc.setFontSize(14);
+      doc.text(formatCurrency(amount), pageWidth - 25, y + 8, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+
+      // Amount in words
+      y += 16;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      const words = numberToSpanishWords(amount, entry.currency);
+      const wordLines = doc.splitTextToSize(`(${words})`, pageWidth - 40);
+      doc.text(wordLines, 20, y);
+      y += wordLines.length * 4;
+
+      // Signature lines
+      const sigY = y + 8;
+      doc.setDrawColor(150);
+      doc.line(25, sigY, 85, sigY);
+      doc.setFontSize(8);
+      doc.text("Firma Prestador", 55, sigY + 4, { align: "center" });
+      doc.line(pageWidth - 85, sigY, pageWidth - 25, sigY);
+      doc.text("Firma Autorizada", pageWidth - 55, sigY + 4, { align: "center" });
+
+      // Copy label
+      const copyLabel = yOffset === 0 ? "COPIA EMPRESA" : "COPIA PRESTADOR";
+      doc.setFontSize(7);
+      doc.setTextColor(150);
+      doc.text(copyLabel, pageWidth - 20, yOffset + 5, { align: "right" });
+      doc.setTextColor(0);
+    };
+
+    // Top copy
+    generateCopy(5);
+
+    // Dashed cut line
+    const middleY = 140;
+    doc.setDrawColor(150);
+    doc.setLineDashPattern([3, 2], 0);
+    doc.line(10, middleY, pageWidth - 10, middleY);
+    doc.setLineDashPattern([], 0);
+    doc.setFontSize(6);
+    doc.setTextColor(150);
+    doc.text("✂ CORTAR AQUÍ", pageWidth / 2, middleY - 2, { align: "center" });
+    doc.setTextColor(0);
+
+    // Bottom copy
+    generateCopy(145);
+
+    const safeName = entry.service_providers.name
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+    doc.save(`Recibo_Servicio_${safeName}_${entry.service_date}.pdf`);
   };
 
   const handleOpenDialog = (entry?: ServiceEntry) => {

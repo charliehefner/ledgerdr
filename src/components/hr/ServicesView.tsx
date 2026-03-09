@@ -54,8 +54,8 @@ const emptyForm = {
   master_acct_code: "", description: "", amount: "", currency: "DOP", comments: "", pay_method: "",
 };
 
-function isIncomplete(entry: { master_acct_code: string | null; description: string | null; amount: number | null }) {
-  return !entry.master_acct_code || !entry.description || entry.amount == null;
+function isIncomplete(entry: { master_acct_code: string | null; description: string | null; amount: number | null; pay_method: string | null }) {
+  return !entry.master_acct_code || !entry.description || entry.amount == null || !entry.pay_method;
 }
 
 export function ServicesView() {

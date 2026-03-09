@@ -51,7 +51,7 @@ interface Account {
 
 const emptyForm = {
   provider_id: "", service_date: formatDateLocal(new Date()),
-  master_acct_code: "", description: "", amount: "", currency: "DOP", comments: "",
+  master_acct_code: "", description: "", amount: "", currency: "DOP", comments: "", pay_method: "",
 };
 
 function isIncomplete(entry: { master_acct_code: string | null; description: string | null; amount: number | null }) {

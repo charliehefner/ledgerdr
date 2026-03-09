@@ -110,7 +110,7 @@ export function ServicesView() {
     queryKey: ["service-entries", showClosed],
     queryFn: async () => {
       let query = supabase.from("service_entries")
-        .select("*, service_providers(name, cedula)")
+        .select("*, service_providers(name, cedula), transactions(legacy_id)")
         .order("service_date", { ascending: false });
       if (!showClosed) query = query.eq("is_closed", false);
       const { data, error } = await query;

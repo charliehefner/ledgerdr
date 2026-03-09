@@ -436,6 +436,11 @@ export function ServicesView() {
                           {entry.is_closed ? "Cerrado" : "Abierto"}
                         </Badge>
                       </TableCell>
+                      {showClosed && (
+                        <TableCell className="text-center font-mono text-sm">
+                          {entry.transactions?.legacy_id ?? "—"}
+                        </TableCell>
+                      )}
                       {canWrite && (
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">

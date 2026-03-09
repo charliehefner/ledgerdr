@@ -1,0 +1,1 @@
+ALTER TABLE public.service_entries ADD COLUMN transaction_id uuid REFERENCES public.transactions(id) ON DELETE SET NULL;

@@ -148,19 +148,32 @@ export function ServicesView() {
     onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
+  // Map bank account UUID to transaction pay_method string
+  const mapPayMethod = (bankAccountId: string | null): string | undefined => {
+    if (!bankAccountId) return undefined;
+    const account = bankAccounts.find(ba => ba.id === bankAccountId);
+    if (!account) return undefined;
+    // Match by known bank accounts
+    if (account.account_type === "petty_cash") return "petty_cash";
+    if (account.bank_name === "Banco BDI" || account.bank_name?.includes("BDI")) return "transfer_bdi";
+    if (account.bank_name === "BHD León" || account.bank_name?.includes("BHD")) return "transfer_bhd";
+    return "cash";
+  };
+
   const closeMutation = useMutation({
     mutationFn: async (entry: ServiceEntry) => {
       // Generate receipt PDF
       generateReceipt(entry);
 
-      // Create transaction with pay_method
+      // Create transaction with pay_method mapped to string
       await createTransaction({
         transaction_date: entry.service_date,
         master_acct_code: entry.master_acct_code || "",
         description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
         currency: entry.currency as "DOP" | "USD" | "EUR",
         amount: Number(entry.amount),
-        pay_method: entry.pay_method || undefined,
+        pay_method: mapPayMethod(entry.pay_method),
+        name: entry.service_providers.name,
         is_internal: false,
       });
 

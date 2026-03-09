@@ -174,6 +174,8 @@ export function ServicesView() {
         amount: Number(entry.amount),
         pay_method: mapPayMethod(entry.pay_method),
         name: entry.service_providers.name,
+        document: "Recibo",
+        rnc: entry.service_providers.cedula,
         is_internal: false,
       });
 

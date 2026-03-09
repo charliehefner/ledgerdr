@@ -69,6 +69,19 @@ export function ServicesView() {
   const [formData, setFormData] = useState(emptyForm);
   const [closingEntry, setClosingEntry] = useState<ServiceEntry | null>(null);
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["bank-accounts-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("bank_accounts")
+        .select("id, account_name, bank_name, account_type")
+        .eq("is_active", true)
+        .in("account_type", ["bank", "petty_cash"])
+        .order("account_name");
+      if (error) throw error;
+      return data as { id: string; account_name: string; bank_name: string; account_type: string }[];
+    },
+  });
+
   const { data: providers = [] } = useQuery({
     queryKey: ["service-providers-active"],
     queryFn: async () => {

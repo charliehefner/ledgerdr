@@ -41,7 +41,9 @@ interface ServiceEntry {
   pay_method: string | null;
   is_closed: boolean;
   created_at: string;
+  transaction_id: string | null;
   service_providers: { name: string; cedula: string };
+  transactions?: { legacy_id: number | null } | null;
 }
 
 interface Account {
@@ -108,7 +110,7 @@ export function ServicesView() {
     queryKey: ["service-entries", showClosed],
     queryFn: async () => {
       let query = supabase.from("service_entries")
-        .select("*, service_providers(name, cedula)")
+        .select("*, service_providers(name, cedula), transactions(legacy_id)")
         .order("service_date", { ascending: false });
       if (!showClosed) query = query.eq("is_closed", false);
       const { data, error } = await query;
@@ -166,7 +168,7 @@ export function ServicesView() {
       generateReceipt(entry);
 
       // Create transaction with pay_method mapped to string
-      await createTransaction({
+      const txn = await createTransaction({
         transaction_date: entry.service_date,
         master_acct_code: entry.master_acct_code || "",
         description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
@@ -179,9 +181,9 @@ export function ServicesView() {
         is_internal: false,
       });
 
-      // Mark as closed
+      // Mark as closed and link the transaction
       const { error } = await supabase.from("service_entries")
-        .update({ is_closed: true }).eq("id", entry.id);
+        .update({ is_closed: true, transaction_id: txn.id } as any).eq("id", entry.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -401,14 +403,15 @@ export function ServicesView() {
                 <TableHead>Descripción</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
+                {showClosed && <TableHead className="text-center">Trans. #</TableHead>}
                 {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
               ) : entries.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">
                   No hay servicios {showClosed ? "" : "abiertos"}
                 </TableCell></TableRow>
               ) : (
@@ -433,6 +436,11 @@ export function ServicesView() {
                           {entry.is_closed ? "Cerrado" : "Abierto"}
                         </Badge>
                       </TableCell>
+                      {showClosed && (
+                        <TableCell className="text-center font-mono text-sm">
+                          {entry.transactions?.legacy_id ?? "—"}
+                        </TableCell>
+                      )}
                       {canWrite && (
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">

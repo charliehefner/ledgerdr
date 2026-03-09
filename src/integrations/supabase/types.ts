@@ -2675,6 +2675,7 @@ export type Database = {
           pay_method: string | null
           provider_id: string
           service_date: string
+          transaction_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2689,6 +2690,7 @@ export type Database = {
           pay_method?: string | null
           provider_id: string
           service_date?: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2703,6 +2705,7 @@ export type Database = {
           pay_method?: string | null
           provider_id?: string
           service_date?: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2718,6 +2721,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]

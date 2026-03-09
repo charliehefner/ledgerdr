@@ -118,19 +118,10 @@ export function useOfflineQueue() {
 
       if (error) throw error;
 
-      // Update the tractor's current_hour_meter to the new reading
-      const { error: tractorError } = await supabase
-        .from("fuel_equipment")
-        .update({ 
-          current_hour_meter: submission.hourMeterReading,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", submission.tractorId);
-
-      if (tractorError) {
-        console.error("[OfflineQueue] Failed to update tractor hour meter:", tractorError);
-        // Don't throw - the fuel transaction was successful
-      }
+      // NOTE: We do NOT update fuel_equipment.current_hour_meter here.
+      // The canonical source for tractor hour meters is the operations log,
+      // synced by the DB trigger update_tractor_hour_meter (MAX end_hours).
+      // Overwriting it from fuel transactions caused data corruption (see March 2026 incident).
 
       // Update the tank's last_pump_end_reading for validation
       const { error: tankError } = await supabase

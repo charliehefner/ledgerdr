@@ -1,18 +1,18 @@
 
 
-## Add Inline Edit to Financial Ledger (Reports)
+## Link Existing Closed Service to Its Transaction
 
-Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
+### What
+Update the single closed service entry to reference its matching transaction, so the transaction number (299) displays in the "Mostrar Cerrados" view.
 
-### Changes in `src/pages/Reports.tsx`
+### How
+Run a single data UPDATE using the insert tool:
 
-1. **Import** `EditTransactionDialog` and add state:
-   - `selectedTransaction: Transaction | null`
-   - `editDialogOpen: boolean`
+```sql
+UPDATE service_entries 
+SET transaction_id = '124be4eb-4664-450d-8bb1-0567b7bb2678'
+WHERE id = '09ebcb03-5f2d-44ab-bdb3-de0fd6c13bff';
+```
 
-2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
-
-3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
-
-4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
+This links Juan Williams Corrales' closed service (2026-03-06, $10,000) to transaction #299 (document "Recibo"). No code or schema changes needed.
 

@@ -41,7 +41,9 @@ interface ServiceEntry {
   pay_method: string | null;
   is_closed: boolean;
   created_at: string;
+  transaction_id: string | null;
   service_providers: { name: string; cedula: string };
+  transactions?: { legacy_id: number | null } | null;
 }
 
 interface Account {

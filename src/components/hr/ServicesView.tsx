@@ -339,7 +339,7 @@ export function ServicesView() {
 
   const handleCloseService = (entry: ServiceEntry) => {
     if (isIncomplete(entry)) {
-      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción y monto antes de cerrar.", variant: "destructive" });
+      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción, monto y método de pago antes de cerrar.", variant: "destructive" });
       return;
     }
     setClosingEntry(entry);

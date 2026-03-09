@@ -38,6 +38,7 @@ interface ServiceEntry {
   amount: number | null;
   currency: string;
   comments: string | null;
+  pay_method: string | null;
   is_closed: boolean;
   created_at: string;
   service_providers: { name: string; cedula: string };

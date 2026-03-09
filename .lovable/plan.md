@@ -1,19 +1,18 @@
 
 
-## Fix Service Close → Transaction: Add Missing Fields
+## Add Inline Edit to Financial Ledger (Reports)
 
-### Problem
-When closing a service, the auto-created transaction is missing:
-1. **Document** — should be `"Recibo"`
-2. **RNC** — should be the provider's cédula/passport
+Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
 
-The `pay_method` is already being passed correctly in both `ServicesView.tsx` (line 175) and `api.ts` (line 169). The `name` is already set to the provider's name (line 176).
+### Changes in `src/pages/Reports.tsx`
 
-### Changes
+1. **Import** `EditTransactionDialog` and add state:
+   - `selectedTransaction: Transaction | null`
+   - `editDialogOpen: boolean`
 
-**File: `src/components/hr/ServicesView.tsx`** — Add two fields to the `createTransaction` call inside `closeMutation` (~line 169-178):
-- `document: "Recibo"`
-- `rnc: entry.service_providers.cedula`
+2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
 
-That's it — two lines added to a single file.
+3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
+
+4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
 

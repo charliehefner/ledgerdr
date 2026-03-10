@@ -142,7 +142,7 @@ export function PurchaseDialog({
 
         if (data.reset_tank_gauge) {
           // Reset: tank is full, pump reading goes to 0
-          newTankLevel = addedQuantity;
+          newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
           newPumpReading = 0;
         } else {
           // Normal refill: add to level, subtract from pump reading
@@ -332,7 +332,7 @@ export function PurchaseDialog({
                   </div>
                   {form.reset_tank_gauge && (
                     <p className="text-xs text-destructive">
-                      Tank level will be set to {calculateStockAdded()} gal and pump reading will reset to 0 (ignoring current {selectedTank.current_level_gallons.toLocaleString()} gal)
+                      Tank level will be set to {(Number(selectedTank.current_level_gallons) + Number(calculateStockAdded())).toLocaleString()} gal ({selectedTank.current_level_gallons.toLocaleString()} remaining + {calculateStockAdded()} purchased) and pump reading will reset to 0
                     </p>
                   )}
                 </div>

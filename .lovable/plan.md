@@ -1,30 +1,18 @@
 
 
-## Fix: Include Remaining Gallons When Resetting Tank Gauge
+## Add Inline Edit to Financial Ledger (Reports)
 
-### Problem
-When recording a diesel purchase with "Reset tank gauge" checked, the tank level is set to **only** the purchased amount, discarding whatever was remaining. Example: 70 gal remaining + 500 gal purchased → tank shows 500 instead of 570. Since the inventory trigger sums `current_level_gallons`, this means 70 gallons vanish from stock.
+Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
 
-### Root Cause
-In `PurchaseDialog.tsx` line 145:
-```ts
-newTankLevel = addedQuantity;  // ← discards remaining
-```
+### Changes in `src/pages/Reports.tsx`
 
-### Fix (single file: `src/components/inventory/PurchaseDialog.tsx`)
+1. **Import** `EditTransactionDialog` and add state:
+   - `selectedTransaction: Transaction | null`
+   - `editDialogOpen: boolean`
 
-1. **Line 145** — Change the tank level calculation to include remaining gallons:
-   ```ts
-   newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
-   ```
+2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
 
-2. **Line 335** — Update the warning message to reflect the correct behavior:
-   ```
-   Tank level will be set to {remaining + purchased} gal and pump reading will reset to 0
-   ```
+3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
 
-The gauge reset (pump reading → 0) stays the same. Only the tank **level** calculation changes to preserve existing fuel.
-
-### Data Fix
-The already-recorded purchase likely needs a manual correction to add back the 70 missing gallons to the affected tank's `current_level_gallons`. This will be handled via a data update after code is fixed.
+4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
 

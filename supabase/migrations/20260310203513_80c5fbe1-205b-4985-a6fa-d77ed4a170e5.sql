@@ -1,0 +1,1 @@
+UPDATE fuel_tanks SET current_level_gallons = 559.7 WHERE id = '69e477b5-6c1f-4b14-88d4-4a13df41c789';

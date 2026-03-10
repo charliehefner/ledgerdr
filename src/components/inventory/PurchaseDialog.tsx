@@ -142,7 +142,7 @@ export function PurchaseDialog({
 
         if (data.reset_tank_gauge) {
           // Reset: tank is full, pump reading goes to 0
-          newTankLevel = addedQuantity;
+          newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
           newPumpReading = 0;
         } else {
           // Normal refill: add to level, subtract from pump reading

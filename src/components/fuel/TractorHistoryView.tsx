@@ -115,9 +115,10 @@ export function TractorHistoryView() {
   // Calculate hours worked and consumption rate for each transaction
   const transactionsWithStats = useMemo(() => {
     return filteredTransactions.map((tx) => {
-      const hoursWorked = tx.hour_meter_reading - (tx.previous_hour_meter || 0);
-      const consumptionRate = hoursWorked > 0 ? tx.gallons / hoursWorked : null;
-      return { ...tx, hoursWorked, consumptionRate };
+      const hoursWorked = Math.max(0, (tx.hour_meter_reading ?? 0) - (tx.previous_hour_meter ?? 0));
+      const gallons = Number(tx.gallons) || 0;
+      const consumptionRate = hoursWorked > 0 ? gallons / hoursWorked : null;
+      return { ...tx, hoursWorked, consumptionRate, gallons };
     });
   }, [filteredTransactions]);
 
@@ -183,7 +184,7 @@ export function TractorHistoryView() {
           transactionCount: 0 
         };
       }
-      summaries[tx.equipment_id].totalGallons += tx.gallons;
+      summaries[tx.equipment_id].totalGallons += Number(tx.gallons) || 0;
       summaries[tx.equipment_id].totalHours += tx.hoursWorked;
       summaries[tx.equipment_id].transactionCount += 1;
     });

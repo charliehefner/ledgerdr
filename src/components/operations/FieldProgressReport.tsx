@@ -243,8 +243,9 @@ export function FieldProgressReport() {
     fieldOpMap.forEach((field) => {
       field.hectaresRemaining = Math.max(0, field.totalHectares - field.hectaresDone);
       field.percentComplete = field.totalHectares > 0 
-        ? Math.min(100, (field.hectaresDone / field.totalHectares) * 100)
+        ? Math.min(100, ((field.hectaresDone || 0) / field.totalHectares) * 100)
         : 0;
+      if (!isFinite(field.percentComplete)) field.percentComplete = 0;
       field.isOverage = field.hectaresDone > field.totalHectares;
       result.push(field);
     });

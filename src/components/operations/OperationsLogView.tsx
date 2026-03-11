@@ -1491,7 +1491,7 @@ export function OperationsLogView() {
                       )}
                     </TableCell>
                   )}
-                  {isVisible("notes") && <TableCell className="text-muted-foreground">{op.notes || "-"}</TableCell>}
+                  {isVisible("notes") && <TableCell className="text-muted-foreground max-w-[200px] truncate" title={op.notes || ""}>{op.notes || "-"}</TableCell>}
                   {canEdit && (
                     <TableCell className={cn(
                       "text-right sticky right-0 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]",

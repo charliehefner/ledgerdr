@@ -297,6 +297,12 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         </DropdownMenu>
       </div>
       {/* Scrollable wrapper */}
+      {lineCodes.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <Search className="mx-auto h-8 w-8 mb-2 opacity-50" />
+          <p>{t("budget.noLines") || "No budget lines found for this period."}</p>
+        </div>
+      ) : (
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-max min-w-full text-sm border-collapse">
           <thead>
@@ -426,6 +432,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           </tbody>
         </table>
       </div>
+      )}
 
       <ActualDetailDialog
         open={detailOpen}

@@ -1101,7 +1101,7 @@ export function AgricultureFuelView() {
             {editingTransaction && (
               <div className="text-sm text-muted-foreground bg-muted p-2 rounded space-y-1">
                 <p><strong>Tank:</strong> {editingTransaction.fuel_tanks.name}</p>
-                <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment.name}</p>
+                <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment?.name || "-"}</p>
                 <p><strong>Date:</strong> {format(parseDateLocal(editingTransaction.transaction_date), "MMM d, yyyy")}</p>
               </div>
             )}

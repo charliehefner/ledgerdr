@@ -659,10 +659,10 @@ export function AgricultureFuelView() {
     const tableData = sortedTransactions.map((tx) => [
       format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
       tx.fuel_tanks.name,
-      tx.fuel_equipment.name,
-      tx.hour_meter_reading.toString(),
-      tx.pump_start_reading.toString(),
-      tx.pump_end_reading.toString(),
+      tx.fuel_equipment?.name || "-",
+      tx.hour_meter_reading?.toString() || "-",
+      tx.pump_start_reading?.toString() || "-",
+      tx.pump_end_reading?.toString() || "-",
       tx.gallons.toFixed(1),
       tx.notes || "-",
     ]);

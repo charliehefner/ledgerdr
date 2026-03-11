@@ -535,16 +535,16 @@ export function AgricultureFuelView() {
           comparison = a.fuel_tanks.name.localeCompare(b.fuel_tanks.name);
           break;
         case "tractor":
-          comparison = a.fuel_equipment.name.localeCompare(b.fuel_equipment.name);
+          comparison = (a.fuel_equipment?.name || "").localeCompare(b.fuel_equipment?.name || "");
           break;
         case "hour_meter":
-          comparison = a.hour_meter_reading - b.hour_meter_reading;
+          comparison = (a.hour_meter_reading ?? 0) - (b.hour_meter_reading ?? 0);
           break;
         case "pump_start":
-          comparison = a.pump_start_reading - b.pump_start_reading;
+          comparison = (a.pump_start_reading ?? 0) - (b.pump_start_reading ?? 0);
           break;
         case "pump_end":
-          comparison = a.pump_end_reading - b.pump_end_reading;
+          comparison = (a.pump_end_reading ?? 0) - (b.pump_end_reading ?? 0);
           break;
         case "gallons":
           comparison = a.gallons - b.gallons;

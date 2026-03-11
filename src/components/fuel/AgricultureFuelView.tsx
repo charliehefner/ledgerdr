@@ -428,9 +428,9 @@ export function AgricultureFuelView() {
   const handleEdit = (tx: FuelTransaction) => {
     setEditingTransaction(tx);
     setEditForm({
-      pump_start_reading: tx.pump_start_reading.toString(),
-      pump_end_reading: tx.pump_end_reading.toString(),
-      hour_meter_reading: tx.hour_meter_reading.toString(),
+      pump_start_reading: tx.pump_start_reading?.toString() ?? "",
+      pump_end_reading: tx.pump_end_reading?.toString() ?? "",
+      hour_meter_reading: tx.hour_meter_reading?.toString() ?? "",
       notes: tx.notes || "",
     });
     setIsEditDialogOpen(true);
@@ -535,16 +535,16 @@ export function AgricultureFuelView() {
           comparison = a.fuel_tanks.name.localeCompare(b.fuel_tanks.name);
           break;
         case "tractor":
-          comparison = a.fuel_equipment.name.localeCompare(b.fuel_equipment.name);
+          comparison = (a.fuel_equipment?.name || "").localeCompare(b.fuel_equipment?.name || "");
           break;
         case "hour_meter":
-          comparison = a.hour_meter_reading - b.hour_meter_reading;
+          comparison = (a.hour_meter_reading ?? 0) - (b.hour_meter_reading ?? 0);
           break;
         case "pump_start":
-          comparison = a.pump_start_reading - b.pump_start_reading;
+          comparison = (a.pump_start_reading ?? 0) - (b.pump_start_reading ?? 0);
           break;
         case "pump_end":
-          comparison = a.pump_end_reading - b.pump_end_reading;
+          comparison = (a.pump_end_reading ?? 0) - (b.pump_end_reading ?? 0);
           break;
         case "gallons":
           comparison = a.gallons - b.gallons;
@@ -605,10 +605,10 @@ export function AgricultureFuelView() {
       worksheet.addRow([
         format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
         tx.fuel_tanks.name,
-        tx.fuel_equipment.name,
-        tx.hour_meter_reading,
-        tx.pump_start_reading,
-        tx.pump_end_reading,
+        tx.fuel_equipment?.name || "-",
+        tx.hour_meter_reading ?? "-",
+        tx.pump_start_reading ?? "-",
+        tx.pump_end_reading ?? "-",
         tx.gallons,
         tx.notes || "",
       ]);
@@ -659,10 +659,10 @@ export function AgricultureFuelView() {
     const tableData = sortedTransactions.map((tx) => [
       format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
       tx.fuel_tanks.name,
-      tx.fuel_equipment.name,
-      tx.hour_meter_reading.toString(),
-      tx.pump_start_reading.toString(),
-      tx.pump_end_reading.toString(),
+      tx.fuel_equipment?.name || "-",
+      tx.hour_meter_reading?.toString() || "-",
+      tx.pump_start_reading?.toString() || "-",
+      tx.pump_end_reading?.toString() || "-",
       tx.gallons.toFixed(1),
       tx.notes || "-",
     ]);
@@ -1101,7 +1101,7 @@ export function AgricultureFuelView() {
             {editingTransaction && (
               <div className="text-sm text-muted-foreground bg-muted p-2 rounded space-y-1">
                 <p><strong>Tank:</strong> {editingTransaction.fuel_tanks.name}</p>
-                <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment.name}</p>
+                <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment?.name || "-"}</p>
                 <p><strong>Date:</strong> {format(parseDateLocal(editingTransaction.transaction_date), "MMM d, yyyy")}</p>
               </div>
             )}

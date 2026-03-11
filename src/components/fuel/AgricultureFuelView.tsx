@@ -428,9 +428,9 @@ export function AgricultureFuelView() {
   const handleEdit = (tx: FuelTransaction) => {
     setEditingTransaction(tx);
     setEditForm({
-      pump_start_reading: tx.pump_start_reading.toString(),
-      pump_end_reading: tx.pump_end_reading.toString(),
-      hour_meter_reading: tx.hour_meter_reading.toString(),
+      pump_start_reading: tx.pump_start_reading?.toString() ?? "",
+      pump_end_reading: tx.pump_end_reading?.toString() ?? "",
+      hour_meter_reading: tx.hour_meter_reading?.toString() ?? "",
       notes: tx.notes || "",
     });
     setIsEditDialogOpen(true);

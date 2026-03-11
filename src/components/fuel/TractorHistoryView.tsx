@@ -321,8 +321,8 @@ export function TractorHistoryView() {
                 <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
                 <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
-                <TableCell>{tx.previous_hour_meter?.toFixed(1) || "0"}</TableCell>
-                <TableCell>{tx.hour_meter_reading.toFixed(1)}</TableCell>
+                <TableCell>{(tx.previous_hour_meter ?? 0).toFixed(1)}</TableCell>
+                <TableCell>{(tx.hour_meter_reading ?? 0).toFixed(1)}</TableCell>
                 <TableCell>{tx.hoursWorked.toFixed(1)} hrs</TableCell>
                 <TableCell className={cn(
                   "font-medium",

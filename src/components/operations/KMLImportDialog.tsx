@@ -66,7 +66,7 @@ export function KMLImportDialog({ open, onOpenChange }: KMLImportDialogProps) {
         return {
           placemark: pm,
           field: match
-            ? { id: match.id, name: match.name, farm_name: match.farms.name }
+            ? { id: match.id, name: match.name, farm_name: match.farms?.name || "-" }
             : null,
         };
       });

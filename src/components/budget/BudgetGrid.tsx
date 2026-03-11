@@ -432,6 +432,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           </tbody>
         </table>
       </div>
+      )}
 
       <ActualDetailDialog
         open={detailOpen}

@@ -267,8 +267,9 @@ export function FuelTanksView() {
           </TableHeader>
           <TableBody>
             {tanks.map((tank) => {
-              const fillPercent =
-                (tank.current_level_gallons / tank.capacity_gallons) * 100;
+              const fillPercent = tank.capacity_gallons > 0
+                ? (tank.current_level_gallons / tank.capacity_gallons) * 100
+                : 0;
               return (
                 <TableRow key={tank.id}>
                   <TableCell className="font-medium">{tank.name}</TableCell>

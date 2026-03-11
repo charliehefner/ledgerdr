@@ -184,7 +184,7 @@ export function TractorHistoryView() {
           transactionCount: 0 
         };
       }
-      summaries[tx.equipment_id].totalGallons += tx.gallons;
+      summaries[tx.equipment_id].totalGallons += Number(tx.gallons) || 0;
       summaries[tx.equipment_id].totalHours += tx.hoursWorked;
       summaries[tx.equipment_id].transactionCount += 1;
     });

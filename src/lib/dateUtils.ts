@@ -21,10 +21,12 @@ export function formatDateLocal(date: Date): string {
  * - new Date("2024-01-03") → interpreted as UTC midnight → displays as Jan 2 in AST ❌
  * - parseDateLocal("2024-01-03") → local midnight → displays as Jan 3 ✅
  */
-export function parseDateLocal(dateString: string): Date {
+export function parseDateLocal(dateString: string | null | undefined): Date {
+  if (!dateString) return new Date(NaN); // returns Invalid Date — callers should guard
   // Handle full ISO timestamps (e.g., "2024-01-03T12:00:00.000Z" or "2024-01-03 12:00:00+00")
   // by extracting just the date portion
   const datePart = dateString.split('T')[0].split(' ')[0];
   const [year, month, day] = datePart.split('-').map(Number);
+  if (!year || !month || !day) return new Date(NaN);
   return new Date(year, month - 1, day);
 }

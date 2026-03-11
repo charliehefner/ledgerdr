@@ -329,7 +329,7 @@ export function IndustryFuelView() {
       body: transactions.map((tx) => [
         format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
         tx.transaction_type === "refill" ? "Refill" : "Usage",
-        tx.fuel_tanks.name,
+        tx.fuel_tanks?.name || "-",
         tx.fuel_equipment?.name || "-",
         tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-",
         tx.gallons.toFixed(1),

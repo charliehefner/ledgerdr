@@ -198,7 +198,7 @@ export function FieldHistoryPanel({
                         <div className="flex justify-between">
                           <span>Ha/hora en campo:</span>
                           <span className="font-medium text-foreground">
-                            {op.hectares_done != null
+                            {op.hectares_done != null && metrics.fieldMinutes > 0
                               ? `${(op.hectares_done / (metrics.fieldMinutes / 60)).toFixed(2)} ha/h`
                               : "— ha/h"}
                           </span>

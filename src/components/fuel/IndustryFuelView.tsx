@@ -617,7 +617,7 @@ export function IndustryFuelView() {
                     {tx.transaction_type === "refill" ? "Refill" : "Usage"}
                   </Badge>
                 </TableCell>
-                <TableCell>{tx.fuel_tanks.name}</TableCell>
+                <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
                 <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
                 <TableCell>
                   {tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-"}

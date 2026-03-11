@@ -605,10 +605,10 @@ export function AgricultureFuelView() {
       worksheet.addRow([
         format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
         tx.fuel_tanks.name,
-        tx.fuel_equipment.name,
-        tx.hour_meter_reading,
-        tx.pump_start_reading,
-        tx.pump_end_reading,
+        tx.fuel_equipment?.name || "-",
+        tx.hour_meter_reading ?? "-",
+        tx.pump_start_reading ?? "-",
+        tx.pump_end_reading ?? "-",
         tx.gallons,
         tx.notes || "",
       ]);

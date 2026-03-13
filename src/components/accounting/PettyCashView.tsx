@@ -235,6 +235,11 @@ export function PettyCashView() {
                     <TableCell className="text-right font-mono">
                       {acct.fixed_amount ? fmtNum(acct.fixed_amount) : "—"}
                     </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {glBalanceMap.has(acct.id)
+                        ? fmtNum(glBalanceMap.get(acct.id)!)
+                        : <span className="text-muted-foreground text-xs">—</span>}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
                     </TableCell>

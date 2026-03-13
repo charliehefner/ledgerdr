@@ -103,6 +103,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
           credit: l.credit ? String(l.credit) : "",
           project_code: l.project_code || "",
           cbs_code: l.cbs_code || "",
+          description: l.description || "",
         }))
       );
     }

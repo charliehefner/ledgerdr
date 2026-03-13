@@ -128,6 +128,12 @@ export default function Settings() {
               </TabsTrigger>
             )}
             {canModifySettings && (
+              <TabsTrigger value="operators">
+                <Users className="h-4 w-4 mr-2" />
+                Operadores
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
               <TabsTrigger value="chart-of-accounts">
                 <BookOpen className="h-4 w-4 mr-2" />
                 {t("accounting.chartOfAccounts")}

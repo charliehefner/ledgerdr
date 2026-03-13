@@ -17,6 +17,7 @@ type NewLine = {
   credit: string;
   project_code: string;
   cbs_code: string;
+  description: string;
 };
 
 interface JournalEntryFormProps {

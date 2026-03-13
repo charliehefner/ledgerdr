@@ -82,6 +82,31 @@ export function PettyCashView() {
     },
   });
 
+  // Fetch GL balances for petty cash chart accounts
+  const chartAccountIds = accounts.filter(a => a.chart_account_id).map(a => a.chart_account_id!);
+  const { data: glBalances = [] } = useQuery({
+    queryKey: ["petty-cash-gl-balances", chartAccountIds],
+    queryFn: async () => {
+      if (chartAccountIds.length === 0) return [];
+      const { data, error } = await supabase.rpc("account_balances_from_journals");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: chartAccountIds.length > 0,
+  });
+
+  const glBalanceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    accounts.forEach(acct => {
+      if (!acct.chart_account_id) return;
+      const chartAcct = chartAccounts.find(c => c.id === acct.chart_account_id);
+      if (!chartAcct) return;
+      const bal = glBalances.find((b: any) => b.account_code === chartAcct.account_code);
+      if (bal) map.set(acct.id, bal.balance);
+    });
+    return map;
+  }, [accounts, chartAccounts, glBalances]);
+
   const pettyCashIds = accounts.map(a => a.id);
 
   const { data: recentTx = [] } = useQuery({

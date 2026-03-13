@@ -41,6 +41,7 @@ import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager
 import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
+import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();

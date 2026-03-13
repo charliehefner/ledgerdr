@@ -432,6 +432,18 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                     {isEditable ? (
                       <Input
                         className="h-8 text-xs"
+                        value={line.description}
+                        onChange={(e) => updateLine(idx, "description", e.target.value)}
+                        placeholder="Detalle"
+                      />
+                    ) : (
+                      <span className="text-xs">{line.description || ""}</span>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Input
+                        className="h-8 text-xs"
                         value={line.project_code}
                         onChange={(e) => updateLine(idx, "project_code", e.target.value)}
                         placeholder="Proyecto"

@@ -81,6 +81,8 @@ export function PurchaseHistoryDialog({
                   <TableHead>Date</TableHead>
                   <TableHead>Document #</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Pkg Size</TableHead>
+                  <TableHead className="text-right">Total Units</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Notes</TableHead>
@@ -95,6 +97,12 @@ export function PurchaseHistoryDialog({
                     <TableCell>{purchase.document_number || "-"}</TableCell>
                     <TableCell className="text-right">
                       {purchase.quantity}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {Number(purchase.packaging_quantity || 1)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {(Number(purchase.quantity) * Number(purchase.packaging_quantity || 1)).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
                       ${Number(purchase.unit_price).toFixed(2)}

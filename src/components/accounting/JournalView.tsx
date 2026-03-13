@@ -1,21 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
-import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText, CheckCircle2 } from "lucide-react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText, CheckCircle2, Download, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
 import { PaymentMethodMappingDialog } from "./PaymentMethodMappingDialog";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { usePagination } from "@/hooks/usePagination";
+import { useExport } from "@/hooks/useExport";
 
 type JournalLine = {
   id: string;
@@ -54,6 +64,7 @@ export function JournalView() {
   const { t } = useLanguage();
   const { canWriteSection, user } = useAuth();
   const canWrite = canWriteSection("accounting");
+  const { exportToExcel, exportToPDF } = useExport();
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -63,33 +74,59 @@ export function JournalView() {
   const [newOpen, setNewOpen] = useState(false);
   const [mappingOpen, setMappingOpen] = useState(false);
 
+  // Date range filter — default to current month
+  const now = new Date();
+  const [dateFrom, setDateFrom] = useState(format(startOfMonth(now), "yyyy-MM-dd"));
+  const [dateTo, setDateTo] = useState(format(endOfMonth(now), "yyyy-MM-dd"));
+
   const { data: journals = [], isLoading } = useQuery({
-    queryKey: ["journals"],
+    queryKey: ["journals", dateFrom, dateTo],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("journals")
-        .select(`
-          id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
-          approval_status, approved_by, approved_at, rejection_reason, is_reconciled, reference_description,
-          journal_lines (
-            id, debit, credit, account_id, cbs_code, project_code, description,
-            chart_of_accounts:account_id ( account_code, account_name )
-          )
-        `)
-        .is("deleted_at", null)
-        .order("journal_date", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return data as Journal[];
+      const PAGE_SIZE = 1000;
+      let allRows: any[] = [];
+      let offset = 0;
+      let keepFetching = true;
+
+      while (keepFetching) {
+        let query = supabase
+          .from("journals")
+          .select(`
+            id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
+            approval_status, approved_by, approved_at, rejection_reason, is_reconciled, reference_description,
+            journal_lines (
+              id, debit, credit, account_id, cbs_code, project_code, description,
+              chart_of_accounts:account_id ( account_code, account_name )
+            )
+          `)
+          .is("deleted_at", null)
+          .gte("journal_date", dateFrom)
+          .lte("journal_date", dateTo)
+          .order("journal_date", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        allRows = allRows.concat(data || []);
+        if (!data || data.length < PAGE_SIZE) {
+          keepFetching = false;
+        } else {
+          offset += PAGE_SIZE;
+        }
+      }
+
+      return allRows as Journal[];
     },
   });
 
-  const filtered = journals.filter((j) => {
+  const filtered = useMemo(() => journals.filter((j) => {
     if (statusFilter === "draft" && j.posted) return false;
     if (statusFilter === "posted" && !j.posted) return false;
     if (typeFilter !== "all" && (j as any).journal_type !== typeFilter) return false;
     return true;
-  });
+  }), [journals, statusFilter, typeFilter]);
+
+  const pagination = usePagination(filtered, { defaultPageSize: 50 });
 
   const toggleExpand = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -108,6 +145,61 @@ export function JournalView() {
 
   const fmtNum = (n: number | null) =>
     n ? n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+
+  // ---- Export logic ----
+  const handleExport = (type: "excel" | "pdf") => {
+    // Build line-level rows from ALL filtered journals (not just current page)
+    const exportRows: Record<string, string | number>[] = [];
+    filtered.forEach((j) => {
+      j.journal_lines.forEach((line) => {
+        exportRows.push({
+          numero: j.journal_number || "—",
+          tipo: (j as any).journal_type || "GJ",
+          fecha: format(new Date(j.journal_date), "dd/MM/yyyy"),
+          descripcion: j.description || "",
+          cuenta: line.chart_of_accounts?.account_code || "",
+          nombre_cuenta: line.chart_of_accounts?.account_name || "",
+          proyecto: line.project_code || "",
+          cbs: line.cbs_code || "",
+          detalle_linea: line.description || "",
+          moneda: j.currency || "DOP",
+          debito: line.debit || 0,
+          credito: line.credit || 0,
+          estado: j.posted ? "Contabilizado" : "Borrador",
+        });
+      });
+    });
+
+    const columns = [
+      { key: "numero", header: "Número", width: 14 },
+      { key: "tipo", header: "Tipo", width: 8 },
+      { key: "fecha", header: "Fecha", width: 12 },
+      { key: "descripcion", header: "Descripción", width: 28 },
+      { key: "cuenta", header: "Cuenta", width: 12 },
+      { key: "nombre_cuenta", header: "Nombre Cuenta", width: 24 },
+      { key: "proyecto", header: "Proyecto", width: 10 },
+      { key: "cbs", header: "CBS", width: 10 },
+      { key: "detalle_linea", header: "Detalle Línea", width: 22 },
+      { key: "moneda", header: "Moneda", width: 8 },
+      { key: "debito", header: "Débito", width: 14 },
+      { key: "credito", header: "Crédito", width: 14 },
+      { key: "estado", header: "Estado", width: 14 },
+    ];
+
+    const config = {
+      filename: `diario_contable_${dateFrom}_${dateTo}`,
+      title: "Diario Contable",
+      subtitle: `Período: ${format(new Date(dateFrom), "dd/MM/yyyy")} – ${format(new Date(dateTo), "dd/MM/yyyy")}`,
+      orientation: "landscape" as const,
+      fontSize: 7,
+    };
+
+    if (type === "excel") {
+      exportToExcel({ columns, rows: exportRows }, config);
+    } else {
+      exportToPDF({ columns, rows: exportRows }, config);
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;
 
@@ -141,6 +233,17 @@ export function JournalView() {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Date range */}
+          <div className="flex items-center gap-1">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Desde:</Label>
+            <Input type="date" className="h-8 w-[140px] text-sm" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-1">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Hasta:</Label>
+            <Input type="date" className="h-8 w-[140px] text-sm" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+          </div>
+
+          {/* Status */}
           <div className="flex items-center gap-1">
             <span className="text-xs font-medium text-muted-foreground mr-1">Estado:</span>
             {statusButtons.map((f) => (
@@ -168,18 +271,42 @@ export function JournalView() {
             </Select>
           </div>
         </div>
-        {canWrite && (
-          <div className="flex gap-1">
-            <InfoTooltip translationKey="help.generateJournals" />
-            <GenerateJournalsButton userId={user?.id} />
-            <Button size="sm" variant="ghost" onClick={() => setMappingOpen(true)} title="Configurar mapeo de métodos de pago">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button size="sm" onClick={() => setNewOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-1">
+          {/* Export */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Download className="h-4 w-4 mr-1" /> Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-popover">
+              <DropdownMenuItem onClick={() => handleExport("excel")}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                <FileText className="mr-2 h-4 w-4" /> PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {canWrite && (
+            <>
+              <InfoTooltip translationKey="help.generateJournals" />
+              <GenerateJournalsButton userId={user?.id} />
+              <Button size="sm" variant="ghost" onClick={() => setMappingOpen(true)} title="Configurar mapeo de métodos de pago">
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button size="sm" onClick={() => setNewOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Record count */}
+      <div className="text-xs text-muted-foreground">
+        {filtered.length} asientos encontrados — Mostrando página {pagination.page + 1} de {pagination.totalPages}
       </div>
 
       {filtered.length === 0 ? (
@@ -207,7 +334,7 @@ export function JournalView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((j) => {
+              {pagination.pageData.map((j) => {
                 const totalDebit = j.journal_lines.reduce((s, l) => s + (l.debit || 0), 0);
                 const totalCredit = j.journal_lines.reduce((s, l) => s + (l.credit || 0), 0);
                 const projectCodes = getAggregated(j.journal_lines, "project_code");
@@ -312,6 +439,36 @@ export function JournalView() {
               })}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Pagination controls */}
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Filas por página:</span>
+            <Select value={String(pagination.pageSize)} onValueChange={(v) => pagination.setPageSize(Number(v))}>
+              <SelectTrigger className="h-8 w-[80px] text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pagination.pageSizeOptions.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={!pagination.hasPrevPage} onClick={pagination.prevPage}>
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Página {pagination.page + 1} de {pagination.totalPages}
+            </span>
+            <Button size="sm" variant="outline" disabled={!pagination.hasNextPage} onClick={pagination.nextPage}>
+              Siguiente
+            </Button>
+          </div>
         </div>
       )}
 

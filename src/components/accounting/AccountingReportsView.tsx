@@ -140,28 +140,45 @@ export function AccountingReportsView() {
     },
   });
 
-  // Fetch transactions only when filters are applied
+  // Fetch ALL transactions using recursive paginated fetch to bypass 1,000-row limit
   const { data: rawData = [], isLoading } = useQuery({
     queryKey: ["accounting-report", activeFilters],
     queryFn: async () => {
       if (!activeFilters) return [];
-      let query = supabase
-        .from("transactions")
-        .select("*")
-        .eq("is_void", false)
-        .order("transaction_date", { ascending: false });
 
-      if (activeFilters.startDate) query = query.gte("transaction_date", activeFilters.startDate);
-      if (activeFilters.endDate) query = query.lte("transaction_date", activeFilters.endDate);
-      if (activeFilters.accountCode !== "all") query = query.eq("master_acct_code", activeFilters.accountCode);
-      if (activeFilters.projectCode !== "all") query = query.eq("project_code", activeFilters.projectCode);
-      if (activeFilters.cbsCode !== "all") query = query.eq("cbs_code", activeFilters.cbsCode);
-      if (activeFilters.supplierName) query = query.ilike("name", `%${activeFilters.supplierName}%`);
-      if (activeFilters.payMethod !== "all") query = query.eq("pay_method", activeFilters.payMethod);
+      const PAGE_SIZE = 1000;
+      let allRows: any[] = [];
+      let offset = 0;
+      let keepFetching = true;
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as any[];
+      while (keepFetching) {
+        let query = supabase
+          .from("transactions")
+          .select("*")
+          .eq("is_void", false)
+          .order("transaction_date", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (activeFilters.startDate) query = query.gte("transaction_date", activeFilters.startDate);
+        if (activeFilters.endDate) query = query.lte("transaction_date", activeFilters.endDate);
+        if (activeFilters.accountCode !== "all") query = query.eq("master_acct_code", activeFilters.accountCode);
+        if (activeFilters.projectCode !== "all") query = query.eq("project_code", activeFilters.projectCode);
+        if (activeFilters.cbsCode !== "all") query = query.eq("cbs_code", activeFilters.cbsCode);
+        if (activeFilters.supplierName) query = query.ilike("name", `%${activeFilters.supplierName}%`);
+        if (activeFilters.payMethod !== "all") query = query.eq("pay_method", activeFilters.payMethod);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        allRows = allRows.concat(data || []);
+        if (!data || data.length < PAGE_SIZE) {
+          keepFetching = false;
+        } else {
+          offset += PAGE_SIZE;
+        }
+      }
+
+      return allRows;
     },
     enabled: !!activeFilters,
   });

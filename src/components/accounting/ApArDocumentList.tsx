@@ -58,6 +58,7 @@ export function ApArDocumentList({ direction }: Props) {
   const queryClient = useQueryClient();
   const canWrite = canWriteSection("ap-ar");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [paymentDoc, setPaymentDoc] = useState<ApArDocument | null>(null);
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",

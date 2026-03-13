@@ -1,29 +1,18 @@
 
 
-## Fix: Day Labor Close via Backend Function (No Supervisor Transaction Access)
+## Add Inline Edit to Financial Ledger (Reports)
 
-### Problem
-The day labor week close inserts into `transactions` from the client. Supervisors don't have (and shouldn't have) RLS access to `transactions`. The previous plan incorrectly proposed giving supervisors transaction access.
+Make transaction rows clickable in the Reports page to open the existing `EditTransactionDialog`, allowing direct edits without navigating to the Transactions page. Posted/voided transactions will still be locked (handled by the dialog).
 
-### Solution
-Create a **security definer** database function `close_day_labor_week(p_week_ending date)` that:
-1. Marks all `day_labor_entries` for that week as `is_closed = true`
-2. Inserts the corresponding transaction into `transactions` (account 7690, DOP, etc.)
-3. Returns the created transaction ID
+### Changes in `src/pages/Reports.tsx`
 
-Since it's `SECURITY DEFINER`, it runs with the function owner's privileges, bypassing RLS — supervisors never get direct transaction access.
+1. **Import** `EditTransactionDialog` and add state:
+   - `selectedTransaction: Transaction | null`
+   - `editDialogOpen: boolean`
 
-Then update `DayLaborView.tsx` to call this RPC instead of doing client-side updates + `createTransaction()`.
+2. **Row click handler** — On `<TableRow>` click, set `selectedTransaction` to the clicked transaction and open the dialog. Use `cursor-pointer` styling on rows.
 
-### Backfill
-Include an INSERT for the missing transaction from the week ending 2026-03-13 (RD$ 4,100.00) in the same migration.
+3. **Render `EditTransactionDialog`** at the bottom of the component, passing `selectedTransaction`, `editDialogOpen`, and `onOpenChange`.
 
-### Changes
-
-| Item | Detail |
-|------|--------|
-| **New migration** | `close_day_labor_week(p_week_ending date)` — security definer function that marks entries closed + inserts transaction. Also backfills the missing 2026-03-13 transaction. |
-| **`src/components/hr/DayLaborView.tsx`** | Replace the `closeWeek` mutation body: call `supabase.rpc('close_day_labor_week', { p_week_ending })` instead of manual update + `createTransaction()`. Keep PDF generation and receipts ZIP as-is (client-side). |
-
-No new RLS policies for supervisors on `transactions`. No other files changed.
+4. **Invalidation** — The dialog already invalidates `reportTransactions` on save, so the table will refresh automatically.
 

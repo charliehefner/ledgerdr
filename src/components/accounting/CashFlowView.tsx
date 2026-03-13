@@ -164,9 +164,9 @@ export function CashFlowView() {
   };
 
   const { sections, netIncome, depreciation, netCashChange } = useMemo(() => {
-    const openTotals = buildTotals(openingTx);
-    const closeTotals = buildTotals(closingTx);
-    const periodTotals = buildTotals(periodTx);
+    const openTotals = buildTotals(openingBalances);
+    const closeTotals = buildTotals(closingBalances);
+    const periodTotals = buildTotals(periodBalances);
 
     // Calculate net income from P&L accounts
     const incomeAccounts = accounts.filter(a => a.account_type === "INCOME");

@@ -3208,6 +3208,18 @@ export type Database = {
       }
     }
     Functions: {
+      account_balances_from_journals: {
+        Args: { p_end?: string; p_start?: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_type: string
+          balance: number
+          currency: string
+          total_credit: number
+          total_debit: number
+        }[]
+      }
       create_journal_from_transaction:
         | {
             Args: {

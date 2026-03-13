@@ -135,6 +135,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
         credit: parseFloat(l.credit) || 0,
         project_code: l.project_code || null,
         cbs_code: l.cbs_code || null,
+        description: l.description || null,
         created_by: user?.id,
       }));
       const { error: lErr } = await supabase.from("journal_lines").insert(newLines);

@@ -19,8 +19,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, FileText, Receipt } from "lucide-react";
+import { Plus, FileText, Receipt, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { PaymentDialog } from "./PaymentDialog";
 
 interface ApArDocument {
   id: string;
@@ -57,6 +58,7 @@ export function ApArDocumentList({ direction }: Props) {
   const queryClient = useQueryClient();
   const canWrite = canWriteSection("ap-ar");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [paymentDoc, setPaymentDoc] = useState<ApArDocument | null>(null);
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",
@@ -195,6 +197,7 @@ export function ApArDocumentList({ direction }: Props) {
                 <TableHead className="text-right">{t("apar.amountPaid")}</TableHead>
                 <TableHead className="text-right">{t("apar.balance")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
+                <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -218,6 +221,18 @@ export function ApArDocumentList({ direction }: Props) {
                     <Badge variant="outline" className={STATUS_COLORS[doc.status] || ""}>
                       {doc.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {doc.status !== "paid" && doc.status !== "void" && canWrite && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Registrar Pago"
+                        onClick={() => setPaymentDoc(doc)}
+                      >
+                        <DollarSign className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -299,6 +314,13 @@ export function ApArDocumentList({ direction }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={!!paymentDoc}
+        onOpenChange={open => { if (!open) setPaymentDoc(null); }}
+        document={paymentDoc}
+      />
     </div>
   );
 }

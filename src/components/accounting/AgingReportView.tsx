@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -8,22 +8,23 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Download, FileSpreadsheet, FileText, Clock } from "lucide-react";
 import { useExport } from "@/hooks/useExport";
-import { formatCurrency } from "@/lib/formatters";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type Transaction = {
+type ApArDoc = {
   id: string;
-  name: string | null;
-  transaction_date: string;
+  contact_name: string;
   due_date: string | null;
-  amount: number;
+  document_date: string;
+  balance_remaining: number;
   currency: string;
-  description: string;
-  master_acct_code: string | null;
-  transaction_direction: string | null;
+  direction: string;
+  status: string;
 };
 
 type AgingBucket = {
@@ -47,35 +48,38 @@ function getDaysOverdue(dueDate: string): number {
 export function AgingReportView() {
   const { t } = useLanguage();
   const { exportToExcel, exportToPDF } = useExport();
+  const [dirFilter, setDirFilter] = useState<string>("both");
 
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ["aging-transactions"],
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ["aging-ap-ar-documents"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("transactions")
-        .select("id, name, transaction_date, due_date, amount, currency, description, master_acct_code, transaction_direction")
-        .eq("is_void", false)
-        .not("due_date", "is", null)
+        .from("ap_ar_documents")
+        .select("id, contact_name, due_date, document_date, balance_remaining, currency, direction, status")
+        .not("status", "in", '("paid","void")')
         .order("due_date", { ascending: true });
       if (error) throw error;
-      return data as Transaction[];
+      return data as ApArDoc[];
     },
   });
 
-  // Only show unpaid items (those with due_date set)
-  const openItems = useMemo(() => transactions, [transactions]);
+  const filtered = useMemo(() =>
+    dirFilter === "both" ? documents : documents.filter(d => d.direction === dirFilter),
+    [documents, dirFilter]
+  );
 
   const agingData = useMemo(() => {
     const byName = new Map<string, AgingBucket>();
 
-    openItems.forEach(tx => {
-      const key = `${tx.name || "Sin nombre"}_${tx.currency}`;
+    filtered.forEach(doc => {
+      const key = `${doc.contact_name}_${doc.currency}`;
       if (!byName.has(key)) {
-        byName.set(key, { name: tx.name || "Sin nombre", current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0, currency: tx.currency });
+        byName.set(key, { name: doc.contact_name, current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0, currency: doc.currency });
       }
       const bucket = byName.get(key)!;
-      const days = getDaysOverdue(tx.due_date!);
-      const amt = Math.abs(tx.amount);
+      const dueDate = doc.due_date || doc.document_date;
+      const days = getDaysOverdue(dueDate);
+      const amt = Math.abs(doc.balance_remaining);
 
       if (days <= 0) bucket.current += amt;
       else if (days <= 30) bucket.days30 += amt;
@@ -86,7 +90,7 @@ export function AgingReportView() {
     });
 
     return Array.from(byName.values()).sort((a, b) => b.total - a.total);
-  }, [openItems]);
+  }, [filtered]);
 
   const totals = useMemo(() => agingData.reduce(
     (acc, r) => ({
@@ -147,21 +151,23 @@ export function AgingReportView() {
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;
 
-  if (agingData.length === 0) {
-    return (
-      <EmptyState
-        icon={Clock}
-        title="Antigüedad de Saldos"
-        description="No hay transacciones con fecha de vencimiento. Asigne fechas de vencimiento a las transacciones para ver el reporte de antigüedad."
-      />
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <span className="text-sm text-muted-foreground">{agingData.length} proveedores/clientes con saldos abiertos</span>
+        <div className="flex items-center gap-3">
+          <Select value={dirFilter} onValueChange={setDirFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover">
+              <SelectItem value="both">Todos</SelectItem>
+              <SelectItem value="payable">Cuentas por Pagar</SelectItem>
+              <SelectItem value="receivable">Cuentas por Cobrar</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">
+            {agingData.length} contactos con saldos abiertos
+          </span>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -174,45 +180,53 @@ export function AgingReportView() {
         </DropdownMenu>
       </div>
 
-      <div className="border rounded-lg overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Moneda</TableHead>
-              <TableHead className="text-right">Vigente</TableHead>
-              <TableHead className="text-right">1-30 días</TableHead>
-              <TableHead className="text-right">31-60 días</TableHead>
-              <TableHead className="text-right">61-90 días</TableHead>
-              <TableHead className="text-right text-destructive">+90 días</TableHead>
-              <TableHead className="text-right font-bold">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {agingData.map((r, i) => (
-              <TableRow key={i}>
-                <TableCell className="font-medium">{r.name}</TableCell>
-                <TableCell>{r.currency}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(r.current)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(r.days30)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(r.days60)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(r.days90)}</TableCell>
-                <TableCell className="text-right font-mono text-destructive">{fmtNum(r.over90)}</TableCell>
-                <TableCell className="text-right font-mono font-bold">{fmtNum(r.total)}</TableCell>
+      {agingData.length === 0 ? (
+        <EmptyState
+          icon={Clock}
+          title="Antigüedad de Saldos"
+          description="No hay documentos con saldos pendientes."
+        />
+      ) : (
+        <div className="border rounded-lg overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Moneda</TableHead>
+                <TableHead className="text-right">Vigente</TableHead>
+                <TableHead className="text-right">1-30 días</TableHead>
+                <TableHead className="text-right">31-60 días</TableHead>
+                <TableHead className="text-right">61-90 días</TableHead>
+                <TableHead className="text-right text-destructive">+90 días</TableHead>
+                <TableHead className="text-right font-bold">Total</TableHead>
               </TableRow>
-            ))}
-            <TableRow className="bg-muted/50 font-bold">
-              <TableCell colSpan={2} className="text-right">TOTALES</TableCell>
-              <TableCell className="text-right font-mono">{fmtNum(totals.current)}</TableCell>
-              <TableCell className="text-right font-mono">{fmtNum(totals.days30)}</TableCell>
-              <TableCell className="text-right font-mono">{fmtNum(totals.days60)}</TableCell>
-              <TableCell className="text-right font-mono">{fmtNum(totals.days90)}</TableCell>
-              <TableCell className="text-right font-mono text-destructive">{fmtNum(totals.over90)}</TableCell>
-              <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {agingData.map((r, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>{r.currency}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(r.current)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(r.days30)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(r.days60)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(r.days90)}</TableCell>
+                  <TableCell className="text-right font-mono text-destructive">{fmtNum(r.over90)}</TableCell>
+                  <TableCell className="text-right font-mono font-bold">{fmtNum(r.total)}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-muted/50 font-bold">
+                <TableCell colSpan={2} className="text-right">TOTALES</TableCell>
+                <TableCell className="text-right font-mono">{fmtNum(totals.current)}</TableCell>
+                <TableCell className="text-right font-mono">{fmtNum(totals.days30)}</TableCell>
+                <TableCell className="text-right font-mono">{fmtNum(totals.days60)}</TableCell>
+                <TableCell className="text-right font-mono">{fmtNum(totals.days90)}</TableCell>
+                <TableCell className="text-right font-mono text-destructive">{fmtNum(totals.over90)}</TableCell>
+                <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

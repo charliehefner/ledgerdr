@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,31 @@ export function PettyCashView() {
       return data as ChartAccount[];
     },
   });
+
+  // Fetch GL balances for petty cash chart accounts
+  const chartAccountIds = accounts.filter(a => a.chart_account_id).map(a => a.chart_account_id!);
+  const { data: glBalances = [] } = useQuery({
+    queryKey: ["petty-cash-gl-balances", chartAccountIds],
+    queryFn: async () => {
+      if (chartAccountIds.length === 0) return [];
+      const { data, error } = await supabase.rpc("account_balances_from_journals");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: chartAccountIds.length > 0,
+  });
+
+  const glBalanceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    accounts.forEach(acct => {
+      if (!acct.chart_account_id) return;
+      const chartAcct = chartAccounts.find(c => c.id === acct.chart_account_id);
+      if (!chartAcct) return;
+      const bal = glBalances.find((b: any) => b.account_code === chartAcct.account_code);
+      if (bal) map.set(acct.id, bal.balance);
+    });
+    return map;
+  }, [accounts, chartAccounts, glBalances]);
 
   const pettyCashIds = accounts.map(a => a.id);
 
@@ -195,8 +220,9 @@ export function PettyCashView() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Moneda</TableHead>
-                  <TableHead className="text-right">Monto Fijo</TableHead>
-                  <TableHead>Cuenta Contable</TableHead>
+                   <TableHead className="text-right">Monto Fijo</TableHead>
+                   <TableHead className="text-right">Saldo Contable</TableHead>
+                   <TableHead>Cuenta Contable</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="w-[120px]" />
                 </TableRow>
@@ -208,6 +234,11 @@ export function PettyCashView() {
                     <TableCell>{acct.currency || "DOP"}</TableCell>
                     <TableCell className="text-right font-mono">
                       {acct.fixed_amount ? fmtNum(acct.fixed_amount) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {glBalanceMap.has(acct.id)
+                        ? fmtNum(glBalanceMap.get(acct.id)!)
+                        : <span className="text-muted-foreground text-xs">—</span>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}

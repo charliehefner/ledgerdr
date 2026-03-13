@@ -239,6 +239,14 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                   <td className="p-2">
                     <Input
                       className="h-8 text-xs"
+                      value={line.description}
+                      onChange={(e) => updateLine(idx, "description", e.target.value)}
+                      placeholder="Detalle"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      className="h-8 text-xs"
                       value={line.project_code}
                       onChange={(e) => updateLine(idx, "project_code", e.target.value)}
                       placeholder="Proyecto"

@@ -81,6 +81,8 @@ export function PurchaseHistoryDialog({
                   <TableHead>Date</TableHead>
                   <TableHead>Document #</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Pkg Size</TableHead>
+                  <TableHead className="text-right">Total Units</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Notes</TableHead>

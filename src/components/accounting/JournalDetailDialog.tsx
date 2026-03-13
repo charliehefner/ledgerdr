@@ -50,6 +50,7 @@ type EditableLine = {
   credit: string;
   project_code: string;
   cbs_code: string;
+  description: string;
   isNew?: boolean;
 };
 

@@ -165,6 +165,20 @@ export function OperationsLogView() {
     },
   });
 
+  // Fetch tractor operators
+  const { data: tractorOperators = [] } = useQuery({
+    queryKey: ["tractor-operators"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tractor_operators")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
   // Fetch latest maintenance for each tractor
   const { data: tractorMaintenanceData = new Map<string, number>() } = useQuery({
     queryKey: ["tractors-maintenance-operations"],
@@ -1162,14 +1176,24 @@ export function OperationsLogView() {
                       </div>
                     </div>
                     
-                    {/* Driver field */}
+                    {/* Driver field - dropdown from tractor_operators */}
                     <div>
                       <Label>{t("operations.form.operator")}</Label>
-                      <Input
+                      <Select
                         value={form.driver}
-                        onChange={(e) => setForm({ ...form, driver: e.target.value })}
-                        placeholder={t("operations.form.operatorPlaceholder")}
-                      />
+                        onValueChange={(val) => setForm({ ...form, driver: val })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("operations.form.operatorPlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tractorOperators.map((op) => (
+                            <SelectItem key={op.id} value={op.name}>
+                              {op.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">

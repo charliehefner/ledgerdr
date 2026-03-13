@@ -41,6 +41,7 @@ import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager
 import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
+import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -124,6 +125,12 @@ export default function Settings() {
               <TabsTrigger value="gps">
                 <Satellite className="h-4 w-4 mr-2" />
                 GPS
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="operators">
+                <Users className="h-4 w-4 mr-2" />
+                Operadores
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -307,6 +314,14 @@ export default function Settings() {
             <TabsContent value="gps" className="mt-6">
               <div className="max-w-4xl">
                 <GPSLinkingManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="operators" className="mt-6">
+              <div className="max-w-3xl">
+                <TractorOperatorsManager />
               </div>
             </TabsContent>
           )}

@@ -481,18 +481,21 @@ export function OperationsLogView() {
         
         if (inputError) throw inputError;
 
-        // Deduct from inventory
+        // Deduct from inventory (fetch fresh to avoid stale cache)
         for (const input of currentInputs) {
-          const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
-          if (item) {
-            const newQuantity = item.current_quantity - input.quantity_used;
-            const { error: updateError } = await supabase
-              .from("inventory_items")
-              .update({ current_quantity: newQuantity })
-              .eq("id", input.inventory_item_id);
-            
-            if (updateError) throw updateError;
-          }
+          const { data: freshItem } = await supabase
+            .from("inventory_items")
+            .select("current_quantity")
+            .eq("id", input.inventory_item_id)
+            .maybeSingle();
+          if (!freshItem) continue;
+          const newQuantity = freshItem.current_quantity - input.quantity_used;
+          const { error: updateError } = await supabase
+            .from("inventory_items")
+            .update({ current_quantity: newQuantity })
+            .eq("id", input.inventory_item_id);
+          
+          if (updateError) throw updateError;
         }
       }
 

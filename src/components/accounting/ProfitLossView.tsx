@@ -156,76 +156,65 @@ export function ProfitLossView() {
     },
   });
 
-  interface PLTransaction {
-    master_acct_code: string | null;
-    amount: number;
+  interface JournalBalance {
+    account_code: string;
+    account_name: string;
+    account_type: string;
     currency: string;
-    transaction_direction: string | null;
-    cost_center: string;
+    total_debit: number;
+    total_credit: number;
+    balance: number;
   }
 
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ["pl-transactions", startDate, endDate],
+  const { data: balances = [], isLoading } = useQuery({
+    queryKey: ["pl-journal-balances", startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, transaction_direction, cost_center")
-        .eq("is_void", false)
-        .gte("transaction_date", startDate)
-        .lte("transaction_date", endDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_start: startDate,
+        p_end: endDate,
+      });
       if (error) throw error;
-      return data as PLTransaction[];
+      return (data || []) as JournalBalance[];
     },
   });
 
-  const { data: compTransactions = [] } = useQuery({
-    queryKey: ["pl-transactions-comp", compStartDate, compEndDate],
+  const { data: compBalances = [] } = useQuery({
+    queryKey: ["pl-journal-balances-comp", compStartDate, compEndDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, transaction_direction, cost_center")
-        .eq("is_void", false)
-        .gte("transaction_date", compStartDate)
-        .lte("transaction_date", compEndDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_start: compStartDate,
+        p_end: compEndDate,
+      });
       if (error) throw error;
-      return data as PLTransaction[];
+      return (data || []) as JournalBalance[];
     },
     enabled: compareEnabled,
   });
 
-  const filteredTx = useMemo(() => {
-    if (costCenter === "all") return transactions;
-    return transactions.filter((tx) => (tx.cost_center || "general") === costCenter);
-  }, [transactions, costCenter]);
-
-  const filteredCompTx = useMemo(() => {
-    if (!compareEnabled) return [];
-    if (costCenter === "all") return compTransactions;
-    return compTransactions.filter((tx) => (tx.cost_center || "general") === costCenter);
-  }, [compTransactions, costCenter, compareEnabled]);
-
-  const buildAccountTotals = (txs: PLTransaction[]) => {
+  const buildAccountTotals = (rows: JournalBalance[]) => {
     const totals: Record<string, { rd: number; us: number }> = {};
-    txs.forEach((tx) => {
-      const code = tx.master_acct_code;
-      if (!code) return;
-      const amount = parseFloat(String(tx.amount)) || 0;
-      if (!totals[code]) totals[code] = { rd: 0, us: 0 };
-      if (tx.currency === "USD") {
-        totals[code].us += amount;
-        totals[code].rd += amount * exchangeRate;
-      } else if (tx.currency === "EUR") {
-        totals[code].us += 0; // EUR shown separately if needed, converted to RD$ for totals
-        totals[code].rd += amount * exchangeRate; // EUR uses same exchange rate input
+    rows.forEach((r) => {
+      if (!totals[r.account_code]) totals[r.account_code] = { rd: 0, us: 0 };
+      // For income: credit - debit; for expense: debit - credit
+      // The sign convention is handled later by the P&L structure, so store raw balance
+      const amount = r.balance; // debit - credit
+      if (r.currency === "USD") {
+        totals[r.account_code].us += amount;
+        totals[r.account_code].rd += amount * exchangeRate;
       } else {
-        totals[code].rd += amount;
+        // DOP or EUR (EUR converted at same rate)
+        if (r.currency === "EUR") {
+          totals[r.account_code].rd += amount * exchangeRate;
+        } else {
+          totals[r.account_code].rd += amount;
+        }
       }
     });
     return totals;
   };
 
-  const accountTotals = useMemo(() => buildAccountTotals(filteredTx), [filteredTx, exchangeRate]);
-  const compAccountTotals = useMemo(() => buildAccountTotals(filteredCompTx), [filteredCompTx, exchangeRate]);
+  const accountTotals = useMemo(() => buildAccountTotals(balances), [balances, exchangeRate]);
+  const compAccountTotals = useMemo(() => buildAccountTotals(compBalances), [compBalances, exchangeRate]);
 
   // Build the full categorized statement
   const { statementRows, hasUsd } = useMemo(() => {

@@ -93,70 +93,58 @@ export function BalanceSheetView() {
     },
   });
 
-  interface BSTransaction {
-    master_acct_code: string | null;
-    amount: number;
+  interface JournalBalance {
+    account_code: string;
+    account_name: string;
+    account_type: string;
     currency: string;
-    transaction_direction: string | null;
-    cost_center: string;
+    total_debit: number;
+    total_credit: number;
+    balance: number;
   }
 
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ["bs-transactions", asOfDate],
+  const { data: balances = [], isLoading } = useQuery({
+    queryKey: ["bs-journal-balances", asOfDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, transaction_direction, cost_center")
-        .eq("is_void", false)
-        .lte("transaction_date", asOfDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_end: asOfDate,
+      });
       if (error) throw error;
-      return data as BSTransaction[];
+      return (data || []) as JournalBalance[];
     },
   });
 
-  const { data: compTransactions = [] } = useQuery({
-    queryKey: ["bs-transactions-comp", compAsOfDate],
+  const { data: compBalances = [] } = useQuery({
+    queryKey: ["bs-journal-balances-comp", compAsOfDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, transaction_direction, cost_center")
-        .eq("is_void", false)
-        .lte("transaction_date", compAsOfDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_end: compAsOfDate,
+      });
       if (error) throw error;
-      return data as BSTransaction[];
+      return (data || []) as JournalBalance[];
     },
     enabled: compareEnabled,
   });
 
-  const filterByCc = (txs: BSTransaction[]) => {
-    if (costCenter === "all") return txs;
-    return txs.filter((tx) => (tx.cost_center || "general") === costCenter);
-  };
-
-  const filteredTx = useMemo(() => filterByCc(transactions), [transactions, costCenter]);
-  const filteredCompTx = useMemo(() => compareEnabled ? filterByCc(compTransactions) : [], [compTransactions, costCenter, compareEnabled]);
-
-  const buildTotals = (txs: BSTransaction[]) => {
+  const buildTotals = (rows: JournalBalance[]) => {
     const totals: Record<string, { rd: number; us: number }> = {};
-    txs.forEach((tx) => {
-      const code = tx.master_acct_code;
-      if (!code) return;
-      const amount = parseFloat(String(tx.amount)) || 0;
-      if (!totals[code]) totals[code] = { rd: 0, us: 0 };
-      if (tx.currency === "USD") {
-        totals[code].us += amount;
-        totals[code].rd += amount * exchangeRate;
-      } else if (tx.currency === "EUR") {
-        totals[code].rd += amount * exchangeRate;
+    rows.forEach((r) => {
+      if (!totals[r.account_code]) totals[r.account_code] = { rd: 0, us: 0 };
+      const amount = r.balance; // debit - credit
+      if (r.currency === "USD") {
+        totals[r.account_code].us += amount;
+        totals[r.account_code].rd += amount * exchangeRate;
+      } else if (r.currency === "EUR") {
+        totals[r.account_code].rd += amount * exchangeRate;
       } else {
-        totals[code].rd += amount;
+        totals[r.account_code].rd += amount;
       }
     });
     return totals;
   };
 
-  const accountTotals = useMemo(() => buildTotals(filteredTx), [filteredTx, exchangeRate]);
-  const compAccountTotals = useMemo(() => buildTotals(filteredCompTx), [filteredCompTx, exchangeRate]);
+  const accountTotals = useMemo(() => buildTotals(balances), [balances, exchangeRate]);
+  const compAccountTotals = useMemo(() => buildTotals(compBalances), [compBalances, exchangeRate]);
 
   const buildRows = (types: string[], totals: Record<string, { rd: number; us: number }>, cTotals: Record<string, { rd: number; us: number }>): GroupedAccount[] => {
     const typeAccounts = accounts.filter(a => types.includes(a.account_type));

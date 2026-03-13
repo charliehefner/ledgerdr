@@ -644,6 +644,8 @@ export function ProfitLossView() {
         </DropdownMenu>
       </div>
 
+      <UnlinkedTransactionsWarning startDate={startDate} endDate={endDate} />
+
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
       ) : (

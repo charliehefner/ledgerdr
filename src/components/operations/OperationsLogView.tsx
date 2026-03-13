@@ -481,18 +481,21 @@ export function OperationsLogView() {
         
         if (inputError) throw inputError;
 
-        // Deduct from inventory
+        // Deduct from inventory (fetch fresh to avoid stale cache)
         for (const input of currentInputs) {
-          const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
-          if (item) {
-            const newQuantity = item.current_quantity - input.quantity_used;
-            const { error: updateError } = await supabase
-              .from("inventory_items")
-              .update({ current_quantity: newQuantity })
-              .eq("id", input.inventory_item_id);
-            
-            if (updateError) throw updateError;
-          }
+          const { data: freshItem } = await supabase
+            .from("inventory_items")
+            .select("current_quantity")
+            .eq("id", input.inventory_item_id)
+            .maybeSingle();
+          if (!freshItem) continue;
+          const newQuantity = freshItem.current_quantity - input.quantity_used;
+          const { error: updateError } = await supabase
+            .from("inventory_items")
+            .update({ current_quantity: newQuantity })
+            .eq("id", input.inventory_item_id);
+          
+          if (updateError) throw updateError;
         }
       }
 
@@ -550,18 +553,21 @@ export function OperationsLogView() {
       
       if (updateError) throw updateError;
 
-      // Restore inventory for original inputs
+      // Restore inventory for original inputs (fetch fresh to avoid stale cache)
       for (const input of originalInputs) {
-        const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
-        if (item) {
-          const newQuantity = item.current_quantity + input.quantity_used;
-          const { error: restoreError } = await supabase
-            .from("inventory_items")
-            .update({ current_quantity: newQuantity })
-            .eq("id", input.inventory_item_id);
-          
-          if (restoreError) throw restoreError;
-        }
+        const { data: freshItem } = await supabase
+          .from("inventory_items")
+          .select("current_quantity")
+          .eq("id", input.inventory_item_id)
+          .maybeSingle();
+        if (!freshItem) continue;
+        const newQuantity = freshItem.current_quantity + input.quantity_used;
+        const { error: restoreError } = await supabase
+          .from("inventory_items")
+          .update({ current_quantity: newQuantity })
+          .eq("id", input.inventory_item_id);
+        
+        if (restoreError) throw restoreError;
       }
 
       // Delete old operation_inputs
@@ -636,19 +642,22 @@ export function OperationsLogView() {
       
       if (inputsError) throw inputsError;
 
-      // Restore inventory
+      // Restore inventory (fetch fresh to avoid stale cache)
       if (inputs && inputs.length > 0) {
         for (const input of inputs) {
-          const item = inventoryItems?.find(i => i.id === input.inventory_item_id);
-          if (item) {
-            const newQuantity = item.current_quantity + input.quantity_used;
-            const { error: updateError } = await supabase
-              .from("inventory_items")
-              .update({ current_quantity: newQuantity })
-              .eq("id", input.inventory_item_id);
-            
-            if (updateError) throw updateError;
-          }
+          const { data: freshItem } = await supabase
+            .from("inventory_items")
+            .select("current_quantity")
+            .eq("id", input.inventory_item_id)
+            .maybeSingle();
+          if (!freshItem) continue;
+          const newQuantity = freshItem.current_quantity + input.quantity_used;
+          const { error: updateError } = await supabase
+            .from("inventory_items")
+            .update({ current_quantity: newQuantity })
+            .eq("id", input.inventory_item_id);
+          
+          if (updateError) throw updateError;
         }
       }
 

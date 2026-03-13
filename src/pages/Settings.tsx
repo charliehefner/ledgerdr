@@ -319,6 +319,14 @@ export default function Settings() {
           )}
 
           {canModifySettings && (
+            <TabsContent value="operators" className="mt-6">
+              <div className="max-w-3xl">
+                <TractorOperatorsManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
             <TabsContent value="chart-of-accounts" className="mt-6">
               <div className="max-w-5xl">
                 <ChartOfAccountsView />

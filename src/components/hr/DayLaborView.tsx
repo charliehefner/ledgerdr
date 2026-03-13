@@ -319,7 +319,7 @@ export function DayLaborView() {
   // can close weeks without needing direct INSERT on transactions table
   const closeWeek = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.rpc("close_day_labor_week", {
+      const { data, error } = await supabase.rpc("close_day_labor_week" as any, {
         p_week_ending: formatDateLocal(selectedFriday),
       });
 

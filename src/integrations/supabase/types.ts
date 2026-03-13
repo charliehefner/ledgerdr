@@ -3220,6 +3220,10 @@ export type Database = {
           total_debit: number
         }[]
       }
+      count_unlinked_transactions: {
+        Args: { p_end?: string; p_start?: string }
+        Returns: number
+      }
       create_journal_from_transaction:
         | {
             Args: {

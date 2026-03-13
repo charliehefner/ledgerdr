@@ -8,21 +8,9 @@ export function useJournalGeneration(userId?: string) {
   const [generating, setGenerating] = useState(false);
 
   async function countUnlinked(): Promise<number> {
-    const { data: linked } = await supabase
-      .from("journals")
-      .select("transaction_source_id")
-      .not("transaction_source_id", "is", null)
-      .is("deleted_at", null);
-
-    const linkedIds = new Set((linked || []).map((j) => j.transaction_source_id));
-
-    const { data: txns, error } = await supabase
-      .from("transactions")
-      .select("id")
-      .eq("is_void", false);
-
+    const { data, error } = await supabase.rpc("count_unlinked_transactions", {});
     if (error) throw error;
-    return (txns || []).filter((t) => !linkedIds.has(t.id)).length;
+    return (data as number) ?? 0;
   }
 
   async function generate(): Promise<number> {
@@ -39,6 +27,7 @@ export function useJournalGeneration(userId?: string) {
       const { created = 0, skipped = [], total = 0 } = data || {};
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-transaction-count"] });
 
       if (skipped.length > 0) {
         toast({

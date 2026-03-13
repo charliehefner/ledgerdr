@@ -65,7 +65,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
     n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const addLine = () => {
-    setLines((prev) => [...prev, { key: String(Date.now()), account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" }]);
+    setLines((prev) => [...prev, { key: String(Date.now()), account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "" }]);
   };
 
   const removeLine = (idx: number) => {

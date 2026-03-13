@@ -72,7 +72,7 @@ export function JournalView() {
           id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
           approval_status, approved_by, approved_at, rejection_reason, is_reconciled, reference_description,
           journal_lines (
-            id, debit, credit, account_id, cbs_code, project_code,
+            id, debit, credit, account_id, cbs_code, project_code, description,
             chart_of_accounts:account_id ( account_code, account_name )
           )
         `)

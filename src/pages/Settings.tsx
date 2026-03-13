@@ -84,7 +84,7 @@ export default function Settings() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="general">
               <Settings2 className="h-4 w-4 mr-2" />
               General

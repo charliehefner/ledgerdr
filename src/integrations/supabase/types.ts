@@ -1656,6 +1656,7 @@ export type Database = {
           credit: number | null
           debit: number | null
           deleted_at: string | null
+          description: string | null
           id: string
           journal_id: string | null
           project_code: string | null
@@ -1670,6 +1671,7 @@ export type Database = {
           credit?: number | null
           debit?: number | null
           deleted_at?: string | null
+          description?: string | null
           id?: string
           journal_id?: string | null
           project_code?: string | null
@@ -1684,6 +1686,7 @@ export type Database = {
           credit?: number | null
           debit?: number | null
           deleted_at?: string | null
+          description?: string | null
           id?: string
           journal_id?: string | null
           project_code?: string | null

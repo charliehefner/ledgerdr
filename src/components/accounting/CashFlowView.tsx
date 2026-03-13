@@ -101,62 +101,64 @@ export function CashFlowView() {
     },
   });
 
-  // Opening balances (before start date)
-  const { data: openingTx = [] } = useQuery({
-    queryKey: ["cf-opening", startDate],
+  interface JournalBalance {
+    account_code: string;
+    account_name: string;
+    account_type: string;
+    currency: string;
+    total_debit: number;
+    total_credit: number;
+    balance: number;
+  }
+
+  // Opening balances (before start date) — from posted journals
+  const { data: openingBalances = [] } = useQuery({
+    queryKey: ["cf-opening-journals", startDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, cost_center")
-        .eq("is_void", false)
-        .lt("transaction_date", startDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_end: format(new Date(new Date(startDate).getTime() - 86400000), "yyyy-MM-dd"),
+      });
       if (error) throw error;
-      return data;
+      return (data || []) as JournalBalance[];
     },
   });
 
-  // Closing balances (up to end date)
-  const { data: closingTx = [], isLoading } = useQuery({
-    queryKey: ["cf-closing", endDate],
+  // Closing balances (up to end date) — from posted journals
+  const { data: closingBalances = [], isLoading } = useQuery({
+    queryKey: ["cf-closing-journals", endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, cost_center")
-        .eq("is_void", false)
-        .lte("transaction_date", endDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_end: endDate,
+      });
       if (error) throw error;
-      return data;
+      return (data || []) as JournalBalance[];
     },
   });
 
-  // Period transactions for P&L (net income calculation)
-  const { data: periodTx = [] } = useQuery({
-    queryKey: ["cf-period", startDate, endDate],
+  // Period balances for P&L (net income calculation) — from posted journals
+  const { data: periodBalances = [] } = useQuery({
+    queryKey: ["cf-period-journals", startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("master_acct_code, amount, currency, cost_center")
-        .eq("is_void", false)
-        .gte("transaction_date", startDate)
-        .lte("transaction_date", endDate);
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {
+        p_start: startDate,
+        p_end: endDate,
+      });
       if (error) throw error;
-      return data;
+      return (data || []) as JournalBalance[];
     },
   });
 
-  const filterByCc = (txs: any[]) => {
-    if (costCenter === "all") return txs;
-    return txs.filter((tx: any) => (tx.cost_center || "general") === costCenter);
-  };
-
-  const buildTotals = (txs: any[]) => {
+  const buildTotals = (rows: JournalBalance[]) => {
     const totals: Record<string, number> = {};
-    filterByCc(txs).forEach((tx: any) => {
-      const code = tx.master_acct_code;
+    rows.forEach((r) => {
+      const code = r.account_code;
       if (!code) return;
-      const amount = parseFloat(String(tx.amount)) || 0;
-      const rd = (tx.currency === "USD" || tx.currency === "EUR") ? amount * exchangeRate : amount;
-      totals[code] = (totals[code] || 0) + rd;
+      const amount = r.balance; // debit - credit
+      if (r.currency === "USD" || r.currency === "EUR") {
+        totals[code] = (totals[code] || 0) + amount * exchangeRate;
+      } else {
+        totals[code] = (totals[code] || 0) + amount;
+      }
     });
     return totals;
   };

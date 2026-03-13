@@ -183,6 +183,8 @@ export function TrialBalanceView() {
         </div>
       </div>
 
+      <UnlinkedTransactionsWarning startDate={appliedDates?.start} endDate={appliedDates?.end} />
+
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
       ) : filtered.length === 0 ? (

@@ -503,6 +503,8 @@ export function BalanceSheetView() {
         )}
       </div>
 
+      <UnlinkedTransactionsWarning endDate={asOfDate} />
+
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
       ) : (

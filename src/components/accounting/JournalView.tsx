@@ -297,7 +297,7 @@ export function JournalView() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t font-medium">
-                                  <td colSpan={4} className="py-1 text-right">Totales</td>
+                                  <td colSpan={5} className="py-1 text-right">Totales</td>
                                   <td className="py-1 text-right">{fmtNum(totalDebit)}</td>
                                   <td className="py-1 text-right">{fmtNum(totalCredit)}</td>
                                 </tr>

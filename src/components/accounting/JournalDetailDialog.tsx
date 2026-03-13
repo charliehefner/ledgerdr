@@ -121,7 +121,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const addLine = () => {
     setLines((prev) => [
       ...prev,
-      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", isNew: true },
+      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "", isNew: true },
     ]);
   };
 

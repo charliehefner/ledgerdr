@@ -179,6 +179,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         credit: parseFloat(l.credit) || 0,
         project_code: l.project_code || null,
         cbs_code: l.cbs_code || null,
+        description: l.description || null,
       }));
       const { error: insErr } = await supabase.from("journal_lines").insert(newLines);
       if (insErr) throw insErr;

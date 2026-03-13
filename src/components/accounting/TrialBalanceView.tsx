@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Download, FileSpreadsheet, FileText, Scale, Filter } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { UnlinkedTransactionsWarning } from "@/components/accounting/UnlinkedTransactionsWarning";
 import { useExport } from "@/hooks/useExport";
 import { formatCurrency } from "@/lib/formatters";
 

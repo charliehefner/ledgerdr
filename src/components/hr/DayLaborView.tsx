@@ -315,33 +315,17 @@ export function DayLaborView() {
     URL.revokeObjectURL(url);
   };
 
-  // Close week mutation
+  // Close week mutation — uses backend RPC (SECURITY DEFINER) so supervisors
+  // can close weeks without needing direct INSERT on transactions table
   const closeWeek = useMutation({
     mutationFn: async () => {
-      // Mark all entries as closed
-      const { error: updateError } = await supabase
-        .from("day_labor_entries")
-        .update({ is_closed: true })
-        .eq("week_ending_date", formatDateLocal(selectedFriday));
-
-      if (updateError) throw updateError;
-
-      // Create transaction
-      const fridayStr = format(selectedFriday, "dd/MM/yyyy");
-      await createTransaction({
-        transaction_date: formatDateLocal(selectedFriday),
-        master_acct_code: "7690",
-        description: `Jornales Semana ${fridayStr}`,
-        currency: "DOP",
-        amount: weeklyTotal,
-        pay_method: "Transfer BHD",
-        document: "Recibos",
-        name: "Transferencia",
-        is_internal: true,
-        comments: `Jornales de la semana terminando ${fridayStr}. ${entries.length} entradas.`,
+      const { data, error } = await supabase.rpc("close_day_labor_week", {
+        p_week_ending: formatDateLocal(selectedFriday),
       });
 
-      // Generate PDF + Receipts
+      if (error) throw error;
+
+      // Generate PDF + Receipts (client-side, no DB writes)
       generatePDF();
       await generateDayLaborReceiptsZip(summaryByWorker, jornaleros, selectedFriday, weekStart, weekEnd);
     },

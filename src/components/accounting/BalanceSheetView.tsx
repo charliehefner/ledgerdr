@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { UnlinkedTransactionsWarning } from "@/components/accounting/UnlinkedTransactionsWarning";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -502,6 +503,8 @@ export function BalanceSheetView() {
           </Badge>
         )}
       </div>
+
+      <UnlinkedTransactionsWarning endDate={asOfDate} />
 
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>

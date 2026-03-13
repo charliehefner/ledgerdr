@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Download, FileSpreadsheet, FileText, Scale, Filter } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { UnlinkedTransactionsWarning } from "@/components/accounting/UnlinkedTransactionsWarning";
 import { useExport } from "@/hooks/useExport";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -181,6 +182,8 @@ export function TrialBalanceView() {
           </DropdownMenu>
         </div>
       </div>
+
+      <UnlinkedTransactionsWarning startDate={appliedDates?.start} endDate={appliedDates?.end} />
 
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>

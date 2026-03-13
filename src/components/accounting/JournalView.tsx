@@ -287,6 +287,7 @@ export function JournalView() {
                                       {line.chart_of_accounts?.account_code || "—"}
                                     </td>
                                     <td className="py-1">{line.chart_of_accounts?.account_name || "—"}</td>
+                                    <td className="py-1 text-xs">{line.description || ""}</td>
                                     <td className="py-1 text-xs">{line.project_code || ""}</td>
                                     <td className="py-1 text-xs">{line.cbs_code || ""}</td>
                                     <td className="py-1 text-right">{fmtNum(line.debit)}</td>

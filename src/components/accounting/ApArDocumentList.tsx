@@ -19,8 +19,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, FileText, Receipt } from "lucide-react";
+import { Plus, FileText, Receipt, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { PaymentDialog } from "./PaymentDialog";
 
 interface ApArDocument {
   id: string;

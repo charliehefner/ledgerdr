@@ -270,14 +270,15 @@ export function JournalView() {
                           <div className="bg-muted/30 px-8 py-3">
                             <table className="w-full text-sm">
                               <thead>
-                                <tr className="text-muted-foreground">
-                                  <th className="text-left py-1 font-medium">Cuenta</th>
-                                  <th className="text-left py-1 font-medium">Nombre</th>
-                                  <th className="text-left py-1 font-medium">Proyecto</th>
-                                  <th className="text-left py-1 font-medium">CBS</th>
-                                  <th className="text-right py-1 font-medium">Débito</th>
-                                  <th className="text-right py-1 font-medium">Crédito</th>
-                                </tr>
+                                 <tr className="text-muted-foreground">
+                                   <th className="text-left py-1 font-medium">Cuenta</th>
+                                   <th className="text-left py-1 font-medium">Nombre</th>
+                                   <th className="text-left py-1 font-medium">Descripción</th>
+                                   <th className="text-left py-1 font-medium">Proyecto</th>
+                                   <th className="text-left py-1 font-medium">CBS</th>
+                                   <th className="text-right py-1 font-medium">Débito</th>
+                                   <th className="text-right py-1 font-medium">Crédito</th>
+                                 </tr>
                               </thead>
                               <tbody>
                                 {j.journal_lines.map((line) => (

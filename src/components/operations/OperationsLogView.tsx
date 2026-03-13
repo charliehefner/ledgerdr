@@ -165,6 +165,20 @@ export function OperationsLogView() {
     },
   });
 
+  // Fetch tractor operators
+  const { data: tractorOperators = [] } = useQuery({
+    queryKey: ["tractor-operators"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tractor_operators")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
   // Fetch latest maintenance for each tractor
   const { data: tractorMaintenanceData = new Map<string, number>() } = useQuery({
     queryKey: ["tractors-maintenance-operations"],

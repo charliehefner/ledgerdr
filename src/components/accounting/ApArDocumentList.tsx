@@ -314,6 +314,13 @@ export function ApArDocumentList({ direction }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={!!paymentDoc}
+        onOpenChange={open => { if (!open) setPaymentDoc(null); }}
+        document={paymentDoc}
+      />
     </div>
   );
 }

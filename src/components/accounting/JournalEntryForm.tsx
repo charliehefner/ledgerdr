@@ -92,8 +92,8 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
     setCurrency("DOP");
     setJournalType("GJ");
     setLines([
-      { key: "1", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
-      { key: "2", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
+      { key: "1", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "" },
+      { key: "2", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "" },
     ]);
   };
 

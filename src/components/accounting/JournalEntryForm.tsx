@@ -35,8 +35,8 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
   const [currency, setCurrency] = useState("DOP");
   const [journalType, setJournalType] = useState("GJ");
   const [lines, setLines] = useState<NewLine[]>([
-    { key: "1", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
-    { key: "2", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "" },
+    { key: "1", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "" },
+    { key: "2", account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "" },
   ]);
   const [saving, setSaving] = useState(false);
 

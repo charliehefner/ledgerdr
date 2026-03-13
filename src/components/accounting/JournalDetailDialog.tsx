@@ -509,7 +509,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             </tbody>
             <tfoot>
               <tr className="font-medium bg-muted/30">
-                <td colSpan={3} className="p-2 text-right">Totales</td>
+                <td colSpan={4} className="p-2 text-right">Totales</td>
                 <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
                   {fmtNum(totals.totalDebit)}
                 </td>

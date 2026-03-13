@@ -220,8 +220,9 @@ export function PettyCashView() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Moneda</TableHead>
-                  <TableHead className="text-right">Monto Fijo</TableHead>
-                  <TableHead>Cuenta Contable</TableHead>
+                   <TableHead className="text-right">Monto Fijo</TableHead>
+                   <TableHead className="text-right">Saldo Contable</TableHead>
+                   <TableHead>Cuenta Contable</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="w-[120px]" />
                 </TableRow>

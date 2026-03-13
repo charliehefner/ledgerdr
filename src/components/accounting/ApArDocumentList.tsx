@@ -197,6 +197,7 @@ export function ApArDocumentList({ direction }: Props) {
                 <TableHead className="text-right">{t("apar.amountPaid")}</TableHead>
                 <TableHead className="text-right">{t("apar.balance")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
+                <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,6 +221,18 @@ export function ApArDocumentList({ direction }: Props) {
                     <Badge variant="outline" className={STATUS_COLORS[doc.status] || ""}>
                       {doc.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {doc.status !== "paid" && doc.status !== "void" && canWrite && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Registrar Pago"
+                        onClick={() => setPaymentDoc(doc)}
+                      >
+                        <DollarSign className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

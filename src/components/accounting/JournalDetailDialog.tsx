@@ -20,6 +20,7 @@ type JournalLine = {
   credit: number | null;
   cbs_code: string | null;
   project_code: string | null;
+  description: string | null;
   chart_of_accounts: { account_code: string; account_name: string } | null;
 };
 
@@ -49,6 +50,7 @@ type EditableLine = {
   credit: string;
   project_code: string;
   cbs_code: string;
+  description: string;
   isNew?: boolean;
 };
 
@@ -101,6 +103,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
           credit: l.credit ? String(l.credit) : "",
           project_code: l.project_code || "",
           cbs_code: l.cbs_code || "",
+          description: l.description || "",
         }))
       );
     }
@@ -118,7 +121,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const addLine = () => {
     setLines((prev) => [
       ...prev,
-      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", isNew: true },
+      { id: `new-${Date.now()}`, account_id: "", debit: "", credit: "", project_code: "", cbs_code: "", description: "", isNew: true },
     ]);
   };
 
@@ -176,6 +179,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         credit: parseFloat(l.credit) || 0,
         project_code: l.project_code || null,
         cbs_code: l.cbs_code || null,
+        description: l.description || null,
       }));
       const { error: insErr } = await supabase.from("journal_lines").insert(newLines);
       if (insErr) throw insErr;
@@ -384,6 +388,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left p-2 font-medium">Cuenta</th>
+                <th className="text-left p-2 font-medium w-[140px]">Descripción</th>
                 <th className="text-left p-2 font-medium w-[100px]">Proyecto</th>
                 <th className="text-left p-2 font-medium w-[80px]">CBS</th>
                 <th className="text-right p-2 font-medium w-[130px]">Débito</th>
@@ -421,6 +426,18 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                           journal.journal_lines[idx]?.chart_of_accounts?.account_name ||
                           ""}
                       </span>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {isEditable ? (
+                      <Input
+                        className="h-8 text-xs"
+                        value={line.description}
+                        onChange={(e) => updateLine(idx, "description", e.target.value)}
+                        placeholder="Detalle"
+                      />
+                    ) : (
+                      <span className="text-xs">{line.description || ""}</span>
                     )}
                   </td>
                   <td className="p-2">
@@ -492,7 +509,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             </tbody>
             <tfoot>
               <tr className="font-medium bg-muted/30">
-                <td colSpan={3} className="p-2 text-right">Totales</td>
+                <td colSpan={4} className="p-2 text-right">Totales</td>
                 <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
                   {fmtNum(totals.totalDebit)}
                 </td>

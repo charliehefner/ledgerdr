@@ -24,6 +24,7 @@ type JournalLine = {
   account_id: string;
   cbs_code: string | null;
   project_code: string | null;
+  description: string | null;
   chart_of_accounts: { account_code: string; account_name: string } | null;
 };
 
@@ -71,7 +72,7 @@ export function JournalView() {
           id, journal_number, journal_date, description, currency, posted, posted_by, posted_at, transaction_source_id, journal_type,
           approval_status, approved_by, approved_at, rejection_reason, is_reconciled, reference_description,
           journal_lines (
-            id, debit, credit, account_id, cbs_code, project_code,
+            id, debit, credit, account_id, cbs_code, project_code, description,
             chart_of_accounts:account_id ( account_code, account_name )
           )
         `)
@@ -269,14 +270,15 @@ export function JournalView() {
                           <div className="bg-muted/30 px-8 py-3">
                             <table className="w-full text-sm">
                               <thead>
-                                <tr className="text-muted-foreground">
-                                  <th className="text-left py-1 font-medium">Cuenta</th>
-                                  <th className="text-left py-1 font-medium">Nombre</th>
-                                  <th className="text-left py-1 font-medium">Proyecto</th>
-                                  <th className="text-left py-1 font-medium">CBS</th>
-                                  <th className="text-right py-1 font-medium">Débito</th>
-                                  <th className="text-right py-1 font-medium">Crédito</th>
-                                </tr>
+                                 <tr className="text-muted-foreground">
+                                   <th className="text-left py-1 font-medium">Cuenta</th>
+                                   <th className="text-left py-1 font-medium">Nombre</th>
+                                   <th className="text-left py-1 font-medium">Descripción</th>
+                                   <th className="text-left py-1 font-medium">Proyecto</th>
+                                   <th className="text-left py-1 font-medium">CBS</th>
+                                   <th className="text-right py-1 font-medium">Débito</th>
+                                   <th className="text-right py-1 font-medium">Crédito</th>
+                                 </tr>
                               </thead>
                               <tbody>
                                 {j.journal_lines.map((line) => (
@@ -285,6 +287,7 @@ export function JournalView() {
                                       {line.chart_of_accounts?.account_code || "—"}
                                     </td>
                                     <td className="py-1">{line.chart_of_accounts?.account_name || "—"}</td>
+                                    <td className="py-1 text-xs">{line.description || ""}</td>
                                     <td className="py-1 text-xs">{line.project_code || ""}</td>
                                     <td className="py-1 text-xs">{line.cbs_code || ""}</td>
                                     <td className="py-1 text-right">{fmtNum(line.debit)}</td>
@@ -294,7 +297,7 @@ export function JournalView() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t font-medium">
-                                  <td colSpan={4} className="py-1 text-right">Totales</td>
+                                  <td colSpan={5} className="py-1 text-right">Totales</td>
                                   <td className="py-1 text-right">{fmtNum(totalDebit)}</td>
                                   <td className="py-1 text-right">{fmtNum(totalCredit)}</td>
                                 </tr>

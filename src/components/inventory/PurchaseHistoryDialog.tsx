@@ -99,6 +99,12 @@ export function PurchaseHistoryDialog({
                       {purchase.quantity}
                     </TableCell>
                     <TableCell className="text-right">
+                      {Number(purchase.packaging_quantity || 1)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {(Number(purchase.quantity) * Number(purchase.packaging_quantity || 1)).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
                       ${Number(purchase.unit_price).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-medium">

@@ -20,6 +20,7 @@ type JournalLine = {
   credit: number | null;
   cbs_code: string | null;
   project_code: string | null;
+  description: string | null;
   chart_of_accounts: { account_code: string; account_name: string } | null;
 };
 

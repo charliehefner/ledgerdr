@@ -241,7 +241,7 @@ export function CashFlowView() {
       depreciation,
       netCashChange,
     };
-  }, [accounts, openingTx, closingTx, periodTx, costCenter, exchangeRate, language]);
+  }, [accounts, openingBalances, closingBalances, periodBalances, exchangeRate, language]);
 
   const exportToExcel = async () => {
     try {

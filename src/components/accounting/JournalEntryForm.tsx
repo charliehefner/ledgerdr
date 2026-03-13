@@ -211,6 +211,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left p-2 font-medium">Cuenta</th>
+                <th className="text-left p-2 font-medium w-[140px]">Descripción</th>
                 <th className="text-left p-2 font-medium w-[100px]">Proyecto</th>
                 <th className="text-left p-2 font-medium w-[80px]">CBS</th>
                 <th className="text-right p-2 font-medium w-[130px]">Débito</th>

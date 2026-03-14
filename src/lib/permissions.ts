@@ -157,6 +157,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   "ap-ar": ["admin", "management", "accountant"],
   budget: ["admin"],
   treasury: ["admin", "management", "accountant"],
+  contacts: ["admin", "management", "accountant"],
   "driver-portal": ["driver"],
 };
 

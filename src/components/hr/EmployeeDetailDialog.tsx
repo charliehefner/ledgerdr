@@ -41,6 +41,7 @@ import {
   History,
   TrendingUp,
   Percent,
+  Info,
 } from "lucide-react";
 import { format, differenceInDays, differenceInMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";

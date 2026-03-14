@@ -478,6 +478,45 @@ export default function Contacts() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Transaction History Dialog */}
+      <Dialog open={!!historyContact} onOpenChange={open => { if (!open) setHistoryContact(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              <History className="inline h-5 w-5 mr-2" />
+              {historyContact?.name} — Últimas transacciones
+            </DialogTitle>
+          </DialogHeader>
+          {historyLoading ? (
+            <p className="text-center text-muted-foreground py-4">{t('common.loading')}</p>
+          ) : historyData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">Sin transacciones</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-center">NCF</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historyData.map(tx => (
+                  <TableRow key={tx.id}>
+                    <TableCell>{tx.transaction_date}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {tx.currency === 'USD' ? '$' : 'RD$'}{Number(tx.amount).toLocaleString('en', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {tx.has_ncf ? <Check className="h-4 w-4 text-green-600 mx-auto" /> : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

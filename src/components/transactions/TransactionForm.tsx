@@ -396,8 +396,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
       return updated;
     });
+
+    // CRM lookup after OCR
+    if (result.rnc) {
+      const { data: existing } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('rnc', result.rnc)
+        .maybeSingle();
+      if (!existing) {
+        setPendingCrmContact({ name: result.vendor_name || '', rnc: result.rnc });
+        setShowCrmPrompt(true);
+      }
+    }
   };
 
+  const handleAddToCrm = async () => {
+    if (!pendingCrmContact) return;
+    const { error } = await supabase.from('contacts').insert({
+      name: pendingCrmContact.name,
+      rnc: pendingCrmContact.rnc,
+      contact_type: 'supplier',
+    });
+    if (!error) {
+      toast.success(t('contacts.added'));
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contactsAutocomplete'] });
+    }
+    setShowCrmPrompt(false);
+    setPendingCrmContact(null);
+  };
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">

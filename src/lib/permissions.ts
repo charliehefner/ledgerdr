@@ -33,6 +33,7 @@ export type Section =
   | "ap-ar"
   | "budget"
   | "treasury"
+  | "contacts"
   | "driver-portal";
 
 // HR sub-tabs for granular access control

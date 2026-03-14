@@ -124,6 +124,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
         date_of_hire: employee.date_of_hire,
+        date_of_termination: (employee as any).date_of_termination || "",
         salary: employee.salary,
         boot_size: employee.boot_size || "",
         pant_size: employee.pant_size || "",

@@ -1,31 +1,19 @@
+## Fixes for Missing Links — COMPLETED
 
+### ✅ 1. AP/AR Payment Recording
+- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
+- Added `$` button per row in `ApArDocumentList` for open/partial documents
+- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-## Fix: Treasury Page Missing Sidebar
+### ✅ 2. Unified Aging Report
+- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
+- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
+- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
 
-The file `src/pages/Treasury.tsx` still renders a bare `<div>` instead of wrapping in `MainLayout`. This is why the sidebar disappears.
+### ✅ 3. Petty Cash GL Book Balance
+- Added `Saldo Contable` column to Petty Cash fund table
+- Calls `account_balances_from_journals` DB function and maps by chart account code
+- Shows "—" for funds without a mapped GL account
 
-### Change
-
-**`src/pages/Treasury.tsx`** — replace entire file:
-- Import `MainLayout` instead of `TabbedPageLayout`
-- Remove unused `useState` import
-- Wrap content in `<MainLayout>` with title/subtitle props
-
-```tsx
-import { MainLayout } from "@/components/layout/MainLayout";
-import { TreasuryView } from "@/components/accounting/TreasuryView";
-import { useLanguage } from "@/contexts/LanguageContext";
-
-export default function Treasury() {
-  const { t } = useLanguage();
-
-  return (
-    <MainLayout title={t("page.treasury.title")} subtitle={t("page.treasury.subtitle")}>
-      <TreasuryView />
-    </MainLayout>
-  );
-}
-```
-
-One file, minimal change.
-
+### Deferred: Recurring Entries Automation
+Manual "Generar Pendientes" button works; cron requires config.toml changes.

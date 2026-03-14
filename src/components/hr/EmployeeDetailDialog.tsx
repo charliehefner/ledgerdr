@@ -819,7 +819,7 @@ export function EmployeeDetailDialog({
 
           {/* Incidents Tab */}
           <TabsContent value="incidents" className="space-y-4">
-            {canModifySettings && (
+            {canModifySettings && employee.is_active && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">

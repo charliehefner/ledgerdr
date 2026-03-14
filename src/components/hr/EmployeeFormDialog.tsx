@@ -89,6 +89,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       bank_account_number: "",
       date_of_birth: "",
       date_of_hire: "",
+      date_of_termination: "",
       salary: 0,
       boot_size: "",
       pant_size: "",

@@ -318,7 +318,10 @@ export default function Contacts() {
                             </span>
                           ) : '—'}
                         </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
+                        <TableCell onClick={e => e.stopPropagation()} className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openHistory(c)} title="Historial">
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm">

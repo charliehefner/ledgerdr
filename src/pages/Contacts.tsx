@@ -5,7 +5,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Trash2, Star, Building2 } from 'lucide-react';
+import { Plus, Search, Trash2, Star, Building2, History, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -72,6 +72,50 @@ export default function Contacts() {
   const [form, setForm] = useState(emptyContact);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankOpen, setBankOpen] = useState(false);
+  const [historyContact, setHistoryContact] = useState<Contact | null>(null);
+  const [historyData, setHistoryData] = useState<{ id: string; transaction_date: string; amount: number; currency: string; document: string | null; has_ncf: boolean }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistory = async (c: Contact) => {
+    setHistoryContact(c);
+    setHistoryLoading(true);
+    setHistoryData([]);
+
+    let query = supabase
+      .from('transactions')
+      .select('id, transaction_date, amount, currency, document')
+      .eq('is_void', false)
+      .order('transaction_date', { ascending: false })
+      .limit(10);
+
+    if (c.rnc) {
+      query = query.eq('rnc', c.rnc);
+    } else {
+      query = query.ilike('name', c.name);
+    }
+
+    const { data: txns } = await query;
+    if (!txns || txns.length === 0) {
+      setHistoryData([]);
+      setHistoryLoading(false);
+      return;
+    }
+
+    const txIds = txns.map(t => t.id);
+    const { data: ncfAttachments } = await supabase
+      .from('transaction_attachments')
+      .select('transaction_id')
+      .in('transaction_id', txIds)
+      .eq('attachment_category', 'ncf');
+
+    const ncfSet = new Set((ncfAttachments || []).map(a => a.transaction_id));
+
+    setHistoryData(txns.map(t => ({
+      ...t,
+      has_ncf: ncfSet.has(t.id),
+    })));
+    setHistoryLoading(false);
+  };
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['contacts'],
@@ -274,7 +318,10 @@ export default function Contacts() {
                             </span>
                           ) : '—'}
                         </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
+                        <TableCell onClick={e => e.stopPropagation()} className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openHistory(c)} title="Historial">
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm">
@@ -429,6 +476,45 @@ export default function Contacts() {
               {saveMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Transaction History Dialog */}
+      <Dialog open={!!historyContact} onOpenChange={open => { if (!open) setHistoryContact(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              <History className="inline h-5 w-5 mr-2" />
+              {historyContact?.name} — Últimas transacciones
+            </DialogTitle>
+          </DialogHeader>
+          {historyLoading ? (
+            <p className="text-center text-muted-foreground py-4">{t('common.loading')}</p>
+          ) : historyData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">Sin transacciones</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-center">NCF</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historyData.map(tx => (
+                  <TableRow key={tx.id}>
+                    <TableCell>{tx.transaction_date}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {tx.currency === 'USD' ? '$' : 'RD$'}{Number(tx.amount).toLocaleString('en', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {tx.has_ncf ? <Check className="h-4 w-4 text-green-600 mx-auto" /> : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </DialogContent>
       </Dialog>
     </MainLayout>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { format, eachDayOfInterval, isSunday, isSaturday, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -74,6 +74,46 @@ interface PayrollTimeGridProps {
 }
 
 const BENEFIT_TYPES = ["Teléfono", "Gasolina", "Bono"];
+
+/** Small wrapper that debounces onChange by 600ms */
+function DebouncedNumberInput({
+  value: externalValue,
+  onChange,
+  className,
+}: {
+  value: number | string;
+  onChange: (value: string) => void;
+  className?: string;
+}) {
+  const [localValue, setLocalValue] = useState(String(externalValue || ""));
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setLocalValue(String(externalValue || ""));
+  }, [externalValue]);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalValue(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onChange(val), 600);
+  }, [onChange]);
+
+  return (
+    <Input
+      type="number"
+      min={0}
+      step={100}
+      value={localValue}
+      onChange={handleChange}
+      className={className}
+    />
+  );
+}
 
 // Standard work hours: 7:30 AM to 4:30 PM (9 clock hours, minus 1 hour lunch = 8 work hours)
 const STANDARD_START = 7 * 60 + 30; // 7:30 AM in minutes
@@ -998,16 +1038,12 @@ export function PayrollTimeGrid({
                     </td>
                     {BENEFIT_TYPES.map((type) => (
                       <td key={type} className="p-1 align-middle">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={getBenefitAmount(employee.id, type) || ""}
-                          onChange={(e) =>
-                            handleBenefitChange(employee.id, type, e.target.value)
+                        <DebouncedNumberInput
+                          value={getBenefitAmount(employee.id, type)}
+                          onChange={(val) =>
+                            handleBenefitChange(employee.id, type, val)
                           }
                           className="h-7 text-xs font-mono text-center w-20"
-                          placeholder="0.00"
                         />
                       </td>
                     ))}

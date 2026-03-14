@@ -892,6 +892,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 value={form.name}
                 onChange={(value) => updateField('name', value)}
                 suggestions={uniqueNames}
+                onContactSelect={(contact) => {
+                  if (contact.rnc && !form.rnc) {
+                    updateField('rnc', contact.rnc);
+                  }
+                }}
               />
             </div>
 

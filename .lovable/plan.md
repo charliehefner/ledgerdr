@@ -20,7 +20,7 @@ Manual "Generar Pendientes" button works; cron requires config.toml changes.
 
 ---
 
-## CRM Contacts Module — COMPLETED
+## CRM/Contacts Module — COMPLETED
 
 ### ✅ Database
 - `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
@@ -31,6 +31,12 @@ Manual "Generar Pendientes" button works; cron requires config.toml changes.
 - CRUD table with search, type filter, active toggle
 - Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
 - Bilingual (ES/EN) via i18n keys
+- Nav renamed to "CRM/Contactos" / "CRM/Contacts"
+
+### ✅ Auto-populated from transaction history
+- One-time migration seeded contacts from transactions table
+- Deduplicated by RNC (most-used name variant) and case-insensitive name
+- Skipped numeric-only names and existing contacts
 
 ### ✅ OCR → CRM prompt
 - After OCR extracts RNC, lookup in contacts table

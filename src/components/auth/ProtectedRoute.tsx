@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { canAccessRoute, getDefaultRouteForRole } from "@/lib/permissions";
+import { MainLayout } from "@/components/layout/MainLayout";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -14,9 +15,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <MainLayout>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
     );
   }
 

@@ -433,6 +433,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
       <CardContent>
+        {showCrmPrompt && pendingCrmContact && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <span className="text-sm flex-1">{t('contacts.addToCrm')} <strong>{pendingCrmContact.name}</strong> ({pendingCrmContact.rnc})</span>
+            <Button size="sm" onClick={handleAddToCrm}>{t('common.add')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowCrmPrompt(false); setPendingCrmContact(null); }}>{t('common.cancel')}</Button>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Dates Row */}
           <div className="grid gap-4 md:grid-cols-2">

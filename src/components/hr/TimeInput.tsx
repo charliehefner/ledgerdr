@@ -52,29 +52,37 @@ export function TimeInput({ value, onChange, className, defaultPeriod = "AM", di
   const [hours, setHours] = useState(parsed.hours);
   const [minutes, setMinutes] = useState(parsed.minutes);
   const [period, setPeriod] = useState<"AM" | "PM">(value ? parsed.period : defaultPeriod);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const parsed = to12Hour(value);
     setHours(parsed.hours);
     setMinutes(parsed.minutes);
-    // Only set period from value if value exists, otherwise keep default
     if (value) {
       setPeriod(parsed.period);
     }
   }, [value]);
 
+  const debouncedOnChange = useCallback((val: string | null) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onChange(val), 600);
+  }, [onChange]);
+
   const handleChange = (newHours: string, newMinutes: string, newPeriod: "AM" | "PM") => {
-    // Treat "0" as clearing the field (mark as absent)
     if (newHours === "0") {
       setHours("");
       setMinutes("");
-      onChange(null);
+      debouncedOnChange(null);
       return;
     }
     
-    // Validate hours (1-12)
     if (newHours && (parseInt(newHours) < 1 || parseInt(newHours) > 12)) return;
-    // Validate minutes (0-59)
     if (newMinutes && (parseInt(newMinutes) < 0 || parseInt(newMinutes) > 59)) return;
     
     setHours(newHours);
@@ -83,9 +91,9 @@ export function TimeInput({ value, onChange, className, defaultPeriod = "AM", di
 
     if (newHours && newMinutes) {
       const time24 = to24Hour(newHours, newMinutes, newPeriod);
-      onChange(time24);
+      debouncedOnChange(time24);
     } else if (!newHours && !newMinutes) {
-      onChange(null);
+      debouncedOnChange(null);
     }
   };
 

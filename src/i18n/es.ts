@@ -890,7 +890,7 @@ export const es = {
   "treasury.pettyCash": "Caja Chica",
 
   // Contacts / CRM
-  "nav.contacts": "Contactos",
+  "nav.contacts": "CRM/Contactos",
   "contacts.title": "Contactos",
   "contacts.contact": "Contacto",
   "contacts.type_supplier": "Proveedor",

@@ -1,55 +1,48 @@
+## Fixes for Missing Links — COMPLETED
 
+### ✅ 1. AP/AR Payment Recording
+- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
+- Added `$` button per row in `ApArDocumentList` for open/partial documents
+- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-## Auto-populate CRM + Rename Tab
+### ✅ 2. Unified Aging Report
+- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
+- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
+- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
 
-### 1. Rename nav item
-- `es.ts`: `nav.contacts` → `"CRM/Contactos"`
-- `en.ts`: `nav.contacts` → `"CRM/Contacts"`
+### ✅ 3. Petty Cash GL Book Balance
+- Added `Saldo Contable` column to Petty Cash fund table
+- Calls `account_balances_from_journals` DB function and maps by chart account code
+- Shows "—" for funds without a mapped GL account
 
-### 2. One-time SQL migration to seed contacts
+### Deferred: Recurring Entries Automation
+Manual "Generar Pendientes" button works; cron requires config.toml changes.
 
-A single migration that:
-1. Groups transactions by RNC (when present) — picks the most-used name variant
-2. Groups remaining (no RNC) by case-insensitive name — picks the most-used casing
-3. Skips purely numeric names (e.g. "629.3")
-4. Skips names already in `contacts`
-5. Inserts all as `contact_type = 'supplier'`
+---
 
-```sql
--- Seed contacts from transaction history (one-time)
-WITH ranked AS (
-  SELECT name, rnc,
-    COUNT(*) as cnt,
-    ROW_NUMBER() OVER (
-      PARTITION BY COALESCE(rnc, LOWER(name))
-      ORDER BY COUNT(*) DESC, name
-    ) as rn
-  FROM transactions
-  WHERE name IS NOT NULL AND name != ''
-    AND is_void = false
-    AND name !~ '^\d+\.?\d*$'
-  GROUP BY name, rnc
-)
-INSERT INTO contacts (name, rnc, contact_type)
-SELECT name, rnc, 'supplier'
-FROM ranked
-WHERE rn = 1
-  AND NOT EXISTS (
-    SELECT 1 FROM contacts c
-    WHERE (c.rnc IS NOT NULL AND c.rnc = ranked.rnc)
-       OR LOWER(c.name) = LOWER(ranked.name)
-  );
-```
+## CRM/Contacts Module — COMPLETED
 
-This deduplicates ~148 entries down to unique contacts, merging variants like "JORD DOMINICANA SRL" and "Jord Dominicana" (same RNC `132214048`).
+### ✅ Database
+- `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
+- `contact_bank_accounts` table (one-to-many, bank_name, account_number, account_type, currency, is_default)
+- RLS: authenticated SELECT; admin/management/accountant INSERT/UPDATE; admin/management DELETE
 
-### 3. Remove "Import from History" button from Contacts.tsx
-No UI button needed — the migration runs once during deployment.
+### ✅ UI: `/contacts` page
+- CRUD table with search, type filter, active toggle
+- Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
+- Bilingual (ES/EN) via i18n keys
+- Nav renamed to "CRM/Contactos" / "CRM/Contacts"
 
-### Files changed
-| File | Change |
-|------|--------|
-| Migration SQL | One-time seed query |
-| `src/i18n/es.ts` | Rename nav label |
-| `src/i18n/en.ts` | Rename nav label |
+### ✅ Auto-populated from transaction history
+- One-time migration seeded contacts from transactions table
+- Deduplicated by RNC (most-used name variant) and case-insensitive name
+- Skipped numeric-only names and existing contacts
 
+### ✅ OCR → CRM prompt
+- After OCR extracts RNC, lookup in contacts table
+- If not found, inline banner: "¿Desea agregar este contacto al CRM?"
+- Confirm inserts as supplier
+
+### ✅ NameAutocomplete integration
+- Queries contacts table + legacy transaction names, deduplicated
+- Selecting a CRM contact auto-fills RNC

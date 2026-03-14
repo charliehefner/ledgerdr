@@ -131,6 +131,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   "ap-ar": ["admin", "management", "accountant"],
   budget: ["admin"],
   treasury: ["admin", "management", "accountant"],
+  contacts: ["admin", "management", "accountant", "viewer"],
   "driver-portal": ["driver"],
 };
 

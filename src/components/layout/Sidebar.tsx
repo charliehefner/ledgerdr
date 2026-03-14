@@ -63,6 +63,7 @@ const sectionColors: Record<Section, string> = {
   "ap-ar": "",
   budget: "",
   treasury: "",
+  contacts: "",
   "driver-portal": "",
 };
 

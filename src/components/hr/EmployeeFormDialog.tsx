@@ -185,6 +185,15 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
           });
         }
 
+        // Deactivate open loans when employee is terminated
+        if (!data.is_active && employee?.is_active) {
+          await supabase
+            .from("employee_loans")
+            .update({ is_active: false })
+            .eq("employee_id", employeeId)
+            .eq("is_active", true);
+        }
+
         toast.success("Empleado actualizado exitosamente");
       } else {
         const { data: newEmployee, error } = await supabase

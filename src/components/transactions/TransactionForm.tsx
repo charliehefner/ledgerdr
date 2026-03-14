@@ -353,7 +353,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     });
   };
 
-  const handleOcrResult = (result: OcrResult) => {
+  const handleOcrResult = async (result: OcrResult) => {
     setForm(prev => {
       const updated = { ...prev };
       // Only fill empty fields

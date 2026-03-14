@@ -160,6 +160,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         bank_account_number: data.bank_account_number || null,
         date_of_birth: data.date_of_birth || null,
         date_of_hire: data.date_of_hire,
+        date_of_termination: data.is_active ? null : (data.date_of_termination || new Date().toISOString().split("T")[0]),
         salary: data.salary,
         boot_size: data.boot_size || null,
         pant_size: data.pant_size || null,

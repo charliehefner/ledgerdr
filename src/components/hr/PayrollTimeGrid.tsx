@@ -1038,16 +1038,12 @@ export function PayrollTimeGrid({
                     </td>
                     {BENEFIT_TYPES.map((type) => (
                       <td key={type} className="p-1 align-middle">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={getBenefitAmount(employee.id, type) || ""}
-                          onChange={(e) =>
-                            handleBenefitChange(employee.id, type, e.target.value)
+                        <DebouncedNumberInput
+                          value={getBenefitAmount(employee.id, type)}
+                          onChange={(val) =>
+                            handleBenefitChange(employee.id, type, val)
                           }
                           className="h-7 text-xs font-mono text-center w-20"
-                          placeholder="0.00"
                         />
                       </td>
                     ))}

@@ -29,6 +29,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
 import NotFound from "./pages/NotFound";
+import Contacts from "./pages/Contacts";
 import InstallApp from "./pages/InstallApp";
 const queryClient = new QueryClient({
   defaultOptions: {

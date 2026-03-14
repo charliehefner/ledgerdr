@@ -41,6 +41,7 @@ import {
   History,
   TrendingUp,
   Percent,
+  Info,
 } from "lucide-react";
 import { format, differenceInDays, differenceInMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
@@ -708,7 +709,13 @@ export function EmployeeDetailDialog({
 
           {/* Vacations Tab */}
           <TabsContent value="vacations" className="space-y-4">
-            {canModifySettings && (
+            {!employee.is_active && (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 shrink-0" />
+                Empleado desvinculado — no se permiten nuevos movimientos
+              </div>
+            )}
+            {canModifySettings && employee.is_active && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -812,7 +819,7 @@ export function EmployeeDetailDialog({
 
           {/* Incidents Tab */}
           <TabsContent value="incidents" className="space-y-4">
-            {canModifySettings && (
+            {canModifySettings && employee.is_active && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">

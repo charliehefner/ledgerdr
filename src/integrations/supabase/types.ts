@@ -1045,6 +1045,7 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           date_of_hire: string
+          date_of_termination: string | null
           id: string
           is_active: boolean
           name: string
@@ -1062,6 +1063,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           date_of_hire: string
+          date_of_termination?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -1079,6 +1081,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           date_of_hire?: string
+          date_of_termination?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -3135,6 +3138,7 @@ export type Database = {
           created_at: string | null
           date_of_birth: string | null
           date_of_hire: string | null
+          date_of_termination: string | null
           id: string | null
           is_active: boolean | null
           name: string | null
@@ -3152,6 +3156,7 @@ export type Database = {
           created_at?: string | null
           date_of_birth?: string | null
           date_of_hire?: string | null
+          date_of_termination?: string | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
@@ -3169,6 +3174,7 @@ export type Database = {
           created_at?: string | null
           date_of_birth?: string | null
           date_of_hire?: string | null
+          date_of_termination?: string | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null

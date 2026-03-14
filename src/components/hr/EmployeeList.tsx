@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle } from "lucide-react";
+import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle, Ban } from "lucide-react";
 import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -252,6 +252,14 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "boot_size":
         return employee.boot_size || "—";
       case "vacations": {
+        if (!employee.is_active) {
+          return (
+            <Badge variant="secondary" className="gap-1">
+              <Ban className="h-3 w-3" />
+              Desvinculado
+            </Badge>
+          );
+        }
         const status = getVacationStatus(employee.id, employee.date_of_hire);
         return (
           <Button

@@ -42,6 +42,7 @@ const employeeSchema = z.object({
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
   date_of_hire: z.string().min(1, "La fecha de ingreso es requerida"),
+  date_of_termination: z.string().optional(),
   salary: z.coerce.number().min(0, "El salario debe ser positivo"),
   boot_size: z.string().optional(),
   pant_size: z.string().optional(),
@@ -88,6 +89,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       bank_account_number: "",
       date_of_birth: "",
       date_of_hire: "",
+      date_of_termination: "",
       salary: 0,
       boot_size: "",
       pant_size: "",
@@ -122,6 +124,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
         date_of_hire: employee.date_of_hire,
+        date_of_termination: (employee as any).date_of_termination || "",
         salary: employee.salary,
         boot_size: employee.boot_size || "",
         pant_size: employee.pant_size || "",
@@ -137,6 +140,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         bank_account_number: "",
         date_of_birth: "",
         date_of_hire: "",
+        date_of_termination: "",
         salary: 0,
         boot_size: "",
         pant_size: "",
@@ -156,6 +160,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         bank_account_number: data.bank_account_number || null,
         date_of_birth: data.date_of_birth || null,
         date_of_hire: data.date_of_hire,
+        date_of_termination: data.is_active ? null : (data.date_of_termination || new Date().toISOString().split("T")[0]),
         salary: data.salary,
         boot_size: data.boot_size || null,
         pant_size: data.pant_size || null,
@@ -178,6 +183,15 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
             effective_date: new Date().toISOString().split("T")[0],
             notes: `Salario actualizado de ${employee.salary} a ${data.salary}`,
           });
+        }
+
+        // Deactivate open loans when employee is terminated
+        if (!data.is_active && employee?.is_active) {
+          await supabase
+            .from("employee_loans")
+            .update({ is_active: false })
+            .eq("employee_id", employeeId)
+            .eq("is_active", true);
         }
 
         toast.success("Empleado actualizado exitosamente");
@@ -349,13 +363,37 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (!checked && !form.getValues("date_of_termination")) {
+                              form.setValue("date_of_termination", new Date().toISOString().split("T")[0]);
+                            }
+                            if (checked) {
+                              form.setValue("date_of_termination", "");
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormLabel className="font-normal">Empleado Activo</FormLabel>
                     </FormItem>
                   )}
                 />
+
+                {!form.watch("is_active") && (
+                  <FormField
+                    control={form.control}
+                    name="date_of_termination"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de Desvinculación</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </div>
 

@@ -1,30 +1,19 @@
+## Fixes for Missing Links — COMPLETED
 
+### ✅ 1. AP/AR Payment Recording
+- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
+- Added `$` button per row in `ApArDocumentList` for open/partial documents
+- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-## Plan: Stop Vacation Countdown for Terminated Employees
+### ✅ 2. Unified Aging Report
+- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
+- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
+- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
 
-### Problem
-When an employee is terminated (marked inactive), the vacation countdown continues calculating days as if they were still employed. Instead, it should show a stopped/discontinued state.
+### ✅ 3. Petty Cash GL Book Balance
+- Added `Saldo Contable` column to Petty Cash fund table
+- Calls `account_balances_from_journals` DB function and maps by chart account code
+- Shows "—" for funds without a mapped GL account
 
-### Changes
-
-**1. Database Migration — add `date_of_termination` to `employees`**
-- `ALTER TABLE employees ADD COLUMN date_of_termination date NULL`
-- Update `employees_safe` view to include the new column
-
-**2. `EmployeeFormDialog.tsx` — termination date on deactivation**
-- Add `date_of_termination` to schema (optional date field)
-- When `is_active` is unchecked: show a date picker for termination date (defaults to today)
-- When `is_active` is checked: clear `date_of_termination`
-- On save with `is_active = false`: also deactivate all open employee loans (`UPDATE employee_loans SET is_active = false WHERE employee_id = ? AND is_active = true`)
-
-**3. `EmployeeList.tsx` — show "Desvinculado" in vacation column for inactive employees**
-- In the `vacations` case of `renderCellValue`: if `!employee.is_active`, render a neutral grey badge saying "Desvinculado" with a stop icon instead of running the countdown calculation
-- The badge is not clickable (no vacation dialog opens for terminated employees)
-
-**4. `EmployeeDetailDialog.tsx` — block new movements for inactive employees**
-- Hide "Add Vacation", "Add Incident", and "Add Loan" buttons when employee is inactive
-- Show an info banner: "Empleado desvinculado — no se permiten nuevos movimientos"
-
-### Key distinction from previous plan
-The vacation countdown is **stopped and discontinued** (showing a terminal "Desvinculado" state), not merely hidden. The employee row still appears in the directory with all historical data visible — only the countdown logic ceases and new entries are blocked.
-
+### Deferred: Recurring Entries Automation
+Manual "Generar Pendientes" button works; cron requires config.toml changes.

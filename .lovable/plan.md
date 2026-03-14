@@ -1,29 +1,35 @@
 
 
-## Fix: Treasury Page Missing Sidebar
+## Plan: Debounce Payroll Inputs
 
-### Root Cause
-`src/pages/Treasury.tsx` renders a bare `<div>` without wrapping in `MainLayout`. Every other page either uses `MainLayout` directly or `TabbedPageLayout` (which internally wraps `MainLayout`). The unused `TabbedPageLayout` import is a leftover.
+### Problem
+Two input types in PayrollTimeGrid fire a Supabase mutation on every keystroke:
+- **TimeInput** (hours/minutes): typing "12" fires two saves ("1" then "12")
+- **Benefit inputs** (Teléfono, Gasolina, Bono): typing "500" fires three saves ("5", "50", "500")
+
+This causes unnecessary network requests and potential race conditions.
 
 ### Fix
-Replace the bare `<div>` wrapper with `MainLayout`, passing title and subtitle as props. Remove unused imports (`TabbedPageLayout`, `useState`).
 
-**File: `src/pages/Treasury.tsx`** — rewrite to:
-```tsx
-import { MainLayout } from "@/components/layout/MainLayout";
-import { TreasuryView } from "@/components/accounting/TreasuryView";
-import { useLanguage } from "@/contexts/LanguageContext";
+**1. Debounce TimeInput (`TimeInput.tsx`)**
+- Store hours/minutes/period as local state (already done)
+- Instead of calling `onChange(time24)` synchronously inside `handleChange`, debounce the `onChange` callback with ~600ms delay
+- Use a `useRef` + `setTimeout` pattern (no new dependencies)
+- Clear pending timeout on unmount
 
-export default function Treasury() {
-  const { t } = useLanguage();
+**2. Debounce Benefit Inputs (`PayrollTimeGrid.tsx`)**
+- Create a small `DebouncedNumberInput` inline component that:
+  - Keeps a local `useState` for the input value
+  - Calls the parent `onChange` after 600ms of inactivity
+  - Syncs from props when the external value changes (via `useEffect`)
+- Replace the raw `<Input>` in the benefit columns with this component
 
-  return (
-    <MainLayout title={t("page.treasury.title")} subtitle={t("page.treasury.subtitle")}>
-      <TreasuryView />
-    </MainLayout>
-  );
-}
-```
+### Files changed
 
-One file, ~12 lines. The sidebar will render correctly on the Treasury route.
+| File | Change |
+|------|--------|
+| `src/components/hr/TimeInput.tsx` | Debounce the `onChange` callback (~600ms) |
+| `src/components/hr/PayrollTimeGrid.tsx` | Wrap benefit inputs in a debounced component |
+
+No database changes. No new dependencies.
 

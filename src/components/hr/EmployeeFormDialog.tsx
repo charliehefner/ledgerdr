@@ -363,13 +363,37 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (!checked && !form.getValues("date_of_termination")) {
+                              form.setValue("date_of_termination", new Date().toISOString().split("T")[0]);
+                            }
+                            if (checked) {
+                              form.setValue("date_of_termination", "");
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormLabel className="font-normal">Empleado Activo</FormLabel>
                     </FormItem>
                   )}
                 />
+
+                {!form.watch("is_active") && (
+                  <FormField
+                    control={form.control}
+                    name="date_of_termination"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de Desvinculación</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </div>
 

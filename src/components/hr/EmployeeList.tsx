@@ -252,6 +252,14 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "boot_size":
         return employee.boot_size || "—";
       case "vacations": {
+        if (!employee.is_active) {
+          return (
+            <Badge variant="secondary" className="gap-1">
+              <Ban className="h-3 w-3" />
+              Desvinculado
+            </Badge>
+          );
+        }
         const status = getVacationStatus(employee.id, employee.date_of_hire);
         return (
           <Button

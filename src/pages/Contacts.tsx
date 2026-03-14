@@ -72,6 +72,50 @@ export default function Contacts() {
   const [form, setForm] = useState(emptyContact);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankOpen, setBankOpen] = useState(false);
+  const [historyContact, setHistoryContact] = useState<Contact | null>(null);
+  const [historyData, setHistoryData] = useState<{ id: string; transaction_date: string; amount: number; currency: string; document: string | null; has_ncf: boolean }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistory = async (c: Contact) => {
+    setHistoryContact(c);
+    setHistoryLoading(true);
+    setHistoryData([]);
+
+    let query = supabase
+      .from('transactions')
+      .select('id, transaction_date, amount, currency, document')
+      .eq('is_void', false)
+      .order('transaction_date', { ascending: false })
+      .limit(10);
+
+    if (c.rnc) {
+      query = query.eq('rnc', c.rnc);
+    } else {
+      query = query.ilike('name', c.name);
+    }
+
+    const { data: txns } = await query;
+    if (!txns || txns.length === 0) {
+      setHistoryData([]);
+      setHistoryLoading(false);
+      return;
+    }
+
+    const txIds = txns.map(t => t.id);
+    const { data: ncfAttachments } = await supabase
+      .from('transaction_attachments')
+      .select('transaction_id')
+      .in('transaction_id', txIds)
+      .eq('attachment_category', 'ncf');
+
+    const ncfSet = new Set((ncfAttachments || []).map(a => a.transaction_id));
+
+    setHistoryData(txns.map(t => ({
+      ...t,
+      has_ncf: ncfSet.has(t.id),
+    })));
+    setHistoryLoading(false);
+  };
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['contacts'],

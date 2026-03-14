@@ -1,65 +1,42 @@
+## Fixes for Missing Links — COMPLETED
 
+### ✅ 1. AP/AR Payment Recording
+- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
+- Added `$` button per row in `ApArDocumentList` for open/partial documents
+- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-## CRM Contacts Module with Multi-Bank Support
+### ✅ 2. Unified Aging Report
+- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
+- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
+- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
 
-### Database
+### ✅ 3. Petty Cash GL Book Balance
+- Added `Saldo Contable` column to Petty Cash fund table
+- Calls `account_balances_from_journals` DB function and maps by chart account code
+- Shows "—" for funds without a mapped GL account
 
-**Table 1: `contacts`**
+### Deferred: Recurring Entries Automation
+Manual "Generar Pendientes" button works; cron requires config.toml changes.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| name | text NOT NULL | Company/entity name |
-| rnc | varchar(20) UNIQUE | Tax ID, nullable |
-| contact_type | text NOT NULL | 'customer', 'supplier', 'both' |
-| contact_person | text | Optional individual name |
-| phone | text | |
-| email | text | |
-| address | text | |
-| notes | text | |
-| is_active | boolean DEFAULT true | |
-| created_at / updated_at | timestamptz | |
+---
 
-**Table 2: `contact_bank_accounts`** (one-to-many)
+## CRM Contacts Module — COMPLETED
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| contact_id | uuid FK → contacts | ON DELETE CASCADE |
-| bank_name | text NOT NULL | e.g. "Banco BHD", "Banco Popular" |
-| account_number | text NOT NULL | |
-| account_type | text | 'checking', 'savings' |
-| currency | varchar(3) DEFAULT 'DOP' | DOP, USD, EUR |
-| is_default | boolean DEFAULT false | One default per contact |
-| created_at | timestamptz | |
+### ✅ Database
+- `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
+- `contact_bank_accounts` table (one-to-many, bank_name, account_number, account_type, currency, is_default)
+- RLS: authenticated SELECT; admin/management/accountant INSERT/UPDATE; admin/management DELETE
 
-RLS: authenticated SELECT; role-based INSERT/UPDATE/DELETE via `has_role()`.
+### ✅ UI: `/contacts` page
+- CRUD table with search, type filter, active toggle
+- Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
+- Bilingual (ES/EN) via i18n keys
 
-### UI
+### ✅ OCR → CRM prompt
+- After OCR extracts RNC, lookup in contacts table
+- If not found, inline banner: "¿Desea agregar este contacto al CRM?"
+- Confirm inserts as supplier
 
-**New page: `/contacts`** — "Contactos" / "Contacts" in sidebar
-
-- Table listing contacts with search, type filter, active filter
-- Contact dialog with two sections:
-  - **General**: name, RNC, type, contact person, phone, email, address
-  - **Bank Accounts**: inline editable list — add/remove rows with bank name, account number, type, currency, default toggle
-
-**OCR → CRM prompt** in `TransactionForm.tsx`:
-- After OCR extracts name + RNC → lookup `contacts` by RNC
-- No match → show banner: "¿Desea agregar este contacto al CRM?" / "Add this contact to CRM?"
-- Confirm → insert contact (type='supplier'), bank info added later
-
-**NameAutocomplete** updated to query `contacts` table; selecting a contact auto-fills RNC.
-
-### Files
-
-| File | Change |
-|------|--------|
-| Migration | Create both tables + RLS + updated_at trigger |
-| `src/pages/Contacts.tsx` | New CRUD page with bank accounts sub-table |
-| `src/components/layout/Sidebar.tsx` | Add nav item |
-| `src/App.tsx` | Add `/contacts` route |
-| `src/i18n/es.ts` + `en.ts` | ~30 CRM + bank keys |
-| `src/components/transactions/TransactionForm.tsx` | CRM lookup after OCR, confirmation prompt |
-| `src/components/transactions/NameAutocomplete.tsx` | Query contacts for suggestions |
-
+### ✅ NameAutocomplete integration
+- Queries contacts table + legacy transaction names, deduplicated
+- Selecting a CRM contact auto-fills RNC

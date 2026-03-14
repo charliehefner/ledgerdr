@@ -496,6 +496,92 @@ export type Database = {
           },
         ]
       }
+      contact_bank_accounts: {
+        Row: {
+          account_number: string
+          account_type: string | null
+          bank_name: string
+          contact_id: string
+          created_at: string
+          currency: string
+          id: string
+          is_default: boolean
+        }
+        Insert: {
+          account_number: string
+          account_type?: string | null
+          bank_name: string
+          contact_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_default?: boolean
+        }
+        Update: {
+          account_number?: string
+          account_type?: string | null
+          bank_name?: string
+          contact_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_default?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_bank_accounts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          contact_type: string
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          rnc: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          contact_type?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          rnc?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          contact_type?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          rnc?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cronograma_entries: {
         Row: {
           created_at: string

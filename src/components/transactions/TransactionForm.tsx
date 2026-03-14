@@ -87,6 +87,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCrmPrompt, setShowCrmPrompt] = useState(false);
+  const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
   const { t } = useLanguage();
 
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
@@ -351,7 +353,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     });
   };
 
-  const handleOcrResult = (result: OcrResult) => {
+  const handleOcrResult = async (result: OcrResult) => {
     setForm(prev => {
       const updated = { ...prev };
       // Only fill empty fields
@@ -394,8 +396,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
       return updated;
     });
+
+    // CRM lookup after OCR
+    if (result.rnc) {
+      const { data: existing } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('rnc', result.rnc)
+        .maybeSingle();
+      if (!existing) {
+        setPendingCrmContact({ name: result.vendor_name || '', rnc: result.rnc });
+        setShowCrmPrompt(true);
+      }
+    }
   };
 
+  const handleAddToCrm = async () => {
+    if (!pendingCrmContact) return;
+    const { error } = await supabase.from('contacts').insert({
+      name: pendingCrmContact.name,
+      rnc: pendingCrmContact.rnc,
+      contact_type: 'supplier',
+    });
+    if (!error) {
+      toast.success(t('contacts.added'));
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contactsAutocomplete'] });
+    }
+    setShowCrmPrompt(false);
+    setPendingCrmContact(null);
+  };
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -403,6 +433,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
       <CardContent>
+        {showCrmPrompt && pendingCrmContact && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <span className="text-sm flex-1">{t('contacts.addToCrm')} <strong>{pendingCrmContact.name}</strong> ({pendingCrmContact.rnc})</span>
+            <Button size="sm" onClick={handleAddToCrm}>{t('common.add')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowCrmPrompt(false); setPendingCrmContact(null); }}>{t('common.cancel')}</Button>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Dates Row */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -862,6 +899,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 value={form.name}
                 onChange={(value) => updateField('name', value)}
                 suggestions={uniqueNames}
+                onContactSelect={(contact) => {
+                  if (contact.rnc && !form.rnc) {
+                    updateField('rnc', contact.rnc);
+                  }
+                }}
               />
             </div>
 

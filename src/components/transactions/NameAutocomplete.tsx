@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -6,16 +8,39 @@ interface NameAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   suggestions: string[];
+  onContactSelect?: (contact: { name: string; rnc: string | null }) => void;
 }
 
-export function NameAutocomplete({ value, onChange, suggestions }: NameAutocompleteProps) {
+export function NameAutocomplete({ value, onChange, suggestions, onContactSelect }: NameAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
+  // Query contacts from CRM
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['contactsAutocomplete'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('name, rnc')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Merge CRM contacts + legacy suggestions, deduplicated
+  const allNames = (() => {
+    const contactNames = contacts.map(c => c.name);
+    const merged = new Set([...contactNames, ...suggestions]);
+    return Array.from(merged).sort((a, b) => a.localeCompare(b, 'es'));
+  })();
+
   const filtered = value.trim()
-    ? suggestions.filter(s => s.toLowerCase().includes(value.trim().toLowerCase())).slice(0, 8)
+    ? allNames.filter(s => s.toLowerCase().includes(value.trim().toLowerCase())).slice(0, 8)
     : [];
 
   useEffect(() => {
@@ -35,6 +60,11 @@ export function NameAutocomplete({ value, onChange, suggestions }: NameAutocompl
   const select = (name: string) => {
     onChange(name);
     setOpen(false);
+    // If from CRM contacts, also pass RNC
+    const contact = contacts.find(c => c.name === name);
+    if (contact && onContactSelect) {
+      onContactSelect(contact);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -42,6 +42,7 @@ const employeeSchema = z.object({
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
   date_of_hire: z.string().min(1, "La fecha de ingreso es requerida"),
+  date_of_termination: z.string().optional(),
   salary: z.coerce.number().min(0, "El salario debe ser positivo"),
   boot_size: z.string().optional(),
   pant_size: z.string().optional(),

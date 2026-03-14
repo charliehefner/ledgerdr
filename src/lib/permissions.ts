@@ -107,6 +107,7 @@ export const routeToSection: Record<string, Section> = {
   "/accounts": "ap-ar",
   "/budget": "budget",
   "/treasury": "treasury",
+  "/contacts": "contacts",
   "/driver-portal": "driver-portal",
 };
 

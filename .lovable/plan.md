@@ -1,48 +1,31 @@
-## Fixes for Missing Links — COMPLETED
 
-### ✅ 1. AP/AR Payment Recording
-- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
-- Added `$` button per row in `ApArDocumentList` for open/partial documents
-- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-### ✅ 2. Unified Aging Report
-- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
-- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
-- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
+## Fix: Sidebar Missing on Treasury (and Other Pages) During Auth Loading
 
-### ✅ 3. Petty Cash GL Book Balance
-- Added `Saldo Contable` column to Petty Cash fund table
-- Calls `account_balances_from_journals` DB function and maps by chart account code
-- Shows "—" for funds without a mapped GL account
+### Root Cause
+The `ProtectedRoute` component renders a **full-screen spinner without the sidebar** during auth loading (`isLoading === true`). When navigating to Treasury (or any page), if auth state is briefly re-checked, the sidebar disappears and the user sees only a centered spinner. This affects all pages but is most noticeable on slower loads.
 
-### Deferred: Recurring Entries Automation
-Manual "Generar Pendientes" button works; cron requires config.toml changes.
+### Fix
+Move the loading spinner **inside** `MainLayout` so the sidebar is always visible, even during auth loading.
 
----
+**Option chosen**: Update `ProtectedRoute` to render the loading state wrapped in `MainLayout` instead of a bare full-screen div.
 
-## CRM/Contacts Module — COMPLETED
+### Changes
 
-### ✅ Database
-- `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
-- `contact_bank_accounts` table (one-to-many, bank_name, account_number, account_type, currency, is_default)
-- RLS: authenticated SELECT; admin/management/accountant INSERT/UPDATE; admin/management DELETE
+**`src/components/auth/ProtectedRoute.tsx`**
+- Import `MainLayout` and render the loading spinner inside it, so the sidebar remains visible during auth loading:
 
-### ✅ UI: `/contacts` page
-- CRUD table with search, type filter, active toggle
-- Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
-- Bilingual (ES/EN) via i18n keys
-- Nav renamed to "CRM/Contactos" / "CRM/Contacts"
+```tsx
+if (isLoading) {
+  return (
+    <MainLayout>
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    </MainLayout>
+  );
+}
+```
 
-### ✅ Auto-populated from transaction history
-- One-time migration seeded contacts from transactions table
-- Deduplicated by RNC (most-used name variant) and case-insensitive name
-- Skipped numeric-only names and existing contacts
+This ensures the sidebar is **always** rendered on protected routes, eliminating the flash of missing sidebar on any page load or navigation.
 
-### ✅ OCR → CRM prompt
-- After OCR extracts RNC, lookup in contacts table
-- If not found, inline banner: "¿Desea agregar este contacto al CRM?"
-- Confirm inserts as supplier
-
-### ✅ NameAutocomplete integration
-- Queries contacts table + legacy transaction names, deduplicated
-- Selecting a CRM contact auto-fills RNC

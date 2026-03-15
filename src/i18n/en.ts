@@ -76,6 +76,8 @@ export const en = {
   "common.provider": "Provider",
   "common.history": "History",
   "common.noRecords": "No records",
+  "common.selectAll": "Select All",
+  "common.deselectAll": "Deselect All",
   "common.selectBank": "Select bank",
   "common.createUser": "Create User",
   "common.updatePassword": "Update Password",
@@ -899,6 +901,9 @@ export const en = {
   "budget.section.companyTax": "Company Tax",
   "budget.section.totalTaxes": "Total Taxes",
   "budget.section.netProfit": "Net Profit (Loss)",
+  "budget.accounts": "Accounts",
+  "budget.selectAccounts": "Select Accounts",
+  "budget.selectAccountsDesc": "Choose which accounts to display. Totals always include all accounts.",
 
   // Treasury
   "txForm.pettyCash": "Petty Cash",

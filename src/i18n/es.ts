@@ -76,6 +76,8 @@ export const es = {
   "common.provider": "Prestador",
   "common.history": "Historial",
   "common.noRecords": "Sin registros",
+  "common.selectAll": "Seleccionar Todo",
+  "common.deselectAll": "Deseleccionar Todo",
   "common.selectBank": "Seleccionar banco",
   "common.createUser": "Crear Usuario",
   "common.updatePassword": "Actualizar Contraseña",
@@ -900,6 +902,9 @@ export const es = {
   "budget.section.companyTax": "Impuesto sobre Sociedades",
   "budget.section.totalTaxes": "Total Impuestos",
   "budget.section.netProfit": "Resultado Neto",
+  "budget.accounts": "Cuentas",
+  "budget.selectAccounts": "Seleccionar Cuentas",
+  "budget.selectAccountsDesc": "Elija qué cuentas mostrar. Los totales siempre incluyen todas las cuentas.",
 
   // Treasury
   "txForm.pettyCash": "Caja Chica",

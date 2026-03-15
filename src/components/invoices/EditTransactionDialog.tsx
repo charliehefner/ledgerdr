@@ -172,6 +172,7 @@ export function EditTransactionDialog({
       const payMethodValue = transaction.pay_method || "";
       const tipoBienesValue = transaction.dgii_tipo_bienes_servicios || "";
       const costCenterValue = (transaction as any).cost_center || "general";
+      const itbisOverrideValue = (transaction as any).itbis_override_reason || "";
 
       const isTransfer = (transaction.transaction_direction || "purchase") === "payment";
       const newFormData = {

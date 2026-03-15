@@ -107,6 +107,32 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   const [detailCode, setDetailCode] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
+  // ── Hidden accounts (display-only filter) ───────────────────────
+  const hiddenStorageKey = `budget-hidden-accounts-${budgetType}-${fiscalYear}`;
+  const [hiddenCodes, setHiddenCodes] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(hiddenStorageKey);
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(hiddenStorageKey, JSON.stringify(Array.from(hiddenCodes)));
+  }, [hiddenCodes, hiddenStorageKey]);
+
+  const toggleHidden = useCallback((code: string) => {
+    setHiddenCodes(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  }, []);
+
+  const showAllAccounts = useCallback(() => setHiddenCodes(new Set()), []);
+  const hideAllAccounts = useCallback(() => {
+    setHiddenCodes(new Set(lineCodes.map(lc => lc.code)));
+  }, [lineCodes]);
+
   // Fetch line codes
   const { data: rawLineCodes = [] } = useQuery({
     queryKey: ["budget-line-codes", budgetType, projectCode, fiscalYear],

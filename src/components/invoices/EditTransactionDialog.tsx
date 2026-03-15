@@ -686,9 +686,20 @@ export function EditTransactionDialog({
                 />
               </div>
 
-              <div className="space-y-2 invisible">
-                {/* Spacer to match 4-col layout */}
-              </div>
+              {/* ITBIS override reason - show when ITBIS > 18% */}
+              {!locked && editedItbis && formData.amount && parseFloat(editedItbis) > parseFloat(formData.amount) * 0.18 ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-destructive">ITBIS excede 18%. ¿Acumula ITBIS de pagos previos?</p>
+                  <Input
+                    value={editedItbisOverrideReason}
+                    onChange={(e) => setEditedItbisOverrideReason(e.target.value)}
+                    placeholder="Ej: ITBIS acumulado de pagos sin NCF"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2 invisible">{/* Spacer */}</div>
+              )}
             </div>
 
             {/* ITBIS Retenido / ISR Retenido */}

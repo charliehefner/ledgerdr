@@ -1,37 +1,48 @@
+## Fixes for Missing Links — COMPLETED
 
+### ✅ 1. AP/AR Payment Recording
+- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
+- Added `$` button per row in `ApArDocumentList` for open/partial documents
+- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-## Fix: Account selection drifts when switching tabs
+### ✅ 2. Unified Aging Report
+- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
+- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
+- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
 
-**Root cause**: `useState` initializer runs only once on component mount. When you switch from P&L to a project tab, `hiddenStorageKey` changes (e.g. `budget-hidden-accounts-pl-2025` → `budget-hidden-accounts-project-2025`), but the `hiddenCodes` state retains the old tab's value. Then the `useEffect` writes that stale value to the new key, corrupting saved selections.
+### ✅ 3. Petty Cash GL Book Balance
+- Added `Saldo Contable` column to Petty Cash fund table
+- Calls `account_balances_from_journals` DB function and maps by chart account code
+- Shows "—" for funds without a mapped GL account
 
-**Fix in `src/components/budget/BudgetGrid.tsx`** (lines 111–121):
+### Deferred: Recurring Entries Automation
+Manual "Generar Pendientes" button works; cron requires config.toml changes.
 
-Add a `useEffect` that re-reads `hiddenCodes` from localStorage whenever `hiddenStorageKey` changes:
+---
 
-```typescript
-const hiddenStorageKey = `budget-hidden-accounts-${budgetType}-${fiscalYear}`;
-const [hiddenCodes, setHiddenCodes] = useState<Set<string>>(() => {
-  try {
-    const saved = localStorage.getItem(hiddenStorageKey);
-    return saved ? new Set(JSON.parse(saved)) : new Set<string>();
-  } catch { return new Set<string>(); }
-});
+## CRM/Contacts Module — COMPLETED
 
-// Re-read when key changes (tab switch or year change)
-useEffect(() => {
-  try {
-    const saved = localStorage.getItem(hiddenStorageKey);
-    setHiddenCodes(saved ? new Set(JSON.parse(saved)) : new Set<string>());
-  } catch { setHiddenCodes(new Set<string>()); }
-}, [hiddenStorageKey]);
+### ✅ Database
+- `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
+- `contact_bank_accounts` table (one-to-many, bank_name, account_number, account_type, currency, is_default)
+- RLS: authenticated SELECT; admin/management/accountant INSERT/UPDATE; admin/management DELETE
 
-// Persist — use a ref to avoid writing on key-change reads
-const isKeyChange = useRef(false);
-useEffect(() => {
-  if (isKeyChange.current) { isKeyChange.current = false; return; }
-  localStorage.setItem(hiddenStorageKey, JSON.stringify(Array.from(hiddenCodes)));
-}, [hiddenCodes, hiddenStorageKey]);
-```
+### ✅ UI: `/contacts` page
+- CRUD table with search, type filter, active toggle
+- Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
+- Bilingual (ES/EN) via i18n keys
+- Nav renamed to "CRM/Contactos" / "CRM/Contacts"
 
-Simpler alternative: skip the ref guard and just let the write effect run (it'll write the same data it just read — harmless). The key fix is the re-read effect.
+### ✅ Auto-populated from transaction history
+- One-time migration seeded contacts from transactions table
+- Deduplicated by RNC (most-used name variant) and case-insensitive name
+- Skipped numeric-only names and existing contacts
 
+### ✅ OCR → CRM prompt
+- After OCR extracts RNC, lookup in contacts table
+- If not found, inline banner: "¿Desea agregar este contacto al CRM?"
+- Confirm inserts as supplier
+
+### ✅ NameAutocomplete integration
+- Queries contacts table + legacy transaction names, deduplicated
+- Selecting a CRM contact auto-fills RNC

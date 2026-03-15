@@ -891,9 +891,13 @@ export const en = {
   "budget.section.interestExpense": "Interest Expense & Similar",
   "budget.section.totalFinancial": "Total Financial Items",
   "budget.section.profitAfterFinancial": "Profit after Financial Items",
-  "budget.section.appropriations": "Total Appropriations",
+  "budget.section.realizedFx": "Realized Exchange Differences",
+  "budget.section.unrealizedFx": "Unrealized Exchange Differences",
+  "budget.section.appropriations": "Appropriations",
+  "budget.section.totalAppropriations": "Total Appropriations",
   "budget.section.profitBeforeTax": "Profit before Tax",
   "budget.section.companyTax": "Company Tax",
+  "budget.section.totalTaxes": "Total Taxes",
   "budget.section.netProfit": "Net Profit (Loss)",
 
   // Treasury

@@ -892,9 +892,13 @@ export const es = {
   "budget.section.interestExpense": "Gastos Financieros",
   "budget.section.totalFinancial": "Total Partidas Financieras",
   "budget.section.profitAfterFinancial": "Resultado después de Partidas Financieras",
-  "budget.section.appropriations": "Total Apropiaciones",
+  "budget.section.realizedFx": "Diferencias de Cambio Realizadas",
+  "budget.section.unrealizedFx": "Diferencias de Cambio No Realizadas",
+  "budget.section.appropriations": "Apropiaciones",
+  "budget.section.totalAppropriations": "Total Apropiaciones",
   "budget.section.profitBeforeTax": "Resultado antes de Impuestos",
   "budget.section.companyTax": "Impuesto sobre Sociedades",
+  "budget.section.totalTaxes": "Total Impuestos",
   "budget.section.netProfit": "Resultado Neto",
 
   // Treasury

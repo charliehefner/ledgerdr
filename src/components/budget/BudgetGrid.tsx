@@ -64,18 +64,22 @@ const PL_SECTIONS: PLSection[] = [
   { key: "operatingProfit", labelKey: "budget.section.operatingProfit", type: "computed", computeFrom: [{ key: "totalRevenue", sign: 1 },{ key: "totalCost", sign: 1 }] },
 
   // Financial items
-  { key: "interestIncome", labelKey: "budget.section.interestIncome", type: "accounts", codePrefixes: ["80","81","82","83"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
-  { key: "interestExpense", labelKey: "budget.section.interestExpense", type: "accounts", codePrefixes: ["84"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "totalFinancial", labelKey: "budget.section.totalFinancial", type: "subtotal", computeFrom: [{ key: "interestIncome", sign: 1 },{ key: "interestExpense", sign: 1 }] },
+  { key: "interestIncome", labelKey: "budget.section.interestIncome", type: "accounts", codePrefixes: ["80","81","82","831","834","835","836","837","838","839"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
+  { key: "interestExpense", labelKey: "budget.section.interestExpense", type: "accounts", codePrefixes: ["841","842","844","845","846"], accountTypes: ["EXPENSE"], sign: -1 },
+  { key: "realizedFx", labelKey: "budget.section.realizedFx", type: "accounts", codePrefixes: ["833","843"], sign: 1 },
+  { key: "unrealizedFx", labelKey: "budget.section.unrealizedFx", type: "accounts", codePrefixes: ["851"], sign: -1 },
+  { key: "totalFinancial", labelKey: "budget.section.totalFinancial", type: "subtotal", computeFrom: [{ key: "interestIncome", sign: 1 },{ key: "interestExpense", sign: 1 },{ key: "realizedFx", sign: 1 },{ key: "unrealizedFx", sign: 1 }] },
   { key: "profitAfterFinancial", labelKey: "budget.section.profitAfterFinancial", type: "computed", computeFrom: [{ key: "operatingProfit", sign: 1 },{ key: "totalFinancial", sign: 1 }] },
 
-  // Appropriations
-  { key: "appropriations", labelKey: "budget.section.appropriations", type: "accounts", codePrefixes: ["85"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "profitBeforeTax", labelKey: "budget.section.profitBeforeTax", type: "computed", computeFrom: [{ key: "profitAfterFinancial", sign: 1 },{ key: "appropriations", sign: 1 }] },
+  // Appropriations (88xx are EQUITY type)
+  { key: "appropriations", labelKey: "budget.section.appropriations", type: "accounts", codePrefixes: ["88"], accountTypes: ["EQUITY"], sign: -1 },
+  { key: "totalAppropriations", labelKey: "budget.section.totalAppropriations", type: "subtotal", computeFrom: [{ key: "appropriations", sign: 1 }] },
+  { key: "profitBeforeTax", labelKey: "budget.section.profitBeforeTax", type: "computed", computeFrom: [{ key: "profitAfterFinancial", sign: 1 },{ key: "totalAppropriations", sign: 1 }] },
 
   // Tax
   { key: "companyTax", labelKey: "budget.section.companyTax", type: "accounts", codePrefixes: ["89"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "netProfit", labelKey: "budget.section.netProfit", type: "computed", computeFrom: [{ key: "profitBeforeTax", sign: 1 },{ key: "companyTax", sign: 1 }] },
+  { key: "totalTaxes", labelKey: "budget.section.totalTaxes", type: "subtotal", computeFrom: [{ key: "companyTax", sign: 1 }] },
+  { key: "netProfit", labelKey: "budget.section.netProfit", type: "computed", computeFrom: [{ key: "profitBeforeTax", sign: 1 },{ key: "totalTaxes", sign: 1 }] },
 ];
 
 const fmt = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -102,7 +106,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         const { data: accounts } = await supabase
           .from("chart_of_accounts")
           .select("account_code, english_description, spanish_description, account_type")
-          .in("account_type", ["INCOME", "REVENUE", "EXPENSE", "COST_OF_GOODS_SOLD"])
+          .in("account_type", ["INCOME", "REVENUE", "EXPENSE", "COST_OF_GOODS_SOLD", "EQUITY"])
           .is("deleted_at", null)
           .order("account_code");
 
@@ -245,10 +249,17 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     const sectionAccounts: Record<string, typeof lineCodes> = {};
     PL_SECTIONS.forEach(s => { if (s.type === "accounts") sectionAccounts[s.key] = []; });
 
+    // Sort sections by prefix length descending so more specific prefixes match first
+    const accountSections = PL_SECTIONS.filter(s => s.type === "accounts" && s.codePrefixes);
+    const sortedSections = [...accountSections].sort((a, b) => {
+      const maxA = Math.max(...(a.codePrefixes || []).map(p => p.length));
+      const maxB = Math.max(...(b.codePrefixes || []).map(p => p.length));
+      return maxB - maxA; // longer prefixes first
+    });
+
     lineCodes.forEach(lc => {
-      for (const section of PL_SECTIONS) {
-        if (section.type !== "accounts" || !section.codePrefixes) continue;
-        if (section.codePrefixes.some(prefix => lc.code.startsWith(prefix))) {
+      for (const section of sortedSections) {
+        if (section.codePrefixes!.some(prefix => lc.code.startsWith(prefix))) {
           sectionAccounts[section.key].push(lc);
           break;
         }

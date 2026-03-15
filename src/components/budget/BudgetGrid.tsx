@@ -28,7 +28,7 @@ const MONTH_LABELS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","
 const MONTH_LABELS_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 // Column widths for sticky positioning
-const COL_W = [200, 120, 120, 120, 120]; // code, budget, forecast, actual, variance
+const COL_W = [140, 120, 120, 120, 120]; // code, budget, forecast, actual, variance
 const stickyLeft = COL_W.map((_, i) => COL_W.slice(0, i).reduce((a, b) => a + b, 0));
 
 /** P&L section definitions for the corporate template layout */

@@ -174,7 +174,8 @@ export function BankReconciliationView() {
         .from("bank_statement_lines" as any)
         .select("*")
         .eq("bank_account_id", selectedBank)
-        .order("statement_date", { ascending: false });
+        .order("statement_date", { ascending: false })
+        .limit(10000);
       if (error) throw error;
       return data as unknown as BankLine[];
     },

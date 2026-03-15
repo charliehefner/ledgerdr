@@ -97,7 +97,8 @@ export function ChartOfAccountsView() {
         .from("chart_of_accounts")
         .select("*")
         .is("deleted_at", null)
-        .order("account_code");
+        .order("account_code")
+        .limit(5000);
       if (error) throw error;
       return data as Account[];
     },

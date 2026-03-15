@@ -3223,6 +3223,36 @@ export type Database = {
           },
         ]
       }
+      tss_parameters: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          effective_date: string
+          id: string
+          parameter_key: string
+          parameter_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          effective_date?: string
+          id?: string
+          parameter_key: string
+          parameter_value: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          effective_date?: string
+          id?: string
+          parameter_key?: string
+          parameter_value?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

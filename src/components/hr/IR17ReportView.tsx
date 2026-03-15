@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Copy, FileSpreadsheet } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { calculateComplementaryTax } from "@/lib/payrollCalculations";
+import { calculateComplementaryTax, loadTssParameters } from "@/lib/payrollCalculations";
 
 const MONTHS = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" }, { value: "03", label: "Marzo" },
@@ -21,6 +21,7 @@ const MONTHS = [
 
 export function IR17ReportView() {
   const now = new Date();
+  useEffect(() => { loadTssParameters(); }, []);
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
 

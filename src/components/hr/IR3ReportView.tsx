@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { FileSpreadsheet, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { calculateMonthlyISR, calculateAnnualISR, TSS_EMPLOYEE_RATE } from "@/lib/payrollCalculations";
+import { calculateMonthlyISR, calculateAnnualISR, TSS_EMPLOYEE_RATE, loadTssParameters } from "@/lib/payrollCalculations";
 
 const MONTHS = [
   { value: "01", label: "Enero" },
@@ -44,6 +44,7 @@ interface Snapshot {
 
 export function IR3ReportView() {
   const now = new Date();
+  useEffect(() => { loadTssParameters(); }, []);
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const queryClient = useQueryClient();

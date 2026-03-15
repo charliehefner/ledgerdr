@@ -77,6 +77,8 @@ export function EditTransactionDialog({
   const [originalTipoBienes, setOriginalTipoBienes] = useState("");
   const [editedCostCenter, setEditedCostCenter] = useState("");
   const [originalCostCenter, setOriginalCostCenter] = useState("");
+  const [editedItbisOverrideReason, setEditedItbisOverrideReason] = useState("");
+  const [originalItbisOverrideReason, setOriginalItbisOverrideReason] = useState("");
 
   // Form data for previously read-only fields
   const [formData, setFormData] = useState({
@@ -170,6 +172,7 @@ export function EditTransactionDialog({
       const payMethodValue = transaction.pay_method || "";
       const tipoBienesValue = transaction.dgii_tipo_bienes_servicios || "";
       const costCenterValue = (transaction as any).cost_center || "general";
+      const itbisOverrideValue = (transaction as any).itbis_override_reason || "";
 
       const isTransfer = (transaction.transaction_direction || "purchase") === "payment";
       const newFormData = {
@@ -208,6 +211,8 @@ export function EditTransactionDialog({
       setOriginalTipoBienes(tipoBienesValue);
       setEditedCostCenter(costCenterValue);
       setOriginalCostCenter(costCenterValue);
+      setEditedItbisOverrideReason(itbisOverrideValue);
+      setOriginalItbisOverrideReason(itbisOverrideValue);
     }
   }, [transaction, open]);
 
@@ -241,6 +246,7 @@ export function EditTransactionDialog({
       if (editedPayMethod !== originalPayMethod) updates.pay_method = editedPayMethod || null;
       if (editedTipoBienes !== originalTipoBienes) updates.dgii_tipo_bienes_servicios = editedTipoBienes || null;
       if (editedCostCenter !== originalCostCenter) updates.cost_center = editedCostCenter;
+      if (editedItbisOverrideReason !== originalItbisOverrideReason) updates.itbis_override_reason = editedItbisOverrideReason || null;
 
       // New editable fields
       if (formData.transaction_date !== originalFormData.transaction_date) updates.transaction_date = formData.transaction_date;
@@ -278,6 +284,7 @@ export function EditTransactionDialog({
       setOriginalPayMethod(editedPayMethod);
       setOriginalTipoBienes(editedTipoBienes);
       setOriginalCostCenter(editedCostCenter);
+      setOriginalItbisOverrideReason(editedItbisOverrideReason);
       setOriginalFormData({ ...formData });
 
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });
@@ -302,6 +309,7 @@ export function EditTransactionDialog({
     editedPayMethod !== originalPayMethod ||
     editedTipoBienes !== originalTipoBienes ||
     editedCostCenter !== originalCostCenter ||
+    editedItbisOverrideReason !== originalItbisOverrideReason ||
     formData.transaction_date !== originalFormData.transaction_date ||
     formData.master_acct_code !== originalFormData.master_acct_code ||
     formData.project_code !== originalFormData.project_code ||
@@ -678,9 +686,20 @@ export function EditTransactionDialog({
                 />
               </div>
 
-              <div className="space-y-2 invisible">
-                {/* Spacer to match 4-col layout */}
-              </div>
+              {/* ITBIS override reason - show when ITBIS > 18% */}
+              {!locked && editedItbis && formData.amount && parseFloat(editedItbis) > parseFloat(formData.amount) * 0.18 ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-destructive">ITBIS excede 18%. ¿Acumula ITBIS de pagos previos?</p>
+                  <Input
+                    value={editedItbisOverrideReason}
+                    onChange={(e) => setEditedItbisOverrideReason(e.target.value)}
+                    placeholder="Ej: ITBIS acumulado de pagos sin NCF"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2 invisible">{/* Spacer */}</div>
+              )}
             </div>
 
             {/* ITBIS Retenido / ISR Retenido */}

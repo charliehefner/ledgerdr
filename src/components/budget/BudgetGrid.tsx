@@ -545,9 +545,10 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   };
 
   const renderProjectBody = () => {
+    const visibleLineCodes = lineCodes.filter(lc => !hiddenCodes.has(lc.code));
     return (
       <>
-        {lineCodes.map((lc, rowIdx) => renderAccountRow(lc, rowIdx))}
+        {visibleLineCodes.map((lc, rowIdx) => renderAccountRow(lc, rowIdx))}
         {/* Totals row */}
         <tr className="border-t-2 font-bold bg-muted/30">
           <td className="sticky left-0 z-20 bg-muted/30 border-r px-3 py-2 text-sm" style={{ minWidth: COL_W[0] }}>

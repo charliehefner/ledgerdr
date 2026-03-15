@@ -249,10 +249,17 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     const sectionAccounts: Record<string, typeof lineCodes> = {};
     PL_SECTIONS.forEach(s => { if (s.type === "accounts") sectionAccounts[s.key] = []; });
 
+    // Sort sections by prefix length descending so more specific prefixes match first
+    const accountSections = PL_SECTIONS.filter(s => s.type === "accounts" && s.codePrefixes);
+    const sortedSections = [...accountSections].sort((a, b) => {
+      const maxA = Math.max(...(a.codePrefixes || []).map(p => p.length));
+      const maxB = Math.max(...(b.codePrefixes || []).map(p => p.length));
+      return maxB - maxA; // longer prefixes first
+    });
+
     lineCodes.forEach(lc => {
-      for (const section of PL_SECTIONS) {
-        if (section.type !== "accounts" || !section.codePrefixes) continue;
-        if (section.codePrefixes.some(prefix => lc.code.startsWith(prefix))) {
+      for (const section of sortedSections) {
+        if (section.codePrefixes!.some(prefix => lc.code.startsWith(prefix))) {
           sectionAccounts[section.key].push(lc);
           break;
         }

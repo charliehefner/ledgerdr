@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Download, FileSpreadsheet, FileText, ChevronRight, ChevronDown } from "lucide-react";
 import { ActualDetailDialog } from "./ActualDetailDialog";
+import { AccountSelector } from "./AccountSelector";
 import { useExport } from "@/hooks/useExport";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

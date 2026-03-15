@@ -12,6 +12,8 @@ interface UnlinkedTransaction {
   description: string;
   amount: number;
   itbis: number | null;
+  itbis_retenido: number | null;
+  isr_retenido: number | null;
   master_acct_code: string | null;
   pay_method: string | null;
   cost_center: string | null;
@@ -19,6 +21,7 @@ interface UnlinkedTransaction {
   destination_acct_code: string | null;
   destination_amount: number | null;
   currency: string | null;
+  exchange_rate: number | null;
 }
 
 interface BankAccountLookup {
@@ -93,7 +96,7 @@ Deno.serve(async (req) => {
       db.from("bank_accounts").select("id, chart_account_id, currency"),
       db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null),
       db.from("transactions")
-        .select("id, transaction_date, description, amount, itbis, master_acct_code, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency")
+        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true }),
     ]);
@@ -114,7 +117,11 @@ Deno.serve(async (req) => {
     );
     const linkedIds = new Set((linkedRes.data || []).map((j: any) => j.transaction_source_id));
 
-    const itbisAccountId = acctByCode.get("1650");
+    // Tax account IDs
+    const itbisPagadoId = acctByCode.get("1650");     // ITBIS Pagado (purchase input tax)
+    const itbisPorPagarId = acctByCode.get("2110");   // ITBIS por Pagar (sales output tax)
+    const itbisRetenidoId = acctByCode.get("2160");   // ITBIS Retenido liability
+    const isrRetenidoId = acctByCode.get("2170");     // ISR Retenido liability
 
     const unlinked = ((txnsRes.data || []) as UnlinkedTransaction[]).filter(
       (t) => !linkedIds.has(t.id)
@@ -133,6 +140,8 @@ Deno.serve(async (req) => {
     for (const txn of unlinked) {
       const label = txn.description || txn.id;
       const isTransfer = txn.transaction_direction === "payment";
+      const isSale = txn.transaction_direction === "sale";
+      const exchangeRate = txn.exchange_rate || 1;
 
       try {
         if (isTransfer) {
@@ -159,6 +168,12 @@ Deno.serve(async (req) => {
             p_journal_type: "CDJ",
           });
           if (jErr) { skipped.push(`${label}: ${jErr.message}`); continue; }
+
+          // Set exchange_rate and currency on journal
+          await db.from("journals").update({
+            currency: txn.currency || "DOP",
+            exchange_rate: exchangeRate,
+          }).eq("id", journalId);
 
           const lines: any[] = [];
           const sourceAmount = txn.amount;
@@ -198,13 +213,13 @@ Deno.serve(async (req) => {
         }
 
         // Standard purchase/sale
-        const expenseAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
+        const mainAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
         const payAccountId = txn.pay_method ? mappingMap.get(txn.pay_method) : null;
 
-        if (!expenseAccountId) { skipped.push(`${label}: cuenta gasto "${txn.master_acct_code}" no encontrada`); continue; }
+        if (!mainAccountId) { skipped.push(`${label}: cuenta "${txn.master_acct_code}" no encontrada`); continue; }
         if (!payAccountId) { skipped.push(`${label}: método pago "${txn.pay_method}" sin mapeo`); continue; }
 
-        const journalType = txn.transaction_direction === "sale" ? "SJ" : "PJ";
+        const journalType = isSale ? "SJ" : "PJ";
         const { data: journalId, error: jErr } = await db.rpc("create_journal_from_transaction", {
           p_transaction_id: txn.id,
           p_date: txn.transaction_date,
@@ -214,15 +229,79 @@ Deno.serve(async (req) => {
         });
         if (jErr) { skipped.push(`${label}: ${jErr.message}`); continue; }
 
+        // Set exchange_rate and currency on journal
+        await db.from("journals").update({
+          currency: txn.currency || "DOP",
+          exchange_rate: exchangeRate,
+        }).eq("id", journalId);
+
         const itbisAmount = txn.itbis || 0;
+        const itbisRetenido = txn.itbis_retenido || 0;
+        const isrRetenido = txn.isr_retenido || 0;
         const netAmount = txn.amount - itbisAmount;
-        const lines: any[] = [
-          { journal_id: journalId, account_id: expenseAccountId, debit: netAmount, credit: 0, created_by: userId },
-        ];
-        if (itbisAmount > 0 && itbisAccountId) {
-          lines.push({ journal_id: journalId, account_id: itbisAccountId, debit: itbisAmount, credit: 0, created_by: userId });
+        const lines: any[] = [];
+
+        if (isSale) {
+          // ── SALE: Debit bank/cash, Credit revenue + ITBIS por Pagar ──
+          // Total received = amount (which already includes ITBIS for sales)
+          lines.push({
+            journal_id: journalId, account_id: payAccountId,
+            debit: txn.amount, credit: 0, created_by: userId,
+            description: `Cobro venta${costCenterLabel(txn.cost_center)}`,
+          });
+          lines.push({
+            journal_id: journalId, account_id: mainAccountId,
+            debit: 0, credit: netAmount, created_by: userId,
+            description: `Ingreso venta`,
+          });
+          if (itbisAmount > 0 && itbisPorPagarId) {
+            lines.push({
+              journal_id: journalId, account_id: itbisPorPagarId,
+              debit: 0, credit: itbisAmount, created_by: userId,
+              description: "ITBIS por Pagar",
+            });
+          }
+        } else {
+          // ── PURCHASE: Debit expense + ITBIS pagado, Credit bank/cash ──
+          lines.push({
+            journal_id: journalId, account_id: mainAccountId,
+            debit: netAmount, credit: 0, created_by: userId,
+            description: `Gasto${costCenterLabel(txn.cost_center)}`,
+          });
+          if (itbisAmount > 0 && itbisPagadoId) {
+            lines.push({
+              journal_id: journalId, account_id: itbisPagadoId,
+              debit: itbisAmount, credit: 0, created_by: userId,
+              description: "ITBIS Pagado",
+            });
+          }
+
+          // Withholding lines reduce the amount credited to bank
+          let bankCredit = txn.amount;
+
+          if (itbisRetenido > 0 && itbisRetenidoId) {
+            lines.push({
+              journal_id: journalId, account_id: itbisRetenidoId,
+              debit: 0, credit: itbisRetenido, created_by: userId,
+              description: "ITBIS Retenido",
+            });
+            bankCredit -= itbisRetenido;
+          }
+          if (isrRetenido > 0 && isrRetenidoId) {
+            lines.push({
+              journal_id: journalId, account_id: isrRetenidoId,
+              debit: 0, credit: isrRetenido, created_by: userId,
+              description: "ISR Retenido",
+            });
+            bankCredit -= isrRetenido;
+          }
+
+          lines.push({
+            journal_id: journalId, account_id: payAccountId,
+            debit: 0, credit: Math.max(0, bankCredit), created_by: userId,
+            description: `Pago`,
+          });
         }
-        lines.push({ journal_id: journalId, account_id: payAccountId, debit: 0, credit: txn.amount, created_by: userId });
 
         const { error: lErr } = await db.from("journal_lines").insert(lines);
         if (lErr) {

@@ -200,6 +200,67 @@ export type Database = {
         }
         Relationships: []
       }
+      ap_ar_payments: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          created_at: string
+          created_by: string | null
+          document_id: string
+          id: string
+          journal_id: string | null
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          id?: string
+          journal_id?: string | null
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          id?: string
+          journal_id?: string | null
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_payments_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_depreciation_rules: {
         Row: {
           accumulated_depreciation_account: string | null
@@ -3300,18 +3361,31 @@ export type Database = {
       }
     }
     Functions: {
-      account_balances_from_journals: {
-        Args: { p_end?: string; p_start?: string }
-        Returns: {
-          account_code: string
-          account_name: string
-          account_type: string
-          balance: number
-          currency: string
-          total_credit: number
-          total_debit: number
-        }[]
-      }
+      account_balances_from_journals:
+        | {
+            Args: { p_end?: string; p_start?: string }
+            Returns: {
+              account_code: string
+              account_name: string
+              account_type: string
+              balance: number
+              currency: string
+              total_credit: number
+              total_debit: number
+            }[]
+          }
+        | {
+            Args: { p_cost_center?: string; p_end?: string; p_start?: string }
+            Returns: {
+              account_code: string
+              account_name: string
+              account_type: string
+              balance: number
+              currency: string
+              total_credit: number
+              total_debit: number
+            }[]
+          }
       count_unlinked_transactions: {
         Args: { p_end?: string; p_start?: string }
         Returns: number

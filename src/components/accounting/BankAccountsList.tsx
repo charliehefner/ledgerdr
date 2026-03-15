@@ -62,6 +62,16 @@ export function BankAccountsList() {
     },
   });
 
+  // Fetch GL balances for all accounts
+  const { data: glBalances = [] } = useQuery({
+    queryKey: ["bank-gl-balances"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {});
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: chartAccounts = [] } = useQuery({
     queryKey: ["chart-accounts-postable"],
     queryFn: async () => {
@@ -151,19 +161,27 @@ export function BankAccountsList() {
                 <TableHead>Número</TableHead>
                 <TableHead>Moneda</TableHead>
                 <TableHead>Cuenta Contable</TableHead>
+                <TableHead className="text-right">Saldo Contable</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map(acct => (
+              {accounts.map(acct => {
+                const chartCode = chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code;
+                const glEntry = chartCode ? (glBalances as any[]).find((b: any) => b.account_code === chartCode) : null;
+                const glBalance = glEntry ? Number(glEntry.balance) : null;
+                return (
                 <TableRow key={acct.id}>
                   <TableCell className="font-medium">{acct.account_name}</TableCell>
                   <TableCell>{acct.bank_name}</TableCell>
                   <TableCell className="text-muted-foreground">{acct.account_number || "—"}</TableCell>
                   <TableCell>{acct.currency || "DOP"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
+                    {chartCode || "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {glBalance !== null ? glBalance.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -180,7 +198,9 @@ export function BankAccountsList() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
+
             </TableBody>
           </Table>
         </div>

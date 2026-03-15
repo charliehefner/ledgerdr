@@ -300,6 +300,32 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         // Invalidate attachment queries
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
+
+        // Auto-create AP/AR document when due_date is present (accrual accounting)
+        if (form.due_date && !isTransfer && form.transaction_direction !== 'payment') {
+          const direction = form.transaction_direction === 'sale' ? 'receivable' : 'payable';
+          const totalAmount = parseFloat(form.amount);
+          try {
+            await supabase.from('ap_ar_documents').insert({
+              direction,
+              contact_name: form.name || form.description,
+              contact_rnc: form.rnc || null,
+              document_number: form.document || null,
+              document_date: formatDateLocal(form.transaction_date!),
+              due_date: form.due_date,
+              currency: form.currency,
+              total_amount: totalAmount,
+              amount_paid: 0,
+              balance_remaining: totalAmount,
+              status: 'open',
+              linked_transaction_ids: [result.id],
+              notes: form.description,
+            });
+            queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
+          } catch (apArErr) {
+            console.error('Auto AP/AR creation error:', apArErr);
+          }
+        }
       }
 
       toast.success(t('txForm.success'));

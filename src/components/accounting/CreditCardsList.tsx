@@ -145,6 +145,7 @@ export function CreditCardsList() {
                 <TableHead>Últimos 4</TableHead>
                 <TableHead>Moneda</TableHead>
                 <TableHead>Cuenta Contable</TableHead>
+                <TableHead className="text-right">Saldo Contable</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>

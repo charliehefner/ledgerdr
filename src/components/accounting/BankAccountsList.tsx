@@ -178,7 +178,10 @@ export function BankAccountsList() {
                   <TableCell className="text-muted-foreground">{acct.account_number || "—"}</TableCell>
                   <TableCell>{acct.currency || "DOP"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
+                    {chartCode || "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {glBalance !== null ? glBalance.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -195,7 +198,9 @@ export function BankAccountsList() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
+
             </TableBody>
           </Table>
         </div>

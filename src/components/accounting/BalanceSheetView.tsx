@@ -103,11 +103,14 @@ export function BalanceSheetView() {
     balance: number;
   }
 
+  const costCenterParam = costCenter === "all" ? null : costCenter;
+
   const { data: balances = [], isLoading } = useQuery({
-    queryKey: ["bs-journal-balances", asOfDate],
+    queryKey: ["bs-journal-balances", asOfDate, costCenter],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("account_balances_from_journals", {
         p_end: asOfDate,
+        p_cost_center: costCenterParam,
       });
       if (error) throw error;
       return (data || []) as JournalBalance[];
@@ -115,10 +118,11 @@ export function BalanceSheetView() {
   });
 
   const { data: compBalances = [] } = useQuery({
-    queryKey: ["bs-journal-balances-comp", compAsOfDate],
+    queryKey: ["bs-journal-balances-comp", compAsOfDate, costCenter],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("account_balances_from_journals", {
         p_end: compAsOfDate,
+        p_cost_center: costCenterParam,
       });
       if (error) throw error;
       return (data || []) as JournalBalance[];

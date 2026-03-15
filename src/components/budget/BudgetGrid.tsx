@@ -116,6 +116,15 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     } catch { return new Set<string>(); }
   });
 
+  // Re-read from localStorage when storage key changes (tab/year switch)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(hiddenStorageKey);
+      setHiddenCodes(saved ? new Set(JSON.parse(saved)) : new Set<string>());
+    } catch { setHiddenCodes(new Set<string>()); }
+  }, [hiddenStorageKey]);
+
+  // Persist selections to localStorage
   useEffect(() => {
     localStorage.setItem(hiddenStorageKey, JSON.stringify(Array.from(hiddenCodes)));
   }, [hiddenCodes, hiddenStorageKey]);

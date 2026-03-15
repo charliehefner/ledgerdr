@@ -181,6 +181,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
       due_date: transaction.due_date || null,
       destination_amount: transaction.destination_amount || null,
+      itbis_override_reason: transaction.itbis_override_reason || null,
       ...fkFields,
     })
     .select()

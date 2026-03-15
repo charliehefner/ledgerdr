@@ -527,7 +527,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         // Section header
         rows.push(renderSectionHeader(section));
         // Account rows
-        const accounts = plData.sectionAccounts[section.key] || [];
+        const accounts = (plData.sectionAccounts[section.key] || []).filter(lc => !hiddenCodes.has(lc.code));
         if (!collapsedSections[section.key]) {
           accounts.forEach(lc => {
             rows.push(renderAccountRow(lc, rowCounter++));

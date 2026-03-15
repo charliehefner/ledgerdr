@@ -583,7 +583,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           <table className="w-max min-w-full text-sm border-collapse">
             <thead>
               <tr className="bg-muted/50">
-                <th className="sticky left-0 z-30 bg-muted/50 border-r border-b px-3 py-2 text-left font-medium whitespace-nowrap" style={{ minWidth: COL_W[0] }}>
+                <th className="sticky left-0 z-30 bg-muted/50 border-r border-b px-3 py-2 text-left font-medium whitespace-nowrap" style={{ minWidth: 100 }}>
                   {t("budget.code")}
                 </th>
                 <th className="sticky z-30 bg-muted/50 border-r border-b px-3 py-2 text-right font-medium whitespace-nowrap" style={{ left: stickyLeft[1], minWidth: COL_W[1], width: COL_W[1] }}>

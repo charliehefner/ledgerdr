@@ -106,7 +106,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         const { data: accounts } = await supabase
           .from("chart_of_accounts")
           .select("account_code, english_description, spanish_description, account_type")
-          .in("account_type", ["INCOME", "REVENUE", "EXPENSE", "COST_OF_GOODS_SOLD"])
+          .in("account_type", ["INCOME", "REVENUE", "EXPENSE", "COST_OF_GOODS_SOLD", "EQUITY"])
           .is("deleted_at", null)
           .order("account_code");
 

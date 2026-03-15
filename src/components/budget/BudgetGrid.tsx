@@ -84,6 +84,17 @@ const PL_SECTIONS: PLSection[] = [
 
 const fmt = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+const CHANGE_IN_STOCK_RE = [
+  /change in stock/i,
+  /change in inventories/i,
+  /variaci[oó]n.*existenc/i,
+  /cambio.*existenc/i,
+  /cambio.*stock/i,
+];
+
+const isChangeInStockAccount = (en?: string | null, es?: string | null) =>
+  CHANGE_IN_STOCK_RE.some((re) => re.test(en ?? "") || re.test(es ?? ""));
+
 export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridProps) {
   const { language, t } = useLanguage();
   const { user } = useAuth();
@@ -101,22 +112,26 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     queryFn: async () => {
       if (budgetType === "project") {
         const { data } = await supabase.from("cbs_codes").select("code, english_description, spanish_description").order("code");
-        return (data || []).map(c => ({ code: c.code, desc: getDescription(c, language) }));
-      } else {
-        // For P&L: fetch ALL income + expense accounts (not just expense)
-        const { data: accounts } = await supabase
-          .from("chart_of_accounts")
-          .select("account_code, english_description, spanish_description, account_type")
-          .in("account_type", ["INCOME", "REVENUE", "EXPENSE", "COST_OF_GOODS_SOLD", "EQUITY"])
-          .is("deleted_at", null)
-          .order("account_code");
-
-        return (accounts || []).map(a => ({
-          code: a.account_code,
-          desc: (language === "en" ? a.english_description : a.spanish_description) || a.account_code,
-          accountType: a.account_type,
-        }));
+        return (data || []).map((c) => ({ code: c.code, desc: getDescription(c, language) }));
       }
+
+      // For P&L: fetch ALL income + expense accounts (not just expense)
+      const { data: accounts } = await supabase
+        .from("chart_of_accounts")
+        .select("account_code, english_description, spanish_description, account_type")
+        .in("account_type", ["INCOME", "REVENUE", "EXPENSE", "COST_OF_GOODS_SOLD", "EQUITY"])
+        .is("deleted_at", null)
+        .order("account_code");
+
+      const filtered = (accounts || []).filter(
+        (a) => !isChangeInStockAccount(a.english_description, a.spanish_description)
+      );
+
+      return filtered.map((a) => ({
+        code: a.account_code,
+        desc: (language === "en" ? a.english_description : a.spanish_description) || a.account_code,
+        accountType: a.account_type,
+      }));
     },
   });
 

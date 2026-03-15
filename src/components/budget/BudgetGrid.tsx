@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Download, FileSpreadsheet, FileText, ChevronRight, ChevronDown } from "lucide-react";
 import { ActualDetailDialog } from "./ActualDetailDialog";
+import { AccountSelector } from "./AccountSelector";
 import { useExport } from "@/hooks/useExport";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -106,6 +107,30 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   const [detailCode, setDetailCode] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
+  // ── Hidden accounts (display-only filter) ───────────────────────
+  const hiddenStorageKey = `budget-hidden-accounts-${budgetType}-${fiscalYear}`;
+  const [hiddenCodes, setHiddenCodes] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(hiddenStorageKey);
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(hiddenStorageKey, JSON.stringify(Array.from(hiddenCodes)));
+  }, [hiddenCodes, hiddenStorageKey]);
+
+  const toggleHidden = useCallback((code: string) => {
+    setHiddenCodes(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  }, []);
+
+  const showAllAccounts = useCallback(() => setHiddenCodes(new Set()), []);
+  // hideAllAccounts defined after lineCodes
+
   // Fetch line codes
   const { data: rawLineCodes = [] } = useQuery({
     queryKey: ["budget-line-codes", budgetType, projectCode, fiscalYear],
@@ -144,7 +169,10 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     [budgetType, rawLineCodes]
   );
 
-  // Fetch budget lines
+  const hideAllAccounts = useCallback(() => {
+    setHiddenCodes(new Set(lineCodes.map(lc => lc.code)));
+  }, [lineCodes]);
+
   const { data: budgetLines = [] } = useQuery({
     queryKey: ["budget-lines", budgetType, projectCode, fiscalYear],
     queryFn: async () => {
@@ -499,7 +527,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         // Section header
         rows.push(renderSectionHeader(section));
         // Account rows
-        const accounts = plData.sectionAccounts[section.key] || [];
+        const accounts = (plData.sectionAccounts[section.key] || []).filter(lc => !hiddenCodes.has(lc.code));
         if (!collapsedSections[section.key]) {
           accounts.forEach(lc => {
             rows.push(renderAccountRow(lc, rowCounter++));
@@ -517,9 +545,10 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   };
 
   const renderProjectBody = () => {
+    const visibleLineCodes = lineCodes.filter(lc => !hiddenCodes.has(lc.code));
     return (
       <>
-        {lineCodes.map((lc, rowIdx) => renderAccountRow(lc, rowIdx))}
+        {visibleLineCodes.map((lc, rowIdx) => renderAccountRow(lc, rowIdx))}
         {/* Totals row */}
         <tr className="border-t-2 font-bold bg-muted/30">
           <td className="sticky left-0 z-20 bg-muted/30 border-r px-3 py-2 text-sm" style={{ minWidth: COL_W[0] }}>
@@ -549,10 +578,31 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     );
   };
 
+  // Build account groups for the selector dialog
+  const accountGroups = useMemo(() => {
+    if (budgetType === "pl" && plData) {
+      return PL_SECTIONS
+        .filter(s => s.type === "accounts" && (plData.sectionAccounts[s.key] || []).length > 0)
+        .map(s => ({
+          label: t(s.labelKey),
+          accounts: plData.sectionAccounts[s.key],
+        }));
+    }
+    return undefined;
+  }, [budgetType, plData, t]);
+
   return (
     <div className="relative">
-      {/* Export button */}
-      <div className="flex justify-end mb-2">
+      {/* Toolbar */}
+      <div className="flex justify-end gap-2 mb-2">
+        <AccountSelector
+          accounts={lineCodes}
+          groups={accountGroups}
+          hiddenCodes={hiddenCodes}
+          onToggle={toggleHidden}
+          onShowAll={showAllAccounts}
+          onHideAll={hideAllAccounts}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
@@ -579,9 +629,9 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           <p>{t("budget.noLines") || "No budget lines found for this period."}</p>
         </div>
       ) : (
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="overflow-x-auto overflow-y-auto max-h-[75vh] border rounded-lg">
           <table className="w-max min-w-full text-sm border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-40">
               <tr className="bg-muted/50">
                 <th className="sticky left-0 z-30 bg-muted/50 border-r border-b px-3 py-2 text-left font-medium whitespace-nowrap" style={{ minWidth: 100 }}>
                   {t("budget.code")}

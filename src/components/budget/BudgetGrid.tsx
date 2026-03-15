@@ -578,10 +578,31 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     );
   };
 
+  // Build account groups for the selector dialog
+  const accountGroups = useMemo(() => {
+    if (budgetType === "pl" && plData) {
+      return PL_SECTIONS
+        .filter(s => s.type === "accounts" && (plData.sectionAccounts[s.key] || []).length > 0)
+        .map(s => ({
+          label: t(s.labelKey),
+          accounts: plData.sectionAccounts[s.key],
+        }));
+    }
+    return undefined;
+  }, [budgetType, plData, t]);
+
   return (
     <div className="relative">
-      {/* Export button */}
-      <div className="flex justify-end mb-2">
+      {/* Toolbar */}
+      <div className="flex justify-end gap-2 mb-2">
+        <AccountSelector
+          accounts={lineCodes}
+          groups={accountGroups}
+          hiddenCodes={hiddenCodes}
+          onToggle={toggleHidden}
+          onShowAll={showAllAccounts}
+          onHideAll={hideAllAccounts}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
@@ -608,9 +629,9 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           <p>{t("budget.noLines") || "No budget lines found for this period."}</p>
         </div>
       ) : (
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="overflow-x-auto overflow-y-auto max-h-[75vh] border rounded-lg">
           <table className="w-max min-w-full text-sm border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-40">
               <tr className="bg-muted/50">
                 <th className="sticky left-0 z-30 bg-muted/50 border-r border-b px-3 py-2 text-left font-medium whitespace-nowrap" style={{ minWidth: 100 }}>
                   {t("budget.code")}

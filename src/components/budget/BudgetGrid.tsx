@@ -169,7 +169,10 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     [budgetType, rawLineCodes]
   );
 
-  // Fetch budget lines
+  const hideAllAccounts = useCallback(() => {
+    setHiddenCodes(new Set(lineCodes.map(lc => lc.code)));
+  }, [lineCodes]);
+
   const { data: budgetLines = [] } = useQuery({
     queryKey: ["budget-lines", budgetType, projectCode, fiscalYear],
     queryFn: async () => {

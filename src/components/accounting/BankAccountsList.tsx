@@ -161,12 +161,17 @@ export function BankAccountsList() {
                 <TableHead>Número</TableHead>
                 <TableHead>Moneda</TableHead>
                 <TableHead>Cuenta Contable</TableHead>
+                <TableHead className="text-right">Saldo Contable</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map(acct => (
+              {accounts.map(acct => {
+                const chartCode = chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code;
+                const glEntry = chartCode ? (glBalances as any[]).find((b: any) => b.account_code === chartCode) : null;
+                const glBalance = glEntry ? Number(glEntry.balance) : null;
+                return (
                 <TableRow key={acct.id}>
                   <TableCell className="font-medium">{acct.account_name}</TableCell>
                   <TableCell>{acct.bank_name}</TableCell>

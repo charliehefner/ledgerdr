@@ -44,6 +44,7 @@ interface Snapshot {
 
 export function IR3ReportView() {
   const now = new Date();
+  useEffect(() => { loadTssParameters(); }, []);
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const queryClient = useQueryClient();

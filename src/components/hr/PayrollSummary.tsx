@@ -119,6 +119,8 @@ export function PayrollSummary({
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingReceipts, setIsGeneratingReceipts] = useState(false);
 
+  useEffect(() => { loadTssParameters(); }, []);
+
   const isClosed = periodStatus === "closed";
 
   // Fetch snapshots for closed periods (immutable data)

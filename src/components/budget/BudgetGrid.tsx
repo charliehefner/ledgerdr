@@ -7,7 +7,7 @@ import { getDescription } from "@/lib/getDescription";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Search, Download, FileSpreadsheet, FileText, ChevronRight, ChevronDown } from "lucide-react";
 import { ActualDetailDialog } from "./ActualDetailDialog";
 import { useExport } from "@/hooks/useExport";
 import { toast } from "sonner";

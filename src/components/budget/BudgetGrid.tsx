@@ -64,18 +64,22 @@ const PL_SECTIONS: PLSection[] = [
   { key: "operatingProfit", labelKey: "budget.section.operatingProfit", type: "computed", computeFrom: [{ key: "totalRevenue", sign: 1 },{ key: "totalCost", sign: 1 }] },
 
   // Financial items
-  { key: "interestIncome", labelKey: "budget.section.interestIncome", type: "accounts", codePrefixes: ["80","81","82","83"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
-  { key: "interestExpense", labelKey: "budget.section.interestExpense", type: "accounts", codePrefixes: ["84"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "totalFinancial", labelKey: "budget.section.totalFinancial", type: "subtotal", computeFrom: [{ key: "interestIncome", sign: 1 },{ key: "interestExpense", sign: 1 }] },
+  { key: "interestIncome", labelKey: "budget.section.interestIncome", type: "accounts", codePrefixes: ["80","81","82","831","834","835","836","837","838","839"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
+  { key: "interestExpense", labelKey: "budget.section.interestExpense", type: "accounts", codePrefixes: ["841","842","844","845","846"], accountTypes: ["EXPENSE"], sign: -1 },
+  { key: "realizedFx", labelKey: "budget.section.realizedFx", type: "accounts", codePrefixes: ["833","843"], sign: 1 },
+  { key: "unrealizedFx", labelKey: "budget.section.unrealizedFx", type: "accounts", codePrefixes: ["851"], sign: -1 },
+  { key: "totalFinancial", labelKey: "budget.section.totalFinancial", type: "subtotal", computeFrom: [{ key: "interestIncome", sign: 1 },{ key: "interestExpense", sign: 1 },{ key: "realizedFx", sign: 1 },{ key: "unrealizedFx", sign: 1 }] },
   { key: "profitAfterFinancial", labelKey: "budget.section.profitAfterFinancial", type: "computed", computeFrom: [{ key: "operatingProfit", sign: 1 },{ key: "totalFinancial", sign: 1 }] },
 
-  // Appropriations
-  { key: "appropriations", labelKey: "budget.section.appropriations", type: "accounts", codePrefixes: ["85"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "profitBeforeTax", labelKey: "budget.section.profitBeforeTax", type: "computed", computeFrom: [{ key: "profitAfterFinancial", sign: 1 },{ key: "appropriations", sign: 1 }] },
+  // Appropriations (88xx are EQUITY type)
+  { key: "appropriations", labelKey: "budget.section.appropriations", type: "accounts", codePrefixes: ["88"], accountTypes: ["EQUITY"], sign: -1 },
+  { key: "totalAppropriations", labelKey: "budget.section.totalAppropriations", type: "subtotal", computeFrom: [{ key: "appropriations", sign: 1 }] },
+  { key: "profitBeforeTax", labelKey: "budget.section.profitBeforeTax", type: "computed", computeFrom: [{ key: "profitAfterFinancial", sign: 1 },{ key: "totalAppropriations", sign: 1 }] },
 
   // Tax
   { key: "companyTax", labelKey: "budget.section.companyTax", type: "accounts", codePrefixes: ["89"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "netProfit", labelKey: "budget.section.netProfit", type: "computed", computeFrom: [{ key: "profitBeforeTax", sign: 1 },{ key: "companyTax", sign: 1 }] },
+  { key: "totalTaxes", labelKey: "budget.section.totalTaxes", type: "subtotal", computeFrom: [{ key: "companyTax", sign: 1 }] },
+  { key: "netProfit", labelKey: "budget.section.netProfit", type: "computed", computeFrom: [{ key: "profitBeforeTax", sign: 1 },{ key: "totalTaxes", sign: 1 }] },
 ];
 
 const fmt = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });

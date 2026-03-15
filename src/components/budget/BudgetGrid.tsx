@@ -107,7 +107,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   // Fetch line codes
-  const { data: lineCodes = [] } = useQuery({
+  const { data: rawLineCodes = [] } = useQuery({
     queryKey: ["budget-line-codes", budgetType, projectCode, fiscalYear],
     queryFn: async () => {
       if (budgetType === "project") {
@@ -134,6 +134,15 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       }));
     },
   });
+
+  // Defensive: also filter cached data so it disappears immediately without a hard refresh
+  const lineCodes = useMemo(
+    () =>
+      budgetType === "pl"
+        ? rawLineCodes.filter((lc: any) => !isChangeInStockAccount(lc.desc, lc.desc))
+        : rawLineCodes,
+    [budgetType, rawLineCodes]
+  );
 
   // Fetch budget lines
   const { data: budgetLines = [] } = useQuery({

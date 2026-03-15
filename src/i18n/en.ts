@@ -899,6 +899,9 @@ export const en = {
   "budget.section.companyTax": "Company Tax",
   "budget.section.totalTaxes": "Total Taxes",
   "budget.section.netProfit": "Net Profit (Loss)",
+  "budget.accounts": "Accounts",
+  "budget.selectAccounts": "Select Accounts",
+  "budget.selectAccountsDesc": "Choose which accounts to display. Totals always include all accounts.",
 
   // Treasury
   "txForm.pettyCash": "Petty Cash",

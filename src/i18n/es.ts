@@ -900,6 +900,9 @@ export const es = {
   "budget.section.companyTax": "Impuesto sobre Sociedades",
   "budget.section.totalTaxes": "Total Impuestos",
   "budget.section.netProfit": "Resultado Neto",
+  "budget.accounts": "Cuentas",
+  "budget.selectAccounts": "Seleccionar Cuentas",
+  "budget.selectAccountsDesc": "Elija qué cuentas mostrar. Los totales siempre incluyen todas las cuentas.",
 
   // Treasury
   "txForm.pettyCash": "Caja Chica",

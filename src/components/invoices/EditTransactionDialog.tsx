@@ -211,6 +211,8 @@ export function EditTransactionDialog({
       setOriginalTipoBienes(tipoBienesValue);
       setEditedCostCenter(costCenterValue);
       setOriginalCostCenter(costCenterValue);
+      setEditedItbisOverrideReason(itbisOverrideValue);
+      setOriginalItbisOverrideReason(itbisOverrideValue);
     }
   }, [transaction, open]);
 

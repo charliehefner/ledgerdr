@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -21,13 +25,31 @@ interface PaymentDialogProps {
     total_amount: number;
     amount_paid: number;
     balance_remaining: number;
+    direction: string;
   } | null;
 }
 
 export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
+  const [bankAccountId, setBankAccountId] = useState("");
+
+  // Fetch bank accounts for payment method selection
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["bank-accounts-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bank_accounts")
+        .select("id, account_name, bank_name, chart_account_id, currency")
+        .eq("is_active", true)
+        .order("account_name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -36,10 +58,73 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
       if (!amount || amount <= 0) throw new Error("Monto inválido");
       if (amount > document.balance_remaining + 0.005) throw new Error("El pago excede el saldo pendiente");
 
+      const selectedBank = bankAccounts.find(b => b.id === bankAccountId);
+      if (!selectedBank?.chart_account_id) throw new Error("Seleccione una cuenta bancaria con cuenta contable asignada");
+
       const newPaid = document.amount_paid + amount;
       const newBalance = document.total_amount - newPaid;
       const newStatus = newBalance <= 0.005 ? "paid" : "partial";
 
+      // Determine AP/AR GL account and journal type based on direction
+      const isPayable = document.direction === "payable";
+      const apArAccountCode = isPayable ? "2100" : "1200"; // AP or AR
+      const journalType = isPayable ? "CDJ" : "CRJ";
+
+      // Look up the AP/AR GL account ID
+      const { data: apArAcct } = await supabase
+        .from("chart_of_accounts")
+        .select("id")
+        .eq("account_code", apArAccountCode)
+        .eq("allow_posting", true)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (!apArAcct) throw new Error(`Cuenta contable ${apArAccountCode} no encontrada`);
+
+      // 1. Create payment journal entry
+      const { data: journalId, error: jErr } = await supabase.rpc(
+        "create_journal_from_transaction" as any,
+        {
+          p_transaction_id: null,
+          p_date: paymentDate,
+          p_description: `Pago ${isPayable ? "a" : "de"} ${document.contact_name} — ${document.document_number || "S/N"}`,
+          p_created_by: user?.id || null,
+          p_journal_type: journalType,
+        }
+      );
+      if (jErr) throw jErr;
+
+      // Journal lines: for payable, debit AP credit bank; for receivable, debit bank credit AR
+      const lines = isPayable
+        ? [
+            { journal_id: journalId, account_id: apArAcct.id, debit: amount, credit: 0, description: `Pago a ${document.contact_name}` },
+            { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: 0, credit: amount, description: `Pago ${selectedBank.account_name}` },
+          ]
+        : [
+            { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: amount, credit: 0, description: `Cobro de ${document.contact_name}` },
+            { journal_id: journalId, account_id: apArAcct.id, debit: 0, credit: amount, description: `Cobro a ${document.contact_name}` },
+          ];
+
+      const { error: lErr } = await supabase.from("journal_lines").insert(lines);
+      if (lErr) {
+        // Clean up orphaned journal
+        await supabase.from("journals").delete().eq("id", journalId);
+        throw lErr;
+      }
+
+      // 2. Record payment in ap_ar_payments audit trail
+      const { error: pErr } = await supabase.from("ap_ar_payments" as any).insert({
+        document_id: document.id,
+        payment_date: paymentDate,
+        amount: amount,
+        payment_method: selectedBank.account_name,
+        bank_account_id: bankAccountId,
+        journal_id: journalId,
+        created_by: user?.id || null,
+      });
+      if (pErr) console.error("Payment audit insert error:", pErr);
+
+      // 3. Update ap_ar_documents summary
       const { error } = await supabase
         .from("ap_ar_documents")
         .update({
@@ -52,15 +137,17 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
-      toast.success("Pago registrado");
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      toast.success("Pago registrado con asiento contable");
       onOpenChange(false);
       setPaymentAmount("");
+      setBankAccountId("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const handleOpen = (isOpen: boolean) => {
-    if (!isOpen) setPaymentAmount("");
+    if (!isOpen) { setPaymentAmount(""); setBankAccountId(""); }
     onOpenChange(isOpen);
   };
 
@@ -97,6 +184,19 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
             <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
           </div>
           <div className="space-y-1">
+            <Label>Cuenta Bancaria *</Label>
+            <Select value={bankAccountId} onValueChange={setBankAccountId}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
+              <SelectContent className="bg-popover">
+                {bankAccounts.map(b => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.account_name} — {b.bank_name} ({b.currency || "DOP"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label>Monto del Pago *</Label>
             <Input
               type="number"
@@ -124,7 +224,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
           <Button variant="outline" onClick={() => handleOpen(false)}>Cancelar</Button>
           <Button
             onClick={() => mutation.mutate()}
-            disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || mutation.isPending}
+            disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || !bankAccountId || mutation.isPending}
           >
             {mutation.isPending ? "Guardando..." : "Registrar Pago"}
           </Button>

@@ -205,14 +205,10 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
     try {
       await handleSave();
 
-      const { error } = await supabase
-        .from("journals")
-        .update({
-          posted: true,
-          posted_by: user?.id,
-          posted_at: new Date().toISOString(),
-        })
-        .eq("id", journal.id);
+      const { error } = await supabase.rpc("post_journal", {
+        p_journal_id: journal.id,
+        p_user: user?.id,
+      });
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });

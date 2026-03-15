@@ -62,6 +62,16 @@ export function BankAccountsList() {
     },
   });
 
+  // Fetch GL balances for all accounts
+  const { data: glBalances = [] } = useQuery({
+    queryKey: ["bank-gl-balances"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {});
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: chartAccounts = [] } = useQuery({
     queryKey: ["chart-accounts-postable"],
     queryFn: async () => {

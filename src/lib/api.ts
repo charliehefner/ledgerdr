@@ -171,6 +171,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       name: transaction.name || null,
       rnc: transaction.rnc || null,
       comments: transaction.comments || null,
+      exchange_rate: transaction.exchange_rate || null,
       is_void: false,
       is_internal: transaction.is_internal ?? false,
       cost_center: transaction.cost_center || 'general',

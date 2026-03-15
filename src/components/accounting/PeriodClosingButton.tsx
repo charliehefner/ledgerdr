@@ -39,7 +39,7 @@ export function PeriodClosingButton({ periodId, periodName, startDate, endDate, 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       toast({
         title: "Asiento de Cierre Creado",
-        description: `Se creó un asiento borrador (CLJ) con ${result.lineCount} líneas. Revíselo y publíquelo cuando esté listo.`,
+        description: `Se creó un asiento borrador (CLJ). Revíselo y publíquelo cuando esté listo.`,
       });
       setConfirmOpen(false);
     },

@@ -225,7 +225,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (!isValid()) {
       if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
         toast.error(t('txForm.projectCbsRequired'));
-      } else if (form.itbis && form.amount && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
+      } else if (form.itbis && form.amount && !form.itbis_override_reason && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
         toast.error(t('txForm.itbisExceeds'));
       } else {
         toast.error(t('txForm.requiredFields'));

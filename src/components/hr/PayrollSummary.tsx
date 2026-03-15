@@ -989,7 +989,131 @@ export function PayrollSummary({
           .eq("id", loan.id);
       }
 
-      // 5. Generate receipts automatically on close
+      // 5. Generate detailed PRJ journal entry for accounting
+      try {
+        const totalGrossPay = payrollData.reduce((s, p) => s + p.grossPay, 0);
+        const totalTss = payrollData.reduce((s, p) => s + p.tss, 0);
+        const totalIsr = payrollData.reduce((s, p) => s + p.isr, 0);
+        const totalNetPay = payrollData.reduce((s, p) => s + p.netPay, 0);
+        const totalLoanDeduction = payrollData.reduce((s, p) => s + p.loanDeduction, 0);
+        // Employer TSS: ~15.72% of gross (7.09% AFP + 7.53% SFS + 1.1% SRL)
+        const TSS_EMPLOYER_RATE = 0.1572;
+        const employerTss = Math.round(totalGrossPay * TSS_EMPLOYER_RATE * 100) / 100;
+
+        // Lookup GL account IDs
+        const acctCodes = ["7010", "6210", "2180", "2170", "1130"];
+        const { data: glAccts } = await supabase
+          .from("chart_of_accounts")
+          .select("id, account_code")
+          .in("account_code", acctCodes)
+          .eq("allow_posting", true)
+          .is("deleted_at", null);
+
+        const acctMap = new Map((glAccts || []).map(a => [a.account_code, a.id]));
+        const salaryAcct = acctMap.get("7010");   // Salary Expense
+        const employerTssAcct = acctMap.get("6210"); // Employer TSS Expense
+        const tssLiabilityAcct = acctMap.get("2180"); // TSS Liability (employee + employer)
+        const isrLiabilityAcct = acctMap.get("2170"); // ISR Withholding Liability
+        const loansReceivableAcct = acctMap.get("1130"); // Loans Receivable / Employee Advances
+
+        if (salaryAcct && tssLiabilityAcct) {
+          // Create journal
+          const { data: journalId, error: jErr } = await supabase.rpc(
+            "create_journal_from_transaction" as any,
+            {
+              p_transaction_id: null,
+              p_date: dateStr,
+              p_description: `Nómina ${nominaNumber} — ${format(startDate, "dd/MM")} al ${format(endDate, "dd/MM/yyyy")}`,
+              p_created_by: null,
+              p_journal_type: "PRJ",
+            }
+          );
+
+          if (!jErr && journalId) {
+            const journalLines: any[] = [];
+
+            // Debit: Salary Expense (gross pay)
+            if (totalGrossPay > 0) {
+              journalLines.push({
+                journal_id: journalId, account_id: salaryAcct,
+                debit: Math.round(totalGrossPay * 100) / 100, credit: 0,
+                description: `Salarios Nómina ${nominaNumber}`,
+              });
+            }
+
+            // Debit: Employer TSS Expense
+            if (employerTss > 0 && employerTssAcct) {
+              journalLines.push({
+                journal_id: journalId, account_id: employerTssAcct,
+                debit: employerTss, credit: 0,
+                description: `TSS Patronal Nómina ${nominaNumber}`,
+              });
+            }
+
+            // Credit: TSS Liability (employee + employer combined)
+            const totalTssLiability = Math.round((totalTss + employerTss) * 100) / 100;
+            if (totalTssLiability > 0) {
+              journalLines.push({
+                journal_id: journalId, account_id: tssLiabilityAcct,
+                debit: 0, credit: totalTssLiability,
+                description: `TSS por Pagar Nómina ${nominaNumber}`,
+              });
+            }
+
+            // Credit: ISR Withholding Liability
+            if (totalIsr > 0 && isrLiabilityAcct) {
+              journalLines.push({
+                journal_id: journalId, account_id: isrLiabilityAcct,
+                debit: 0, credit: Math.round(totalIsr * 100) / 100,
+                description: `ISR Retenido Nómina ${nominaNumber}`,
+              });
+            }
+
+            // Credit: Loan deductions (reduce employee advances receivable)
+            if (totalLoanDeduction > 0 && loansReceivableAcct) {
+              journalLines.push({
+                journal_id: journalId, account_id: loansReceivableAcct,
+                debit: 0, credit: Math.round(totalLoanDeduction * 100) / 100,
+                description: `Descuento Préstamos Nómina ${nominaNumber}`,
+              });
+            }
+
+            // Credit: Net pay to bank (balancing entry)
+            // Net pay = Gross + EmployerTSS - TotalTSSLiability - ISR - Loans
+            // This simplifies to: totalNetPay (which already = gross - empTSS - ISR - loans) + employerTSS expense - employerTSS liability (net 0)
+            // So bank credit = totalNetPay
+            // But we need to find a bank account. Use the first active bank's GL account as default.
+            const { data: defaultBank } = await supabase
+              .from("bank_accounts")
+              .select("chart_account_id")
+              .eq("is_active", true)
+              .eq("account_type", "bank")
+              .limit(1)
+              .maybeSingle();
+
+            if (defaultBank?.chart_account_id && totalNetPay > 0) {
+              journalLines.push({
+                journal_id: journalId, account_id: defaultBank.chart_account_id,
+                debit: 0, credit: Math.round(totalNetPay * 100) / 100,
+                description: `Pago Neto Nómina ${nominaNumber}`,
+              });
+            }
+
+            if (journalLines.length > 0) {
+              const { error: lErr } = await supabase.from("journal_lines").insert(journalLines);
+              if (lErr) {
+                console.error("PRJ journal lines error:", lErr);
+                await supabase.from("journals").delete().eq("id", journalId);
+              }
+            }
+          }
+        }
+      } catch (prjErr) {
+        console.error("PRJ journal generation error:", prjErr);
+        // Non-fatal: don't block payroll close
+      }
+
+      // 6. Generate receipts automatically on close
       await generatePayrollReceiptsZip(payrollData, nominaNumber, startDate, endDate);
     },
     onSuccess: () => {

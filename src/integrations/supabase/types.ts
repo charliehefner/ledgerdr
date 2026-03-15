@@ -3110,6 +3110,7 @@ export type Database = {
           is_void: boolean
           isr_retenido: number | null
           itbis: number | null
+          itbis_override_reason: string | null
           itbis_retenido: number | null
           legacy_id: number | null
           master_acct_code: string | null
@@ -3146,6 +3147,7 @@ export type Database = {
           is_void?: boolean
           isr_retenido?: number | null
           itbis?: number | null
+          itbis_override_reason?: string | null
           itbis_retenido?: number | null
           legacy_id?: number | null
           master_acct_code?: string | null
@@ -3182,6 +3184,7 @@ export type Database = {
           is_void?: boolean
           isr_retenido?: number | null
           itbis?: number | null
+          itbis_override_reason?: string | null
           itbis_retenido?: number | null
           legacy_id?: number | null
           master_acct_code?: string | null
@@ -3446,6 +3449,19 @@ export type Database = {
           booked_dop_total: number
           usd_balance: number
         }[]
+      }
+      generate_closing_journal: {
+        Args: {
+          p_end_date: string
+          p_period_id: string
+          p_start_date: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      generate_due_recurring_journals: {
+        Args: { p_user_id: string }
+        Returns: number
       }
       get_fields_with_boundaries: {
         Args: never

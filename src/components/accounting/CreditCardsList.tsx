@@ -52,6 +52,16 @@ export function CreditCardsList() {
     },
   });
 
+  // Fetch GL balances for linked chart accounts
+  const { data: glBalances = [] } = useQuery({
+    queryKey: ["credit-card-gl-balances"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("account_balances_from_journals", {});
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: chartAccounts = [] } = useQuery({
     queryKey: ["chart-accounts-postable"],
     queryFn: async () => {
@@ -135,6 +145,7 @@ export function CreditCardsList() {
                 <TableHead>Últimos 4</TableHead>
                 <TableHead>Moneda</TableHead>
                 <TableHead>Cuenta Contable</TableHead>
+                <TableHead className="text-right">Saldo Contable</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
@@ -148,6 +159,15 @@ export function CreditCardsList() {
                   <TableCell>{acct.currency || "DOP"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {(() => {
+                      const chartAcct = chartAccounts.find(c => c.id === acct.chart_account_id);
+                      if (!chartAcct) return "—";
+                      const bal = glBalances.find((b: any) => b.account_code === chartAcct.account_code);
+                      if (!bal) return "0.00";
+                      return Number(bal.balance).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Badge variant={acct.is_active ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleActive(acct)}>

@@ -70,6 +70,7 @@ const initialFormState = {
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
   transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment',
+  itbis_override_reason: '',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   due_date: '',
@@ -207,8 +208,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       const toCur = toAcct?.currency || 'DOP';
       if (fromCur !== toCur && !form.transfer_dest_amount) return false;
     }
-    // ITBIS cannot exceed 18% of amount
-    if (form.itbis && form.amount) {
+    // ITBIS cannot exceed 18% of amount (unless override reason provided)
+    if (form.itbis && form.amount && !form.itbis_override_reason) {
       const itbisValue = parseFloat(form.itbis);
       const amountValue = parseFloat(form.amount);
       if (itbisValue > amountValue * 0.18) {
@@ -224,7 +225,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (!isValid()) {
       if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
         toast.error(t('txForm.projectCbsRequired'));
-      } else if (form.itbis && form.amount && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
+      } else if (form.itbis && form.amount && !form.itbis_override_reason && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
         toast.error(t('txForm.itbisExceeds'));
       } else {
         toast.error(t('txForm.requiredFields'));
@@ -841,6 +842,18 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 placeholder="0.00"
                 className="font-mono"
               />
+              {/* ITBIS exceeds 18% warning + override */}
+              {form.itbis && form.amount && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18 && (
+                <div className="mt-1 space-y-1">
+                  <p className="text-xs text-destructive">ITBIS excede 18%. ¿Acumula ITBIS de pagos previos?</p>
+                  <Input
+                    value={form.itbis_override_reason}
+                    onChange={(e) => updateField('itbis_override_reason', e.target.value)}
+                    placeholder="Ej: ITBIS acumulado de pagos sin NCF"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

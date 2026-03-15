@@ -147,61 +147,16 @@ export function RecurringEntriesView() {
         return;
       }
 
-      let generated = 0;
-      for (const tmpl of dueTemplates) {
-        // Fetch template lines
-        const { data: tLines, error: tlErr } = await supabase
-          .from("recurring_journal_template_lines" as any)
-          .select("*")
-          .eq("template_id", tmpl.id);
-        if (tlErr) throw tlErr;
-
-        // Create journal
-        const { data: journal, error: jErr } = await supabase
-          .from("journals")
-          .insert({
-            journal_date: tmpl.next_run_date,
-            journal_type: "RJ",
-            currency: tmpl.currency || "DOP",
-            description: `${tmpl.template_name} — ${tmpl.description || "Recurrente"}`,
-            posted: false,
-            created_by: user?.id,
-          })
-          .select("id")
-          .single();
-        if (jErr) throw jErr;
-
-        // Create lines
-        const journalLines = ((tLines as any[]) || []).map((l: any) => ({
-          journal_id: journal.id,
-          account_id: l.account_id,
-          project_code: l.project_code,
-          cbs_code: l.cbs_code,
-          debit: l.debit || 0,
-          credit: l.credit || 0,
-        }));
-
-        const { error: jlErr } = await supabase.from("journal_lines").insert(journalLines);
-        if (jlErr) throw jlErr;
-
-        // Advance next_run_date
-        const nextDate = tmpl.frequency === "biweekly"
-          ? format(addDays(new Date(tmpl.next_run_date + "T00:00:00"), 14), "yyyy-MM-dd")
-          : format(addMonths(new Date(tmpl.next_run_date + "T00:00:00"), 1), "yyyy-MM-dd");
-
-        await supabase
-          .from("recurring_journal_templates" as any)
-          .update({ next_run_date: nextDate } as any)
-          .eq("id", tmpl.id);
-
-        generated++;
-      }
+      const { data: generated, error } = await supabase.rpc("generate_due_recurring_journals", {
+        p_user_id: user?.id,
+      });
+      if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       toast({
         title: "Asientos Generados",
-        description: `Se generaron ${generated} asiento(s) borrador(es) tipo RJ.`,
+        description: `Se generaron ${generated || 0} asiento(s) borrador(es) tipo RJ.`,
       });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });

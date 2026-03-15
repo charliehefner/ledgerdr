@@ -143,20 +143,22 @@ export function PeriodsView() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={p.status}
-                      onValueChange={(val) => updateStatusMutation.mutate({ id: p.id, status: val as PeriodStatus })}
-                    >
-                      <SelectTrigger className="h-8 w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Abierto</SelectItem>
-                        <SelectItem value="closed">Cerrado</SelectItem>
-                        <SelectItem value="reported">Reportado</SelectItem>
-                        <SelectItem value="locked">Bloqueado</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {(() => {
+                      const statusOrder: PeriodStatus[] = ["open", "closed", "reported", "locked"];
+                      const currentIdx = statusOrder.indexOf(p.status);
+                      const nextStatus = currentIdx < statusOrder.length - 1 ? statusOrder[currentIdx + 1] : null;
+                      if (!nextStatus) return <span className="text-xs text-muted-foreground">Bloqueado</span>;
+                      return (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                          onClick={() => updateStatusMutation.mutate({ id: p.id, status: nextStatus })}
+                        >
+                          → {STATUS_CONFIG[nextStatus].label}
+                        </Button>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <PeriodClosingButton

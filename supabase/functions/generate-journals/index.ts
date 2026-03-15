@@ -94,11 +94,12 @@ Deno.serve(async (req) => {
       db.from("payment_method_accounts").select("pay_method, account_id"),
       db.from("chart_of_accounts").select("id, account_code").eq("allow_posting", true).is("deleted_at", null),
       db.from("bank_accounts").select("id, chart_account_id, currency"),
-      db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null),
+      db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null).limit(10000),
       db.from("transactions")
         .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate")
         .eq("is_void", false)
-        .order("transaction_date", { ascending: true }),
+        .order("transaction_date", { ascending: true })
+        .limit(10000),
     ]);
 
     if (mappingsRes.error) throw mappingsRes.error;

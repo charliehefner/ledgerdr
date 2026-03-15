@@ -288,6 +288,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
         due_date: form.due_date || undefined,
         destination_amount: destinationAmount,
+        itbis_override_reason: form.itbis_override_reason || undefined,
       });
 
       // Save all attachments to local database

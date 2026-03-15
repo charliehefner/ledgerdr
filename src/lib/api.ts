@@ -50,6 +50,7 @@ export interface Transaction {
   dgii_tipo_bienes_servicios?: string;
   due_date?: string;
   destination_amount?: number;
+  itbis_override_reason?: string;
 }
 
 // ============================================
@@ -180,6 +181,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       dgii_tipo_ingreso: transaction.dgii_tipo_ingreso || null,
       due_date: transaction.due_date || null,
       destination_amount: transaction.destination_amount || null,
+      itbis_override_reason: transaction.itbis_override_reason || null,
       ...fkFields,
     })
     .select()
@@ -222,6 +224,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
   if (transaction.transaction_direction !== undefined) updatePayload.transaction_direction = transaction.transaction_direction;
   if (transaction.destination_acct_code !== undefined) updatePayload.destination_acct_code = transaction.destination_acct_code;
   if (transaction.cost_center !== undefined) updatePayload.cost_center = transaction.cost_center;
+  if (transaction.itbis_override_reason !== undefined) updatePayload.itbis_override_reason = transaction.itbis_override_reason;
 
   // Resolve FK IDs when code fields change
   if (transaction.master_acct_code !== undefined) {

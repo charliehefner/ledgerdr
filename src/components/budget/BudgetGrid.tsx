@@ -476,9 +476,11 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         rows.push(renderSectionHeader(section));
         // Account rows
         const accounts = plData.sectionAccounts[section.key] || [];
-        accounts.forEach(lc => {
-          rows.push(renderAccountRow(lc, rowCounter++));
-        });
+        if (!collapsedSections[section.key]) {
+          accounts.forEach(lc => {
+            rows.push(renderAccountRow(lc, rowCounter++));
+          });
+        }
         // Section subtotal (inline — look ahead for next subtotal)
       } else if (section.type === "subtotal") {
         rows.push(renderAggregateRow(section, false));

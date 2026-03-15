@@ -160,6 +160,15 @@ export function CreditCardsList() {
                   <TableCell className="text-xs text-muted-foreground">
                     {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
                   </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {(() => {
+                      const chartAcct = chartAccounts.find(c => c.id === acct.chart_account_id);
+                      if (!chartAcct) return "—";
+                      const bal = glBalances.find((b: any) => b.account_code === chartAcct.account_code);
+                      if (!bal) return "0.00";
+                      return Number(bal.balance).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={acct.is_active ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleActive(acct)}>
                       {acct.is_active ? "Activa" : "Inactiva"}

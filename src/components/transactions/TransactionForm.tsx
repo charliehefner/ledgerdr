@@ -842,6 +842,18 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 placeholder="0.00"
                 className="font-mono"
               />
+              {/* ITBIS exceeds 18% warning + override */}
+              {form.itbis && form.amount && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18 && (
+                <div className="mt-1 space-y-1">
+                  <p className="text-xs text-destructive">ITBIS excede 18%. ¿Acumula ITBIS de pagos previos?</p>
+                  <Input
+                    value={form.itbis_override_reason}
+                    onChange={(e) => updateField('itbis_override_reason', e.target.value)}
+                    placeholder="Ej: ITBIS acumulado de pagos sin NCF"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

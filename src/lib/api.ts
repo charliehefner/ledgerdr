@@ -50,6 +50,7 @@ export interface Transaction {
   dgii_tipo_bienes_servicios?: string;
   due_date?: string;
   destination_amount?: number;
+  itbis_override_reason?: string;
 }
 
 // ============================================

@@ -446,13 +446,23 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     );
   };
 
-  const renderSectionHeader = (section: PLSection) => (
-    <tr key={`header-${section.key}`} className="bg-muted/70">
-      <td colSpan={5 + 12} className="sticky left-0 z-20 bg-muted/70 px-3 py-2 text-sm font-semibold text-foreground">
-        {t(section.labelKey)}
-      </td>
-    </tr>
-  );
+  const toggleSection = useCallback((key: string) => {
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const renderSectionHeader = (section: PLSection) => {
+    const isCollapsed = collapsedSections[section.key];
+    return (
+      <tr key={`header-${section.key}`} className="bg-muted/70 cursor-pointer select-none" onClick={() => toggleSection(section.key)}>
+        <td colSpan={5 + 12} className="sticky left-0 z-20 bg-muted/70 px-3 py-2 text-sm font-semibold text-foreground">
+          <span className="inline-flex items-center gap-1">
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {t(section.labelKey)}
+          </span>
+        </td>
+      </tr>
+    );
+  };
 
   // ── Render ───────────────────────────────────────────────────────
   const renderPLBody = () => {

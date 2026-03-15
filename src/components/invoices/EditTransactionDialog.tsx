@@ -77,6 +77,8 @@ export function EditTransactionDialog({
   const [originalTipoBienes, setOriginalTipoBienes] = useState("");
   const [editedCostCenter, setEditedCostCenter] = useState("");
   const [originalCostCenter, setOriginalCostCenter] = useState("");
+  const [editedItbisOverrideReason, setEditedItbisOverrideReason] = useState("");
+  const [originalItbisOverrideReason, setOriginalItbisOverrideReason] = useState("");
 
   // Form data for previously read-only fields
   const [formData, setFormData] = useState({

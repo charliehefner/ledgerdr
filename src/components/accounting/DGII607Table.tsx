@@ -29,6 +29,7 @@ export function DGII607Table({ transactions, month, year }: Props) {
     rnc: tx.rnc?.replace(/[-\s]/g, "") || "",
     tipoId: getTipoId(tx.rnc),
     ncf: tx.document || "",
+    ncfModificado: "",
     fecha: formatDateDGII(tx.transaction_date),
     tipoIngreso: tx.dgii_tipo_ingreso || "",
     montoFacturado: ((tx.amount || 0) - (tx.itbis || 0)).toFixed(2),
@@ -38,9 +39,9 @@ export function DGII607Table({ transactions, month, year }: Props) {
   }));
 
   const handleCopy = () => {
-    const header = "RNC/Cédula\tTipo Id\tNCF\tFecha Comprobante\tTipo de Ingreso\tMonto Facturado\tITBIS Facturado\tITBIS Retenido por Terceros\tISR Retenido por Terceros";
+    const header = "RNC/Cédula\tTipo Id\tNCF\tNCF Modificado\tFecha Comprobante\tTipo de Ingreso\tMonto Facturado\tITBIS Facturado\tITBIS Retenido por Terceros\tISR Retenido por Terceros";
     const lines = rows.map((r) =>
-      `${r.rnc}\t${r.tipoId}\t${r.ncf}\t${r.fecha}\t${r.tipoIngreso}\t${r.montoFacturado}\t${r.itbisFacturado}\t${r.itbisRetenido}\t${r.isrRetenido}`
+      `${r.rnc}\t${r.tipoId}\t${r.ncf}\t${r.ncfModificado}\t${r.fecha}\t${r.tipoIngreso}\t${r.montoFacturado}\t${r.itbisFacturado}\t${r.itbisRetenido}\t${r.isrRetenido}`
     );
     navigator.clipboard.writeText([header, ...lines].join("\n"));
     toast.success("Datos copiados al portapapeles");
@@ -53,6 +54,7 @@ export function DGII607Table({ transactions, month, year }: Props) {
       { header: "RNC/Cédula del Comprador", key: "rnc", width: 15 },
       { header: "Tipo Id", key: "tipoId", width: 8 },
       { header: "NCF", key: "ncf", width: 20 },
+      { header: "NCF o Documento Modificado", key: "ncfModificado", width: 20 },
       { header: "Fecha Comprobante", key: "fecha", width: 12 },
       { header: "Tipo de Ingreso", key: "tipoIngreso", width: 10 },
       { header: "Monto Facturado", key: "montoFacturado", width: 15 },
@@ -89,6 +91,7 @@ export function DGII607Table({ transactions, month, year }: Props) {
               <TableHead>RNC/Cédula</TableHead>
               <TableHead>Tipo Id</TableHead>
               <TableHead>NCF</TableHead>
+              <TableHead>NCF Mod.</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Tipo Ingreso</TableHead>
               <TableHead className="text-right">Monto</TableHead>
@@ -100,7 +103,7 @@ export function DGII607Table({ transactions, month, year }: Props) {
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   No hay ventas para este período
                 </TableCell>
               </TableRow>
@@ -110,6 +113,7 @@ export function DGII607Table({ transactions, month, year }: Props) {
                   <TableCell className="font-mono text-xs">{r.rnc}</TableCell>
                   <TableCell>{r.tipoId}</TableCell>
                   <TableCell className="font-mono text-xs">{r.ncf}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.ncfModificado}</TableCell>
                   <TableCell className="font-mono text-xs">{r.fecha}</TableCell>
                   <TableCell title={TIPO_INGRESO[r.tipoIngreso] || ""}>{r.tipoIngreso}</TableCell>
                   <TableCell className="text-right">{r.montoFacturado}</TableCell>

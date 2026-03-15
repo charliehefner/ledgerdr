@@ -10,6 +10,7 @@ interface Transaction {
   rnc: string | null;
   document: string | null;
   transaction_date: string;
+  purchase_date: string | null;
   amount: number;
   itbis: number | null;
   itbis_retenido: number | null;
@@ -31,7 +32,9 @@ export function DGII606Table({ transactions, month, year }: Props) {
     tipoId: getTipoId(tx.rnc),
     tipoBienes: tx.dgii_tipo_bienes_servicios || "",
     ncf: tx.document || "",
+    ncfModificado: "",
     fecha: formatDateDGII(tx.transaction_date),
+    fechaPago: formatDateDGII(tx.purchase_date || tx.transaction_date),
     montoFacturado: ((tx.amount || 0) - (tx.itbis || 0)).toFixed(2),
     itbisFacturado: tx.itbis?.toFixed(2) || "0.00",
     itbisRetenido: (tx.itbis_retenido || 0).toFixed(2),
@@ -40,9 +43,9 @@ export function DGII606Table({ transactions, month, year }: Props) {
   }));
 
   const handleCopy = () => {
-    const header = "RNC/Cédula\tTipo Id\tTipo Bienes y Servicios\tNCF\tFecha Comprobante\tMonto Facturado\tITBIS Facturado\tITBIS Retenido\tISR Retenido\tForma de Pago";
+    const header = "RNC/Cédula\tTipo Id\tTipo Bienes y Servicios\tNCF\tNCF Modificado\tFecha Comprobante\tFecha de Pago\tMonto Facturado\tITBIS Facturado\tITBIS Retenido\tISR Retenido\tForma de Pago";
     const lines = rows.map((r) =>
-      `${r.rnc}\t${r.tipoId}\t${r.tipoBienes}\t${r.ncf}\t${r.fecha}\t${r.montoFacturado}\t${r.itbisFacturado}\t${r.itbisRetenido}\t${r.isrRetenido}\t${r.formaPago}`
+      `${r.rnc}\t${r.tipoId}\t${r.tipoBienes}\t${r.ncf}\t${r.ncfModificado}\t${r.fecha}\t${r.fechaPago}\t${r.montoFacturado}\t${r.itbisFacturado}\t${r.itbisRetenido}\t${r.isrRetenido}\t${r.formaPago}`
     );
     navigator.clipboard.writeText([header, ...lines].join("\n"));
     toast.success("Datos copiados al portapapeles");
@@ -56,7 +59,9 @@ export function DGII606Table({ transactions, month, year }: Props) {
       { header: "Tipo Id", key: "tipoId", width: 8 },
       { header: "Tipo Bienes y Servicios", key: "tipoBienes", width: 10 },
       { header: "NCF", key: "ncf", width: 20 },
+      { header: "NCF o Documento Modificado", key: "ncfModificado", width: 20 },
       { header: "Fecha Comprobante", key: "fecha", width: 12 },
+      { header: "Fecha de Pago", key: "fechaPago", width: 12 },
       { header: "Monto Facturado", key: "montoFacturado", width: 15 },
       { header: "ITBIS Facturado", key: "itbisFacturado", width: 15 },
       { header: "ITBIS Retenido", key: "itbisRetenido", width: 15 },
@@ -93,18 +98,20 @@ export function DGII606Table({ transactions, month, year }: Props) {
               <TableHead>Tipo Id</TableHead>
               <TableHead>Tipo B/S</TableHead>
               <TableHead>NCF</TableHead>
+              <TableHead>NCF Mod.</TableHead>
               <TableHead>Fecha</TableHead>
+              <TableHead>F. Pago</TableHead>
               <TableHead className="text-right">Monto</TableHead>
               <TableHead className="text-right">ITBIS Fact.</TableHead>
               <TableHead className="text-right">ITBIS Ret.</TableHead>
               <TableHead className="text-right">ISR Ret.</TableHead>
-              <TableHead>F. Pago</TableHead>
+              <TableHead>Forma Pago</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                   No hay compras para este período
                 </TableCell>
               </TableRow>
@@ -115,7 +122,9 @@ export function DGII606Table({ transactions, month, year }: Props) {
                   <TableCell>{r.tipoId}</TableCell>
                   <TableCell title={TIPO_BIENES_SERVICIOS[r.tipoBienes] || ""}>{r.tipoBienes}</TableCell>
                   <TableCell className="font-mono text-xs">{r.ncf}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.ncfModificado}</TableCell>
                   <TableCell className="font-mono text-xs">{r.fecha}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.fechaPago}</TableCell>
                   <TableCell className="text-right">{r.montoFacturado}</TableCell>
                   <TableCell className="text-right">{r.itbisFacturado}</TableCell>
                   <TableCell className="text-right">{r.itbisRetenido}</TableCell>

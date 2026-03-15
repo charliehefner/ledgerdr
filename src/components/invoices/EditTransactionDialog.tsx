@@ -246,6 +246,7 @@ export function EditTransactionDialog({
       if (editedPayMethod !== originalPayMethod) updates.pay_method = editedPayMethod || null;
       if (editedTipoBienes !== originalTipoBienes) updates.dgii_tipo_bienes_servicios = editedTipoBienes || null;
       if (editedCostCenter !== originalCostCenter) updates.cost_center = editedCostCenter;
+      if (editedItbisOverrideReason !== originalItbisOverrideReason) updates.itbis_override_reason = editedItbisOverrideReason || null;
 
       // New editable fields
       if (formData.transaction_date !== originalFormData.transaction_date) updates.transaction_date = formData.transaction_date;

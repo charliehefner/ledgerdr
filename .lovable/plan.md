@@ -1,48 +1,20 @@
-## Fixes for Missing Links — COMPLETED
 
-### ✅ 1. AP/AR Payment Recording
-- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
-- Added `$` button per row in `ApArDocumentList` for open/partial documents
-- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
 
-### ✅ 2. Unified Aging Report
-- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
-- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
-- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
+## Auto-fit Code/Description column to content
 
-### ✅ 3. Petty Cash GL Book Balance
-- Added `Saldo Contable` column to Petty Cash fund table
-- Calls `account_balances_from_journals` DB function and maps by chart account code
-- Shows "—" for funds without a mapped GL account
+The column currently has fixed constraints (`minWidth: 140px`, `max-w-[200px]`, `max-w-[120px]` on the description span) that prevent it from naturally sizing to content.
 
-### Deferred: Recurring Entries Automation
-Manual "Generar Pendientes" button works; cron requires config.toml changes.
+Since the table already uses `w-max` (line 583), columns will naturally size to their content — we just need to **remove all the artificial width constraints** on the first column and let the browser's table layout do the work.
 
----
+### Changes in `src/components/budget/BudgetGrid.tsx`
 
-## CRM/Contacts Module — COMPLETED
+1. **Line 31**: Remove the first column from `COL_W` width calculations — no fixed width needed. Or simply keep it as a small `minWidth` fallback (e.g. `100`) but not a cap.
 
-### ✅ Database
-- `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
-- `contact_bank_accounts` table (one-to-many, bank_name, account_number, account_type, currency, is_default)
-- RLS: authenticated SELECT; admin/management/accountant INSERT/UPDATE; admin/management DELETE
+2. **Line 406 (td)**: Remove `max-w-[200px]`. Keep `whitespace-nowrap` so it sizes to content.
 
-### ✅ UI: `/contacts` page
-- CRUD table with search, type filter, active toggle
-- Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
-- Bilingual (ES/EN) via i18n keys
-- Nav renamed to "CRM/Contactos" / "CRM/Contacts"
+3. **Line 408 (description span)**: Remove `truncate`, `inline-block`, `max-w-[120px]`, and `align-bottom`. Just render the text naturally.
 
-### ✅ Auto-populated from transaction history
-- One-time migration seeded contacts from transactions table
-- Deduplicated by RNC (most-used name variant) and case-insensitive name
-- Skipped numeric-only names and existing contacts
+4. **Line 586 (th)**: Keep `whitespace-nowrap`, remove any `width`/`maxWidth` constraints.
 
-### ✅ OCR → CRM prompt
-- After OCR extracts RNC, lookup in contacts table
-- If not found, inline banner: "¿Desea agregar este contacto al CRM?"
-- Confirm inserts as supplier
+The `w-max` table will then auto-size the first column to exactly fit the longest code+description, no more, no less.
 
-### ✅ NameAutocomplete integration
-- Queries contacts table + legacy transaction names, deduplicated
-- Selecting a CRM contact auto-fills RNC

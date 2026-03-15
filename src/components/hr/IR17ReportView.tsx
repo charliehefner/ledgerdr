@@ -10,7 +10,7 @@ import { Copy, FileSpreadsheet } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { calculateComplementaryTax } from "@/lib/payrollCalculations";
+import { calculateComplementaryTax, loadTssParameters } from "@/lib/payrollCalculations";
 
 const MONTHS = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" }, { value: "03", label: "Marzo" },

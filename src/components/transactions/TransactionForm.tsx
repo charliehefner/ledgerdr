@@ -208,8 +208,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       const toCur = toAcct?.currency || 'DOP';
       if (fromCur !== toCur && !form.transfer_dest_amount) return false;
     }
-    // ITBIS cannot exceed 18% of amount
-    if (form.itbis && form.amount) {
+    // ITBIS cannot exceed 18% of amount (unless override reason provided)
+    if (form.itbis && form.amount && !form.itbis_override_reason) {
       const itbisValue = parseFloat(form.itbis);
       const amountValue = parseFloat(form.amount);
       if (itbisValue > amountValue * 0.18) {

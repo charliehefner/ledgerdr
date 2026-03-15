@@ -78,7 +78,8 @@ export function ApArDocumentList({ direction }: Props) {
         .from("ap_ar_documents")
         .select("*")
         .eq("direction", direction)
-        .order("document_date", { ascending: false });
+        .order("document_date", { ascending: false })
+        .limit(10000);
       if (error) throw error;
       return data as ApArDocument[];
     },

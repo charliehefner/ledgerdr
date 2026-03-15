@@ -65,7 +65,8 @@ export function FiscalDocumentsReport() {
         .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
         .lte("transaction_date", format(endDate, "yyyy-MM-dd"))
         .or("document.ilike.E31%,document.ilike.B01%")
-        .order("transaction_date", { ascending: false });
+        .order("transaction_date", { ascending: false })
+        .limit(10000);
 
       if (error) throw error;
       return data as FiscalTransaction[];

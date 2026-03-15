@@ -166,12 +166,15 @@ export function ProfitLossView() {
     balance: number;
   }
 
+  const costCenterParam = costCenter === "all" ? null : costCenter;
+
   const { data: balances = [], isLoading } = useQuery({
-    queryKey: ["pl-journal-balances", startDate, endDate],
+    queryKey: ["pl-journal-balances", startDate, endDate, costCenter],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("account_balances_from_journals", {
         p_start: startDate,
         p_end: endDate,
+        p_cost_center: costCenterParam,
       });
       if (error) throw error;
       return (data || []) as JournalBalance[];
@@ -179,11 +182,12 @@ export function ProfitLossView() {
   });
 
   const { data: compBalances = [] } = useQuery({
-    queryKey: ["pl-journal-balances-comp", compStartDate, compEndDate],
+    queryKey: ["pl-journal-balances-comp", compStartDate, compEndDate, costCenter],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("account_balances_from_journals", {
         p_start: compStartDate,
         p_end: compEndDate,
+        p_cost_center: costCenterParam,
       });
       if (error) throw error;
       return (data || []) as JournalBalance[];

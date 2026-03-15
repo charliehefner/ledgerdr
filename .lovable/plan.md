@@ -1,57 +1,49 @@
+## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
+### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
+- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
+- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
+- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-# Final Market-Readiness Assessment
+### ✅ 2. Journal Generation: Exchange Rate
+- `generate-journals` now reads `exchange_rate` from transactions
+- Sets `currency` and `exchange_rate` on created journals after RPC call
 
-After a thorough sweep of the entire codebase — API layer, DGII reports, scaling limits, permissions, authentication, edit dialogs, and data integrity triggers — the system is in strong shape. The three prior audit rounds addressed the critical gaps. Here is what remains:
+### ✅ 3. Auto AP/AR Document Creation from Transactions
+- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
+- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
+- Links transaction ID via `linked_transaction_ids`
 
----
+### ✅ 4. AP/AR Payment Generates Journal Entry
+- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
+- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
+- Requires bank account selection with mapped GL account
+- Records in `ap_ar_payments` audit trail table
 
-## Remaining Items (Minor)
+### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
+- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
+- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
+- Each line now includes a narrative `description` field
 
-### 1. DGII 606 — Missing "Fecha de Pago" Column
-The DGII's official 606 format requires a **Fecha de Pago** column (payment date, distinct from the invoice date for credit purchases). The current 606 export only has "Fecha Comprobante". For credit purchases (`pay_method = 'credit'`), the payment date should differ from the document date. Currently, the `purchase_date` field exists on the transaction model but is not mapped to the 606 output.
+### ✅ 6. AP/AR Payment Audit Trail Table
+- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
+- RLS: authenticated SELECT, admin/management/accountant INSERT
 
-**Fix**: Add a `fechaPago` column to `DGII606Table` mapped from `purchase_date || transaction_date` (fallback to transaction date if no purchase date). Add the column to both the copy-to-clipboard and Excel export.
+### ✅ 7. Payroll Journal Detail Integration (PRJ)
+- Closing payroll now generates detailed PRJ journal with:
+  - Debit: Salary Expense (7010), Employer TSS (6210)
+  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
+- Non-fatal: payroll close proceeds even if journal generation fails
 
-### 2. DGII 606/607 — Missing "NCF Modificado" Column
-The DGII format includes an "NCF o Documento Modificado" column (for credit notes that reference an original NCF). This column can be empty for most transactions but must exist in the export file for the DGII upload tool to accept it.
+### ✅ 8. Bank GL Book Balance Display
+- BankAccountsList now shows "Saldo Contable" column
+- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
 
-**Fix**: Add an empty `ncfModificado` column to both 606 and 607 table/export. The column is blank unless a future credit-note linking feature populates it.
+### ✅ 9. Post Journal via Server-Side RPC
+- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
+- Ensures server-side balance validation before posting
 
-### 3. FiscalDocumentsReport — Missing Row Limit
-`src/components/dashboard/FiscalDocumentsReport.tsx` queries transactions without `.limit()`, hitting the default 1,000-row cap. For companies with heavy E31/B01 volume this silently truncates data.
-
-**Fix**: Add `.limit(10000)` to the query at line 61.
-
-### 4. `purchase_date` Not Persisted on Create
-The `TransactionForm` has a `purchase_date` field in its state, but `createTransaction()` in `api.ts` does not include `purchase_date` in the insert payload. The value is silently dropped.
-
-**Fix**: Add `purchase_date: transaction.purchase_date || null` to the insert payload in `createTransaction()` and to `updateTransaction()`.
-
----
-
-## Already Solid (No Action Needed)
-
-- **Multi-currency RPCs**: All use `COALESCE(exchange_rate, 1)` — correct
-- **ITBIS override**: Present in both create form, edit dialog, and API layer — complete
-- **Row limits**: All major queries (DGII, Aging, Bank Recon, COA, AP/AR, Journals, Accounting Reports) use pagination or `.limit(10000)` — complete
-- **Period enforcement**: One-way status transitions via SQL trigger — complete
-- **Void reversal journals**: Automatic via SQL trigger — complete
-- **DGII auto-mapping**: `dgii_tipo_bienes_servicios` auto-set via trigger — complete
-- **TSS externalization**: Rates loaded from database — complete
-- **Permissions/RBAC**: Comprehensive role matrix with proper `has_role()` security definer — solid
-- **Auth**: Server-side role fetch with retries and timeout — robust
-
----
-
-## Implementation Plan
-
-| # | Task | Files |
-|---|------|-------|
-| 1 | Add `purchase_date` to API insert/update payloads | `src/lib/api.ts` |
-| 2 | Add Fecha de Pago + NCF Modificado columns to 606 | `DGII606Table.tsx`, `DGIIReportsView.tsx` (add `purchase_date` to select) |
-| 3 | Add NCF Modificado column to 607 | `DGII607Table.tsx` |
-| 4 | Add `.limit(10000)` to FiscalDocumentsReport | `FiscalDocumentsReport.tsx` |
-
-Estimated scope: 4 small, targeted edits. No database migrations needed.
-
+### ✅ 10. Cost Center Filtering in Financial Reports
+- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
+- LEFT JOINs transactions to filter by cost_center when not "all"
+- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls

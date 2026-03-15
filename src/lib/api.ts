@@ -161,6 +161,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       master_acct_code: transaction.master_acct_code,
       project_code: transaction.project_code || null,
       cbs_code: transaction.cbs_code || null,
+      purchase_date: transaction.purchase_date || null,
       description: transaction.description,
       currency: transaction.currency,
       amount: transaction.amount,
@@ -225,6 +226,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
   if (transaction.destination_acct_code !== undefined) updatePayload.destination_acct_code = transaction.destination_acct_code;
   if (transaction.cost_center !== undefined) updatePayload.cost_center = transaction.cost_center;
   if (transaction.itbis_override_reason !== undefined) updatePayload.itbis_override_reason = transaction.itbis_override_reason;
+  if (transaction.purchase_date !== undefined) updatePayload.purchase_date = transaction.purchase_date || null;
 
   // Resolve FK IDs when code fields change
   if (transaction.master_acct_code !== undefined) {

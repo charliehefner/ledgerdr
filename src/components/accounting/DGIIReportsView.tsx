@@ -41,7 +41,7 @@ export function DGIIReportsView() {
       // Fetch purchases (606) - use limit(10000) to avoid 1000-row cap
       const { data: purchaseData } = await supabase
         .from("transactions")
-        .select("id, rnc, document, transaction_date, amount, itbis, itbis_retenido, isr_retenido, pay_method, dgii_tipo_bienes_servicios, name")
+        .select("id, rnc, document, transaction_date, purchase_date, amount, itbis, itbis_retenido, isr_retenido, pay_method, dgii_tipo_bienes_servicios, name")
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .eq("is_void", false)

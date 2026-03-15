@@ -70,6 +70,7 @@ const initialFormState = {
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
   transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment',
+  itbis_override_reason: '',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   due_date: '',

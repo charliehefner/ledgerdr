@@ -284,6 +284,7 @@ export function EditTransactionDialog({
       setOriginalPayMethod(editedPayMethod);
       setOriginalTipoBienes(editedTipoBienes);
       setOriginalCostCenter(editedCostCenter);
+      setOriginalItbisOverrideReason(editedItbisOverrideReason);
       setOriginalFormData({ ...formData });
 
       queryClient.invalidateQueries({ queryKey: ["invoiceTransactions"] });

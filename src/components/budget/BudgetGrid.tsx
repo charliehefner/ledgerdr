@@ -129,9 +129,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   }, []);
 
   const showAllAccounts = useCallback(() => setHiddenCodes(new Set()), []);
-  const hideAllAccounts = useCallback(() => {
-    setHiddenCodes(new Set(lineCodes.map(lc => lc.code)));
-  }, [lineCodes]);
+  // hideAllAccounts defined after lineCodes
 
   // Fetch line codes
   const { data: rawLineCodes = [] } = useQuery({

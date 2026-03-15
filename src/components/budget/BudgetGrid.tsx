@@ -403,9 +403,9 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
 
     return (
       <tr key={lc.code} className={cn("border-b hover:bg-muted/60", stripeBg)}>
-        <td className={cn("sticky left-0 z-20 border-r px-3 py-1.5 whitespace-nowrap max-w-[200px]", stripeBg || "bg-background")} style={{ minWidth: COL_W[0] }}>
+        <td className={cn("sticky left-0 z-20 border-r px-3 py-1.5 whitespace-nowrap", stripeBg || "bg-background")} style={{ minWidth: 100 }}>
           <span className="font-mono text-xs">{lc.code}</span>
-          <span className="ml-2 text-foreground text-xs truncate inline-block max-w-[120px] align-bottom">{lc.desc}</span>
+          <span className="ml-2 text-foreground text-xs">{lc.desc}</span>
         </td>
         <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
           <Input key={`${lc.code}-budget-${bl?.annual_budget ?? 0}`} type="number" defaultValue={bl?.annual_budget ?? 0}

@@ -38,7 +38,7 @@ export function DGIIReportsView() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch purchases (606)
+      // Fetch purchases (606) - use limit(10000) to avoid 1000-row cap
       const { data: purchaseData } = await supabase
         .from("transactions")
         .select("id, rnc, document, transaction_date, amount, itbis, itbis_retenido, isr_retenido, pay_method, dgii_tipo_bienes_servicios, name")
@@ -47,7 +47,8 @@ export function DGIIReportsView() {
         .eq("is_void", false)
         .or("transaction_direction.eq.purchase,transaction_direction.is.null")
         .not("document", "is", null)
-        .order("transaction_date");
+        .order("transaction_date")
+        .limit(10000);
 
       // Fetch sales (607)
       const { data: salesData } = await supabase
@@ -58,7 +59,8 @@ export function DGIIReportsView() {
         .eq("is_void", false)
         .eq("transaction_direction", "sale")
         .not("document", "is", null)
-        .order("transaction_date");
+        .order("transaction_date")
+        .limit(10000);
 
       // Fetch voided (608)
       const { data: voidedData } = await supabase
@@ -68,7 +70,8 @@ export function DGIIReportsView() {
         .lte("transaction_date", endDate)
         .eq("is_void", true)
         .not("document", "is", null)
-        .order("transaction_date");
+        .order("transaction_date")
+        .limit(10000);
 
       setPurchases(purchaseData || []);
       setSales(salesData || []);

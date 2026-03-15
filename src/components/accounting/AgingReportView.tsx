@@ -57,7 +57,8 @@ export function AgingReportView() {
         .from("ap_ar_documents")
         .select("id, contact_name, due_date, document_date, balance_remaining, currency, direction, status")
         .not("status", "in", '("paid","void")')
-        .order("due_date", { ascending: true });
+        .order("due_date", { ascending: true })
+        .limit(10000);
       if (error) throw error;
       return data as ApArDoc[];
     },

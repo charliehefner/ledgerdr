@@ -50,14 +50,14 @@ interface PLSection {
 
 const PL_SECTIONS: PLSection[] = [
   // Revenue
-  { key: "netSales", labelKey: "budget.section.netSales", type: "accounts", codePrefixes: ["30","31","32","33","34","35","36","37","38","39"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
+  { key: "netSales", labelKey: "budget.section.netSales", type: "accounts", codePrefixes: ["30","31","32","33","34","35","36","37","38"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
   { key: "totalRevenue", labelKey: "budget.section.totalRevenue", type: "subtotal", computeFrom: [{ key: "netSales", sign: 1 }] },
 
   // Costs
   { key: "rawMaterial", labelKey: "budget.section.rawMaterial", type: "accounts", codePrefixes: ["40","41","42","43","44","45","46","47","48"], accountTypes: ["EXPENSE","COST_OF_GOODS_SOLD"], sign: -1 },
-  { key: "otherExternal", labelKey: "budget.section.otherExternal", type: "accounts", codePrefixes: ["50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69"], accountTypes: ["EXPENSE"], sign: -1 },
+  { key: "otherExternal", labelKey: "budget.section.otherExternal", type: "accounts", codePrefixes: ["50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "personnelCost", labelKey: "budget.section.personnelCost", type: "accounts", codePrefixes: ["70","71","72","73","74","75","76"], accountTypes: ["EXPENSE"], sign: -1 },
-  { key: "depreciation", labelKey: "budget.section.depreciation", type: "accounts", codePrefixes: ["77","78","79"], accountTypes: ["EXPENSE"], sign: -1 },
+  { key: "depreciation", labelKey: "budget.section.depreciation", type: "accounts", codePrefixes: ["77","78"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "totalCost", labelKey: "budget.section.totalCost", type: "subtotal", computeFrom: [{ key: "rawMaterial", sign: 1 },{ key: "otherExternal", sign: 1 },{ key: "personnelCost", sign: 1 },{ key: "depreciation", sign: 1 }] },
 
   // Operating profit

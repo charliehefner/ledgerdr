@@ -76,6 +76,8 @@ export const en = {
   "common.provider": "Provider",
   "common.history": "History",
   "common.noRecords": "No records",
+  "common.selectAll": "Select All",
+  "common.deselectAll": "Deselect All",
   "common.selectBank": "Select bank",
   "common.createUser": "Create User",
   "common.updatePassword": "Update Password",

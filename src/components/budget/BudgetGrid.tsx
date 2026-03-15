@@ -93,6 +93,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailCode, setDetailCode] = useState("");
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   // Fetch line codes
   const { data: lineCodes = [] } = useQuery({

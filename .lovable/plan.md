@@ -1,48 +1,49 @@
-## Fixes for Missing Links — COMPLETED
+## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
-### ✅ 1. AP/AR Payment Recording
-- Created `PaymentDialog.tsx` with amount entry, "pay full" shortcut, and auto-status updates
-- Added `$` button per row in `ApArDocumentList` for open/partial documents
-- Updates `amount_paid`, `balance_remaining`, and `status` (paid/partial) on save
+### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
+- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
+- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
+- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-### ✅ 2. Unified Aging Report
-- Rewrote `AgingReportView` to pull from `ap_ar_documents` (excludes paid/void)
-- Uses `balance_remaining` instead of raw `amount` — reflects partial payments
-- Added direction filter (Todos / Cuentas por Pagar / Cuentas por Cobrar)
+### ✅ 2. Journal Generation: Exchange Rate
+- `generate-journals` now reads `exchange_rate` from transactions
+- Sets `currency` and `exchange_rate` on created journals after RPC call
 
-### ✅ 3. Petty Cash GL Book Balance
-- Added `Saldo Contable` column to Petty Cash fund table
-- Calls `account_balances_from_journals` DB function and maps by chart account code
-- Shows "—" for funds without a mapped GL account
+### ✅ 3. Auto AP/AR Document Creation from Transactions
+- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
+- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
+- Links transaction ID via `linked_transaction_ids`
 
-### Deferred: Recurring Entries Automation
-Manual "Generar Pendientes" button works; cron requires config.toml changes.
+### ✅ 4. AP/AR Payment Generates Journal Entry
+- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
+- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
+- Requires bank account selection with mapped GL account
+- Records in `ap_ar_payments` audit trail table
 
----
+### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
+- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
+- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
+- Each line now includes a narrative `description` field
 
-## CRM/Contacts Module — COMPLETED
+### ✅ 6. AP/AR Payment Audit Trail Table
+- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
+- RLS: authenticated SELECT, admin/management/accountant INSERT
 
-### ✅ Database
-- `contacts` table (name, RNC unique, contact_type, contact_person, phone, email, address, notes, is_active)
-- `contact_bank_accounts` table (one-to-many, bank_name, account_number, account_type, currency, is_default)
-- RLS: authenticated SELECT; admin/management/accountant INSERT/UPDATE; admin/management DELETE
+### ✅ 7. Payroll Journal Detail Integration (PRJ)
+- Closing payroll now generates detailed PRJ journal with:
+  - Debit: Salary Expense (7010), Employer TSS (6210)
+  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
+- Non-fatal: payroll close proceeds even if journal generation fails
 
-### ✅ UI: `/contacts` page
-- CRUD table with search, type filter, active toggle
-- Dialog with general info + collapsible bank accounts section (add/remove rows, default star)
-- Bilingual (ES/EN) via i18n keys
-- Nav renamed to "CRM/Contactos" / "CRM/Contacts"
+### ✅ 8. Bank GL Book Balance Display
+- BankAccountsList now shows "Saldo Contable" column
+- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
 
-### ✅ Auto-populated from transaction history
-- One-time migration seeded contacts from transactions table
-- Deduplicated by RNC (most-used name variant) and case-insensitive name
-- Skipped numeric-only names and existing contacts
+### ✅ 9. Post Journal via Server-Side RPC
+- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
+- Ensures server-side balance validation before posting
 
-### ✅ OCR → CRM prompt
-- After OCR extracts RNC, lookup in contacts table
-- If not found, inline banner: "¿Desea agregar este contacto al CRM?"
-- Confirm inserts as supplier
-
-### ✅ NameAutocomplete integration
-- Queries contacts table + legacy transaction names, deduplicated
-- Selecting a CRM contact auto-fills RNC
+### ✅ 10. Cost Center Filtering in Financial Reports
+- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
+- LEFT JOINs transactions to filter by cost_center when not "all"
+- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls

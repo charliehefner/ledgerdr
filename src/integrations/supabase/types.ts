@@ -139,6 +139,7 @@ export type Database = {
       }
       ap_ar_documents: {
         Row: {
+          account_id: string | null
           amount_paid: number
           balance_remaining: number | null
           contact_name: string
@@ -159,6 +160,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_id?: string | null
           amount_paid?: number
           balance_remaining?: number | null
           contact_name: string
@@ -179,6 +181,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_id?: string | null
           amount_paid?: number
           balance_remaining?: number | null
           contact_name?: string
@@ -198,7 +201,15 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_documents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ap_ar_payments: {
         Row: {

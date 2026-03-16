@@ -1,0 +1,1 @@
+ALTER TABLE public.ap_ar_documents ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES public.chart_of_accounts(id);

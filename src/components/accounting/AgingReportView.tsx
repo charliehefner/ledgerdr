@@ -220,15 +220,18 @@ export function AgingReportView() {
                   <TableCell className="text-right font-mono font-bold">{fmtNum(r.total)}</TableCell>
                 </TableRow>
               ))}
-              <TableRow className="bg-muted/50 font-bold">
-                <TableCell colSpan={2} className="text-right">TOTALES</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.current)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.days30)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.days60)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.days90)}</TableCell>
-                <TableCell className="text-right font-mono text-destructive">{fmtNum(totals.over90)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
-              </TableRow>
+              {totalsByCurrency.map(([currency, totals]) => (
+                <TableRow key={`total-${currency}`} className="bg-muted/50 font-bold">
+                  <TableCell className="text-right">TOTAL</TableCell>
+                  <TableCell>{currency}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.current)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.days30)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.days60)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.days90)}</TableCell>
+                  <TableCell className="text-right font-mono text-destructive">{fmtNum(totals.over90)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>

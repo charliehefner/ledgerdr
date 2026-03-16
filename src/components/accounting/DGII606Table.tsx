@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Copy, Download } from "lucide-react";
 import { toast } from "sonner";
-import { getTipoId, formatDateDGII, getFormaDePago, TIPO_BIENES_SERVICIOS } from "./dgiiConstants";
+import { getTipoId, formatDateDGII, getFormaDePago, TIPO_BIENES_SERVICIOS, type BankAccountForDGII } from "./dgiiConstants";
 import ExcelJS from "exceljs";
 
 interface Transaction {
@@ -24,9 +24,10 @@ interface Props {
   transactions: Transaction[];
   month: number;
   year: number;
+  bankAccounts?: BankAccountForDGII[];
 }
 
-export function DGII606Table({ transactions, month, year }: Props) {
+export function DGII606Table({ transactions, month, year, bankAccounts }: Props) {
   const rows = transactions.map((tx) => ({
     rnc: tx.rnc?.replace(/[-\s]/g, "") || "",
     tipoId: getTipoId(tx.rnc),
@@ -39,7 +40,7 @@ export function DGII606Table({ transactions, month, year }: Props) {
     itbisFacturado: tx.itbis?.toFixed(2) || "0.00",
     itbisRetenido: (tx.itbis_retenido || 0).toFixed(2),
     isrRetenido: (tx.isr_retenido || 0).toFixed(2),
-    formaPago: getFormaDePago(tx.pay_method),
+    formaPago: getFormaDePago(tx.pay_method, bankAccounts),
   }));
 
   const handleCopy = () => {

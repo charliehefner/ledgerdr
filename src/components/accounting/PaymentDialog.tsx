@@ -116,6 +116,23 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         throw lErr;
       }
 
+      // Finding 7: Set currency and exchange_rate on the payment journal
+      if (document.currency !== "DOP") {
+        // Fetch latest exchange rate
+        const { data: rateData } = await supabase
+          .from("exchange_rates")
+          .select("sell_rate")
+          .eq("currency_pair", "USD_DOP")
+          .order("rate_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const rate = rateData?.sell_rate || 1;
+        await supabase.from("journals").update({
+          currency: document.currency,
+          exchange_rate: rate,
+        }).eq("id", journalId);
+      }
+
       // 2. Record payment in ap_ar_payments audit trail
       const { error: pErr } = await supabase.from("ap_ar_payments" as any).insert({
         document_id: document.id,

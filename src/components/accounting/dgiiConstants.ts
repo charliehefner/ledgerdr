@@ -38,7 +38,7 @@ export const TIPO_ANULACION: Record<string, string> = {
   "10": "Pérdida o Hurto de Talonarios",
 };
 
-// Map internal pay_method values to DGII Forma de Pago codes
+// Map internal pay_method values to DGII Forma de Pago codes (legacy string keys)
 export const PAY_METHOD_TO_DGII: Record<string, string> = {
   cash: "01",
   transfer_bdi: "02",
@@ -77,7 +77,35 @@ export function formatDateDGII(dateStr: string): string {
   return `${day}-${month}-${year}`;
 }
 
-export function getFormaDePago(payMethod: string | null): string {
+export interface BankAccountForDGII {
+  id: string;
+  account_type: string;
+}
+
+/**
+ * Resolve DGII Forma de Pago code from pay_method.
+ * First checks legacy string mapping, then resolves UUID via bankAccounts lookup.
+ * Bank account_type mapping: bank→02, credit_card→03, petty_cash→01
+ */
+export function getFormaDePago(
+  payMethod: string | null,
+  bankAccounts?: BankAccountForDGII[]
+): string {
   if (!payMethod) return "";
-  return PAY_METHOD_TO_DGII[payMethod] || "01";
+  // 1. Legacy string mapping
+  const legacy = PAY_METHOD_TO_DGII[payMethod];
+  if (legacy) return legacy;
+  // 2. UUID-based bank account lookup
+  if (bankAccounts) {
+    const bank = bankAccounts.find(b => b.id === payMethod);
+    if (bank) {
+      switch (bank.account_type) {
+        case "credit_card": return "03";
+        case "petty_cash": return "01";
+        case "bank":
+        default: return "02";
+      }
+    }
+  }
+  return "01";
 }

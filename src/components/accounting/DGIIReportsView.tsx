@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { IR3ReportView } from "@/components/hr/IR3ReportView";
 import { IR17ReportView } from "@/components/hr/IR17ReportView";
 import { Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import type { BankAccountForDGII } from "./dgiiConstants";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -28,6 +30,20 @@ export function DGIIReportsView() {
   const [voided, setVoided] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Fetch bank accounts for DGII payment method resolution
+  const { data: bankAccounts = [] } = useQuery<BankAccountForDGII[]>({
+    queryKey: ["bank-accounts-dgii"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bank_accounts")
+        .select("id, account_type")
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data || []) as BankAccountForDGII[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate = new Date(year, month, 0).toISOString().split("T")[0];
 
@@ -38,7 +54,7 @@ export function DGIIReportsView() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch purchases (606) - use limit(10000) to avoid 1000-row cap
+      // Fetch purchases (606)
       const { data: purchaseData } = await supabase
         .from("transactions")
         .select("id, rnc, document, transaction_date, purchase_date, amount, itbis, itbis_retenido, isr_retenido, pay_method, dgii_tipo_bienes_servicios, name")
@@ -140,7 +156,7 @@ export function DGIIReportsView() {
                 <TabsTrigger value="ir17" className="gap-1">IR-17 - Retenciones</TabsTrigger>
               </TabsList>
               <TabsContent value="606">
-                <DGII606Table transactions={purchases} month={month} year={year} />
+                <DGII606Table transactions={purchases} month={month} year={year} bankAccounts={bankAccounts} />
               </TabsContent>
               <TabsContent value="607">
                 <DGII607Table transactions={sales} month={month} year={year} />

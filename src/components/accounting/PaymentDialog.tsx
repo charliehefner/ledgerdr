@@ -68,19 +68,22 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
 
       // Determine AP/AR GL account and journal type based on direction
       const isPayable = document.direction === "payable";
-      const apArAccountCode = isPayable ? "2100" : "1200"; // AP or AR
       const journalType = isPayable ? "CDJ" : "CRJ";
 
-      // Look up the AP/AR GL account ID
-      const { data: apArAcct } = await supabase
-        .from("chart_of_accounts")
-        .select("id")
-        .eq("account_code", apArAccountCode)
-        .eq("allow_posting", true)
-        .is("deleted_at", null)
-        .maybeSingle();
-
-      if (!apArAcct) throw new Error(`Cuenta contable ${apArAccountCode} no encontrada`);
+      // Use the document's linked account, or fall back to default
+      let apArAccountId = document.account_id;
+      if (!apArAccountId) {
+        const fallbackCode = isPayable ? "2100" : "1200";
+        const { data: fallbackAcct } = await supabase
+          .from("chart_of_accounts")
+          .select("id")
+          .eq("account_code", fallbackCode)
+          .eq("allow_posting", true)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (!fallbackAcct) throw new Error(`Cuenta contable ${fallbackCode} no encontrada`);
+        apArAccountId = fallbackAcct.id;
+      }
 
       // 1. Create payment journal entry
       const { data: journalId, error: jErr } = await supabase.rpc(

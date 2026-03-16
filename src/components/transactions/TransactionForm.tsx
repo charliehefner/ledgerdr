@@ -308,6 +308,18 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           const direction = form.transaction_direction === 'sale' ? 'receivable' : 'payable';
           const totalAmount = parseFloat(form.amount);
           try {
+            // Look up default AR/AP GL account
+            const acctPrefix = direction === 'receivable' ? '12' : '21';
+            const { data: defaultAcct } = await supabase
+              .from('chart_of_accounts')
+              .select('id')
+              .like('account_code', `${acctPrefix}%`)
+              .eq('allow_posting', true)
+              .is('deleted_at', null)
+              .order('account_code')
+              .limit(1)
+              .maybeSingle();
+
             await supabase.from('ap_ar_documents').insert({
               direction,
               contact_name: form.name || form.description,
@@ -322,7 +334,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               status: 'open',
               linked_transaction_ids: [result.id],
               notes: form.description,
-            });
+              account_id: defaultAcct?.id || null,
+            } as any);
             queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
           } catch (apArErr) {
             console.error('Auto AP/AR creation error:', apArErr);

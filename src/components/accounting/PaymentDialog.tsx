@@ -101,12 +101,12 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
       // Journal lines: for payable, debit AP credit bank; for receivable, debit bank credit AR
       const lines = isPayable
         ? [
-            { journal_id: journalId, account_id: apArAcct.id, debit: amount, credit: 0, description: `Pago a ${document.contact_name}` },
+            { journal_id: journalId, account_id: apArAccountId, debit: amount, credit: 0, description: `Pago a ${document.contact_name}` },
             { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: 0, credit: amount, description: `Pago ${selectedBank.account_name}` },
           ]
         : [
             { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: amount, credit: 0, description: `Cobro de ${document.contact_name}` },
-            { journal_id: journalId, account_id: apArAcct.id, debit: 0, credit: amount, description: `Cobro a ${document.contact_name}` },
+            { journal_id: journalId, account_id: apArAccountId, debit: 0, credit: amount, description: `Cobro a ${document.contact_name}` },
           ];
 
       const { error: lErr } = await supabase.from("journal_lines").insert(lines);

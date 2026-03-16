@@ -93,17 +93,20 @@ export function AgingReportView() {
     return Array.from(byName.values()).sort((a, b) => b.total - a.total);
   }, [filtered]);
 
-  const totals = useMemo(() => agingData.reduce(
-    (acc, r) => ({
-      current: acc.current + r.current,
-      days30: acc.days30 + r.days30,
-      days60: acc.days60 + r.days60,
-      days90: acc.days90 + r.days90,
-      over90: acc.over90 + r.over90,
-      total: acc.total + r.total,
-    }),
-    { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 }
-  ), [agingData]);
+  const totalsByCurrency = useMemo(() => {
+    const byCurr = new Map<string, { current: number; days30: number; days60: number; days90: number; over90: number; total: number }>();
+    agingData.forEach(r => {
+      const existing = byCurr.get(r.currency) || { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 };
+      existing.current += r.current;
+      existing.days30 += r.days30;
+      existing.days60 += r.days60;
+      existing.days90 += r.days90;
+      existing.over90 += r.over90;
+      existing.total += r.total;
+      byCurr.set(r.currency, existing);
+    });
+    return Array.from(byCurr.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [agingData]);
 
   const fmtNum = (n: number) =>
     n !== 0 ? n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
@@ -121,7 +124,9 @@ export function AgingReportView() {
         { key: "total", header: "Total", width: 14 },
       ],
       rows: agingData,
-      totalsRow: { name: "TOTAL", currency: "", ...totals },
+      totalsRow: totalsByCurrency.length === 1
+        ? { name: "TOTAL", currency: totalsByCurrency[0][0], ...totalsByCurrency[0][1] }
+        : undefined,
     }, { filename: "aging_report", title: "Antigüedad de Saldos" });
   };
 
@@ -215,15 +220,18 @@ export function AgingReportView() {
                   <TableCell className="text-right font-mono font-bold">{fmtNum(r.total)}</TableCell>
                 </TableRow>
               ))}
-              <TableRow className="bg-muted/50 font-bold">
-                <TableCell colSpan={2} className="text-right">TOTALES</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.current)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.days30)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.days60)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.days90)}</TableCell>
-                <TableCell className="text-right font-mono text-destructive">{fmtNum(totals.over90)}</TableCell>
-                <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
-              </TableRow>
+              {totalsByCurrency.map(([currency, totals]) => (
+                <TableRow key={`total-${currency}`} className="bg-muted/50 font-bold">
+                  <TableCell className="text-right">TOTAL</TableCell>
+                  <TableCell>{currency}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.current)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.days30)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.days60)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.days90)}</TableCell>
+                  <TableCell className="text-right font-mono text-destructive">{fmtNum(totals.over90)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>

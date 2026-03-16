@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText, CheckCircle2, Download, FileSpreadsheet } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Plus, FileText, CheckCircle2, Download, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -22,7 +22,6 @@ import {
 import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
-import { PaymentMethodMappingDialog } from "./PaymentMethodMappingDialog";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useExport } from "@/hooks/useExport";
@@ -72,7 +71,6 @@ export function JournalView() {
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
-  const [mappingOpen, setMappingOpen] = useState(false);
 
   // Date range filter — default to current month
   const now = new Date();
@@ -293,9 +291,6 @@ export function JournalView() {
             <>
               <InfoTooltip translationKey="help.generateJournals" />
               <GenerateJournalsButton userId={user?.id} />
-              <Button size="sm" variant="ghost" onClick={() => setMappingOpen(true)} title="Configurar mapeo de métodos de pago">
-                <Settings className="h-4 w-4" />
-              </Button>
               <Button size="sm" onClick={() => setNewOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
               </Button>
@@ -474,7 +469,7 @@ export function JournalView() {
 
       <JournalDetailDialog journal={selectedJournal} open={detailOpen} onOpenChange={setDetailOpen} />
       <JournalEntryForm open={newOpen} onOpenChange={setNewOpen} />
-      <PaymentMethodMappingDialog open={mappingOpen} onOpenChange={setMappingOpen} />
+      
     </div>
   );
 }

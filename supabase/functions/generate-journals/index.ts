@@ -35,6 +35,22 @@ function costCenterLabel(cc: string | null): string {
   return ` [${cc === "agricultural" ? "Agrícola" : "Industrial"}]`;
 }
 
+/** Resolve pay_method to a chart_account_id: try legacy mapping first, then bank_accounts UUID lookup */
+function resolvePayAccountId(
+  payMethod: string | null,
+  mappingMap: Map<string, string>,
+  bankAccountMap: Map<string, BankAccountLookup>
+): string | null {
+  if (!payMethod) return null;
+  // 1. Legacy string mapping
+  const legacyId = mappingMap.get(payMethod);
+  if (legacyId) return legacyId;
+  // 2. UUID-based bank account lookup
+  const bankAcct = bankAccountMap.get(payMethod);
+  if (bankAcct?.chart_account_id) return bankAcct.chart_account_id;
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -146,8 +162,8 @@ Deno.serve(async (req) => {
 
       try {
         if (isTransfer) {
-          const sourceBankAcct = txn.pay_method ? bankAccountMap.get(txn.pay_method) : null;
-          const sourceChartAccountId = sourceBankAcct?.chart_account_id || null;
+          // Resolve source: try legacy mapping then bank account UUID
+          const sourceChartAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
           if (!sourceChartAccountId) { skipped.push(`${label}: cuenta origen sin mapeo contable`); continue; }
 
           let destChartAccountId: string | null = null;
@@ -176,32 +192,13 @@ Deno.serve(async (req) => {
             exchange_rate: exchangeRate,
           }).eq("id", journalId);
 
-          const lines: any[] = [];
+          // Finding 5 fix: Always use sourceAmount for both sides to keep journal balanced.
+          // Cross-currency context is captured in journal header (currency + exchange_rate).
           const sourceAmount = txn.amount;
-          const destAmount = txn.destination_amount || txn.amount;
-          const sourceCurrency = txn.currency || "DOP";
-          const destBankAcct = txn.destination_acct_code ? bankAccountMap.get(txn.destination_acct_code) : null;
-          const destCurrency = destBankAcct?.currency || "DOP";
-
-          if (sourceCurrency === destCurrency || !txn.destination_amount) {
-            lines.push({ journal_id: journalId, account_id: destChartAccountId, debit: sourceAmount, credit: 0, created_by: userId });
-            lines.push({ journal_id: journalId, account_id: sourceChartAccountId, debit: 0, credit: sourceAmount, created_by: userId });
-          } else {
-            let debitAmount: number;
-            let creditAmount: number;
-            if (destCurrency === "DOP") {
-              debitAmount = destAmount;
-              creditAmount = destAmount;
-            } else if (sourceCurrency === "DOP") {
-              debitAmount = sourceAmount;
-              creditAmount = sourceAmount;
-            } else {
-              debitAmount = sourceAmount;
-              creditAmount = sourceAmount;
-            }
-            lines.push({ journal_id: journalId, account_id: destChartAccountId, debit: debitAmount, credit: 0, created_by: userId });
-            lines.push({ journal_id: journalId, account_id: sourceChartAccountId, debit: 0, credit: creditAmount, created_by: userId });
-          }
+          const lines: any[] = [
+            { journal_id: journalId, account_id: destChartAccountId, debit: sourceAmount, credit: 0, created_by: userId },
+            { journal_id: journalId, account_id: sourceChartAccountId, debit: 0, credit: sourceAmount, created_by: userId },
+          ];
 
           const { error: lErr } = await db.from("journal_lines").insert(lines);
           if (lErr) {
@@ -215,7 +212,8 @@ Deno.serve(async (req) => {
 
         // Standard purchase/sale
         const mainAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
-        const payAccountId = txn.pay_method ? mappingMap.get(txn.pay_method) : null;
+        // Finding 1 fix: resolve pay_method via legacy mapping OR bank_accounts UUID
+        const payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
 
         if (!mainAccountId) { skipped.push(`${label}: cuenta "${txn.master_acct_code}" no encontrada`); continue; }
         if (!payAccountId) { skipped.push(`${label}: método pago "${txn.pay_method}" sin mapeo`); continue; }
@@ -244,7 +242,6 @@ Deno.serve(async (req) => {
 
         if (isSale) {
           // ── SALE: Debit bank/cash, Credit revenue + ITBIS por Pagar ──
-          // Total received = amount (which already includes ITBIS for sales)
           lines.push({
             journal_id: journalId, account_id: payAccountId,
             debit: txn.amount, credit: 0, created_by: userId,

@@ -469,7 +469,7 @@ export function JournalView() {
 
       <JournalDetailDialog journal={selectedJournal} open={detailOpen} onOpenChange={setDetailOpen} />
       <JournalEntryForm open={newOpen} onOpenChange={setNewOpen} />
-      <PaymentMethodMappingDialog open={mappingOpen} onOpenChange={setMappingOpen} />
+      
     </div>
   );
 }

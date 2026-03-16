@@ -3105,6 +3105,7 @@ export type Database = {
           dgii_tipo_ingreso: string | null
           document: string | null
           due_date: string | null
+          exchange_rate: number | null
           id: string
           is_internal: boolean
           is_void: boolean
@@ -3142,6 +3143,7 @@ export type Database = {
           dgii_tipo_ingreso?: string | null
           document?: string | null
           due_date?: string | null
+          exchange_rate?: number | null
           id?: string
           is_internal?: boolean
           is_void?: boolean
@@ -3179,6 +3181,7 @@ export type Database = {
           dgii_tipo_ingreso?: string | null
           document?: string | null
           due_date?: string | null
+          exchange_rate?: number | null
           id?: string
           is_internal?: boolean
           is_void?: boolean

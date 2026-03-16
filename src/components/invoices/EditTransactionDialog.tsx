@@ -737,7 +737,17 @@ export function EditTransactionDialog({
               <div className="space-y-2">
                 <Label>{t('txForm.payMethod')}</Label>
                 {locked ? (
-                  <Input value={editedPayMethod} readOnly className="bg-muted" />
+                  <Input value={(() => {
+                    const legacy: Record<string, string> = {
+                      transfer_bdi: 'Transfer BDI', transfer_bhd: 'Transfer BHD',
+                      cash: 'Efectivo', petty_cash: 'Caja Chica',
+                      cc_management: 'TC Gerencia', cc_agri: 'TC Agrícola',
+                      cc_industry: 'TC Industrial', credit: 'Crédito',
+                    };
+                    if (legacy[editedPayMethod]) return legacy[editedPayMethod];
+                    const ba = bankAccounts.find(b => b.id === editedPayMethod);
+                    return ba ? `${ba.account_name} (${ba.currency})` : editedPayMethod;
+                  })()} readOnly className="bg-muted" />
                 ) : (
                   <Select
                     value={editedPayMethod}

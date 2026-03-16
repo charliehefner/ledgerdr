@@ -85,7 +85,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bank_accounts')
-        .select('id, account_name, account_type')
+        .select('id, account_name, account_type, currency')
         .order('account_name');
       if (error) throw error;
       return data;
@@ -97,21 +97,23 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     return account ? getDescription(account, language) : code;
   };
 
-  const PAY_METHOD_LABELS: Record<string, string> = {
+  const LEGACY_PAY_METHOD_LABELS: Record<string, string> = {
     transfer_bdi: t('txForm.transferBdi'),
     transfer_bhd: t('txForm.transferBhd'),
     cash: t('txForm.cash'),
     petty_cash: t('txForm.pettyCash'),
     cc_management: t('txForm.ccManagement'),
     cc_agri: t('txForm.ccAgri'),
+    cc_industry: t('txForm.ccIndustry'),
+    credit: t('txForm.credit'),
   };
 
   const getPayMethodLabel = (payMethod: string | null): string => {
     if (!payMethod) return '-';
-    if (PAY_METHOD_LABELS[payMethod]) return PAY_METHOD_LABELS[payMethod];
+    if (LEGACY_PAY_METHOD_LABELS[payMethod]) return LEGACY_PAY_METHOD_LABELS[payMethod];
     // Check if it's a bank account UUID
     const bankAcct = bankAccounts.find(b => b.id === payMethod);
-    if (bankAcct) return bankAcct.account_name;
+    if (bankAcct) return `${bankAcct.account_name} (${bankAcct.currency})`;
     return payMethod;
   };
 

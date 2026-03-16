@@ -39,6 +39,9 @@ interface ApArDocument {
   status: string;
   notes: string | null;
   created_at: string;
+  account_id: string | null;
+  account_code?: string;
+  account_name?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -69,6 +72,24 @@ export function ApArDocumentList({ direction }: Props) {
     currency: "DOP",
     total_amount: "",
     notes: "",
+    account_id: "",
+  });
+
+  // Fetch relevant GL accounts for the direction
+  const accountPrefix = direction === "receivable" ? "12" : "21";
+  const { data: glAccounts = [] } = useQuery({
+    queryKey: ["ap-ar-gl-accounts", accountPrefix],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("id, account_code, account_name")
+        .like("account_code", `${accountPrefix}%`)
+        .eq("allow_posting", true)
+        .is("deleted_at", null)
+        .order("account_code");
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const { data: documents = [], isLoading } = useQuery({
@@ -76,12 +97,17 @@ export function ApArDocumentList({ direction }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ap_ar_documents")
-        .select("*")
+        .select("*, chart_of_accounts:account_id(account_code, account_name)")
         .eq("direction", direction)
         .order("document_date", { ascending: false })
         .limit(10000);
       if (error) throw error;
-      return data as ApArDocument[];
+      return (data || []).map((d: any) => ({
+        ...d,
+        account_code: d.chart_of_accounts?.account_code || null,
+        account_name: d.chart_of_accounts?.account_name || null,
+        chart_of_accounts: undefined,
+      })) as ApArDocument[];
     },
   });
 
@@ -118,6 +144,7 @@ export function ApArDocumentList({ direction }: Props) {
         total_amount: parseFloat(form.total_amount) || 0,
         notes: form.notes || null,
         created_by: user?.id || null,
+        account_id: form.account_id || null,
       } as any);
       if (error) throw error;
     },
@@ -140,6 +167,7 @@ export function ApArDocumentList({ direction }: Props) {
       currency: "DOP",
       total_amount: "",
       notes: "",
+      account_id: glAccounts.length > 0 ? glAccounts[0].id : "",
     });
   };
 
@@ -191,6 +219,7 @@ export function ApArDocumentList({ direction }: Props) {
               <TableRow>
                 <TableHead>{t("apar.documentNumber")}</TableHead>
                 <TableHead>{t("common.type")}</TableHead>
+                <TableHead>Cuenta</TableHead>
                 <TableHead>{t("apar.contactName")}</TableHead>
                 <TableHead>{t("apar.documentDate")}</TableHead>
                 <TableHead>{t("apar.dueDate")}</TableHead>
@@ -209,6 +238,9 @@ export function ApArDocumentList({ direction }: Props) {
                     <Badge variant="outline" className="text-xs">
                       {t(`apar.${doc.document_type}`)}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs font-mono">
+                    {doc.account_code ? `${doc.account_code}` : "—"}
                   </TableCell>
                   <TableCell>{doc.contact_name}</TableCell>
                   <TableCell className="whitespace-nowrap">{formatDate(doc.document_date)}</TableCell>
@@ -274,6 +306,19 @@ export function ApArDocumentList({ direction }: Props) {
               </div>
             </div>
             <div className="space-y-1">
+              <Label>Cuenta Contable *</Label>
+              <Select value={form.account_id} onValueChange={v => setForm(f => ({ ...f, account_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {glAccounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.account_code} — {a.account_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>{t("apar.contactName")} *</Label>
               <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
             </div>
@@ -309,7 +354,7 @@ export function ApArDocumentList({ direction }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!form.contact_name || !form.total_amount || createMutation.isPending}>
+            <Button onClick={() => createMutation.mutate()} disabled={!form.contact_name || !form.total_amount || !form.account_id || createMutation.isPending}>
               {createMutation.isPending ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>

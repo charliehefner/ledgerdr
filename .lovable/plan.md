@@ -1,57 +1,49 @@
+## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
+### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
+- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
+- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
+- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-# Fix AP/AR: Account Linkage, Transaction-Driven, Proper Separation
+### ✅ 2. Journal Generation: Exchange Rate
+- `generate-journals` now reads `exchange_rate` from transactions
+- Sets `currency` and `exchange_rate` on created journals after RPC call
 
-## Current Problems
+### ✅ 3. Auto AP/AR Document Creation from Transactions
+- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
+- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
+- Links transaction ID via `linked_transaction_ids`
 
-1. **No GL account on documents** — PaymentDialog hardcodes `2100` (AP) and `1200` (AR). In reality, companies may have multiple AR/AP sub-accounts (e.g., 1201 Trade Receivables, 1202 Employee Receivables, 2101 Trade Payables, 2102 Accrued Payables).
+### ✅ 4. AP/AR Payment Generates Journal Entry
+- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
+- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
+- Requires bank account selection with mapped GL account
+- Records in `ap_ar_payments` audit trail table
 
-2. **Manual "New Document" shouldn't be the primary workflow** — AP/AR documents should originate from transactions (purchase with `due_date` → payable; sale with `due_date` → receivable). The auto-creation from TransactionForm already does this, but:
-   - It doesn't capture which AR/AP account is involved
-   - The manual creation dialog also lacks account selection
+### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
+- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
+- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
+- Each line now includes a narrative `description` field
 
-3. **Separation** — Receivables and Payables already use separate tabs with `direction` filtering. But the accountant likely wants each document explicitly tied to a specific AR or AP account from the chart of accounts (not just a hardcoded 2100/1200).
+### ✅ 6. AP/AR Payment Audit Trail Table
+- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
+- RLS: authenticated SELECT, admin/management/accountant INSERT
 
-## Plan
+### ✅ 7. Payroll Journal Detail Integration (PRJ)
+- Closing payroll now generates detailed PRJ journal with:
+  - Debit: Salary Expense (7010), Employer TSS (6210)
+  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
+- Non-fatal: payroll close proceeds even if journal generation fails
 
-### 1. Database: Add `account_id` column to `ap_ar_documents`
+### ✅ 8. Bank GL Book Balance Display
+- BankAccountsList now shows "Saldo Contable" column
+- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
 
-```sql
-ALTER TABLE public.ap_ar_documents
-  ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES chart_of_accounts(id);
-```
+### ✅ 9. Post Journal via Server-Side RPC
+- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
+- Ensures server-side balance validation before posting
 
-This links each document to a specific GL account (e.g., 1200 "Cuentas por Cobrar" or 2100 "Cuentas por Pagar").
-
-### 2. Auto-creation from Transactions (TransactionForm.tsx)
-
-When auto-creating AP/AR documents on transaction save (lines 306-330), look up the correct default account:
-- **Payable** → find the first active `21xx` account (or allow the user to pick one in future)
-- **Receivable** → find the first active `12xx` account
-- Store the `account_id` on the document
-
-### 3. Update "New Document" dialog (ApArDocumentList.tsx)
-
-- Add a **required account selector** showing only relevant accounts:
-  - For receivables: accounts starting with `12xx`
-  - For payables: accounts starting with `21xx`
-- Save the selected `account_id` on insert
-
-### 4. Show account in the list view (ApArDocumentList.tsx)
-
-- Join `chart_of_accounts` in the query to fetch account_code + name
-- Add an "Account" column to the table
-
-### 5. Use document's account in PaymentDialog
-
-Replace hardcoded `2100`/`1200` lookup with the document's actual `account_id`. Pass `account_id` through the document prop so the payment journal debits/credits the correct GL account.
-
-### Files Changed
-
-| File | Change |
-|------|--------|
-| **Migration SQL** | Add `account_id` column |
-| `TransactionForm.tsx` | Look up default AR/AP account_id during auto-creation |
-| `ApArDocumentList.tsx` | Add account selector to dialog, account column to table, join in query |
-| `PaymentDialog.tsx` | Use `document.account_id` instead of hardcoded account codes |
-
+### ✅ 10. Cost Center Filtering in Financial Reports
+- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
+- LEFT JOINs transactions to filter by cost_center when not "all"
+- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls

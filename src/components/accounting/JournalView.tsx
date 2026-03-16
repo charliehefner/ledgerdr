@@ -22,7 +22,6 @@ import {
 import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
-import { PaymentMethodMappingDialog } from "./PaymentMethodMappingDialog";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useExport } from "@/hooks/useExport";

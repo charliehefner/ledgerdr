@@ -124,7 +124,9 @@ export function AgingReportView() {
         { key: "total", header: "Total", width: 14 },
       ],
       rows: agingData,
-      totalsRow: { name: "TOTAL", currency: "", ...totals },
+      totalsRow: totalsByCurrency.length === 1
+        ? { name: "TOTAL", currency: totalsByCurrency[0][0], ...totalsByCurrency[0][1] }
+        : undefined,
     }, { filename: "aging_report", title: "Antigüedad de Saldos" });
   };
 

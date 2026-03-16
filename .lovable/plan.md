@@ -47,3 +47,44 @@
 - Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
 - LEFT JOINs transactions to filter by cost_center when not "all"
 - P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
+
+---
+
+## Deep Technical Audit Fixes — IMPLEMENTED
+
+### ✅ Finding 1: Journal Generation for UUID pay_methods (CRITICAL)
+- Added `resolvePayAccountId()` helper: tries legacy `payment_method_accounts` mapping first, then falls back to `bank_accounts.chart_account_id` via UUID lookup
+- Both transfer and purchase/sale paths now use the dual-resolution flow
+
+### ⏳ Finding 2: Bank Accounts Missing GL Links (CRITICAL)
+- Waiting on accountant to provide correct chart_account_id for each bank account
+
+### ✅ Finding 3: DGII 606 Forma de Pago (HIGH)
+- `getFormaDePago()` now accepts optional `bankAccounts` array parameter
+- Resolves UUID pay_methods via bank account_type: bank→02, credit_card→03, petty_cash→01
+- `DGIIReportsView` fetches bank accounts and passes to `DGII606Table`
+
+### ✅ Finding 4: PaymentMethodMappingDialog Obsolete (MEDIUM)
+- Removed Settings gear button and `PaymentMethodMappingDialog` usage from JournalView
+- Component file preserved for backwards compatibility
+
+### ✅ Finding 5: Cross-Currency Transfer Journal Balance (MEDIUM)
+- Simplified to always use `sourceAmount` for both debit and credit sides
+- Journal stays balanced; currency context captured in journal header metadata
+
+### ✅ Finding 6: Voided Transaction Voids AP/AR Document (MEDIUM)
+- Created SQL trigger `trg_void_ap_ar_on_transaction_void` on transactions table
+- When `is_void` changes to true, auto-sets `status = 'void'` on linked AP/AR documents
+
+### ✅ Finding 7: Exchange Rate on AP/AR Payment Journals (MEDIUM)
+- PaymentDialog now sets `currency` and `exchange_rate` on journals for non-DOP documents
+- Fetches latest exchange rate from `exchange_rates` table
+
+### ⏳ Finding 8: Client-Side Depreciation Loop (LOW)
+- Deferred — performance optimization, not correctness issue
+
+### ✅ Finding 9: Unlinked Count Has No Date Filter (LOW)
+- Working as designed — Generate Journals processes ALL unlinked transactions
+
+### ✅ Finding 10: Aging Report Currency Mixing (LOW)
+- Totals row now shows separate rows per currency instead of mixing DOP + USD

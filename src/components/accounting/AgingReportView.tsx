@@ -93,17 +93,20 @@ export function AgingReportView() {
     return Array.from(byName.values()).sort((a, b) => b.total - a.total);
   }, [filtered]);
 
-  const totals = useMemo(() => agingData.reduce(
-    (acc, r) => ({
-      current: acc.current + r.current,
-      days30: acc.days30 + r.days30,
-      days60: acc.days60 + r.days60,
-      days90: acc.days90 + r.days90,
-      over90: acc.over90 + r.over90,
-      total: acc.total + r.total,
-    }),
-    { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 }
-  ), [agingData]);
+  const totalsByCurrency = useMemo(() => {
+    const byCurr = new Map<string, { current: number; days30: number; days60: number; days90: number; over90: number; total: number }>();
+    agingData.forEach(r => {
+      const existing = byCurr.get(r.currency) || { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 };
+      existing.current += r.current;
+      existing.days30 += r.days30;
+      existing.days60 += r.days60;
+      existing.days90 += r.days90;
+      existing.over90 += r.over90;
+      existing.total += r.total;
+      byCurr.set(r.currency, existing);
+    });
+    return Array.from(byCurr.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [agingData]);
 
   const fmtNum = (n: number) =>
     n !== 0 ? n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";

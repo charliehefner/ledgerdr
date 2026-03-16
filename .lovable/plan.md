@@ -1,49 +1,40 @@
-## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
-### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
-- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
-- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
-- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-### ✅ 2. Journal Generation: Exchange Rate
-- `generate-journals` now reads `exchange_rate` from transactions
-- Sets `currency` and `exchange_rate` on created journals after RPC call
+# Fix: Generic Error Message on Transaction Save
 
-### ✅ 3. Auto AP/AR Document Creation from Transactions
-- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
-- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
-- Links transaction ID via `linked_transaction_ids`
+## Problem
+When saving an internal transaction fails, the user sees a generic "Error" toast with no details. The catch block in `TransactionForm.tsx` (line 336-339) discards the actual error message:
 
-### ✅ 4. AP/AR Payment Generates Journal Entry
-- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
-- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
-- Requires bank account selection with mapped GL account
-- Records in `ap_ar_payments` audit trail table
+```typescript
+} catch (error) {
+  toast.error(t('txForm.error'));  // Generic message, ignores actual error
+  console.error(error);
+}
+```
 
-### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
-- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
-- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
-- Each line now includes a narrative `description` field
+The `createTransaction` function in `api.ts` correctly throws with the database error message (`throw new Error(error.message)`), but the form never displays it.
 
-### ✅ 6. AP/AR Payment Audit Trail Table
-- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
-- RLS: authenticated SELECT, admin/management/accountant INSERT
+## Root Cause
+No database errors appear in recent logs, which means either:
+1. The error was transient (network/connectivity - the logs show "Failed to fetch" errors from around the same time)
+2. A trigger rejection (locked period, ITBIS cap) whose message was swallowed
 
-### ✅ 7. Payroll Journal Detail Integration (PRJ)
-- Closing payroll now generates detailed PRJ journal with:
-  - Debit: Salary Expense (7010), Employer TSS (6210)
-  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
-- Non-fatal: payroll close proceeds even if journal generation fails
+Either way, the fix is the same: **show the actual error message to the user**.
 
-### ✅ 8. Bank GL Book Balance Display
-- BankAccountsList now shows "Saldo Contable" column
-- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
+## Plan
 
-### ✅ 9. Post Journal via Server-Side RPC
-- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
-- Ensures server-side balance validation before posting
+### 1. Show actual error message in TransactionForm.tsx
+Update the catch block to append the real error message:
+```typescript
+} catch (error) {
+  const msg = error instanceof Error ? error.message : '';
+  toast.error(msg || t('txForm.error'));
+  console.error(error);
+}
+```
 
-### ✅ 10. Cost Center Filtering in Financial Reports
-- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
-- LEFT JOINs transactions to filter by cost_center when not "all"
-- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
+### 2. Same fix in EditTransactionDialog.tsx
+Apply the same pattern to the edit dialog's error handler so users see the specific database rejection reason there too.
+
+**Files**: `src/components/transactions/TransactionForm.tsx`, `src/components/invoices/EditTransactionDialog.tsx`
+

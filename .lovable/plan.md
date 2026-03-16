@@ -1,49 +1,114 @@
-## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
-### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
-- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
-- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
-- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-### ✅ 2. Journal Generation: Exchange Rate
-- `generate-journals` now reads `exchange_rate` from transactions
-- Sets `currency` and `exchange_rate` on created journals after RPC call
+# Fix Accounting Audit Findings 1, 3-10
 
-### ✅ 3. Auto AP/AR Document Creation from Transactions
-- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
-- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
-- Links transaction ID via `linked_transaction_ids`
+Skipping Finding 2 (bank account GL links) per your instruction — waiting on accountant.
 
-### ✅ 4. AP/AR Payment Generates Journal Entry
-- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
-- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
-- Requires bank account selection with mapped GL account
-- Records in `ap_ar_payments` audit trail table
+## Finding 1 — Journal Generation Broken for UUID pay_methods (CRITICAL)
 
-### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
-- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
-- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
-- Each line now includes a narrative `description` field
+**File**: `supabase/functions/generate-journals/index.ts`
 
-### ✅ 6. AP/AR Payment Audit Trail Table
-- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
-- RLS: authenticated SELECT, admin/management/accountant INSERT
+The Edge Function resolves `pay_method` via the `payment_method_accounts` mapping table, which only has legacy string keys. New transactions store bank account UUIDs.
 
-### ✅ 7. Payroll Journal Detail Integration (PRJ)
-- Closing payroll now generates detailed PRJ journal with:
-  - Debit: Salary Expense (7010), Employer TSS (6210)
-  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
-- Non-fatal: payroll close proceeds even if journal generation fails
+**Fix**: After the existing `mappingMap` lookup fails, check if `pay_method` looks like a UUID. If so, look it up directly in `bankAccountMap` to get `chart_account_id`. Fall back to legacy mapping only for old string-based values.
 
-### ✅ 8. Bank GL Book Balance Display
-- BankAccountsList now shows "Saldo Contable" column
-- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
+```text
+payAccountId resolution flow:
+  1. Try mappingMap.get(pay_method)          ← legacy strings
+  2. If null, try bankAccountMap.get(pay_method)?.chart_account_id  ← UUID
+  3. If still null → skip with error
+```
 
-### ✅ 9. Post Journal via Server-Side RPC
-- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
-- Ensures server-side balance validation before posting
+Also handle transfer `pay_method` the same way (already uses `bankAccountMap`, but the source lookup at line ~170 needs the same dual-path).
 
-### ✅ 10. Cost Center Filtering in Financial Reports
-- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
-- LEFT JOINs transactions to filter by cost_center when not "all"
-- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
+## Finding 3 — DGII 606 Forma de Pago Wrong (HIGH)
+
+**File**: `src/components/accounting/dgiiConstants.ts`
+
+`getFormaDePago()` only checks a static map. UUID pay_methods all default to "01" (Efectivo).
+
+**Fix**: The function can't do async DB lookups. Instead, change `DGII606Table` (and `DGII607Table` if applicable) to accept a `bankAccounts` lookup array prop, and resolve the forma de pago from `account_type`:
+- `bank` → "02" (Transferencia)
+- `credit_card` → "03" (Tarjeta)
+- `petty_cash` → "01" (Efectivo)
+
+Update `getFormaDePago` to accept an optional bank accounts array as second parameter.
+
+**Files**: `src/components/accounting/dgiiConstants.ts`, `src/components/accounting/DGII606Table.tsx`, `src/components/accounting/DGII607Table.tsx`, `src/components/accounting/DGIIReportsView.tsx`
+
+## Finding 4 — PaymentMethodMappingDialog Obsolete (MEDIUM)
+
+**File**: `src/components/accounting/JournalView.tsx`
+
+Remove the Settings gear button that opens `PaymentMethodMappingDialog`. The mapping is now implicit via `bank_accounts.chart_account_id`. Keep the component file for now (no breaking deletion) but remove its usage from the Journal UI.
+
+## Finding 5 — Cross-Currency Transfer Journal Imbalance (MEDIUM)
+
+**File**: `supabase/functions/generate-journals/index.ts`
+
+When source and destination currencies differ, force both debit and credit to use `sourceAmount` (the DOP-equivalent amount), keeping the journal balanced in the reporting currency. Store the original currency info on the journal header. The current branching logic at lines 186-204 is over-complicated and produces wrong results.
+
+**Fix**: Simplify to always use `sourceAmount` for both sides. The journal's `exchange_rate` and `currency` metadata already capture the conversion context.
+
+## Finding 6 — Voided Transaction Doesn't Void AP/AR Document (MEDIUM)
+
+**Database migration**: Add a trigger on `transactions` that fires when `is_void` changes to `true`. It finds any `ap_ar_documents` where `linked_transaction_ids` contains the voided transaction ID and sets their status to `void`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.void_ap_ar_on_transaction_void()
+RETURNS trigger ...
+  -- Find ap_ar_documents with this transaction in linked_transaction_ids
+  UPDATE ap_ar_documents
+  SET status = 'void'
+  WHERE linked_transaction_ids @> ARRAY[NEW.id]::uuid[];
+```
+
+## Finding 7 — No Exchange Rate on AP/AR Payment Journals (MEDIUM)
+
+**File**: `src/components/accounting/PaymentDialog.tsx`
+
+After creating the journal via RPC, set `currency` and `exchange_rate` on it (same pattern already used in `generate-journals`). Use the document's currency and fetch the current rate if non-DOP.
+
+Add after journal creation (line ~99):
+```typescript
+await supabase.from("journals").update({
+  currency: document.currency,
+  exchange_rate: document.currency !== 'DOP' ? currentRate : 1,
+}).eq("id", journalId);
+```
+
+## Finding 8 — Client-Side Depreciation Loop (LOW)
+
+Skip for now — this is a performance optimization, not a correctness issue. Flag for future Edge Function migration.
+
+## Finding 9 — Unlinked Count Has No Date Filter (LOW)
+
+**File**: `src/components/accounting/useJournalGeneration.ts`
+
+The `countUnlinked()` call passes `{}` (no dates). This is actually intentional — the Generate Journals button processes ALL unlinked transactions regardless of date range. No change needed; this is working as designed.
+
+## Finding 10 — Aging Report Ignores Currency (LOW)
+
+**File**: `src/components/accounting/AgingReportView.tsx`
+
+The aging already groups by `contact_name + currency` (line 76: `key = contact_name_currency`), and each row shows a currency column. The totals row at the bottom mixes currencies, which is misleading.
+
+**Fix**: Group totals by currency. Show separate total rows per currency, or remove the mixed total.
+
+---
+
+## Summary of Changes
+
+| Finding | File(s) | Type |
+|---------|---------|------|
+| 1 | `generate-journals/index.ts` | Edge function edit |
+| 3 | `dgiiConstants.ts`, `DGII606Table.tsx`, `DGII607Table.tsx`, `DGIIReportsView.tsx` | Code edit |
+| 4 | `JournalView.tsx` | Remove mapping dialog usage |
+| 5 | `generate-journals/index.ts` | Edge function edit |
+| 6 | SQL migration | New trigger |
+| 7 | `PaymentDialog.tsx` | Code edit |
+| 9 | No change | Working as designed |
+| 10 | `AgingReportView.tsx` | Code edit |
+
+Findings 2 (waiting on accountant) and 8 (low priority performance) are deferred.
+

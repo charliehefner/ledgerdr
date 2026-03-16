@@ -26,6 +26,7 @@ interface PaymentDialogProps {
     amount_paid: number;
     balance_remaining: number;
     direction: string;
+    account_id: string | null;
   } | null;
 }
 

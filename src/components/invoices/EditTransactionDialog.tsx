@@ -293,7 +293,8 @@ export function EditTransactionDialog({
       queryClient.invalidateQueries({ queryKey: ["allTransactions"] });
       toast.success("Cambios guardados exitosamente");
     } catch (error) {
-      toast.error("Error al guardar cambios");
+      const msg = error instanceof Error ? error.message : '';
+      toast.error(msg || "Error al guardar cambios");
     } finally {
       setIsSaving(false);
     }

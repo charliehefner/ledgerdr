@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { BookOpen, ChevronDown, ChevronRight, Plus, Settings, FileText, CheckCircle2, Download, FileSpreadsheet } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Plus, FileText, CheckCircle2, Download, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {

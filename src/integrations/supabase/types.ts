@@ -3119,6 +3119,7 @@ export type Database = {
           pay_method: string | null
           project_code: string | null
           project_id: string | null
+          purchase_date: string | null
           rnc: string | null
           transaction_date: string
           transaction_direction: string | null
@@ -3157,6 +3158,7 @@ export type Database = {
           pay_method?: string | null
           project_code?: string | null
           project_id?: string | null
+          purchase_date?: string | null
           rnc?: string | null
           transaction_date: string
           transaction_direction?: string | null
@@ -3195,6 +3197,7 @@ export type Database = {
           pay_method?: string | null
           project_code?: string | null
           project_id?: string | null
+          purchase_date?: string | null
           rnc?: string | null
           transaction_date?: string
           transaction_direction?: string | null

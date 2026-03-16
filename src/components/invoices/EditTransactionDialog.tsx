@@ -737,7 +737,17 @@ export function EditTransactionDialog({
               <div className="space-y-2">
                 <Label>{t('txForm.payMethod')}</Label>
                 {locked ? (
-                  <Input value={editedPayMethod} readOnly className="bg-muted" />
+                  <Input value={(() => {
+                    const legacy: Record<string, string> = {
+                      transfer_bdi: 'Transfer BDI', transfer_bhd: 'Transfer BHD',
+                      cash: 'Efectivo', petty_cash: 'Caja Chica',
+                      cc_management: 'TC Gerencia', cc_agri: 'TC Agrícola',
+                      cc_industry: 'TC Industrial', credit: 'Crédito',
+                    };
+                    if (legacy[editedPayMethod]) return legacy[editedPayMethod];
+                    const ba = bankAccounts.find(b => b.id === editedPayMethod);
+                    return ba ? `${ba.account_name} (${ba.currency})` : editedPayMethod;
+                  })()} readOnly className="bg-muted" />
                 ) : (
                   <Select
                     value={editedPayMethod}
@@ -747,14 +757,41 @@ export function EditTransactionDialog({
                       <SelectValue placeholder={t('txForm.selectMethod')} />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="transfer_bdi">{t('txForm.transferBdi')}</SelectItem>
-                      <SelectItem value="transfer_bhd">{t('txForm.transferBhd')}</SelectItem>
-                      <SelectItem value="cash">{t('txForm.cash')}</SelectItem>
-                      <SelectItem value="petty_cash">{t('txForm.pettyCash') || 'Caja Chica'}</SelectItem>
-                      <SelectItem value="cc_management">{t('txForm.ccManagement')}</SelectItem>
-                      <SelectItem value="cc_agri">{t('txForm.ccAgri')}</SelectItem>
-                      <SelectItem value="cc_industry">{t('txForm.ccIndustry')}</SelectItem>
-                      <SelectItem value="credit">{t('txForm.credit')}</SelectItem>
+                      {(() => {
+                        const banks = bankAccounts.filter(a => a.account_type === 'bank');
+                        const cards = bankAccounts.filter(a => a.account_type === 'credit_card');
+                        const petty = bankAccounts.filter(a => a.account_type === 'petty_cash');
+                        return (
+                          <>
+                            {banks.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>Bancos</SelectLabel>
+                                {banks.map(a => (
+                                  <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency})</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                            {cards.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>Tarjetas de Crédito</SelectLabel>
+                                {cards.map(a => (
+                                  <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency})</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                            {petty.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>Caja Chica</SelectLabel>
+                                {petty.map(a => (
+                                  <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency})</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                            <SelectSeparator />
+                            <SelectItem value="credit">{t('txForm.credit')}</SelectItem>
+                          </>
+                        );
+                      })()}
                     </SelectContent>
                   </Select>
                 )}

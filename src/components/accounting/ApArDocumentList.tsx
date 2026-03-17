@@ -220,7 +220,7 @@ export function ApArDocumentList({ direction }: Props) {
                 <TableHead>{t("apar.documentNumber")}</TableHead>
                 <TableHead>{t("common.type")}</TableHead>
                 <TableHead>Cuenta</TableHead>
-                <TableHead>{t("apar.contactName")}</TableHead>
+                <TableHead>{direction === "payable" ? t("apar.vendor") : t("apar.customer")}</TableHead>
                 <TableHead>{t("apar.documentDate")}</TableHead>
                 <TableHead>{t("apar.dueDate")}</TableHead>
                 <TableHead className="text-right">{t("apar.totalAmount")}</TableHead>
@@ -288,6 +288,7 @@ export function ApArDocumentList({ direction }: Props) {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">
                     <SelectItem value="invoice">{t("apar.invoice")}</SelectItem>
+                    {direction === "payable" && <SelectItem value="bill">{t("apar.bill")}</SelectItem>}
                     <SelectItem value="credit_memo">{t("apar.creditMemo")}</SelectItem>
                     <SelectItem value="debit_note">{t("apar.debitNote")}</SelectItem>
                   </SelectContent>

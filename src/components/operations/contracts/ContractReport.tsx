@@ -513,9 +513,9 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                                   {entry.line_items?.map((item, i) => (
                                     <div key={i} className={item.amount < 0 ? "text-destructive" : ""}>
-                                      + {item.description}: {item.amount < 0 
-                                        ? `($${Math.abs(item.amount).toLocaleString()})` 
-                                        : `$${item.amount.toLocaleString()}`}
+                                       + {item.description}: {item.amount < 0 
+                                        ? `($${formatMoney(Math.abs(item.amount))})` 
+                                        : `$${formatMoney(item.amount)}`}
                                     </div>
                                   ))}
                                 </div>

@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Plus, Play, Loader2, RefreshCw, Trash2 } from "lucide-react";
-import { format, addMonths, addDays } from "date-fns";
+import { format } from "date-fns";
 
 type Template = {
   id: string;
@@ -27,16 +27,6 @@ type Template = {
   next_run_date: string;
   is_active: boolean;
   currency: string | null;
-};
-
-type TemplateLine = {
-  id: string;
-  template_id: string;
-  account_id: string;
-  project_code: string | null;
-  cbs_code: string | null;
-  debit: number;
-  credit: number;
 };
 
 export function RecurringEntriesView() {
@@ -103,7 +93,7 @@ export function RecurringEntriesView() {
       if (error) throw error;
 
       const validLines = lines.filter(l => l.account_id && (parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0));
-      if (validLines.length < 2) throw new Error("Se necesitan al menos 2 líneas.");
+      if (validLines.length < 2) throw new Error(t("accounting.recur.needTwoLines"));
 
       const { error: lError } = await supabase
         .from("recurring_journal_template_lines" as any)
@@ -117,7 +107,7 @@ export function RecurringEntriesView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
-      toast({ title: "Plantilla creada" });
+      toast({ title: t("accounting.recur.templateCreated") });
       setDialogOpen(false);
     },
     onError: (e: Error) => {
@@ -132,7 +122,7 @@ export function RecurringEntriesView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
-      toast({ title: "Plantilla eliminada" });
+      toast({ title: t("accounting.recur.templateDeleted") });
     },
   });
 
@@ -140,10 +130,10 @@ export function RecurringEntriesView() {
     setGenerating(true);
     try {
       const today = new Date().toISOString().split("T")[0];
-      const dueTemplates = templates.filter(t => t.is_active && t.next_run_date <= today);
+      const dueTemplates = templates.filter(tmpl => tmpl.is_active && tmpl.next_run_date <= today);
 
       if (dueTemplates.length === 0) {
-        toast({ title: "Sin pendientes", description: "No hay plantillas con fecha vencida para generar." });
+        toast({ title: t("accounting.recur.noDue"), description: t("accounting.recur.noDueDesc") });
         setGenerating(false);
         return;
       }
@@ -156,8 +146,8 @@ export function RecurringEntriesView() {
       queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       toast({
-        title: "Asientos Generados",
-        description: `Se generaron ${generated || 0} asiento(s) borrador(es) tipo RJ.`,
+        title: t("accounting.recur.generated"),
+        description: t("accounting.recur.generatedDesc").replace("{count}", String(generated || 0)),
       });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -183,23 +173,23 @@ export function RecurringEntriesView() {
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
 
   const today = new Date().toISOString().split("T")[0];
-  const dueCount = templates.filter(t => t.is_active && t.next_run_date <= today).length;
+  const dueCount = templates.filter(tmpl => tmpl.is_active && tmpl.next_run_date <= today).length;
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h3 className="text-lg font-medium">Asientos Recurrentes</h3>
+        <h3 className="text-lg font-medium">{t("accounting.recur.title")}</h3>
         <div className="flex gap-2">
           {dueCount > 0 && (
             <Button size="sm" onClick={generateDueEntries} disabled={generating}>
               {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-              Generar Pendientes ({dueCount})
+              {t("accounting.recur.generateDue")} ({dueCount})
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={openNew}>
-            <Plus className="h-4 w-4 mr-1" /> Nueva Plantilla
+            <Plus className="h-4 w-4 mr-1" /> {t("accounting.recur.newTemplate")}
           </Button>
         </div>
       </div>
@@ -207,40 +197,40 @@ export function RecurringEntriesView() {
       {templates.length === 0 ? (
         <EmptyState
           icon={RefreshCw}
-          title="Sin plantillas recurrentes"
-          description="Cree plantillas para asientos que se repiten mensual o quincenalmente."
-          action={<Button onClick={openNew} size="sm"><Plus className="h-4 w-4 mr-1" />Nueva Plantilla</Button>}
+          title={t("accounting.recur.noTemplates")}
+          description={t("accounting.recur.noTemplatesDesc")}
+          action={<Button onClick={openNew} size="sm"><Plus className="h-4 w-4 mr-1" />{t("accounting.recur.newTemplate")}</Button>}
         />
       ) : (
         <div className="border rounded-lg overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Frecuencia</TableHead>
-                <TableHead>Próxima Ejecución</TableHead>
-                <TableHead>Moneda</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>{t("accounting.recur.col.name")}</TableHead>
+                <TableHead>{t("accounting.recur.col.frequency")}</TableHead>
+                <TableHead>{t("accounting.recur.col.nextRun")}</TableHead>
+                <TableHead>{t("accounting.recur.col.currency")}</TableHead>
+                <TableHead>{t("accounting.recur.col.status")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {templates.map(t => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.template_name}</TableCell>
-                  <TableCell>{t.frequency === "biweekly" ? "Quincenal" : "Mensual"}</TableCell>
-                  <TableCell className={t.next_run_date <= today ? "text-destructive font-medium" : ""}>
-                    {format(new Date(t.next_run_date + "T00:00:00"), "dd/MM/yyyy")}
-                    {t.next_run_date <= today && <Badge variant="destructive" className="ml-2 text-[10px]">Vencida</Badge>}
+              {templates.map(tmpl => (
+                <TableRow key={tmpl.id}>
+                  <TableCell className="font-medium">{tmpl.template_name}</TableCell>
+                  <TableCell>{tmpl.frequency === "biweekly" ? t("accounting.recur.biweekly") : t("accounting.recur.monthly")}</TableCell>
+                  <TableCell className={tmpl.next_run_date <= today ? "text-destructive font-medium" : ""}>
+                    {format(new Date(tmpl.next_run_date + "T00:00:00"), "dd/MM/yyyy")}
+                    {tmpl.next_run_date <= today && <Badge variant="destructive" className="ml-2 text-[10px]">{t("accounting.recur.overdue")}</Badge>}
                   </TableCell>
-                  <TableCell>{t.currency || "DOP"}</TableCell>
+                  <TableCell>{tmpl.currency || "DOP"}</TableCell>
                   <TableCell>
-                    <Badge variant={t.is_active ? "default" : "secondary"}>
-                      {t.is_active ? "Activa" : "Inactiva"}
+                    <Badge variant={tmpl.is_active ? "default" : "secondary"}>
+                      {tmpl.is_active ? t("accounting.recur.active") : t("accounting.recur.inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(t.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(tmpl.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -256,33 +246,33 @@ export function RecurringEntriesView() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nueva Plantilla Recurrente</DialogTitle>
+              <DialogTitle>{t("accounting.recur.newTemplateTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre</Label>
-                  <Input value={form.template_name} onChange={e => setForm(f => ({ ...f, template_name: e.target.value }))} placeholder="Ej: Depreciación mensual" />
+                  <Label>{t("accounting.recur.templateName")}</Label>
+                  <Input value={form.template_name} onChange={e => setForm(f => ({ ...f, template_name: e.target.value }))} placeholder={t("accounting.recur.templateNamePlaceholder")} />
                 </div>
                 <div>
-                  <Label>Descripción</Label>
+                  <Label>{t("accounting.description")}</Label>
                   <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Frecuencia</Label>
+                  <Label>{t("accounting.recur.frequency")}</Label>
                   <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
-                    <option value="monthly">Mensual</option>
-                    <option value="biweekly">Quincenal</option>
+                    <option value="monthly">{t("accounting.recur.monthly")}</option>
+                    <option value="biweekly">{t("accounting.recur.biweekly")}</option>
                   </select>
                 </div>
                 <div>
-                  <Label>Próxima Fecha</Label>
+                  <Label>{t("accounting.recur.nextDate")}</Label>
                   <Input type="date" value={form.next_run_date} onChange={e => setForm(f => ({ ...f, next_run_date: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>Moneda</Label>
+                  <Label>{t("accounting.currencyLabel")}</Label>
                   <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
                     <option value="DOP">DOP</option>
                     <option value="USD">USD</option>
@@ -292,14 +282,14 @@ export function RecurringEntriesView() {
               </div>
 
               <div>
-                <Label>Líneas del Asiento</Label>
+                <Label>{t("accounting.recur.entryLines")}</Label>
                 <div className="border rounded-lg overflow-auto mt-1">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/50">
-                        <th className="text-left p-2">Cuenta</th>
-                        <th className="text-right p-2 w-32">Débito</th>
-                        <th className="text-right p-2 w-32">Crédito</th>
+                        <th className="text-left p-2">{t("accounting.col.account")}</th>
+                        <th className="text-right p-2 w-32">{t("accounting.col.debit")}</th>
+                        <th className="text-right p-2 w-32">{t("accounting.col.credit")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -311,7 +301,7 @@ export function RecurringEntriesView() {
                               value={line.account_id}
                               onChange={e => updateLine(idx, "account_id", e.target.value)}
                             >
-                              <option value="">Seleccionar cuenta...</option>
+                              <option value="">{t("accounting.selectAccount")}...</option>
                               {accounts.map(a => (
                                 <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>
                               ))}
@@ -327,7 +317,7 @@ export function RecurringEntriesView() {
                       ))}
                       <tr className="border-t font-medium bg-muted/30">
                         <td className="p-2 text-right">
-                          <Button type="button" variant="ghost" size="sm" onClick={addLine}><Plus className="h-3 w-3 mr-1" />Línea</Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={addLine}><Plus className="h-3 w-3 mr-1" />{t("accounting.line")}</Button>
                         </td>
                         <td className="p-2 text-right font-mono">{formatMoney(totalDebit)}</td>
                         <td className="p-2 text-right font-mono">{formatMoney(totalCredit)}</td>
@@ -336,17 +326,17 @@ export function RecurringEntriesView() {
                   </table>
                 </div>
                 {!isBalanced && totalDebit > 0 && (
-                  <p className="text-xs text-destructive mt-1">Débitos y créditos no están balanceados.</p>
+                  <p className="text-xs text-destructive mt-1">{t("accounting.debitCreditUnbalanced")}</p>
                 )}
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
               <Button
                 onClick={() => createMutation.mutate()}
                 disabled={createMutation.isPending || !form.template_name || !form.next_run_date || !isBalanced}
               >
-                {createMutation.isPending ? "Guardando..." : "Guardar Plantilla"}
+                {createMutation.isPending ? t("common.saving") : t("accounting.recur.saveTemplate")}
               </Button>
             </DialogFooter>
           </DialogContent>

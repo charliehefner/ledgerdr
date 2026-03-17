@@ -146,7 +146,6 @@ export function JournalView() {
 
   // ---- Export logic ----
   const handleExport = (type: "excel" | "pdf") => {
-    // Build line-level rows from ALL filtered journals (not just current page)
     const exportRows: Record<string, string | number>[] = [];
     filtered.forEach((j) => {
       j.journal_lines.forEach((line) => {
@@ -163,31 +162,31 @@ export function JournalView() {
           moneda: j.currency || "DOP",
           debito: line.debit || 0,
           credito: line.credit || 0,
-          estado: j.posted ? "Contabilizado" : "Borrador",
+          estado: j.posted ? t("accounting.export.posted") : t("accounting.export.draftStatus"),
         });
       });
     });
 
     const columns = [
-      { key: "numero", header: "Número", width: 14 },
-      { key: "tipo", header: "Tipo", width: 8 },
-      { key: "fecha", header: "Fecha", width: 12 },
-      { key: "descripcion", header: "Descripción", width: 28 },
-      { key: "cuenta", header: "Cuenta", width: 12 },
-      { key: "nombre_cuenta", header: "Nombre Cuenta", width: 24 },
-      { key: "proyecto", header: "Proyecto", width: 10 },
-      { key: "cbs", header: "CBS", width: 10 },
-      { key: "detalle_linea", header: "Detalle Línea", width: 22 },
-      { key: "moneda", header: "Moneda", width: 8 },
-      { key: "debito", header: "Débito", width: 14 },
-      { key: "credito", header: "Crédito", width: 14 },
-      { key: "estado", header: "Estado", width: 14 },
+      { key: "numero", header: t("accounting.export.number"), width: 14 },
+      { key: "tipo", header: t("accounting.export.type"), width: 8 },
+      { key: "fecha", header: t("accounting.export.date"), width: 12 },
+      { key: "descripcion", header: t("accounting.export.description"), width: 28 },
+      { key: "cuenta", header: t("accounting.export.account"), width: 12 },
+      { key: "nombre_cuenta", header: t("accounting.export.accountName"), width: 24 },
+      { key: "proyecto", header: t("accounting.export.project"), width: 10 },
+      { key: "cbs", header: t("accounting.export.cbs"), width: 10 },
+      { key: "detalle_linea", header: t("accounting.export.lineDetail"), width: 22 },
+      { key: "moneda", header: t("accounting.export.currency"), width: 8 },
+      { key: "debito", header: t("accounting.export.debit"), width: 14 },
+      { key: "credito", header: t("accounting.export.credit"), width: 14 },
+      { key: "estado", header: t("accounting.export.status"), width: 14 },
     ];
 
     const config = {
       filename: `diario_contable_${dateFrom}_${dateTo}`,
-      title: "Diario Contable",
-      subtitle: `Período: ${format(new Date(dateFrom), "dd/MM/yyyy")} – ${format(new Date(dateTo), "dd/MM/yyyy")}`,
+      title: t("accounting.export.title"),
+      subtitle: t("accounting.export.period").replace("{start}", format(new Date(dateFrom), "dd/MM/yyyy")).replace("{end}", format(new Date(dateTo), "dd/MM/yyyy")),
       orientation: "landscape" as const,
       fontSize: 7,
     };
@@ -220,7 +219,6 @@ export function JournalView() {
     { key: "CLJ", label: t("accounting.type.CLJ") },
   ];
 
-  /** Aggregate unique project/cbs codes from journal lines */
   const getAggregated = (lines: JournalLine[], field: "project_code" | "cbs_code") => {
     const values = [...new Set(lines.map(l => l[field]).filter(Boolean))] as string[];
     return values.length > 0 ? values.join(", ") : "";
@@ -231,19 +229,17 @@ export function JournalView() {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Date range */}
           <div className="flex items-center gap-1">
-            <Label className="text-xs text-muted-foreground whitespace-nowrap">Desde:</Label>
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">{t("accounting.from")}</Label>
             <Input type="date" className="h-8 w-[140px] text-sm" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
           </div>
           <div className="flex items-center gap-1">
-            <Label className="text-xs text-muted-foreground whitespace-nowrap">Hasta:</Label>
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">{t("accounting.to")}</Label>
             <Input type="date" className="h-8 w-[140px] text-sm" value={dateTo} onChange={e => setDateTo(e.target.value)} />
           </div>
 
-          {/* Status */}
           <div className="flex items-center gap-1">
-            <span className="text-xs font-medium text-muted-foreground mr-1">Estado:</span>
+            <span className="text-xs font-medium text-muted-foreground mr-1">{t("accounting.statusLabel")}</span>
             {statusButtons.map((f) => (
               <Button
                 key={f.key}
@@ -262,19 +258,18 @@ export function JournalView() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {typeOptions.map((t) => (
-                  <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
+                {typeOptions.map((opt) => (
+                  <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="flex gap-1">
-          {/* Export */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline">
-                <Download className="h-4 w-4 mr-1" /> Exportar
+                <Download className="h-4 w-4 mr-1" /> {t("accounting.export")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-popover">
@@ -292,7 +287,7 @@ export function JournalView() {
               <InfoTooltip translationKey="help.generateJournals" />
               <GenerateJournalsButton userId={user?.id} />
               <Button size="sm" onClick={() => setNewOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
+                <Plus className="h-4 w-4 mr-1" /> {t("accounting.newEntry")}
               </Button>
             </>
           )}
@@ -301,14 +296,14 @@ export function JournalView() {
 
       {/* Record count */}
       <div className="text-xs text-muted-foreground">
-        {filtered.length} asientos encontrados — Mostrando página {pagination.page + 1} de {pagination.totalPages}
+        {filtered.length} {t("accounting.entriesFound").replace("{page}", String(pagination.page + 1)).replace("{total}", String(pagination.totalPages))}
       </div>
 
       {filtered.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="No hay asientos"
-          description="Los asientos contables aparecerán aquí cuando se registren."
+          title={t("accounting.noEntries")}
+          description={t("accounting.noEntriesDesc")}
         />
       ) : (
         <div className="border rounded-lg overflow-auto">
@@ -316,16 +311,16 @@ export function JournalView() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[40px]" />
-                <TableHead className="w-[120px]">Número</TableHead>
-                <TableHead className="w-[60px]">Tipo</TableHead>
-                <TableHead className="w-[110px]">Fecha</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead className="w-[100px]">Proyecto</TableHead>
-                <TableHead className="w-[80px]">CBS</TableHead>
-                <TableHead className="w-[120px]">Ref.</TableHead>
-                <TableHead className="w-[80px]">Moneda</TableHead>
-                <TableHead className="w-[50px]">Conc.</TableHead>
-                <TableHead className="w-[100px]">Estado</TableHead>
+                <TableHead className="w-[120px]">{t("accounting.col.number")}</TableHead>
+                <TableHead className="w-[60px]">{t("accounting.col.type")}</TableHead>
+                <TableHead className="w-[110px]">{t("accounting.col.date")}</TableHead>
+                <TableHead>{t("accounting.col.description")}</TableHead>
+                <TableHead className="w-[100px]">{t("accounting.col.project")}</TableHead>
+                <TableHead className="w-[80px]">{t("accounting.col.cbs")}</TableHead>
+                <TableHead className="w-[120px]">{t("accounting.col.ref")}</TableHead>
+                <TableHead className="w-[80px]">{t("accounting.col.currency")}</TableHead>
+                <TableHead className="w-[50px]">{t("accounting.col.reconciled")}</TableHead>
+                <TableHead className="w-[100px]">{t("accounting.col.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -393,13 +388,13 @@ export function JournalView() {
                             <table className="w-full text-sm">
                               <thead>
                                  <tr className="text-muted-foreground">
-                                   <th className="text-left py-1 font-medium">Cuenta</th>
-                                   <th className="text-left py-1 font-medium">Nombre</th>
-                                   <th className="text-left py-1 font-medium">Descripción</th>
-                                   <th className="text-left py-1 font-medium">Proyecto</th>
-                                   <th className="text-left py-1 font-medium">CBS</th>
-                                   <th className="text-right py-1 font-medium">Débito</th>
-                                   <th className="text-right py-1 font-medium">Crédito</th>
+                                   <th className="text-left py-1 font-medium">{t("accounting.col.account")}</th>
+                                   <th className="text-left py-1 font-medium">{t("accounting.col.accountName")}</th>
+                                   <th className="text-left py-1 font-medium">{t("accounting.col.description")}</th>
+                                   <th className="text-left py-1 font-medium">{t("accounting.col.project")}</th>
+                                   <th className="text-left py-1 font-medium">{t("accounting.col.cbs")}</th>
+                                   <th className="text-right py-1 font-medium">{t("accounting.col.debit")}</th>
+                                   <th className="text-right py-1 font-medium">{t("accounting.col.credit")}</th>
                                  </tr>
                               </thead>
                               <tbody>
@@ -419,7 +414,7 @@ export function JournalView() {
                               </tbody>
                               <tfoot>
                                 <tr className="border-t font-medium">
-                                  <td colSpan={5} className="py-1 text-right">Totales</td>
+                                  <td colSpan={5} className="py-1 text-right">{t("accounting.totals")}</td>
                                   <td className="py-1 text-right">{fmtNum(totalDebit)}</td>
                                   <td className="py-1 text-right">{fmtNum(totalCredit)}</td>
                                 </tr>
@@ -441,7 +436,7 @@ export function JournalView() {
       {filtered.length > 0 && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Filas por página:</span>
+            <span className="text-sm text-muted-foreground">{t("accounting.rowsPerPage")}</span>
             <Select value={String(pagination.pageSize)} onValueChange={(v) => pagination.setPageSize(Number(v))}>
               <SelectTrigger className="h-8 w-[80px] text-sm">
                 <SelectValue />
@@ -455,13 +450,13 @@ export function JournalView() {
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" disabled={!pagination.hasPrevPage} onClick={pagination.prevPage}>
-              Anterior
+              {t("accounting.previous")}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Página {pagination.page + 1} de {pagination.totalPages}
+              {t("accounting.page").replace("{page}", String(pagination.page + 1)).replace("{total}", String(pagination.totalPages))}
             </span>
             <Button size="sm" variant="outline" disabled={!pagination.hasNextPage} onClick={pagination.nextPage}>
-              Siguiente
+              {t("accounting.next")}
             </Button>
           </div>
         </div>

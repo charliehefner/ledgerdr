@@ -126,7 +126,7 @@ export function ChartOfAccountsView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chart-of-accounts"] });
-      toast({ title: editing ? "Cuenta actualizada" : "Cuenta creada" });
+      toast({ title: editing ? t("accounting.coa.accountUpdated") : t("accounting.coa.accountCreated") });
       setDialogOpen(false);
       setEditing(null);
     },
@@ -166,9 +166,7 @@ export function ChartOfAccountsView() {
 
   const tree = buildTree(accounts);
 
-  // Filter by collapsed parents
   const isHidden = (node: typeof tree[0]) => {
-    // Walk up parent chain
     let pid = node.parent_id;
     while (pid) {
       if (collapsed.has(pid)) return true;
@@ -199,7 +197,7 @@ export function ChartOfAccountsView() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por código o nombre..."
+              placeholder={t("accounting.coa.searchPlaceholder")}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9"
@@ -211,35 +209,35 @@ export function ChartOfAccountsView() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("common.all")}</SelectItem>
-              {ACCOUNT_TYPES.map(t => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
+              {ACCOUNT_TYPES.map(typ => (
+                <SelectItem key={typ} value={typ}>{typ}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <Button onClick={openAdd} size="sm">
           <Plus className="h-4 w-4 mr-1" />
-          Agregar Cuenta
+          {t("accounting.coa.addAccount")}
         </Button>
       </div>
 
       {accounts.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="No hay cuentas"
-          description="Importe su plan de cuentas o agregue cuentas manualmente."
-          action={<Button onClick={openAdd} size="sm"><Plus className="h-4 w-4 mr-1" />Agregar Cuenta</Button>}
+          title={t("accounting.coa.noAccounts")}
+          description={t("accounting.coa.noAccountsDesc")}
+          action={<Button onClick={openAdd} size="sm"><Plus className="h-4 w-4 mr-1" />{t("accounting.coa.addAccount")}</Button>}
         />
       ) : (
         <div className="border rounded-lg overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Código</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead className="w-[120px]">Tipo</TableHead>
-                <TableHead className="w-[80px]">Moneda</TableHead>
-                <TableHead className="w-[100px]">Posteable</TableHead>
+                <TableHead className="w-[200px]">{t("accounting.coa.col.code")}</TableHead>
+                <TableHead>{t("accounting.coa.col.name")}</TableHead>
+                <TableHead className="w-[120px]">{t("accounting.coa.col.type")}</TableHead>
+                <TableHead className="w-[80px]">{t("accounting.coa.col.currency")}</TableHead>
+                <TableHead className="w-[100px]">{t("accounting.coa.col.postable")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -275,7 +273,7 @@ export function ChartOfAccountsView() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm">{node.currency || "DOP"}</TableCell>
-                  <TableCell>{node.allow_posting ? "Sí" : "No"}</TableCell>
+                  <TableCell>{node.allow_posting ? t("accounting.coa.yes") : t("accounting.coa.no")}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -287,42 +285,42 @@ export function ChartOfAccountsView() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar Cuenta" : "Nueva Cuenta"}</DialogTitle>
+            <DialogTitle>{editing ? t("accounting.coa.editAccount") : t("accounting.coa.newAccount")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Código</Label>
+                <Label>{t("accounting.coa.code")}</Label>
                 <Input value={form.account_code} onChange={e => setForm(f => ({ ...f, account_code: e.target.value }))} placeholder="1100" />
               </div>
               <div>
-                <Label>Tipo</Label>
+                <Label>{t("accounting.coa.type")}</Label>
                 <Select value={form.account_type} onValueChange={v => setForm(f => ({ ...f, account_type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ACCOUNT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    {ACCOUNT_TYPES.map(typ => <SelectItem key={typ} value={typ}>{typ}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Nombre (cuenta)</Label>
-              <Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder="Efectivo en Caja" />
+              <Label>{t("accounting.coa.accountName")}</Label>
+              <Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} />
             </div>
             <div>
-              <Label>Descripción en Español</Label>
-              <Input value={form.spanish_description} onChange={e => setForm(f => ({ ...f, spanish_description: e.target.value }))} placeholder="Efectivo en Caja" />
+              <Label>{t("accounting.coa.spanishDesc")}</Label>
+              <Input value={form.spanish_description} onChange={e => setForm(f => ({ ...f, spanish_description: e.target.value }))} />
             </div>
             <div>
-              <Label>English Description</Label>
+              <Label>{t("accounting.coa.englishDesc")}</Label>
               <Input value={form.english_description} onChange={e => setForm(f => ({ ...f, english_description: e.target.value }))} placeholder="Cash in Hand" />
             </div>
             <div>
-              <Label>Cuenta Padre</Label>
+              <Label>{t("accounting.coa.parentAccount")}</Label>
               <Select value={form.parent_id || "none"} onValueChange={v => setForm(f => ({ ...f, parent_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Sin padre" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("accounting.coa.noParent")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin padre</SelectItem>
+                  <SelectItem value="none">{t("accounting.coa.noParent")}</SelectItem>
                   {accounts.filter(a => a.id !== editing?.id).map(a => (
                     <SelectItem key={a.id} value={a.id}>{a.account_code} - {a.account_name}</SelectItem>
                   ))}
@@ -331,7 +329,7 @@ export function ChartOfAccountsView() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Moneda</Label>
+                <Label>{t("accounting.coa.col.currency")}</Label>
                 <Select value={form.currency} onValueChange={v => setForm(f => ({ ...f, currency: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -347,7 +345,7 @@ export function ChartOfAccountsView() {
                   checked={form.allow_posting}
                   onCheckedChange={v => setForm(f => ({ ...f, allow_posting: !!v }))}
                 />
-                <Label htmlFor="allow-posting">Permite asientos</Label>
+                <Label htmlFor="allow-posting">{t("accounting.coa.allowPosting")}</Label>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { RefreshCw, Loader2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -23,11 +24,11 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
   const [preview, setPreview] = useState<{ rate: number; total: number; count: number } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const openConfirm = async () => {
     try {
-      // Fetch closing rate
       const { data: rateRow, error: rateErr } = await supabase
         .from("exchange_rates")
         .select("sell_rate")
@@ -38,11 +39,10 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
         .single();
 
       if (rateErr || !rateRow) {
-        toast({ title: "Error", description: "No se encontró tasa de cambio para la fecha de cierre.", variant: "destructive" });
+        toast({ title: "Error", description: t("accounting.reval.noRate"), variant: "destructive" });
         return;
       }
 
-      // Fetch balances
       const { data: balances, error: balErr } = await supabase.rpc("foreign_currency_balances", {
         p_start: startDate,
         p_end: endDate,
@@ -51,7 +51,7 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
       if (balErr) throw balErr;
 
       if (!balances || balances.length === 0) {
-        toast({ title: "Sin saldos USD", description: "No hay saldos en moneda extranjera para revaluar en este período." });
+        toast({ title: t("accounting.reval.noBalances") });
         return;
       }
 
@@ -69,7 +69,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
 
   const revalMutation = useMutation({
     mutationFn: async () => {
-      // 1. Fetch closing rate
       const { data: rateRow } = await supabase
         .from("exchange_rates")
         .select("sell_rate")
@@ -82,7 +81,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
       if (!rateRow) throw new Error("No exchange rate found");
       const closingRate = rateRow.sell_rate;
 
-      // 2. Get balances
       const { data: balances, error: balErr } = await supabase.rpc("foreign_currency_balances", {
         p_start: startDate,
         p_end: endDate,
@@ -90,7 +88,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
       if (balErr) throw balErr;
       if (!balances || balances.length === 0) throw new Error("No foreign currency balances");
 
-      // 3. Find account 8510 (Diferencia Cambiaria)
       const { data: fxAcct, error: fxErr } = await supabase
         .from("chart_of_accounts")
         .select("id")
@@ -99,7 +96,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
         .single();
       if (fxErr || !fxAcct) throw new Error("No se encontró cuenta 8510 — Diferencia Cambiaria");
 
-      // 4. Create draft ADJ journal
       const { data: journal, error: jErr } = await supabase
         .from("journals")
         .insert({
@@ -116,7 +112,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
         .single();
       if (jErr) throw jErr;
 
-      // 5. Build journal lines
       const lines: any[] = [];
       let totalAdj = 0;
 
@@ -125,7 +120,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
         if (Math.abs(adj) < 0.01) return;
         totalAdj += adj;
 
-        // Adjustment on the account itself
         lines.push({
           journal_id: journal.id,
           account_id: b.account_id,
@@ -134,7 +128,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
         });
       });
 
-      // Offsetting entry to 8510
       if (Math.abs(totalAdj) >= 0.01) {
         lines.push({
           journal_id: journal.id,
@@ -149,7 +142,6 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
       const { error: lErr } = await supabase.from("journal_lines").insert(lines);
       if (lErr) throw lErr;
 
-      // 6. Log revaluation
       await supabase.from("revaluation_log").insert({
         period_id: periodId,
         journal_id: journal.id,
@@ -166,8 +158,8 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
       queryClient.invalidateQueries({ queryKey: ["accounting-periods"] });
       const formatted = new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(result.totalAdj);
       toast({
-        title: "Revaluación Generada",
-        description: `Asiento ADJ borrador con ${result.lineCount} líneas. Ajuste neto: ${formatted}`,
+        title: t("accounting.reval.generated"),
+        description: t("accounting.reval.generatedDesc").replace("{count}", String(result.lineCount)).replace("{amount}", formatted),
       });
       setConfirmOpen(false);
       setPreview(null);
@@ -188,34 +180,34 @@ export function PeriodRevaluationButton({ periodId, periodName, startDate, endDa
         disabled={revalMutation.isPending}
       >
         {revalMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-        Revaluación
+        {t("accounting.reval.button")}
       </Button>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revaluación Cambiaria</AlertDialogTitle>
+            <AlertDialogTitle>{t("accounting.reval.title")}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>
-                  Se generará un asiento de ajuste <strong>borrador</strong> para el período "{periodName}".
+                  {t("accounting.reval.description").replace("{period}", periodName)}
                 </p>
                 {preview && (
                   <div className="bg-muted rounded-md p-3 text-sm space-y-1">
-                    <p><strong>Tasa de cierre:</strong> {preview.rate.toFixed(4)} DOP/USD</p>
-                    <p><strong>Cuentas a revaluar:</strong> {preview.count}</p>
-                    <p><strong>Ajuste neto estimado:</strong> {new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(preview.total)}</p>
+                    <p><strong>{t("accounting.reval.closingRate")}</strong> {preview.rate.toFixed(4)} DOP/USD</p>
+                    <p><strong>{t("accounting.reval.accountsToRevalue")}</strong> {preview.count}</p>
+                    <p><strong>{t("accounting.reval.estimatedAdj")}</strong> {new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(preview.total)}</p>
                   </div>
                 )}
                 <p className="text-muted-foreground text-xs">
-                  Puede revisar y modificar el asiento antes de publicarlo.
+                  {t("accounting.reval.reviewNote")}
                 </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => revalMutation.mutate()}>
-              Generar Borrador
+              {t("accounting.closing.generateDraft")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

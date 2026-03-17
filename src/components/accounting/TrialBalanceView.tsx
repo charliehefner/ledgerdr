@@ -69,12 +69,12 @@ export function TrialBalanceView() {
     exportToExcel(
       {
         columns: [
-          { key: "account_code", header: "Código", width: 14 },
-          { key: "account_name", header: "Cuenta", width: 30 },
-          { key: "account_type", header: "Tipo", width: 14 },
-          { key: "total_debit_base", header: "Débito", width: 16 },
-          { key: "total_credit_base", header: "Crédito", width: 16 },
-          { key: "balance_base", header: "Saldo", width: 16 },
+          { key: "account_code", header: t("accounting.tb.col.code"), width: 14 },
+          { key: "account_name", header: t("accounting.tb.col.account"), width: 30 },
+          { key: "account_type", header: t("accounting.tb.col.type"), width: 14 },
+          { key: "total_debit_base", header: t("accounting.tb.col.debit"), width: 16 },
+          { key: "total_credit_base", header: t("accounting.tb.col.credit"), width: 16 },
+          { key: "balance_base", header: t("accounting.tb.col.balance"), width: 16 },
         ],
         rows: filtered.map(r => ({
           account_code: r.account_code,
@@ -93,7 +93,7 @@ export function TrialBalanceView() {
           balance_base: totals.debit - totals.credit,
         },
       },
-      { filename: `balanza_comprobacion_${dateRange || "all"}`, title: "Balanza de Comprobación" }
+      { filename: `balanza_comprobacion_${dateRange || "all"}`, title: t("accounting.tb.title") }
     );
   };
 
@@ -102,12 +102,12 @@ export function TrialBalanceView() {
     exportToPDF(
       {
         columns: [
-          { key: "account_code", header: "Código" },
-          { key: "account_name", header: "Cuenta" },
-          { key: "account_type", header: "Tipo" },
-          { key: "total_debit_base", header: "Débito" },
-          { key: "total_credit_base", header: "Crédito" },
-          { key: "balance_base", header: "Saldo" },
+          { key: "account_code", header: t("accounting.tb.col.code") },
+          { key: "account_name", header: t("accounting.tb.col.account") },
+          { key: "account_type", header: t("accounting.tb.col.type") },
+          { key: "total_debit_base", header: t("accounting.tb.col.debit") },
+          { key: "total_credit_base", header: t("accounting.tb.col.credit") },
+          { key: "balance_base", header: t("accounting.tb.col.balance") },
         ],
         rows: filtered.map(r => ({
           account_code: r.account_code,
@@ -120,7 +120,7 @@ export function TrialBalanceView() {
       },
       {
         filename: `balanza_comprobacion_${dateRange || "all"}`,
-        title: "Balanza de Comprobación",
+        title: t("accounting.tb.title"),
         subtitle: appliedDates ? `${appliedDates.start || "∞"} — ${appliedDates.end || "∞"}` : undefined,
       }
     );
@@ -130,22 +130,22 @@ export function TrialBalanceView() {
     return (
       <EmptyState
         icon={Scale}
-        title="Balanza de Comprobación"
-        description="Seleccione un rango de fechas para generar la balanza de comprobación."
+        title={t("accounting.tb.title")}
+        description={t("accounting.tb.noMovements")}
         action={
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center gap-2">
               <div>
-                <Label className="text-xs">Desde</Label>
+                <Label className="text-xs">{t("accounting.tb.from")}</Label>
                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40" />
               </div>
               <div>
-                <Label className="text-xs">Hasta</Label>
+                <Label className="text-xs">{t("accounting.tb.to")}</Label>
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
               </div>
             </div>
             <Button onClick={handleGenerate}>
-              <Filter className="h-4 w-4 mr-1" /> Generar
+              <Filter className="h-4 w-4 mr-1" /> {t("common.generate")}
             </Button>
           </div>
         }
@@ -158,22 +158,22 @@ export function TrialBalanceView() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div>
-            <Label className="text-xs">Desde</Label>
+            <Label className="text-xs">{t("accounting.tb.from")}</Label>
             <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40 h-9" />
           </div>
           <div>
-            <Label className="text-xs">Hasta</Label>
+            <Label className="text-xs">{t("accounting.tb.to")}</Label>
             <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40 h-9" />
           </div>
           <Button size="sm" onClick={handleGenerate} className="mt-4">
-            <Filter className="h-4 w-4 mr-1" /> Generar
+            <Filter className="h-4 w-4 mr-1" /> {t("common.generate")}
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{filtered.length} cuentas</span>
+          <span className="text-sm text-muted-foreground">{filtered.length} {t("accounting.tb.accounts")}</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm"><Download className="h-4 w-4 mr-1" /> Exportar</Button>
+              <Button size="sm"><Download className="h-4 w-4 mr-1" /> {t("common.export")}</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-popover">
               <DropdownMenuItem onClick={handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</DropdownMenuItem>
@@ -188,18 +188,18 @@ export function TrialBalanceView() {
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
       ) : filtered.length === 0 ? (
-        <div className="p-8 text-center text-muted-foreground">No hay movimientos en el período seleccionado.</div>
+        <div className="p-8 text-center text-muted-foreground">{t("accounting.tb.noMovements")}</div>
       ) : (
         <div className="border rounded-lg overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Cuenta</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Débito</TableHead>
-                <TableHead className="text-right">Crédito</TableHead>
-                <TableHead className="text-right">Saldo</TableHead>
+                <TableHead>{t("accounting.tb.col.code")}</TableHead>
+                <TableHead>{t("accounting.tb.col.account")}</TableHead>
+                <TableHead>{t("accounting.tb.col.type")}</TableHead>
+                <TableHead className="text-right">{t("accounting.tb.col.debit")}</TableHead>
+                <TableHead className="text-right">{t("accounting.tb.col.credit")}</TableHead>
+                <TableHead className="text-right">{t("accounting.tb.col.balance")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

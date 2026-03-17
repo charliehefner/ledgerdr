@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarDays } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,19 +27,19 @@ type Period = {
   created_at: string | null;
 };
 
-const STATUS_CONFIG: Record<PeriodStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  open: { label: "Abierto", variant: "default" },
-  closed: { label: "Cerrado", variant: "secondary" },
-  reported: { label: "Reportado", variant: "outline" },
-  locked: { label: "Bloqueado", variant: "destructive" },
-};
-
 export function PeriodsView() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ period_name: "", start_date: "", end_date: "" });
+
+  const statusConfig: Record<PeriodStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+    open: { label: t("accounting.periods.statusOpen"), variant: "default" },
+    closed: { label: t("accounting.periods.statusClosed"), variant: "secondary" },
+    reported: { label: t("accounting.periods.statusReported"), variant: "outline" },
+    locked: { label: t("accounting.periods.statusLocked"), variant: "destructive" },
+  };
 
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ["accounting-periods"],
@@ -71,7 +70,7 @@ export function PeriodsView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounting-periods"] });
-      toast({ title: "Período creado" });
+      toast({ title: t("accounting.periods.created") });
       setDialogOpen(false);
     },
     onError: (e: Error) => {
@@ -86,7 +85,7 @@ export function PeriodsView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounting-periods"] });
-      toast({ title: "Período actualizado" });
+      toast({ title: t("accounting.periods.updated") });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -103,32 +102,32 @@ export function PeriodsView() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Períodos Contables</h3>
+        <h3 className="text-lg font-medium">{t("accounting.periods.title")}</h3>
         <Button onClick={openAdd} size="sm">
           <Plus className="h-4 w-4 mr-1" />
-          Nuevo Período
+          {t("accounting.periods.new")}
         </Button>
       </div>
 
       {periods.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
-          title="No hay períodos"
-          description="Cree su primer período contable para comenzar."
-          action={<Button onClick={openAdd} size="sm"><Plus className="h-4 w-4 mr-1" />Nuevo Período</Button>}
+          title={t("accounting.periods.noPeriods")}
+          description={t("accounting.periods.noPeriodsDesc")}
+          action={<Button onClick={openAdd} size="sm"><Plus className="h-4 w-4 mr-1" />{t("accounting.periods.new")}</Button>}
         />
       ) : (
         <div className="border rounded-lg overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Inicio</TableHead>
-                <TableHead>Fin</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="w-[140px]">Cambiar Estado</TableHead>
-                <TableHead className="w-[120px]">Cierre</TableHead>
-                <TableHead className="w-[130px]">Revaluación</TableHead>
+                <TableHead>{t("accounting.periods.col.name")}</TableHead>
+                <TableHead>{t("accounting.periods.col.start")}</TableHead>
+                <TableHead>{t("accounting.periods.col.end")}</TableHead>
+                <TableHead>{t("accounting.periods.col.status")}</TableHead>
+                <TableHead className="w-[140px]">{t("accounting.periods.col.changeStatus")}</TableHead>
+                <TableHead className="w-[120px]">{t("accounting.periods.col.closing")}</TableHead>
+                <TableHead className="w-[130px]">{t("accounting.periods.col.revaluation")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -138,8 +137,8 @@ export function PeriodsView() {
                   <TableCell>{format(new Date(p.start_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{format(new Date(p.end_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_CONFIG[p.status].variant}>
-                      {STATUS_CONFIG[p.status].label}
+                    <Badge variant={statusConfig[p.status].variant}>
+                      {statusConfig[p.status].label}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -147,7 +146,7 @@ export function PeriodsView() {
                       const statusOrder: PeriodStatus[] = ["open", "closed", "reported", "locked"];
                       const currentIdx = statusOrder.indexOf(p.status);
                       const nextStatus = currentIdx < statusOrder.length - 1 ? statusOrder[currentIdx + 1] : null;
-                      if (!nextStatus) return <span className="text-xs text-muted-foreground">Bloqueado</span>;
+                      if (!nextStatus) return <span className="text-xs text-muted-foreground">{t("accounting.periods.statusLocked")}</span>;
                       return (
                         <Button
                           size="sm"
@@ -155,7 +154,7 @@ export function PeriodsView() {
                           className="h-8"
                           onClick={() => updateStatusMutation.mutate({ id: p.id, status: nextStatus })}
                         >
-                          → {STATUS_CONFIG[nextStatus].label}
+                          → {statusConfig[nextStatus].label}
                         </Button>
                       );
                     })()}
@@ -188,20 +187,20 @@ export function PeriodsView() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nuevo Período Contable</DialogTitle>
+            <DialogTitle>{t("accounting.periods.newTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <Label>Nombre del Período</Label>
+              <Label>{t("accounting.periods.periodName")}</Label>
               <Input
                 value={form.period_name}
                 onChange={e => setForm(f => ({ ...f, period_name: e.target.value }))}
-                placeholder="Ej: Enero 2026"
+                placeholder={t("accounting.periods.periodNamePlaceholder")}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Fecha Inicio</Label>
+                <Label>{t("accounting.periods.startDate")}</Label>
                 <Input
                   type="date"
                   value={form.start_date}
@@ -209,7 +208,7 @@ export function PeriodsView() {
                 />
               </div>
               <div>
-                <Label>Fecha Fin</Label>
+                <Label>{t("accounting.periods.endDate")}</Label>
                 <Input
                   type="date"
                   value={form.end_date}

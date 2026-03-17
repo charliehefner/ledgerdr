@@ -393,8 +393,8 @@ export function AccountingReportsView() {
               <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
               <SelectItem value="pl">{t("pl.title")}</SelectItem>
               <SelectItem value="bs">{t("bs.title")}</SelectItem>
-              <SelectItem value="tb">Balanza de Comprobación</SelectItem>
-              <SelectItem value="aging">Antigüedad de Saldos</SelectItem>
+              <SelectItem value="tb">{t("accounting.tb.title")}</SelectItem>
+              <SelectItem value="aging">{t("aging.title")}</SelectItem>
               <SelectItem value="cf">{t("cf.title")}</SelectItem>
             </SelectContent>
           </Select>

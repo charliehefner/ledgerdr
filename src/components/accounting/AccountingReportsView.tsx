@@ -271,7 +271,7 @@ export function AccountingReportsView() {
     ["currency", t("acctReport.col.currency")],
     ["amount", t("acctReport.col.amount")],
     ["itbis", "ITBIS"],
-    ["pay_method", "Método Pago"],
+    ["pay_method", t("acctReport.col.payMethod")],
   ];
 
   const exportToExcel = async () => {

@@ -379,64 +379,77 @@ export function AccountingReportsView() {
   const getDesc = (item: { spanish_description: string; english_description: string }) =>
     language === "en" ? item.english_description : item.spanish_description;
 
+  const reportCards = [
+    { key: "pl" as const, icon: TrendingUp, title: t("pl.title"), desc: t("acctReport.plDesc") },
+    { key: "bs" as const, icon: ClipboardList, title: t("bs.title"), desc: t("acctReport.bsDesc") },
+    { key: "tb" as const, icon: Scale, title: t("accounting.tb.title"), desc: t("acctReport.tbDesc") },
+    { key: "cf" as const, icon: Banknote, title: t("cf.title"), desc: t("acctReport.cfDesc") },
+    { key: "aging" as const, icon: Clock, title: t("aging.title"), desc: t("acctReport.agingDesc") },
+    { key: "detail" as const, icon: Receipt, title: t("acctReport.transactionReports"), desc: t("acctReport.transactionReportsDesc") },
+  ];
+
+  const BackButton = () => (
+    <Button variant="ghost" size="sm" onClick={() => { setReportType(null); setActiveFilters(null); }} className="mb-2">
+      <ArrowLeft className="h-4 w-4 mr-1" />
+      {t("acctReport.backToReports")}
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
-      {/* Report Type Selector — Toolbar Card */}
-      <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-muted/30 px-4 py-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("acctReport.reportType")}</span>
-          <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
-            <SelectTrigger className="w-64">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover">
-              <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
-              <SelectItem value="pl">{t("pl.title")}</SelectItem>
-              <SelectItem value="bs">{t("bs.title")}</SelectItem>
-              <SelectItem value="tb">{t("accounting.tb.title")}</SelectItem>
-              <SelectItem value="aging">{t("aging.title")}</SelectItem>
-              <SelectItem value="cf">{t("cf.title")}</SelectItem>
-            </SelectContent>
-          </Select>
+      {reportType === null ? (
+        /* ===== Card Grid Landing ===== */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">{t("acctReport.title")}</h2>
+            <PowerBIExportButton />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reportCards.map((card) => (
+              <button
+                key={card.key}
+                onClick={() => setReportType(card.key)}
+                className="group relative text-left rounded-xl border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-primary/0 transition-colors group-hover:bg-primary" />
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+                    <card.icon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-sm text-foreground">{card.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{card.desc}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="ml-auto">
-          <PowerBIExportButton />
-        </div>
-      </div>
-
-      {reportType === "pl" ? (
-        <ProfitLossView />
+      ) : reportType === "pl" ? (
+        <><BackButton /><ProfitLossView /></>
       ) : reportType === "bs" ? (
-        <BalanceSheetView />
+        <><BackButton /><BalanceSheetView /></>
       ) : reportType === "tb" ? (
-        <TrialBalanceView />
+        <><BackButton /><TrialBalanceView /></>
       ) : reportType === "aging" ? (
-        <AgingReportView />
+        <><BackButton /><AgingReportView /></>
       ) : reportType === "cf" ? (
-        <CashFlowView />
+        <><BackButton /><CashFlowView /></>
       ) : (
       <>
+      <BackButton />
       {!activeFilters ? (
         <div className="rounded-lg border-2 border-dashed border-border bg-gradient-to-br from-muted/40 to-transparent p-2">
           <EmptyState
             icon={FileBarChart}
-            title={t("acctReport.title")}
-            description={t("acctReport.selectReport")}
+            title={t("acctReport.transactionReports")}
+            description={t("acctReport.description")}
             className="[&_svg]:text-primary [&_.rounded-full]:bg-primary/10"
             action={
-              <div className="space-y-4">
-                <Button onClick={() => { setFilters(emptyFilters); setFiltersOpen(true); }}>
-                  <Filter className="h-4 w-4 mr-1" />
-                  {t("acctReport.generateReport")}
-                </Button>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setReportType("pl")}>{t("pl.title")}</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("bs")}>{t("bs.title")}</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("tb")}>{t("accounting.tb.title")}</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("cf")}>{t("cf.title")}</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("aging")}>{t("aging.title")}</Button>
-                </div>
-              </div>
+              <Button onClick={() => { setFilters(emptyFilters); setFiltersOpen(true); }}>
+                <Filter className="h-4 w-4 mr-1" />
+                {t("acctReport.generateReport")}
+              </Button>
             }
           />
         </div>

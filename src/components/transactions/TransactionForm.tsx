@@ -155,6 +155,28 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     },
   });
 
+  // Credit note alert state
+  const [creditNotes, setCreditNotes] = useState<{ id: string; balance_remaining: number; currency: string; document_number: string | null }[]>([]);
+  
+  useEffect(() => {
+    const name = form.name?.trim();
+    if (!name || name.length < 2) {
+      setCreditNotes([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('ap_ar_documents')
+        .select('id, balance_remaining, currency, document_number')
+        .eq('contact_name', name)
+        .eq('document_type', 'credit_memo')
+        .not('status', 'in', '("paid","void")')
+        .gt('balance_remaining', 0);
+      setCreditNotes(data || []);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.name]);
+
   const uniqueNames = useMemo(() => {
     const names = new Set<string>();
     existingTransactions.forEach(tx => {

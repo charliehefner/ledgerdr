@@ -612,7 +612,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                           <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
                           <TableCell className="font-mono">{payment.transaction_id}</TableCell>
                           <TableCell className="text-right font-mono text-emerald-600 font-semibold">
-                            ${Number(payment.amount).toLocaleString()}
+                            ${formatMoney(Number(payment.amount))}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{payment.notes || "-"}</TableCell>
                           <TableCell className="text-right">

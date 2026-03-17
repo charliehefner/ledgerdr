@@ -181,6 +181,11 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                         {formatDate(tx.transaction_date)}
                       </TableCell>
                     )}
+                    {columnVisibility.isVisible("dueDate") && (
+                      <TableCell className="font-mono text-sm whitespace-nowrap">
+                        {tx.due_date ? formatDate(tx.due_date) : "-"}
+                      </TableCell>
+                    )}
                     {columnVisibility.isVisible("account") && (
                       <TableCell>
                         <div>

@@ -506,6 +506,14 @@ export const en = {
   "acctReport.generated": "Generated",
   "acctReport.filters": "Filters",
   "acctReport.totalTransactions": "Total Transactions",
+  "acctReport.transactionReports": "Transaction Reports",
+  "acctReport.transactionReportsDesc": "Filterable detail report of all transactions",
+  "acctReport.plDesc": "Income vs. expenses over a period",
+  "acctReport.bsDesc": "Assets, liabilities & equity snapshot",
+  "acctReport.tbDesc": "Verify debit = credit totals",
+  "acctReport.cfDesc": "Operating, investing & financing flows",
+  "acctReport.agingDesc": "Outstanding balances by age",
+  "acctReport.backToReports": "Back to Reports",
 
   // Cronograma Module
   "nav.cronograma": "Schedule",

@@ -565,7 +565,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                           : "–"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-lg">
-                        ${totalInvoiced.toLocaleString()}
+                        ${formatMoney(totalInvoiced)}
                       </TableCell>
                     </TableRow>
                   </>

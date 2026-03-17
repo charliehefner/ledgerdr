@@ -303,10 +303,19 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
 
-        // Auto-create AP/AR document when due_date is present (accrual accounting)
-        if (form.due_date && !isTransfer && form.transaction_direction !== 'payment') {
+        // Auto-create AP/AR document when due_date is present OR pay_method is credit
+        const shouldCreateApAr = !isTransfer && form.transaction_direction !== 'payment'
+          && (form.due_date || form.pay_method === 'credit');
+        if (shouldCreateApAr) {
           const direction = form.transaction_direction === 'sale' ? 'receivable' : 'payable';
           const totalAmount = parseFloat(form.amount);
+          // Default due_date to +30 days if credit but no explicit due_date
+          let dueDate = form.due_date;
+          if (!dueDate && form.pay_method === 'credit') {
+            const d = new Date(form.transaction_date!);
+            d.setDate(d.getDate() + 30);
+            dueDate = formatDateLocal(d);
+          }
           try {
             // Look up default AR/AP GL account
             const acctPrefix = direction === 'receivable' ? '12' : '21';
@@ -326,7 +335,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               contact_rnc: form.rnc || null,
               document_number: form.document || null,
               document_date: formatDateLocal(form.transaction_date!),
-              due_date: form.due_date,
+              due_date: dueDate,
               currency: form.currency,
               total_amount: totalAmount,
               amount_paid: 0,

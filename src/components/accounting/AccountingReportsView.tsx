@@ -430,11 +430,11 @@ export function AccountingReportsView() {
                   {t("acctReport.generateReport")}
                 </Button>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setReportType("pl")}>Estado de Resultados</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("bs")}>Balance General</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("tb")}>Balanza de Comprobación</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("cf")}>Flujo de Caja</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("aging")}>Antigüedad de Saldos</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("pl")}>{t("pl.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("bs")}>{t("bs.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("tb")}>{t("accounting.tb.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("cf")}>{t("cf.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("aging")}>{t("aging.title")}</Button>
                 </div>
               </div>
             }

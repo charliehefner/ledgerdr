@@ -189,8 +189,8 @@ export function AgingReportView() {
       {agingData.length === 0 ? (
         <EmptyState
           icon={Clock}
-          title="Antigüedad de Saldos"
-          description="No hay documentos con saldos pendientes."
+          title={t("aging.title")}
+          description={t("aging.noDocuments")}
         />
       ) : (
         <div className="border rounded-lg overflow-auto">

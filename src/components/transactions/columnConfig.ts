@@ -8,6 +8,7 @@ import { ColumnConfig } from "@/hooks/useColumnVisibility";
 export const TRANSACTION_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
   { key: "date", label: "Date / Fecha", defaultVisible: true },
+  { key: "dueDate", label: "Due Date / Fecha Vencimiento", defaultVisible: true },
   { key: "account", label: "Account / Cuenta", defaultVisible: true },
   { key: "project", label: "Project / Proyecto", defaultVisible: false },
   { key: "cbsCode", label: "CBS Code / Código CBS", defaultVisible: false },
@@ -32,6 +33,7 @@ export const TRANSACTION_COLUMNS: ColumnConfig[] = [
 export const REPORT_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: false },
   { key: "date", label: "Date / Fecha", defaultVisible: true },
+  { key: "dueDate", label: "Due Date / Fecha Vencimiento", defaultVisible: true },
   { key: "account", label: "Account / Cuenta", defaultVisible: true },
   { key: "project", label: "Project / Proyecto", defaultVisible: true },
   { key: "cbsCode", label: "CBS Code / Código CBS", defaultVisible: true },
@@ -56,6 +58,7 @@ export const REPORT_COLUMNS: ColumnConfig[] = [
 export const DASHBOARD_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
   { key: "date", label: "Date / Fecha", defaultVisible: true },
+  { key: "dueDate", label: "Due Date / Fecha Vencimiento", defaultVisible: false },
   { key: "account", label: "Account / Cuenta", defaultVisible: true },
   { key: "project", label: "Project / Proyecto", defaultVisible: false },
   { key: "cbsCode", label: "CBS Code / Código CBS", defaultVisible: false },

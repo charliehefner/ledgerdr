@@ -425,6 +425,31 @@ export const en = {
   "accounting.tb.col.credit": "Credit",
   "accounting.tb.col.balance": "Balance",
 
+  // Accounting Reports - Aging
+  "aging.title": "Aging Report",
+  "aging.noDocuments": "No documents with outstanding balances.",
+  "aging.all": "All",
+  "aging.payable": "Accounts Payable",
+  "aging.receivable": "Accounts Receivable",
+  "aging.contactsWithBalance": "contacts with open balances",
+  "aging.col.name": "Name",
+  "aging.col.currency": "Currency",
+  "aging.col.current": "Current",
+  "aging.col.days30": "1-30 days",
+  "aging.col.days60": "31-60 days",
+  "aging.col.days90": "61-90 days",
+  "aging.col.over90": "+90 days",
+
+  // Accounting Reports - Pay Methods & Report Type
+  "acctReport.reportType": "Report Type",
+  "acctReport.selectReport": "Select a report type above, or configure filters for the transaction detail.",
+  "acctReport.payMethod": "Payment Method",
+  "acctReport.col.payMethod": "Pay Method",
+  "payMethod.cash": "Cash",
+  "payMethod.ccAgricultural": "CC Agricultural",
+  "payMethod.ccIndustrial": "CC Industrial",
+
+
   // Accounting - Export headers (for Excel/PDF)
   "accounting.export.number": "Number",
   "accounting.export.type": "Type",

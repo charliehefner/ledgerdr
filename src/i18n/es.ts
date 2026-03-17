@@ -425,6 +425,31 @@ export const es = {
   "accounting.tb.col.credit": "Crédito",
   "accounting.tb.col.balance": "Saldo",
 
+  // Accounting Reports - Aging
+  "aging.title": "Antigüedad de Saldos",
+  "aging.noDocuments": "No hay documentos con saldos pendientes.",
+  "aging.all": "Todos",
+  "aging.payable": "Cuentas por Pagar",
+  "aging.receivable": "Cuentas por Cobrar",
+  "aging.contactsWithBalance": "contactos con saldos abiertos",
+  "aging.col.name": "Nombre",
+  "aging.col.currency": "Moneda",
+  "aging.col.current": "Vigente",
+  "aging.col.days30": "1-30 días",
+  "aging.col.days60": "31-60 días",
+  "aging.col.days90": "61-90 días",
+  "aging.col.over90": "+90 días",
+
+  // Accounting Reports - Pay Methods & Report Type
+  "acctReport.reportType": "Tipo de Informe",
+  "acctReport.selectReport": "Seleccione un tipo de informe arriba, o configure filtros para el detalle de transacciones.",
+  "acctReport.payMethod": "Método de Pago",
+  "acctReport.col.payMethod": "Método Pago",
+  "payMethod.cash": "Efectivo",
+  "payMethod.ccAgricultural": "CC Agrícola",
+  "payMethod.ccIndustrial": "CC Industrial",
+
+
   // Accounting - Export headers (for Excel/PDF)
   "accounting.export.number": "Número",
   "accounting.export.type": "Tipo",

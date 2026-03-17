@@ -450,7 +450,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
               <div>
                 <span className="text-muted-foreground">{t("contracts.pricePerUnit")}:</span>
                 <div className="font-medium font-mono">
-                  ${selectedContract.price_per_unit.toLocaleString()}/{UNIT_LABELS[selectedContract.unit_type]}
+                  ${formatMoney(selectedContract.price_per_unit)}/{UNIT_LABELS[selectedContract.unit_type]}
                 </div>
               </div>
               {selectedContract.farm?.name && (

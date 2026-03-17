@@ -177,7 +177,7 @@ export function AgingReportView() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm"><Download className="h-4 w-4 mr-1" /> Exportar</Button>
+            <Button size="sm"><Download className="h-4 w-4 mr-1" /> {t("common.export")}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-popover">
             <DropdownMenuItem onClick={handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</DropdownMenuItem>

@@ -288,6 +288,7 @@ export function ApArDocumentList({ direction }: Props) {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">
                     <SelectItem value="invoice">{t("apar.invoice")}</SelectItem>
+                    {direction === "payable" && <SelectItem value="bill">{t("apar.bill")}</SelectItem>}
                     <SelectItem value="credit_memo">{t("apar.creditMemo")}</SelectItem>
                     <SelectItem value="debit_note">{t("apar.debitNote")}</SelectItem>
                   </SelectContent>

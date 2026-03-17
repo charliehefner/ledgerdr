@@ -526,10 +526,10 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                             {entry.units_charged.toLocaleString()} {unitLabel}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            ${baseCost.toLocaleString()}
+                            ${formatMoney(baseCost)}
                             {entry.cost_override !== null && (
                               <div className="text-xs text-muted-foreground line-through">
-                                ${entry.calculated_cost.toLocaleString()}
+                                ${formatMoney(entry.calculated_cost)}
                               </div>
                             )}
                           </TableCell>

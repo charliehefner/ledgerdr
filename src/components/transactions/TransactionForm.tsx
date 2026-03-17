@@ -1020,6 +1020,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               />
             </div>
 
+            {creditNotes.length > 0 && (
+              <div className="md:col-span-3">
+                <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/20">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                    Este proveedor tiene {creditNotes.length} nota(s) de crédito pendiente(s) por{' '}
+                    <strong>
+                      {creditNotes.reduce((sum, cn) => sum + (cn.balance_remaining || 0), 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                    </strong>
+                    . Considere aplicarla(s) antes de registrar un nuevo pago.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>{t('txForm.rnc')}</Label>
               <Input

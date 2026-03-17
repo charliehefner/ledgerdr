@@ -73,14 +73,15 @@ const emptyFilters: Filters = {
 
 type SortKey = "legacy_id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis" | "pay_method";
 
-const PAY_METHOD_LABELS: Record<string, string> = {
+const usePayMethodLabels = (t: (key: string) => string): Record<string, string> => ({
   transfer_bdi: "Transfer BDI",
   transfer_bhd: "Transfer BHD",
-  cash: "Efectivo",
+  cash: t("payMethod.cash"),
   cc_management: "CC Management",
-  cc_agricultural: "CC Agrícola",
-  cc_industrial: "CC Industrial",
-};
+  cc_agricultural: t("payMethod.ccAgricultural"),
+  cc_industrial: t("payMethod.ccIndustrial"),
+});
+
 type SortDir = "asc" | "desc" | null;
 
 const COST_CENTER_LABELS: Record<string, Record<string, string>> = {

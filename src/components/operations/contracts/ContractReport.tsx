@@ -666,7 +666,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.totalInvoiced")}</div>
-                <div className="text-xl font-bold font-mono">${totalInvoiced.toLocaleString()}</div>
+                <div className="text-xl font-bold font-mono">${formatMoney(totalInvoiced)}</div>
               </div>
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.totalPaid")}</div>

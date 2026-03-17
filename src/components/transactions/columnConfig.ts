@@ -33,6 +33,7 @@ export const TRANSACTION_COLUMNS: ColumnConfig[] = [
 export const REPORT_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: false },
   { key: "date", label: "Date / Fecha", defaultVisible: true },
+  { key: "dueDate", label: "Due Date / Fecha Vencimiento", defaultVisible: true },
   { key: "account", label: "Account / Cuenta", defaultVisible: true },
   { key: "project", label: "Project / Proyecto", defaultVisible: true },
   { key: "cbsCode", label: "CBS Code / Código CBS", defaultVisible: true },

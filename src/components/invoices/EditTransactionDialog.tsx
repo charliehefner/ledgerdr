@@ -277,6 +277,59 @@ export function EditTransactionDialog({
 
       await updateTransaction(String(transaction.legacy_id), updates);
 
+      // Auto-create AP/AR document if due_date or credit pay_method and none exists yet
+      const effectivePayMethod = updates.pay_method !== undefined ? updates.pay_method : editedPayMethod;
+      const effectiveDueDate = updates.due_date !== undefined ? updates.due_date : formData.due_date;
+      const effectiveDirection = updates.transaction_direction || formData.transaction_direction;
+
+      if (transaction.id && (effectivePayMethod === 'credit' || effectiveDueDate) && effectiveDirection !== 'payment') {
+        try {
+          // Check if AP/AR document already exists for this transaction
+          const { data: existingDoc } = await supabase
+            .from('ap_ar_documents')
+            .select('id')
+            .contains('linked_transaction_ids', [transaction.id])
+            .maybeSingle();
+
+          if (!existingDoc) {
+            const direction = effectiveDirection === 'sale' ? 'receivable' : 'payable';
+            const acctPrefix = direction === 'receivable' ? '12' : '21';
+
+            const { data: defaultAcct } = await supabase
+              .from('chart_of_accounts')
+              .select('id')
+              .is('deleted_at', null)
+              .eq('allow_posting', true)
+              .like('account_code', `${acctPrefix}%`)
+              .order('account_code')
+              .limit(1)
+              .maybeSingle();
+
+            const txAmount = updates.amount !== undefined ? updates.amount : parseFloat(formData.amount);
+            const txCurrency = updates.currency || formData.currency || 'DOP';
+            const txDate = updates.transaction_date || formData.transaction_date;
+            const dueDateVal = effectiveDueDate || txDate;
+
+            await supabase.from('ap_ar_documents').insert({
+              contact_name: updates.name || formData.name || 'Sin nombre',
+              contact_rnc: updates.rnc !== undefined ? updates.rnc : (editedRnc || null),
+              direction,
+              document_date: txDate,
+              due_date: dueDateVal,
+              total_amount: txAmount,
+              amount_paid: 0,
+              status: 'open',
+              currency: txCurrency,
+              linked_transaction_ids: [transaction.id],
+              account_id: defaultAcct?.id || null,
+              document_type: direction === 'receivable' ? 'invoice' : 'bill',
+            });
+          }
+        } catch (apArError) {
+          console.warn('AP/AR auto-creation failed (non-fatal):', apArError);
+        }
+      }
+
       // Sync original values
       setOriginalDocument(editedDocument);
       setOriginalDescription(editedDescription);

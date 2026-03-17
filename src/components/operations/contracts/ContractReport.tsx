@@ -555,7 +555,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                         {totalUnits.toLocaleString()} {UNIT_LABELS[selectedContract.unit_type]}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        ${totalBaseCost.toLocaleString()}
+                        ${formatMoney(totalBaseCost)}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${totalLineItems < 0 ? "text-destructive" : ""}`}>
                         {totalLineItems !== 0 

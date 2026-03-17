@@ -252,6 +252,7 @@ export function EditTransactionDialog({
 
       // New editable fields
       if (formData.transaction_date !== originalFormData.transaction_date) updates.transaction_date = formData.transaction_date;
+      if (formData.due_date !== originalFormData.due_date) updates.due_date = formData.due_date || null;
       if (formData.master_acct_code !== originalFormData.master_acct_code) updates.master_acct_code = formData.master_acct_code;
       if (formData.project_code !== originalFormData.project_code) updates.project_code = formData.project_code || null;
       if (formData.cbs_code !== originalFormData.cbs_code) updates.cbs_code = formData.cbs_code || null;

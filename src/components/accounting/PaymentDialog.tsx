@@ -133,7 +133,51 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         }).eq("id", journalId);
       }
 
-      // 2. Record payment in ap_ar_payments audit trail
+      // 2. Create a transaction record for full traceability
+      let transactionLegacyId: number | null = null;
+      try {
+        // Look up AP/AR account code for master_acct_code
+        const { data: apArAcct } = await supabase
+          .from("chart_of_accounts")
+          .select("account_code")
+          .eq("id", apArAccountId)
+          .maybeSingle();
+
+        const txDescription = `Pago ${isPayable ? "a" : "de"} ${document.contact_name} — ${document.document_number || "S/N"}`;
+
+        const { data: newTx, error: txErr } = await supabase
+          .from("transactions")
+          .insert({
+            transaction_date: paymentDate,
+            description: txDescription,
+            amount: amount,
+            currency: document.currency,
+            pay_method: bankAccountId,
+            name: document.contact_name,
+            master_acct_code: apArAcct?.account_code || (isPayable ? "2100" : "1200"),
+            transaction_direction: isPayable ? "purchase" : "sale",
+            is_internal: false,
+            cost_center: "general",
+            exchange_rate: document.currency !== "DOP" ? undefined : 1,
+          })
+          .select("id, legacy_id")
+          .single();
+
+        if (txErr) {
+          console.error("Transaction insert error (non-fatal):", txErr);
+        } else if (newTx) {
+          transactionLegacyId = newTx.legacy_id;
+          // Link journal to this transaction
+          await supabase
+            .from("journals")
+            .update({ transaction_source_id: newTx.id })
+            .eq("id", journalId);
+        }
+      } catch (txError) {
+        console.error("Transaction creation failed (non-fatal):", txError);
+      }
+
+      // 3. Record payment in ap_ar_payments audit trail
       const { error: pErr } = await supabase.from("ap_ar_payments" as any).insert({
         document_id: document.id,
         payment_date: paymentDate,
@@ -142,6 +186,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         bank_account_id: bankAccountId,
         journal_id: journalId,
         created_by: user?.id || null,
+        notes: transactionLegacyId ? `TX-${transactionLegacyId}` : null,
       });
       if (pErr) console.error("Payment audit insert error:", pErr);
 

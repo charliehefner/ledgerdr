@@ -832,7 +832,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableCell></TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right">
-                          {moleculeSummary.reduce((s, r) => s + r.totalCost, 0).toFixed(2)}
+                          {formatMoney(moleculeSummary.reduce((s, r) => s + r.totalCost, 0))}
                         </TableCell>
                         <TableCell className="text-right">
                           {moleculeSummary.reduce((s, r) => s + r.totalCO2e, 0).toFixed(2)}

@@ -276,7 +276,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
     query = query.eq('id', String(id));
   }
 
-  const { data, error } = await query.select().single();
+  const { data, error } = await query.select().maybeSingle();
   
   if (error) {
     console.error('Error updating transaction:', error);

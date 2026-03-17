@@ -1,90 +1,51 @@
-## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
-### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
-- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
-- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
-- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-### ✅ 2. Journal Generation: Exchange Rate
-- `generate-journals` now reads `exchange_rate` from transactions
-- Sets `currency` and `exchange_rate` on created journals after RPC call
+# Redesign Accounting Reports as 6-Card Grid
 
-### ✅ 3. Auto AP/AR Document Creation from Transactions
-- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
-- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
-- Links transaction ID via `linked_transaction_ids`
+## Current State
+The Reports tab uses a dropdown selector to switch between 6 report types (Transaction Detail, P&L, Balance Sheet, Trial Balance, Aging, Cash Flow). When "detail" is selected, an empty state with quick-action buttons appears. The Power BI export button sits in the toolbar next to the dropdown.
 
-### ✅ 4. AP/AR Payment Generates Journal Entry
-- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
-- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
-- Requires bank account selection with mapped GL account
-- Records in `ap_ar_payments` audit trail table
+## Proposed Design
+Replace the dropdown + empty state with a **6-card grid landing page**. Each card is a clickable report entry point with an icon, title, and brief description. Once a card is clicked, the corresponding report view renders (same as today). A back button returns to the grid.
 
-### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
-- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
-- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
-- Each line now includes a narrative `description` field
+### Card Grid Layout
+3 columns on desktop, 2 on tablet, 1 on mobile. Cards follow the existing enterprise design system (soft shadows, hover elevation, left-border accent).
 
-### ✅ 6. AP/AR Payment Audit Trail Table
-- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
-- RLS: authenticated SELECT, admin/management/accountant INSERT
+```text
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  📊 Profit &     │  │  📋 Balance      │  │  ⚖️ Trial        │
+│     Loss         │  │     Sheet        │  │     Balance      │
+│  Income vs       │  │  Assets, liab,   │  │  Verify debit =  │
+│  expenses        │  │  equity snapshot  │  │  credit totals   │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  💰 Cash Flow    │  │  ⏳ Aging        │  │  📑 Transaction  │
+│                  │  │     Report       │  │     Reports      │
+│  Operating,      │  │  Outstanding     │  │  Filterable      │
+│  investing, fin  │  │  balances by age │  │  detail report   │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+```
 
-### ✅ 7. Payroll Journal Detail Integration (PRJ)
-- Closing payroll now generates detailed PRJ journal with:
-  - Debit: Salary Expense (7010), Employer TSS (6210)
-  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
-- Non-fatal: payroll close proceeds even if journal generation fails
+### Power BI Export Placement
+The **Export Power BI** button moves to the top-right of the grid landing page as a secondary action (consistent with how export buttons appear elsewhere in the app). It's visible without being intrusive.
 
-### ✅ 8. Bank GL Book Balance Display
-- BankAccountsList now shows "Saldo Contable" column
-- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
+## Implementation
 
-### ✅ 9. Post Journal via Server-Side RPC
-- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
-- Ensures server-side balance validation before posting
+### File: `src/components/accounting/AccountingReportsView.tsx`
+1. **Remove** the toolbar card with the `<Select>` dropdown (lines 384–405).
+2. **Add a grid landing page** when `reportType` is `null` (change initial state from `"detail"` to `null`). The grid renders 6 styled cards, each with an icon, translated title, translated subtitle, and `onClick` to set reportType.
+3. **Rename** "Transaction Detail" → "Transaction Reports" (add new i18n key `acctReport.transactionReports` / `acctReport.transactionReportsDesc`).
+4. **Add a back/return button** at the top of each report view to go back to the grid (`setReportType(null)`).
+5. **Place Power BI button** in the grid header row (top-right, aligned with a section title like "Accounting Reports").
+6. Update `ReportType` to allow `null` as the landing state.
 
-### ✅ 10. Cost Center Filtering in Financial Reports
-- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
-- LEFT JOINs transactions to filter by cost_center when not "all"
-- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
+### Files: `src/i18n/en.ts` and `src/i18n/es.ts`
+Add ~8 new keys:
+- `acctReport.transactionReports` — "Transaction Reports" / "Informes de Transacciones"
+- `acctReport.transactionReportsDesc` — short description
+- `acctReport.plDesc`, `acctReport.bsDesc`, `acctReport.tbDesc`, `acctReport.cfDesc`, `acctReport.agingDesc` — card subtitles
+- `acctReport.backToReports` — "Back to Reports" / "Volver a Informes"
 
----
+### Scope
+3 files changed. No database changes. All existing report functionality preserved — only the navigation entry point changes.
 
-## Deep Technical Audit Fixes — IMPLEMENTED
-
-### ✅ Finding 1: Journal Generation for UUID pay_methods (CRITICAL)
-- Added `resolvePayAccountId()` helper: tries legacy `payment_method_accounts` mapping first, then falls back to `bank_accounts.chart_account_id` via UUID lookup
-- Both transfer and purchase/sale paths now use the dual-resolution flow
-
-### ⏳ Finding 2: Bank Accounts Missing GL Links (CRITICAL)
-- Waiting on accountant to provide correct chart_account_id for each bank account
-
-### ✅ Finding 3: DGII 606 Forma de Pago (HIGH)
-- `getFormaDePago()` now accepts optional `bankAccounts` array parameter
-- Resolves UUID pay_methods via bank account_type: bank→02, credit_card→03, petty_cash→01
-- `DGIIReportsView` fetches bank accounts and passes to `DGII606Table`
-
-### ✅ Finding 4: PaymentMethodMappingDialog Obsolete (MEDIUM)
-- Removed Settings gear button and `PaymentMethodMappingDialog` usage from JournalView
-- Component file preserved for backwards compatibility
-
-### ✅ Finding 5: Cross-Currency Transfer Journal Balance (MEDIUM)
-- Simplified to always use `sourceAmount` for both debit and credit sides
-- Journal stays balanced; currency context captured in journal header metadata
-
-### ✅ Finding 6: Voided Transaction Voids AP/AR Document (MEDIUM)
-- Created SQL trigger `trg_void_ap_ar_on_transaction_void` on transactions table
-- When `is_void` changes to true, auto-sets `status = 'void'` on linked AP/AR documents
-
-### ✅ Finding 7: Exchange Rate on AP/AR Payment Journals (MEDIUM)
-- PaymentDialog now sets `currency` and `exchange_rate` on journals for non-DOP documents
-- Fetches latest exchange rate from `exchange_rates` table
-
-### ⏳ Finding 8: Client-Side Depreciation Loop (LOW)
-- Deferred — performance optimization, not correctness issue
-
-### ✅ Finding 9: Unlinked Count Has No Date Filter (LOW)
-- Working as designed — Generate Journals processes ALL unlinked transactions
-
-### ✅ Finding 10: Aging Report Currency Mixing (LOW)
-- Totals row now shows separate rows per currency instead of mixing DOP + USD

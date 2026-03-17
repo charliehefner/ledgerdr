@@ -114,20 +114,20 @@ export function AgingReportView() {
   const handleExportExcel = () => {
     exportToExcel({
       columns: [
-        { key: "name", header: "Nombre", width: 24 },
-        { key: "currency", header: "Moneda", width: 8 },
-        { key: "current", header: "Vigente", width: 14 },
-        { key: "days30", header: "1-30 días", width: 14 },
-        { key: "days60", header: "31-60 días", width: 14 },
-        { key: "days90", header: "61-90 días", width: 14 },
-        { key: "over90", header: "+90 días", width: 14 },
-        { key: "total", header: "Total", width: 14 },
+        { key: "name", header: t("aging.col.name"), width: 24 },
+        { key: "currency", header: t("aging.col.currency"), width: 8 },
+        { key: "current", header: t("aging.col.current"), width: 14 },
+        { key: "days30", header: t("aging.col.days30"), width: 14 },
+        { key: "days60", header: t("aging.col.days60"), width: 14 },
+        { key: "days90", header: t("aging.col.days90"), width: 14 },
+        { key: "over90", header: t("aging.col.over90"), width: 14 },
+        { key: "total", header: t("common.total"), width: 14 },
       ],
       rows: agingData,
       totalsRow: totalsByCurrency.length === 1
         ? { name: "TOTAL", currency: totalsByCurrency[0][0], ...totalsByCurrency[0][1] }
         : undefined,
-    }, { filename: "aging_report", title: "Antigüedad de Saldos" });
+    }, { filename: "aging_report", title: t("aging.title") });
   };
 
   const handleExportPDF = () => {

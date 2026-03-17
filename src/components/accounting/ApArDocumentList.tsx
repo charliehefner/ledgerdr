@@ -198,7 +198,7 @@ export function ApArDocumentList({ direction }: Props) {
           {documents.length} {t("acctReport.transactions")}
         </span>
         {canWrite && (
-          <Button size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
+          <Button variant="outline" size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" /> {t("apar.newDocument")}
           </Button>
         )}

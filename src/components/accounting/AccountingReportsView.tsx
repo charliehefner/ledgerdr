@@ -255,7 +255,7 @@ export function AccountingReportsView() {
     if (activeFilters.projectCode !== "all") parts.push(`${t("acctReport.project")}: ${activeFilters.projectCode}`);
     if (activeFilters.cbsCode !== "all") parts.push(`CBS: ${activeFilters.cbsCode}`);
     if (activeFilters.supplierName) parts.push(`${t("acctReport.supplier").split(" /")[0]}: ${activeFilters.supplierName}`);
-    if (activeFilters.payMethod !== "all") parts.push(`Método Pago: ${PAY_METHOD_LABELS[activeFilters.payMethod] || activeFilters.payMethod}`);
+    if (activeFilters.payMethod !== "all") parts.push(`${t("acctReport.col.payMethod")}: ${PAY_METHOD_LABELS[activeFilters.payMethod] || activeFilters.payMethod}`);
     return parts;
   }, [activeFilters, t, ccLabels]);
 

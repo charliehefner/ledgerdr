@@ -8,6 +8,7 @@ import { ColumnConfig } from "@/hooks/useColumnVisibility";
 export const TRANSACTION_COLUMNS: ColumnConfig[] = [
   { key: "id", label: "ID", defaultVisible: true },
   { key: "date", label: "Date / Fecha", defaultVisible: true },
+  { key: "dueDate", label: "Due Date / Fecha Vencimiento", defaultVisible: true },
   { key: "account", label: "Account / Cuenta", defaultVisible: true },
   { key: "project", label: "Project / Proyecto", defaultVisible: false },
   { key: "cbsCode", label: "CBS Code / Código CBS", defaultVisible: false },

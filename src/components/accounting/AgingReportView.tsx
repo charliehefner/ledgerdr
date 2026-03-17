@@ -133,14 +133,14 @@ export function AgingReportView() {
   const handleExportPDF = () => {
     exportToPDF({
       columns: [
-        { key: "name", header: "Nombre" },
-        { key: "currency", header: "Moneda" },
-        { key: "current", header: "Vigente" },
-        { key: "days30", header: "1-30" },
-        { key: "days60", header: "31-60" },
-        { key: "days90", header: "61-90" },
-        { key: "over90", header: "+90" },
-        { key: "total", header: "Total" },
+        { key: "name", header: t("aging.col.name") },
+        { key: "currency", header: t("aging.col.currency") },
+        { key: "current", header: t("aging.col.current") },
+        { key: "days30", header: t("aging.col.days30") },
+        { key: "days60", header: t("aging.col.days60") },
+        { key: "days90", header: t("aging.col.days90") },
+        { key: "over90", header: t("aging.col.over90") },
+        { key: "total", header: t("common.total") },
       ],
       rows: agingData.map(r => ({
         name: r.name,
@@ -152,7 +152,7 @@ export function AgingReportView() {
         over90: fmtNum(r.over90),
         total: fmtNum(r.total),
       })),
-    }, { filename: "aging_report", title: "Antigüedad de Saldos" });
+    }, { filename: "aging_report", title: t("aging.title") });
   };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;

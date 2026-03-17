@@ -1104,12 +1104,10 @@ export const es = {
   "apar.noDocumentsDesc": "Cree una factura o cuenta para comenzar.",
   "apar.statementPdf": "Generar Estado de Cuenta",
 
-  // Aprobación de Asientos
+  // Aprobación de Asientos (kept for backward compat — primary keys above)
   "accounting.approvalPending": "Pendiente",
   "accounting.approvalApproved": "Aprobado",
   "accounting.approvalRejected": "Rechazado",
-  "accounting.approve": "Aprobar",
-  "accounting.reject": "Rechazar",
   "accounting.rejectionReason": "Motivo de Rechazo",
   "accounting.approvedBy": "Aprobado por",
   "accounting.rejectedBy": "Rechazado por",

@@ -1103,12 +1103,10 @@ export const en = {
   "apar.noDocumentsDesc": "Create an invoice or bill to get started.",
   "apar.statementPdf": "Generate Statement",
 
-  // Journal Approval
+  // Journal Approval (kept for backward compat — primary keys above)
   "accounting.approvalPending": "Pending",
   "accounting.approvalApproved": "Approved",
   "accounting.approvalRejected": "Rejected",
-  "accounting.approve": "Approve",
-  "accounting.reject": "Reject",
   "accounting.rejectionReason": "Rejection Reason",
   "accounting.approvedBy": "Approved by",
   "accounting.rejectedBy": "Rejected by",

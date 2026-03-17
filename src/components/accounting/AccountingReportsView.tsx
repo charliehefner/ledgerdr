@@ -608,7 +608,7 @@ export function AccountingReportsView() {
             {/* Pay Method */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
-                <Label>Método de Pago</Label>
+                <Label>{t("acctReport.payMethod")}</Label>
                 <Select value={filters.payMethod} onValueChange={v => setFilters(f => ({ ...f, payMethod: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">

@@ -197,14 +197,14 @@ export function AgingReportView() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Moneda</TableHead>
-                <TableHead className="text-right">Vigente</TableHead>
-                <TableHead className="text-right">1-30 días</TableHead>
-                <TableHead className="text-right">31-60 días</TableHead>
-                <TableHead className="text-right">61-90 días</TableHead>
-                <TableHead className="text-right text-destructive">+90 días</TableHead>
-                <TableHead className="text-right font-bold">Total</TableHead>
+                <TableHead>{t("aging.col.name")}</TableHead>
+                <TableHead>{t("aging.col.currency")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.current")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.days30")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.days60")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.days90")}</TableHead>
+                <TableHead className="text-right text-destructive">{t("aging.col.over90")}</TableHead>
+                <TableHead className="text-right font-bold">{t("common.total")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

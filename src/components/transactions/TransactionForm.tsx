@@ -333,7 +333,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               direction,
               contact_name: form.name || form.description,
               contact_rnc: form.rnc || null,
-              document_number: form.document || null,
+              document_number: result.legacy_id?.toString() || null,
               document_date: formatDateLocal(form.transaction_date!),
               due_date: dueDate,
               currency: form.currency,

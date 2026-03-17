@@ -323,6 +323,7 @@ export function EditTransactionDialog({
               linked_transaction_ids: [transaction.id],
               account_id: defaultAcct?.id || null,
               document_type: direction === 'receivable' ? 'invoice' : 'bill',
+              document_number: transaction.legacy_id?.toString() || null,
             });
           }
         } catch (apArError) {

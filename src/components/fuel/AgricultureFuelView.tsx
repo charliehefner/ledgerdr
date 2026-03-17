@@ -250,12 +250,10 @@ export function AgricultureFuelView() {
         if (tankError) throw tankError;
       }
 
-      // Update equipment hour meter
-      const { error: equipError } = await supabase
-        .from("fuel_equipment")
-        .update({ current_hour_meter: hourMeter })
-        .eq("id", data.equipment_id);
-      if (equipError) throw equipError;
+      // NOTE: We do NOT update fuel_equipment.current_hour_meter here.
+      // The canonical source for tractor hour meters is the operations log,
+      // synced by the DB trigger update_tractor_hour_meter (MAX end_hours).
+      // Overwriting it from fuel transactions caused data corruption (see March 2026 incident).
 
       // Deduct from inventory if matching fuel inventory item exists
       const fuelType = tankData?.fuel_type || 'diesel';

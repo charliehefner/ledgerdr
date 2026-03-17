@@ -54,7 +54,7 @@ type SortDirection = "asc" | "desc" | null;
 
 export default function Reports() {
   const queryClient = useQueryClient();
-  const [limit, setLimit] = useState("150");
+  const [limit, setLimit] = useState("10000");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [sortKey, setSortKey] = useState<SortKey | null>(null);

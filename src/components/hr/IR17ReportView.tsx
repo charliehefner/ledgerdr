@@ -156,7 +156,7 @@ export function IR17ReportView() {
   const grandTotal = sectionI.totalISR + sectionII.totalTax + sectionIII.totalITBIS;
 
   const handleCopyTotal = () => {
-    navigator.clipboard.writeText(grandTotal.toFixed(2));
+    navigator.clipboard.writeText(fmt(grandTotal));
     toast.success("Total IR-17 copiado al portapapeles");
   };
 

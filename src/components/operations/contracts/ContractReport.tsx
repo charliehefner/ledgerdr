@@ -43,6 +43,7 @@ import { FileText, DollarSign, Pencil, Trash2, Plus } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import { formatMoney } from "@/lib/formatters";
 import { ContractPayment, PaymentDialog } from "./PaymentDialog";
 
 interface ContractReportProps {
@@ -449,7 +450,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
               <div>
                 <span className="text-muted-foreground">{t("contracts.pricePerUnit")}:</span>
                 <div className="font-medium font-mono">
-                  ${selectedContract.price_per_unit.toLocaleString()}/{UNIT_LABELS[selectedContract.unit_type]}
+                  ${formatMoney(selectedContract.price_per_unit)}/{UNIT_LABELS[selectedContract.unit_type]}
                 </div>
               </div>
               {selectedContract.farm?.name && (
@@ -512,9 +513,9 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                                   {entry.line_items?.map((item, i) => (
                                     <div key={i} className={item.amount < 0 ? "text-destructive" : ""}>
-                                      + {item.description}: {item.amount < 0 
-                                        ? `($${Math.abs(item.amount).toLocaleString()})` 
-                                        : `$${item.amount.toLocaleString()}`}
+                                       + {item.description}: {item.amount < 0 
+                                        ? `($${formatMoney(Math.abs(item.amount))})` 
+                                        : `$${formatMoney(item.amount)}`}
                                     </div>
                                   ))}
                                 </div>
@@ -525,22 +526,22 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                             {entry.units_charged.toLocaleString()} {unitLabel}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            ${baseCost.toLocaleString()}
+                            ${formatMoney(baseCost)}
                             {entry.cost_override !== null && (
                               <div className="text-xs text-muted-foreground line-through">
-                                ${entry.calculated_cost.toLocaleString()}
+                                ${formatMoney(entry.calculated_cost)}
                               </div>
                             )}
                           </TableCell>
                           <TableCell className={`text-right font-mono ${lineItemsTotal < 0 ? "text-destructive" : ""}`}>
                             {lineItemsTotal !== 0 
                               ? (lineItemsTotal < 0 
-                                  ? `($${Math.abs(lineItemsTotal).toLocaleString()})` 
-                                  : `$${lineItemsTotal.toLocaleString()}`)
+                                  ? `($${formatMoney(Math.abs(lineItemsTotal))})` 
+                                  : `$${formatMoney(lineItemsTotal)}`)
                               : "–"}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            ${finalCost.toLocaleString()}
+                            ${formatMoney(finalCost)}
                           </TableCell>
                         </TableRow>
                       );
@@ -554,17 +555,17 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                         {totalUnits.toLocaleString()} {UNIT_LABELS[selectedContract.unit_type]}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        ${totalBaseCost.toLocaleString()}
+                        ${formatMoney(totalBaseCost)}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${totalLineItems < 0 ? "text-destructive" : ""}`}>
                         {totalLineItems !== 0 
                           ? (totalLineItems < 0 
-                              ? `($${Math.abs(totalLineItems).toLocaleString()})` 
-                              : `$${totalLineItems.toLocaleString()}`)
+                              ? `($${formatMoney(Math.abs(totalLineItems))})` 
+                              : `$${formatMoney(totalLineItems)}`)
                           : "–"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-lg">
-                        ${totalInvoiced.toLocaleString()}
+                        ${formatMoney(totalInvoiced)}
                       </TableCell>
                     </TableRow>
                   </>
@@ -611,7 +612,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                           <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
                           <TableCell className="font-mono">{payment.transaction_id}</TableCell>
                           <TableCell className="text-right font-mono text-emerald-600 font-semibold">
-                            ${Number(payment.amount).toLocaleString()}
+                            ${formatMoney(Number(payment.amount))}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{payment.notes || "-"}</TableCell>
                           <TableCell className="text-right">
@@ -648,7 +649,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                       <TableRow className="bg-emerald-50 dark:bg-emerald-950/20 font-semibold">
                         <TableCell colSpan={2}>{t("contracts.totalPaid")}</TableCell>
                         <TableCell className="text-right font-mono text-lg text-emerald-600">
-                          ${totalPaid.toLocaleString()}
+                          ${formatMoney(totalPaid)}
                         </TableCell>
                         <TableCell colSpan={2}></TableCell>
                       </TableRow>
@@ -665,16 +666,16 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.totalInvoiced")}</div>
-                <div className="text-xl font-bold font-mono">${totalInvoiced.toLocaleString()}</div>
+                <div className="text-xl font-bold font-mono">${formatMoney(totalInvoiced)}</div>
               </div>
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.totalPaid")}</div>
-                <div className="text-xl font-bold font-mono text-emerald-600">${totalPaid.toLocaleString()}</div>
+                <div className="text-xl font-bold font-mono text-emerald-600">${formatMoney(totalPaid)}</div>
               </div>
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.balance")}</div>
                 <div className={`text-xl font-bold font-mono ${balance > 0 ? 'text-amber-600' : balance < 0 ? 'text-emerald-600' : ''}`}>
-                  ${balance.toLocaleString()}
+                  ${formatMoney(balance)}
                 </div>
               </div>
             </div>

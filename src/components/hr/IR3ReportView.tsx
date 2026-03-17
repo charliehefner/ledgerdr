@@ -243,7 +243,7 @@ export function IR3ReportView() {
     .some((p) => !snapshots.some((s) => s.period_id === p.id));
 
   const handleCopyTotal = () => {
-    navigator.clipboard.writeText(totalISR.toFixed(2));
+    navigator.clipboard.writeText(fmt(totalISR));
     toast.success("Total ISR copiado al portapapeles");
   };
 

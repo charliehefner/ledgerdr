@@ -21,6 +21,7 @@ import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO 
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
+import { formatMoney } from "@/lib/formatters";
 
 const DIESEL_VIRTUAL_ID = "__diesel__";
 
@@ -821,8 +822,8 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableRow key={row.moleculeName}>
                           <TableCell className="font-medium">{row.moleculeName}</TableCell>
                           <TableCell className="text-right">{row.totalAmount.toFixed(2)} {row.useUnit}</TableCell>
-                          <TableCell className="text-right">{row.costPerUnit.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{row.totalCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.costPerUnit)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.totalCost)}</TableCell>
                           <TableCell className="text-right">{row.totalCO2e.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
@@ -831,7 +832,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableCell></TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right">
-                          {moleculeSummary.reduce((s, r) => s + r.totalCost, 0).toFixed(2)}
+                          {formatMoney(moleculeSummary.reduce((s, r) => s + r.totalCost, 0))}
                         </TableCell>
                         <TableCell className="text-right">
                           {moleculeSummary.reduce((s, r) => s + r.totalCO2e, 0).toFixed(2)}
@@ -868,8 +869,8 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                           <TableCell className="text-right">{row.amount.toFixed(2)} {row.inputUnit}</TableCell>
                           <TableCell className="text-right">{row.hectares.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{row.amountPerHectare.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{row.costPerUnit.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{(row.costPerUnit * row.amount).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.costPerUnit)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.costPerUnit * row.amount)}</TableCell>
                           <TableCell>{row.tractor}</TableCell>
                         </TableRow>
                       ))}
@@ -880,7 +881,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableCell className="text-right">{totals.totalHectares.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.avgPerHectare.toFixed(2)}</TableCell>
                         <TableCell></TableCell>
-                        <TableCell className="text-right">{totals.totalCost.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{formatMoney(totals.totalCost)}</TableCell>
                         <TableCell></TableCell>
                       </TableRow>
                     </TableBody>

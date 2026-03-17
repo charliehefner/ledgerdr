@@ -49,6 +49,15 @@ export function formatNumber(num: number, locale: string = "es-DO"): string {
 }
 
 /**
+ * Format a number with thousand separators and 2 decimal places
+ * without a currency symbol. Useful for currency amounts where the
+ * symbol is already provided or not needed.
+ */
+export function formatMoney(n: number): string {
+  return n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
  * Get relative time string in Spanish (e.g., "Hace 2 días")
  */
 export function getRelativeTime(dateString: string): string {

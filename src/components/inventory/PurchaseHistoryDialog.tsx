@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { parseDateLocal } from "@/lib/dateUtils";
+import { formatMoney } from "@/lib/formatters";
 import {
   Dialog,
   DialogContent,
@@ -105,10 +106,10 @@ export function PurchaseHistoryDialog({
                       {(Number(purchase.quantity) * Number(purchase.packaging_quantity || 1)).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
-                      ${Number(purchase.unit_price).toFixed(2)}
+                      ${formatMoney(Number(purchase.unit_price))}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${Number(purchase.total_price).toFixed(2)}
+                      ${formatMoney(Number(purchase.total_price))}
                     </TableCell>
                     <TableCell className="max-w-[150px] truncate">
                       {purchase.notes || "-"}

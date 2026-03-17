@@ -141,6 +141,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
               <TableRow>
                 {columnVisibility.isVisible("id") && <TableHead>ID</TableHead>}
                 {columnVisibility.isVisible("date") && <TableHead>{t("col.date")}</TableHead>}
+                {columnVisibility.isVisible("dueDate") && <TableHead>{language === 'es' ? 'Fecha Venc.' : 'Due Date'}</TableHead>}
                 {columnVisibility.isVisible("account") && <TableHead>{t("col.account")}</TableHead>}
                 {columnVisibility.isVisible("description") && <TableHead>{t("common.description")}</TableHead>}
                 {columnVisibility.isVisible("currency") && <TableHead>{t("col.currency")}</TableHead>}

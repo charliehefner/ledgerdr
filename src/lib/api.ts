@@ -226,6 +226,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
   if (transaction.destination_acct_code !== undefined) updatePayload.destination_acct_code = transaction.destination_acct_code;
   if (transaction.cost_center !== undefined) updatePayload.cost_center = transaction.cost_center;
   if (transaction.itbis_override_reason !== undefined) updatePayload.itbis_override_reason = transaction.itbis_override_reason;
+  if (transaction.due_date !== undefined) updatePayload.due_date = transaction.due_date;
   if (transaction.purchase_date !== undefined) updatePayload.purchase_date = transaction.purchase_date || null;
 
   // Resolve FK IDs when code fields change
@@ -275,7 +276,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
     query = query.eq('id', String(id));
   }
 
-  const { data, error } = await query.select().single();
+  const { data, error } = await query.select().maybeSingle();
   
   if (error) {
     console.error('Error updating transaction:', error);

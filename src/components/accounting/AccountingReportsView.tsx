@@ -93,6 +93,7 @@ type ReportType = "detail" | "pl" | "bs" | "tb" | "aging" | "cf";
 
 export function AccountingReportsView() {
   const { t, language } = useLanguage();
+  const PAY_METHOD_LABELS = usePayMethodLabels(t);
   const [reportType, setReportType] = useState<ReportType>("detail");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);

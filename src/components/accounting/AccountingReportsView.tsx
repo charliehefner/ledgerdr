@@ -89,12 +89,12 @@ const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
   en: { general: "General", agricultural: "Agricultural", industrial: "Industrial" },
 };
 
-type ReportType = "detail" | "pl" | "bs" | "tb" | "aging" | "cf";
+type ReportType = "detail" | "pl" | "bs" | "tb" | "aging" | "cf" | null;
 
 export function AccountingReportsView() {
   const { t, language } = useLanguage();
   const PAY_METHOD_LABELS = usePayMethodLabels(t);
-  const [reportType, setReportType] = useState<ReportType>("detail");
+  const [reportType, setReportType] = useState<ReportType>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [activeFilters, setActiveFilters] = useState<Filters | null>(null);

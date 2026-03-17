@@ -291,7 +291,7 @@ export function AccountingReportsView() {
         { header: t("acctReport.col.currency"), key: "currency", width: 10 },
         { header: t("acctReport.col.amount"), key: "amount", width: 14 },
         { header: "ITBIS", key: "itbis", width: 12 },
-        { header: "Método Pago", key: "pay_method", width: 16 },
+        { header: t("acctReport.col.payMethod"), key: "pay_method", width: 16 },
       ];
       sorted.forEach((tx: any) => {
         ws.addRow({

@@ -166,13 +166,13 @@ export function AgingReportView() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover">
-              <SelectItem value="both">Todos</SelectItem>
-              <SelectItem value="payable">Cuentas por Pagar</SelectItem>
-              <SelectItem value="receivable">Cuentas por Cobrar</SelectItem>
+              <SelectItem value="both">{t("aging.all")}</SelectItem>
+              <SelectItem value="payable">{t("aging.payable")}</SelectItem>
+              <SelectItem value="receivable">{t("aging.receivable")}</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">
-            {agingData.length} contactos con saldos abiertos
+            {agingData.length} {t("aging.contactsWithBalance")}
           </span>
         </div>
         <DropdownMenu>

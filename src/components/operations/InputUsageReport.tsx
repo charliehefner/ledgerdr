@@ -869,8 +869,8 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                           <TableCell className="text-right">{row.amount.toFixed(2)} {row.inputUnit}</TableCell>
                           <TableCell className="text-right">{row.hectares.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{row.amountPerHectare.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{row.costPerUnit.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{(row.costPerUnit * row.amount).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.costPerUnit)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.costPerUnit * row.amount)}</TableCell>
                           <TableCell>{row.tractor}</TableCell>
                         </TableRow>
                       ))}

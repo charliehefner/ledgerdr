@@ -1,90 +1,28 @@
-## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
-### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
-- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
-- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
-- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-### ✅ 2. Journal Generation: Exchange Rate
-- `generate-journals` now reads `exchange_rate` from transactions
-- Sets `currency` and `exchange_rate` on created journals after RPC call
+# Add Credit Note Alert in Transaction Form
 
-### ✅ 3. Auto AP/AR Document Creation from Transactions
-- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
-- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
-- Links transaction ID via `linked_transaction_ids`
+## Overview
+When a user selects a vendor name in the "Nueva Transacción" form, check if that vendor has any outstanding credit notes (Notas de Crédito) in `ap_ar_documents`. If so, display a prominent warning banner before the user submits a payment, so they can apply the credit first.
 
-### ✅ 4. AP/AR Payment Generates Journal Entry
-- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
-- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
-- Requires bank account selection with mapped GL account
-- Records in `ap_ar_payments` audit trail table
+## Changes
 
-### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
-- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
-- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
-- Each line now includes a narrative `description` field
+### 1. `src/components/transactions/TransactionForm.tsx`
+- Add a query that fires when `form.name` changes (debounced): look up `ap_ar_documents` where `contact_name = form.name`, `document_type = 'credit_memo'`, `status` is not `paid`/`void`, and `balance_remaining > 0`.
+- If results exist, render an `Alert` banner (warning variant) below the name field showing: "Este proveedor tiene X nota(s) de crédito pendiente(s) por {total amount}. Considere aplicarla(s) antes de registrar un nuevo pago."
+- The alert appears for both `purchase` and `sale` directions.
 
-### ✅ 6. AP/AR Payment Audit Trail Table
-- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
-- RLS: authenticated SELECT, admin/management/accountant INSERT
+### 2. `src/components/accounting/ApArDocumentList.tsx`
+- The `credit_memo` type already exists in the document type dropdown. No schema changes needed.
+- Credit memos are created manually from the AP/AR "Nuevo Documento" dialog with type "Nota de Crédito".
+- Credit memos have a `total_amount` representing the credit, `balance_remaining` tracks the unapplied portion.
 
-### ✅ 7. Payroll Journal Detail Integration (PRJ)
-- Closing payroll now generates detailed PRJ journal with:
-  - Debit: Salary Expense (7010), Employer TSS (6210)
-  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
-- Non-fatal: payroll close proceeds even if journal generation fails
+### 3. No database changes required
+- `ap_ar_documents` already supports `document_type` as a free text field with `credit_memo` as a value.
+- The query uses existing columns: `contact_name`, `document_type`, `status`, `balance_remaining`.
 
-### ✅ 8. Bank GL Book Balance Display
-- BankAccountsList now shows "Saldo Contable" column
-- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
+### Implementation detail
+- Query in TransactionForm uses `supabase.from('ap_ar_documents').select('id, balance_remaining, currency, document_number').eq('contact_name', form.name).eq('document_type', 'credit_memo').not('status', 'in', '("paid","void")').gt('balance_remaining', 0)`
+- Only runs when `form.name.length >= 2` and direction is `purchase` or `sale`
+- Uses the existing `Alert` component from `@/components/ui/alert` with `AlertTriangle` icon
 
-### ✅ 9. Post Journal via Server-Side RPC
-- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
-- Ensures server-side balance validation before posting
-
-### ✅ 10. Cost Center Filtering in Financial Reports
-- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
-- LEFT JOINs transactions to filter by cost_center when not "all"
-- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
-
----
-
-## Deep Technical Audit Fixes — IMPLEMENTED
-
-### ✅ Finding 1: Journal Generation for UUID pay_methods (CRITICAL)
-- Added `resolvePayAccountId()` helper: tries legacy `payment_method_accounts` mapping first, then falls back to `bank_accounts.chart_account_id` via UUID lookup
-- Both transfer and purchase/sale paths now use the dual-resolution flow
-
-### ⏳ Finding 2: Bank Accounts Missing GL Links (CRITICAL)
-- Waiting on accountant to provide correct chart_account_id for each bank account
-
-### ✅ Finding 3: DGII 606 Forma de Pago (HIGH)
-- `getFormaDePago()` now accepts optional `bankAccounts` array parameter
-- Resolves UUID pay_methods via bank account_type: bank→02, credit_card→03, petty_cash→01
-- `DGIIReportsView` fetches bank accounts and passes to `DGII606Table`
-
-### ✅ Finding 4: PaymentMethodMappingDialog Obsolete (MEDIUM)
-- Removed Settings gear button and `PaymentMethodMappingDialog` usage from JournalView
-- Component file preserved for backwards compatibility
-
-### ✅ Finding 5: Cross-Currency Transfer Journal Balance (MEDIUM)
-- Simplified to always use `sourceAmount` for both debit and credit sides
-- Journal stays balanced; currency context captured in journal header metadata
-
-### ✅ Finding 6: Voided Transaction Voids AP/AR Document (MEDIUM)
-- Created SQL trigger `trg_void_ap_ar_on_transaction_void` on transactions table
-- When `is_void` changes to true, auto-sets `status = 'void'` on linked AP/AR documents
-
-### ✅ Finding 7: Exchange Rate on AP/AR Payment Journals (MEDIUM)
-- PaymentDialog now sets `currency` and `exchange_rate` on journals for non-DOP documents
-- Fetches latest exchange rate from `exchange_rates` table
-
-### ⏳ Finding 8: Client-Side Depreciation Loop (LOW)
-- Deferred — performance optimization, not correctness issue
-
-### ✅ Finding 9: Unlinked Count Has No Date Filter (LOW)
-- Working as designed — Generate Journals processes ALL unlinked transactions
-
-### ✅ Finding 10: Aging Report Currency Mixing (LOW)
-- Totals row now shows separate rows per currency instead of mixing DOP + USD

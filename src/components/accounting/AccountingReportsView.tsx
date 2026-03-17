@@ -419,7 +419,7 @@ export function AccountingReportsView() {
           <EmptyState
             icon={FileBarChart}
             title={t("acctReport.title")}
-            description={t("acctReport.description")}
+            description="Seleccione un tipo de informe arriba, o configure filtros para el detalle de transacciones."
             className="[&_svg]:text-primary [&_.rounded-full]:bg-primary/10"
             action={
               <div className="space-y-4">

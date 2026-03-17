@@ -190,7 +190,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
       });
       if (pErr) console.error("Payment audit insert error:", pErr);
 
-      // 3. Update ap_ar_documents summary
+      // 4. Update ap_ar_documents summary
       const { error } = await supabase
         .from("ap_ar_documents")
         .update({

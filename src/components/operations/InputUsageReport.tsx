@@ -21,6 +21,7 @@ import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO 
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
+import { formatMoney } from "@/lib/formatters";
 
 const DIESEL_VIRTUAL_ID = "__diesel__";
 

@@ -822,8 +822,8 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableRow key={row.moleculeName}>
                           <TableCell className="font-medium">{row.moleculeName}</TableCell>
                           <TableCell className="text-right">{row.totalAmount.toFixed(2)} {row.useUnit}</TableCell>
-                          <TableCell className="text-right">{row.costPerUnit.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{row.totalCost.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.costPerUnit)}</TableCell>
+                          <TableCell className="text-right">{formatMoney(row.totalCost)}</TableCell>
                           <TableCell className="text-right">{row.totalCO2e.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}

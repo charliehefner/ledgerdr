@@ -4,6 +4,7 @@ import { Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { getTipoId, formatDateDGII, getFormaDePago, TIPO_BIENES_SERVICIOS, type BankAccountForDGII } from "./dgiiConstants";
 import ExcelJS from "exceljs";
+import { formatMoney } from "@/lib/formatters";
 
 interface Transaction {
   id: string;

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';

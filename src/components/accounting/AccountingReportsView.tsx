@@ -419,7 +419,7 @@ export function AccountingReportsView() {
           <EmptyState
             icon={FileBarChart}
             title={t("acctReport.title")}
-            description={t("acctReport.description")}
+            description="Seleccione un tipo de informe arriba, o configure filtros para el detalle de transacciones."
             className="[&_svg]:text-primary [&_.rounded-full]:bg-primary/10"
             action={
               <div className="space-y-4">
@@ -427,12 +427,12 @@ export function AccountingReportsView() {
                   <Filter className="h-4 w-4 mr-1" />
                   {t("acctReport.generateReport")}
                 </Button>
-                <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-md bg-muted px-2 py-1">Estado de Resultados</span>
-                  <span className="rounded-md bg-muted px-2 py-1">Balance General</span>
-                  <span className="rounded-md bg-muted px-2 py-1">Balanza de Comprobación</span>
-                  <span className="rounded-md bg-muted px-2 py-1">Flujo de Caja</span>
-                  <span className="rounded-md bg-muted px-2 py-1">Antigüedad de Saldos</span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setReportType("pl")}>Estado de Resultados</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("bs")}>Balance General</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("tb")}>Balanza de Comprobación</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("cf")}>Flujo de Caja</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("aging")}>Antigüedad de Saldos</Button>
                 </div>
               </div>
             }

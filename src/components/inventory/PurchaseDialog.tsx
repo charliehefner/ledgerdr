@@ -455,7 +455,7 @@ export function PurchaseDialog({
             <div className="rounded-lg bg-muted p-3 space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Cost:</span>
-                <span className="font-semibold">${calculateTotal()}</span>
+                <span className="font-semibold">${formatMoney(parseFloat(calculateTotal()))}</span>
               </div>
               {form.packaging_quantity && selectedItem && (
                 <div className="flex justify-between text-sm">

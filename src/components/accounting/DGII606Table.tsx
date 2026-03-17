@@ -127,10 +127,10 @@ export function DGII606Table({ transactions, month, year, bankAccounts }: Props)
                   <TableCell className="font-mono text-xs">{r.ncfModificado}</TableCell>
                   <TableCell className="font-mono text-xs">{r.fecha}</TableCell>
                   <TableCell className="font-mono text-xs">{r.fechaPago}</TableCell>
-                  <TableCell className="text-right">{r.montoFacturado}</TableCell>
-                  <TableCell className="text-right">{r.itbisFacturado}</TableCell>
-                  <TableCell className="text-right">{r.itbisRetenido}</TableCell>
-                  <TableCell className="text-right">{r.isrRetenido}</TableCell>
+                  <TableCell className="text-right">{formatMoney(Number(r.montoFacturado))}</TableCell>
+                  <TableCell className="text-right">{formatMoney(Number(r.itbisFacturado))}</TableCell>
+                  <TableCell className="text-right">{formatMoney(Number(r.itbisRetenido))}</TableCell>
+                  <TableCell className="text-right">{formatMoney(Number(r.isrRetenido))}</TableCell>
                   <TableCell>{r.formaPago}</TableCell>
                 </TableRow>
               ))

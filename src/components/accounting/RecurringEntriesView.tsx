@@ -329,8 +329,8 @@ export function RecurringEntriesView() {
                         <td className="p-2 text-right">
                           <Button type="button" variant="ghost" size="sm" onClick={addLine}><Plus className="h-3 w-3 mr-1" />Línea</Button>
                         </td>
-                        <td className="p-2 text-right font-mono">{totalDebit.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono">{totalCredit.toFixed(2)}</td>
+                        <td className="p-2 text-right font-mono">{formatMoney(totalDebit)}</td>
+                        <td className="p-2 text-right font-mono">{formatMoney(totalCredit)}</td>
                       </tr>
                     </tbody>
                   </table>

@@ -881,7 +881,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         <TableCell className="text-right">{totals.totalHectares.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.avgPerHectare.toFixed(2)}</TableCell>
                         <TableCell></TableCell>
-                        <TableCell className="text-right">{totals.totalCost.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{formatMoney(totals.totalCost)}</TableCell>
                         <TableCell></TableCell>
                       </TableRow>
                     </TableBody>

@@ -675,7 +675,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
               <div className="p-3 bg-background rounded-lg border">
                 <div className="text-sm text-muted-foreground">{t("contracts.balance")}</div>
                 <div className={`text-xl font-bold font-mono ${balance > 0 ? 'text-amber-600' : balance < 0 ? 'text-emerald-600' : ''}`}>
-                  ${balance.toLocaleString()}
+                  ${formatMoney(balance)}
                 </div>
               </div>
             </div>

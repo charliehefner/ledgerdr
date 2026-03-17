@@ -114,33 +114,33 @@ export function AgingReportView() {
   const handleExportExcel = () => {
     exportToExcel({
       columns: [
-        { key: "name", header: "Nombre", width: 24 },
-        { key: "currency", header: "Moneda", width: 8 },
-        { key: "current", header: "Vigente", width: 14 },
-        { key: "days30", header: "1-30 días", width: 14 },
-        { key: "days60", header: "31-60 días", width: 14 },
-        { key: "days90", header: "61-90 días", width: 14 },
-        { key: "over90", header: "+90 días", width: 14 },
-        { key: "total", header: "Total", width: 14 },
+        { key: "name", header: t("aging.col.name"), width: 24 },
+        { key: "currency", header: t("aging.col.currency"), width: 8 },
+        { key: "current", header: t("aging.col.current"), width: 14 },
+        { key: "days30", header: t("aging.col.days30"), width: 14 },
+        { key: "days60", header: t("aging.col.days60"), width: 14 },
+        { key: "days90", header: t("aging.col.days90"), width: 14 },
+        { key: "over90", header: t("aging.col.over90"), width: 14 },
+        { key: "total", header: t("common.total"), width: 14 },
       ],
       rows: agingData,
       totalsRow: totalsByCurrency.length === 1
         ? { name: "TOTAL", currency: totalsByCurrency[0][0], ...totalsByCurrency[0][1] }
         : undefined,
-    }, { filename: "aging_report", title: "Antigüedad de Saldos" });
+    }, { filename: "aging_report", title: t("aging.title") });
   };
 
   const handleExportPDF = () => {
     exportToPDF({
       columns: [
-        { key: "name", header: "Nombre" },
-        { key: "currency", header: "Moneda" },
-        { key: "current", header: "Vigente" },
-        { key: "days30", header: "1-30" },
-        { key: "days60", header: "31-60" },
-        { key: "days90", header: "61-90" },
-        { key: "over90", header: "+90" },
-        { key: "total", header: "Total" },
+        { key: "name", header: t("aging.col.name") },
+        { key: "currency", header: t("aging.col.currency") },
+        { key: "current", header: t("aging.col.current") },
+        { key: "days30", header: t("aging.col.days30") },
+        { key: "days60", header: t("aging.col.days60") },
+        { key: "days90", header: t("aging.col.days90") },
+        { key: "over90", header: t("aging.col.over90") },
+        { key: "total", header: t("common.total") },
       ],
       rows: agingData.map(r => ({
         name: r.name,
@@ -152,7 +152,7 @@ export function AgingReportView() {
         over90: fmtNum(r.over90),
         total: fmtNum(r.total),
       })),
-    }, { filename: "aging_report", title: "Antigüedad de Saldos" });
+    }, { filename: "aging_report", title: t("aging.title") });
   };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>;
@@ -166,18 +166,18 @@ export function AgingReportView() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover">
-              <SelectItem value="both">Todos</SelectItem>
-              <SelectItem value="payable">Cuentas por Pagar</SelectItem>
-              <SelectItem value="receivable">Cuentas por Cobrar</SelectItem>
+              <SelectItem value="both">{t("aging.all")}</SelectItem>
+              <SelectItem value="payable">{t("aging.payable")}</SelectItem>
+              <SelectItem value="receivable">{t("aging.receivable")}</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">
-            {agingData.length} contactos con saldos abiertos
+            {agingData.length} {t("aging.contactsWithBalance")}
           </span>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm"><Download className="h-4 w-4 mr-1" /> Exportar</Button>
+            <Button size="sm"><Download className="h-4 w-4 mr-1" /> {t("common.export")}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-popover">
             <DropdownMenuItem onClick={handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</DropdownMenuItem>
@@ -189,22 +189,22 @@ export function AgingReportView() {
       {agingData.length === 0 ? (
         <EmptyState
           icon={Clock}
-          title="Antigüedad de Saldos"
-          description="No hay documentos con saldos pendientes."
+          title={t("aging.title")}
+          description={t("aging.noDocuments")}
         />
       ) : (
         <div className="border rounded-lg overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Moneda</TableHead>
-                <TableHead className="text-right">Vigente</TableHead>
-                <TableHead className="text-right">1-30 días</TableHead>
-                <TableHead className="text-right">31-60 días</TableHead>
-                <TableHead className="text-right">61-90 días</TableHead>
-                <TableHead className="text-right text-destructive">+90 días</TableHead>
-                <TableHead className="text-right font-bold">Total</TableHead>
+                <TableHead>{t("aging.col.name")}</TableHead>
+                <TableHead>{t("aging.col.currency")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.current")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.days30")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.days60")}</TableHead>
+                <TableHead className="text-right">{t("aging.col.days90")}</TableHead>
+                <TableHead className="text-right text-destructive">{t("aging.col.over90")}</TableHead>
+                <TableHead className="text-right font-bold">{t("common.total")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

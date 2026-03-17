@@ -73,14 +73,15 @@ const emptyFilters: Filters = {
 
 type SortKey = "legacy_id" | "transaction_date" | "master_acct_code" | "project_code" | "cbs_code" | "cost_center" | "name" | "description" | "currency" | "amount" | "itbis" | "pay_method";
 
-const PAY_METHOD_LABELS: Record<string, string> = {
+const usePayMethodLabels = (t: (key: string) => string): Record<string, string> => ({
   transfer_bdi: "Transfer BDI",
   transfer_bhd: "Transfer BHD",
-  cash: "Efectivo",
+  cash: t("payMethod.cash"),
   cc_management: "CC Management",
-  cc_agricultural: "CC Agrícola",
-  cc_industrial: "CC Industrial",
-};
+  cc_agricultural: t("payMethod.ccAgricultural"),
+  cc_industrial: t("payMethod.ccIndustrial"),
+});
+
 type SortDir = "asc" | "desc" | null;
 
 const COST_CENTER_LABELS: Record<string, Record<string, string>> = {
@@ -92,6 +93,7 @@ type ReportType = "detail" | "pl" | "bs" | "tb" | "aging" | "cf";
 
 export function AccountingReportsView() {
   const { t, language } = useLanguage();
+  const PAY_METHOD_LABELS = usePayMethodLabels(t);
   const [reportType, setReportType] = useState<ReportType>("detail");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -253,7 +255,7 @@ export function AccountingReportsView() {
     if (activeFilters.projectCode !== "all") parts.push(`${t("acctReport.project")}: ${activeFilters.projectCode}`);
     if (activeFilters.cbsCode !== "all") parts.push(`CBS: ${activeFilters.cbsCode}`);
     if (activeFilters.supplierName) parts.push(`${t("acctReport.supplier").split(" /")[0]}: ${activeFilters.supplierName}`);
-    if (activeFilters.payMethod !== "all") parts.push(`Método Pago: ${PAY_METHOD_LABELS[activeFilters.payMethod] || activeFilters.payMethod}`);
+    if (activeFilters.payMethod !== "all") parts.push(`${t("acctReport.col.payMethod")}: ${PAY_METHOD_LABELS[activeFilters.payMethod] || activeFilters.payMethod}`);
     return parts;
   }, [activeFilters, t, ccLabels]);
 
@@ -269,7 +271,7 @@ export function AccountingReportsView() {
     ["currency", t("acctReport.col.currency")],
     ["amount", t("acctReport.col.amount")],
     ["itbis", "ITBIS"],
-    ["pay_method", "Método Pago"],
+    ["pay_method", t("acctReport.col.payMethod")],
   ];
 
   const exportToExcel = async () => {
@@ -289,7 +291,7 @@ export function AccountingReportsView() {
         { header: t("acctReport.col.currency"), key: "currency", width: 10 },
         { header: t("acctReport.col.amount"), key: "amount", width: 14 },
         { header: "ITBIS", key: "itbis", width: 12 },
-        { header: "Método Pago", key: "pay_method", width: 16 },
+        { header: t("acctReport.col.payMethod"), key: "pay_method", width: 16 },
       ];
       sorted.forEach((tx: any) => {
         ws.addRow({
@@ -382,7 +384,7 @@ export function AccountingReportsView() {
       {/* Report Type Selector — Toolbar Card */}
       <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-muted/30 px-4 py-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tipo de Informe</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("acctReport.reportType")}</span>
           <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
             <SelectTrigger className="w-64">
               <SelectValue />
@@ -391,8 +393,8 @@ export function AccountingReportsView() {
               <SelectItem value="detail">{t("reports.transactionDetail")}</SelectItem>
               <SelectItem value="pl">{t("pl.title")}</SelectItem>
               <SelectItem value="bs">{t("bs.title")}</SelectItem>
-              <SelectItem value="tb">Balanza de Comprobación</SelectItem>
-              <SelectItem value="aging">Antigüedad de Saldos</SelectItem>
+              <SelectItem value="tb">{t("accounting.tb.title")}</SelectItem>
+              <SelectItem value="aging">{t("aging.title")}</SelectItem>
               <SelectItem value="cf">{t("cf.title")}</SelectItem>
             </SelectContent>
           </Select>
@@ -419,7 +421,7 @@ export function AccountingReportsView() {
           <EmptyState
             icon={FileBarChart}
             title={t("acctReport.title")}
-            description="Seleccione un tipo de informe arriba, o configure filtros para el detalle de transacciones."
+            description={t("acctReport.selectReport")}
             className="[&_svg]:text-primary [&_.rounded-full]:bg-primary/10"
             action={
               <div className="space-y-4">
@@ -428,11 +430,11 @@ export function AccountingReportsView() {
                   {t("acctReport.generateReport")}
                 </Button>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setReportType("pl")}>Estado de Resultados</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("bs")}>Balance General</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("tb")}>Balanza de Comprobación</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("cf")}>Flujo de Caja</Button>
-                  <Button variant="outline" size="sm" onClick={() => setReportType("aging")}>Antigüedad de Saldos</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("pl")}>{t("pl.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("bs")}>{t("bs.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("tb")}>{t("accounting.tb.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("cf")}>{t("cf.title")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setReportType("aging")}>{t("aging.title")}</Button>
                 </div>
               </div>
             }
@@ -606,7 +608,7 @@ export function AccountingReportsView() {
             {/* Pay Method */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
-                <Label>Método de Pago</Label>
+                <Label>{t("acctReport.payMethod")}</Label>
                 <Select value={filters.payMethod} onValueChange={v => setFilters(f => ({ ...f, payMethod: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">

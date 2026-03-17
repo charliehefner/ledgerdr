@@ -83,6 +83,7 @@ export function EditTransactionDialog({
   // Form data for previously read-only fields
   const [formData, setFormData] = useState({
     transaction_date: "",
+    due_date: "",
     master_acct_code: "",
     project_code: "",
     cbs_code: "",
@@ -177,6 +178,7 @@ export function EditTransactionDialog({
       const isTransfer = (transaction.transaction_direction || "purchase") === "payment";
       const newFormData = {
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
+        due_date: transaction.due_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
         project_code: transaction.project_code || "",
         cbs_code: transaction.cbs_code || "",
@@ -250,6 +252,7 @@ export function EditTransactionDialog({
 
       // New editable fields
       if (formData.transaction_date !== originalFormData.transaction_date) updates.transaction_date = formData.transaction_date;
+      if (formData.due_date !== originalFormData.due_date) updates.due_date = formData.due_date || null;
       if (formData.master_acct_code !== originalFormData.master_acct_code) updates.master_acct_code = formData.master_acct_code;
       if (formData.project_code !== originalFormData.project_code) updates.project_code = formData.project_code || null;
       if (formData.cbs_code !== originalFormData.cbs_code) updates.cbs_code = formData.cbs_code || null;
@@ -312,6 +315,7 @@ export function EditTransactionDialog({
     editedCostCenter !== originalCostCenter ||
     editedItbisOverrideReason !== originalItbisOverrideReason ||
     formData.transaction_date !== originalFormData.transaction_date ||
+    formData.due_date !== originalFormData.due_date ||
     formData.master_acct_code !== originalFormData.master_acct_code ||
     formData.project_code !== originalFormData.project_code ||
     formData.cbs_code !== originalFormData.cbs_code ||
@@ -349,7 +353,7 @@ export function EditTransactionDialog({
           )}
 
           <div className="space-y-6">
-            {/* Row 1: Date */}
+            {/* Row 1: Date and Due Date */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Fecha de Transacción</Label>
@@ -357,6 +361,16 @@ export function EditTransactionDialog({
                   type="date"
                   value={formData.transaction_date}
                   onChange={(e) => setFormData(f => ({ ...f, transaction_date: e.target.value }))}
+                  readOnly={locked}
+                  className={locked ? "bg-muted" : ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha de Vencimiento</Label>
+                <Input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
                   readOnly={locked}
                   className={locked ? "bg-muted" : ""}
                 />

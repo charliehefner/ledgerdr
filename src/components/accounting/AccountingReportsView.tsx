@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, TrendingUp, ClipboardList, Scale, Banknote, Clock, Receipt } from "lucide-react";
 import { ProfitLossView } from "./ProfitLossView";
 import { BalanceSheetView } from "./BalanceSheetView";
 import { PowerBIExportButton } from "./PowerBIExportButton";

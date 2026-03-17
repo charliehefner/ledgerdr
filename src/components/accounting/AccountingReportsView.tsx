@@ -384,7 +384,7 @@ export function AccountingReportsView() {
       {/* Report Type Selector — Toolbar Card */}
       <div className="flex items-center gap-3 flex-wrap rounded-lg border bg-muted/30 px-4 py-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tipo de Informe</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("acctReport.reportType")}</span>
           <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
             <SelectTrigger className="w-64">
               <SelectValue />

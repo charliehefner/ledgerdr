@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX, CheckCircle2 } from "lucide-react";
@@ -62,6 +63,7 @@ interface JournalDetailDialogProps {
 
 export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDetailDialogProps) {
   const { user, canWriteSection } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const canWrite = canWriteSection("accounting");
   const isDraft = !journal?.posted;
@@ -144,24 +146,22 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const handleSave = async () => {
     if (!journal || !isEditable) return;
     if (!totals.balanced) {
-      toast({ title: "Error", description: "Débitos y créditos no están balanceados.", variant: "destructive" });
+      toast({ title: "Error", description: t("accounting.debitCreditUnbalanced"), variant: "destructive" });
       return;
     }
     if (lines.some((l) => !l.account_id)) {
-      toast({ title: "Error", description: "Todas las líneas necesitan una cuenta.", variant: "destructive" });
+      toast({ title: "Error", description: t("accounting.allLinesNeedAccount"), variant: "destructive" });
       return;
     }
 
     setSaving(true);
     try {
-      // Update journal description, type, and reference
       const { error: jErr } = await supabase
         .from("journals")
         .update({ description, journal_type: journalType, reference_description: referenceDescription || null } as any)
         .eq("id", journal.id);
       if (jErr) throw jErr;
 
-      // Delete existing lines
       const existingIds = journal.journal_lines.map((l) => l.id);
       if (existingIds.length > 0) {
         const { error: delErr } = await supabase
@@ -171,7 +171,6 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         if (delErr) throw delErr;
       }
 
-      // Insert all lines with project_code and cbs_code
       const newLines = lines.map((l) => ({
         journal_id: journal.id,
         account_id: l.account_id,
@@ -185,7 +184,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
       if (insErr) throw insErr;
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Guardado", description: "Asiento actualizado correctamente." });
+      toast({ title: t("accounting.saved"), description: t("accounting.entryUpdated") });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -197,7 +196,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
   const handlePost = async () => {
     if (!journal || !canWrite) return;
     if (!totals.balanced) {
-      toast({ title: "Error", description: "Débitos y créditos no están balanceados.", variant: "destructive" });
+      toast({ title: "Error", description: t("accounting.debitCreditUnbalanced"), variant: "destructive" });
       return;
     }
 
@@ -212,7 +211,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Publicado", description: "Asiento aprobado y publicado." });
+      toast({ title: t("accounting.publishedTitle"), description: t("accounting.entryPublished") });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -236,7 +235,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         .eq("id", journal.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Aprobado", description: "Asiento aprobado. Puede ser publicado." });
+      toast({ title: t("accounting.approvedTitle"), description: t("accounting.entryApproved") });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -247,7 +246,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
   const handleReject = async () => {
     if (!journal || !canApprove) return;
-    const reason = window.prompt("Motivo de rechazo:");
+    const reason = window.prompt(t("accounting.rejectionPrompt"));
     if (!reason) return;
     setSaving(true);
     try {
@@ -262,7 +261,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         .eq("id", journal.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Rechazado", description: "Asiento rechazado." });
+      toast({ title: t("accounting.rejectedTitle"), description: t("accounting.entryRejected") });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -282,7 +281,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Eliminado", description: "Asiento eliminado." });
+      toast({ title: t("accounting.deleted"), description: t("accounting.entryDeleted") });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -299,11 +298,11 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         <DialogHeader>
           <div className="flex items-center gap-3 flex-wrap">
             <DialogTitle className="text-lg">
-              {journal.journal_number || "Sin número"}
+              {journal.journal_number || t("accounting.noNumber")}
             </DialogTitle>
             <Badge variant="secondary">{(journal as any).journal_type || "GJ"}</Badge>
             <Badge variant={journal.posted ? "default" : "outline"}>
-              {journal.posted ? "Publicado" : "Borrador"}
+              {journal.posted ? t("accounting.posted") : t("accounting.draft")}
             </Badge>
             {!journal.posted && (
               <Badge variant="outline" className={
@@ -311,12 +310,12 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                 journal.approval_status === "rejected" ? "bg-red-100 text-red-800 border-red-200" :
                 "bg-yellow-100 text-yellow-800 border-yellow-200"
               }>
-                {journal.approval_status === "approved" ? "Aprobado" : journal.approval_status === "rejected" ? "Rechazado" : "Pendiente"}
+                {journal.approval_status === "approved" ? t("accounting.approved") : journal.approval_status === "rejected" ? t("accounting.rejected") : t("accounting.pending")}
               </Badge>
             )}
             {journal.is_reconciled && (
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                <CheckCircle2 className="h-3 w-3 mr-1" /> Conciliado
+                <CheckCircle2 className="h-3 w-3 mr-1" /> {t("accounting.reconciled")}
               </Badge>
             )}
           </div>
@@ -326,7 +325,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             {journal.posted && journal.posted_at && (
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Lock className="h-3 w-3" />
-                Publicado el {format(new Date(journal.posted_at), "dd/MM/yyyy HH:mm")}
+                {t("accounting.postedOn")} {format(new Date(journal.posted_at), "dd/MM/yyyy HH:mm")}
               </span>
             )}
           </DialogDescription>
@@ -335,16 +334,16 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         {/* Journal Type (editable for drafts) */}
         {isEditable && (
           <div className="space-y-1">
-            <label className="text-sm font-medium">Tipo de Asiento</label>
+            <label className="text-sm font-medium">{t("accounting.entryType")}</label>
             <Select value={journalType} onValueChange={setJournalType}>
               <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="GJ">GJ – General</SelectItem>
-                <SelectItem value="PJ">PJ – Compras</SelectItem>
-                <SelectItem value="SJ">SJ – Ventas</SelectItem>
-                <SelectItem value="PRJ">PRJ – Nómina</SelectItem>
-                <SelectItem value="CDJ">CDJ – Desembolsos</SelectItem>
-                <SelectItem value="CRJ">CRJ – Recibos</SelectItem>
+                <SelectItem value="GJ">GJ – {t("accounting.typeGeneral")}</SelectItem>
+                <SelectItem value="PJ">PJ – {t("accounting.typePurchases")}</SelectItem>
+                <SelectItem value="SJ">SJ – {t("accounting.typeSales")}</SelectItem>
+                <SelectItem value="PRJ">PRJ – {t("accounting.typePayroll")}</SelectItem>
+                <SelectItem value="CDJ">CDJ – {t("accounting.typeDisbursements")}</SelectItem>
+                <SelectItem value="CRJ">CRJ – {t("accounting.typeReceipts")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -352,7 +351,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
         {/* Description */}
         <div className="space-y-1">
-          <label className="text-sm font-medium">Descripción</label>
+          <label className="text-sm font-medium">{t("accounting.description")}</label>
           {isEditable ? (
             <Textarea
               value={description}
@@ -366,12 +365,12 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
         {/* Reference Description */}
         <div className="space-y-1">
-          <label className="text-sm font-medium">Referencia</label>
+          <label className="text-sm font-medium">{t("accounting.reference")}</label>
           {isEditable ? (
             <Input
               value={referenceDescription}
               onChange={(e) => setReferenceDescription(e.target.value)}
-              placeholder="Ej: Factura #001, Cheque #123"
+              placeholder={t("accounting.referencePlaceholder")}
             />
           ) : (
             <p className="text-sm text-muted-foreground">{referenceDescription || "—"}</p>
@@ -383,12 +382,12 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-2 font-medium">Cuenta</th>
-                <th className="text-left p-2 font-medium w-[140px]">Descripción</th>
-                <th className="text-left p-2 font-medium w-[100px]">Proyecto</th>
-                <th className="text-left p-2 font-medium w-[80px]">CBS</th>
-                <th className="text-right p-2 font-medium w-[130px]">Débito</th>
-                <th className="text-right p-2 font-medium w-[130px]">Crédito</th>
+                <th className="text-left p-2 font-medium">{t("accounting.col.account")}</th>
+                <th className="text-left p-2 font-medium w-[140px]">{t("accounting.col.description")}</th>
+                <th className="text-left p-2 font-medium w-[100px]">{t("accounting.col.project")}</th>
+                <th className="text-left p-2 font-medium w-[80px]">{t("accounting.col.cbs")}</th>
+                <th className="text-right p-2 font-medium w-[130px]">{t("accounting.col.debit")}</th>
+                <th className="text-right p-2 font-medium w-[130px]">{t("accounting.col.credit")}</th>
                 {isEditable && <th className="w-[40px]" />}
               </tr>
             </thead>
@@ -402,7 +401,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                         onValueChange={(v) => updateLine(idx, "account_id", v)}
                       >
                         <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Seleccionar cuenta" />
+                          <SelectValue placeholder={t("accounting.selectAccount")} />
                         </SelectTrigger>
                         <SelectContent>
                           {accounts.map((a) => (
@@ -430,7 +429,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                         className="h-8 text-xs"
                         value={line.description}
                         onChange={(e) => updateLine(idx, "description", e.target.value)}
-                        placeholder="Detalle"
+                        placeholder={t("accounting.detail")}
                       />
                     ) : (
                       <span className="text-xs">{line.description || ""}</span>
@@ -442,7 +441,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                         className="h-8 text-xs"
                         value={line.project_code}
                         onChange={(e) => updateLine(idx, "project_code", e.target.value)}
-                        placeholder="Proyecto"
+                        placeholder={t("accounting.col.project")}
                       />
                     ) : (
                       <span className="text-xs">{line.project_code || ""}</span>
@@ -454,7 +453,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
                         className="h-8 text-xs"
                         value={line.cbs_code}
                         onChange={(e) => updateLine(idx, "cbs_code", e.target.value)}
-                        placeholder="CBS"
+                        placeholder={t("accounting.col.cbs")}
                       />
                     ) : (
                       <span className="text-xs">{line.cbs_code || ""}</span>
@@ -505,7 +504,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             </tbody>
             <tfoot>
               <tr className="font-medium bg-muted/30">
-                <td colSpan={4} className="p-2 text-right">Totales</td>
+                <td colSpan={4} className="p-2 text-right">{t("accounting.totals")}</td>
                 <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
                   {fmtNum(totals.totalDebit)}
                 </td>
@@ -520,20 +519,20 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
 
         {!totals.balanced && (
           <p className="text-xs text-destructive">
-            Diferencia: {fmtNum(Math.abs(totals.totalDebit - totals.totalCredit))}
+            {t("accounting.difference")} {fmtNum(Math.abs(totals.totalDebit - totals.totalCredit))}
           </p>
         )}
 
         {isEditable && (
           <Button variant="outline" size="sm" onClick={addLine} className="w-fit">
-            <Plus className="h-3.5 w-3.5 mr-1" /> Agregar línea
+            <Plus className="h-3.5 w-3.5 mr-1" /> {t("accounting.addLine")}
           </Button>
         )}
 
         {/* Approval status info */}
         {journal && !journal.posted && journal.rejection_reason && (
           <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
-            Rechazado: {journal.rejection_reason}
+            {t("accounting.rejectedLabel")} {journal.rejection_reason}
           </p>
         )}
 
@@ -544,36 +543,36 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" disabled={saving}>
-                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("common.delete")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar asiento?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("accounting.deleteEntry")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta acción eliminará el asiento {journal.journal_number || ""}.
+                      {t("accounting.deleteEntryDesc").replace("{number}", journal.journal_number || "")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
 
               {/* Save */}
               <Button variant="outline" size="sm" onClick={handleSave} disabled={saving || !totals.balanced}>
-                <Save className="h-3.5 w-3.5 mr-1" /> Guardar cambios
+                <Save className="h-3.5 w-3.5 mr-1" /> {t("accounting.saveChanges")}
               </Button>
 
               {/* Approve / Reject (maker-checker) */}
               {canApprove && !isApproved && (
                 <>
                   <Button size="sm" variant="outline" onClick={handleReject} disabled={saving}>
-                    <ShieldX className="h-3.5 w-3.5 mr-1" /> Rechazar
+                    <ShieldX className="h-3.5 w-3.5 mr-1" /> {t("accounting.reject")}
                   </Button>
                   <Button size="sm" variant="secondary" onClick={handleApprove} disabled={saving || !totals.balanced}>
-                    <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Aprobar
+                    <ShieldCheck className="h-3.5 w-3.5 mr-1" /> {t("accounting.approve")}
                   </Button>
                 </>
               )}
@@ -582,19 +581,19 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button size="sm" disabled={saving || !totals.balanced || !isApproved}>
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Contabilizar
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> {t("accounting.post")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Contabilizar asiento?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("accounting.postEntry")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Una vez contabilizado, el asiento no se podrá modificar. Esta acción es irreversible.
+                      {t("accounting.postEntryDesc")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handlePost}>Contabilizar</AlertDialogAction>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handlePost}>{t("accounting.post")}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

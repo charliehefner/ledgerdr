@@ -1,74 +1,90 @@
+## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
+### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
+- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
+- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
+- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-# Internationalize Hardcoded Spanish Strings in Accounting Module
+### ✅ 2. Journal Generation: Exchange Rate
+- `generate-journals` now reads `exchange_rate` from transactions
+- Sets `currency` and `exchange_rate` on created journals after RPC call
 
-## Scope
+### ✅ 3. Auto AP/AR Document Creation from Transactions
+- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
+- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
+- Links transaction ID via `linked_transaction_ids`
 
-Found hardcoded Spanish strings in **10 accounting files** plus the Accounting page tab label. These need `t()` translation keys added to `src/i18n/en.ts` and `src/i18n/es.ts`, then referenced via `useLanguage()`.
+### ✅ 4. AP/AR Payment Generates Journal Entry
+- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
+- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
+- Requires bank account selection with mapped GL account
+- Records in `ap_ar_payments` audit trail table
 
-## Files & Strings to Fix
+### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
+- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
+- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
+- Each line now includes a narrative `description` field
 
-### 1. `src/pages/Accounting.tsx`
-- Line 48: `"Recurrentes"` → `t("accounting.recurring")`
+### ✅ 6. AP/AR Payment Audit Trail Table
+- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
+- RLS: authenticated SELECT, admin/management/accountant INSERT
 
-### 2. `src/components/accounting/JournalView.tsx`
-- "Nuevo Asiento", "asientos encontrados — Mostrando página X de Y", "No hay asientos", empty state description
-- Excel export headers (Número, Tipo, Fecha, etc.) and status values (Contabilizado/Borrador)
+### ✅ 7. Payroll Journal Detail Integration (PRJ)
+- Closing payroll now generates detailed PRJ journal with:
+  - Debit: Salary Expense (7010), Employer TSS (6210)
+  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
+- Non-fatal: payroll close proceeds even if journal generation fails
 
-### 3. `src/components/accounting/JournalEntryForm.tsx`
-- "Nuevo Asiento Contable", "Se creará como borrador para revisión", "Creado", "Asiento creado como borrador"
-- "Fecha", "Tipo", "Cancelar", "Crear Borrador", "Agregar línea"
-- Field labels and placeholders
+### ✅ 8. Bank GL Book Balance Display
+- BankAccountsList now shows "Saldo Contable" column
+- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
 
-### 4. `src/components/accounting/JournalDetailDialog.tsx`
-- Status badges: "Publicado"/"Borrador", "Aprobado"/"Rechazado"/"Pendiente", "Conciliado"
-- "Sin número", "Publicado el", "Tipo de Asiento", "Descripción", "Referencia"
-- Journal type labels: "Compras", "Ventas", "Nómina", "Desembolsos", "Recibos"
-- Table headers: "Cuenta", "Descripción", "Proyecto", "Débito", "Crédito", "Totales"
-- Actions: "Eliminar", "Guardar cambios", "Rechazar", "Aprobar", "Contabilizar"
-- Confirm dialogs: "¿Eliminar asiento?", "¿Contabilizar asiento?"
+### ✅ 9. Post Journal via Server-Side RPC
+- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
+- Ensures server-side balance validation before posting
 
-### 5. `src/components/accounting/PeriodsView.tsx`
-- STATUS_CONFIG labels: "Abierto"/"Cerrado"/"Reportado"/"Bloqueado"
-- "Períodos Contables", "Nuevo Período", empty state text
-- Table headers: "Nombre", "Inicio", "Fin", "Estado", "Cambiar Estado", "Cierre", "Revaluación"
-- Dialog: "Nuevo Período Contable", "Nombre del Período", "Fecha Inicio", "Fecha Fin"
-- Toast messages
+### ✅ 10. Cost Center Filtering in Financial Reports
+- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
+- LEFT JOINs transactions to filter by cost_center when not "all"
+- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
 
-### 6. `src/components/accounting/PeriodClosingButton.tsx`
-- "Generar Cierre", "Generar Asiento de Cierre", confirmation text, "Generar Borrador"
+---
 
-### 7. `src/components/accounting/PeriodRevaluationButton.tsx`
-- "Revaluación", "Revaluación Cambiaria", preview labels, confirmation text
+## Deep Technical Audit Fixes — IMPLEMENTED
 
-### 8. `src/components/accounting/RecurringEntriesView.tsx`
-- "Asientos Recurrentes", "Generar Pendientes", "Nueva Plantilla"
-- Table headers and status labels: "Quincenal"/"Mensual", "Activa"/"Inactiva", "Vencida"
-- Dialog: "Nueva Plantilla Recurrente", form labels, "Seleccionar cuenta..."
-- Toast messages
+### ✅ Finding 1: Journal Generation for UUID pay_methods (CRITICAL)
+- Added `resolvePayAccountId()` helper: tries legacy `payment_method_accounts` mapping first, then falls back to `bank_accounts.chart_account_id` via UUID lookup
+- Both transfer and purchase/sale paths now use the dual-resolution flow
 
-### 9. `src/components/accounting/ChartOfAccountsView.tsx`
-- "Buscar por código o nombre...", "Agregar Cuenta", "Sí"/"No"
-- Table headers: "Código", "Nombre", "Tipo", "Moneda", "Posteable"
-- Dialog: "Editar Cuenta"/"Nueva Cuenta", form labels
-- "Sin padre", "Permite asientos"
+### ⏳ Finding 2: Bank Accounts Missing GL Links (CRITICAL)
+- Waiting on accountant to provide correct chart_account_id for each bank account
 
-### 10. `src/components/accounting/BankReconciliationView.tsx`
-- Dialog titles and form labels for bank account and manual line dialogs
-- "Cancelar", "Guardando...", "Guardar", "Agregar"
-- Status badges: "Conciliada"/"Pendiente", "Crear Entrada"
+### ✅ Finding 3: DGII 606 Forma de Pago (HIGH)
+- `getFormaDePago()` now accepts optional `bankAccounts` array parameter
+- Resolves UUID pay_methods via bank account_type: bank→02, credit_card→03, petty_cash→01
+- `DGIIReportsView` fetches bank accounts and passes to `DGII606Table`
 
-### 11. `src/components/accounting/TrialBalanceView.tsx`
-- "Balanza de Comprobación", "Desde"/"Hasta", "Generar"
-- "cuentas", "Exportar", table headers, empty state text
+### ✅ Finding 4: PaymentMethodMappingDialog Obsolete (MEDIUM)
+- Removed Settings gear button and `PaymentMethodMappingDialog` usage from JournalView
+- Component file preserved for backwards compatibility
 
-## Implementation
+### ✅ Finding 5: Cross-Currency Transfer Journal Balance (MEDIUM)
+- Simplified to always use `sourceAmount` for both debit and credit sides
+- Journal stays balanced; currency context captured in journal header metadata
 
-1. **Add ~120 new i18n keys** to both `src/i18n/en.ts` and `src/i18n/es.ts` under an `accounting.*` namespace (e.g., `accounting.newEntry`, `accounting.draft`, `accounting.posted`, `accounting.periods.title`, etc.)
+### ✅ Finding 6: Voided Transaction Voids AP/AR Document (MEDIUM)
+- Created SQL trigger `trg_void_ap_ar_on_transaction_void` on transactions table
+- When `is_void` changes to true, auto-sets `status = 'void'` on linked AP/AR documents
 
-2. **Replace hardcoded strings** in each file with `t("accounting.xxx")` calls. Files that don't already import `useLanguage` will need it added.
+### ✅ Finding 7: Exchange Rate on AP/AR Payment Journals (MEDIUM)
+- PaymentDialog now sets `currency` and `exchange_rate` on journals for non-DOP documents
+- Fetches latest exchange rate from `exchange_rates` table
 
-3. **Toast messages** will also be translated — they currently show only in Spanish regardless of language setting.
+### ⏳ Finding 8: Client-Side Depreciation Loop (LOW)
+- Deferred — performance optimization, not correctness issue
 
-4. Common patterns like "Cancelar", "Guardar", "Eliminar" will reuse existing `common.*` keys where they exist, or new ones will be added.
+### ✅ Finding 9: Unlinked Count Has No Date Filter (LOW)
+- Working as designed — Generate Journals processes ALL unlinked transactions
 
+### ✅ Finding 10: Aging Report Currency Mixing (LOW)
+- Totals row now shows separate rows per currency instead of mixing DOP + USD

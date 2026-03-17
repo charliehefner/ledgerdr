@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { BookCheck, Loader2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -22,6 +23,7 @@ export function PeriodClosingButton({ periodId, periodName, startDate, endDate, 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const closingMutation = useMutation({
@@ -35,11 +37,11 @@ export function PeriodClosingButton({ periodId, periodName, startDate, endDate, 
       if (error) throw error;
       return { journalId };
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       toast({
-        title: "Asiento de Cierre Creado",
-        description: `Se creó un asiento borrador (CLJ). Revíselo y publíquelo cuando esté listo.`,
+        title: t("accounting.closing.created"),
+        description: t("accounting.closing.createdDesc"),
       });
       setConfirmOpen(false);
     },
@@ -48,7 +50,6 @@ export function PeriodClosingButton({ periodId, periodName, startDate, endDate, 
     },
   });
 
-  // Only show for open/closed periods
   if (status === "reported" || status === "locked") return null;
 
   return (
@@ -60,22 +61,20 @@ export function PeriodClosingButton({ periodId, periodName, startDate, endDate, 
         disabled={closingMutation.isPending}
       >
         {closingMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <BookCheck className="h-4 w-4 mr-1" />}
-        Generar Cierre
+        {t("accounting.closing.generate")}
       </Button>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Generar Asiento de Cierre</AlertDialogTitle>
+            <AlertDialogTitle>{t("accounting.closing.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se generará un asiento de cierre <strong>borrador</strong> para el período "{periodName}" ({startDate} — {endDate}).
-              Las cuentas de resultado (ingresos y gastos) se cerrarán contra utilidades retenidas.
-              Puede revisar y modificar el asiento antes de publicarlo.
+              {t("accounting.closing.description").replace("{period}", periodName).replace("{start}", startDate).replace("{end}", endDate)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => closingMutation.mutate()}>
-              Generar Borrador
+              {t("accounting.closing.generateDraft")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

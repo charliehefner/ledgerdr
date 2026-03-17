@@ -45,7 +45,7 @@ export default function Accounting() {
             },
             {
               value: "recurring",
-              label: "Recurrentes",
+              label: t("accounting.recurring"),
               icon: <RotateCcw className="h-4 w-4" />,
               content: <RecurringEntriesView />,
             },

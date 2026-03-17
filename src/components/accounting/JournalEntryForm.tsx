@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -27,6 +28,7 @@ interface JournalEntryFormProps {
 
 export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const [journalDate, setJournalDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -99,15 +101,15 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
 
   const handleSave = async () => {
     if (!totals.balanced) {
-      toast({ title: "Error", description: "Débitos y créditos deben estar balanceados.", variant: "destructive" });
+      toast({ title: "Error", description: t("accounting.debitCreditUnbalanced"), variant: "destructive" });
       return;
     }
     if (lines.some((l) => !l.account_id)) {
-      toast({ title: "Error", description: "Todas las líneas necesitan una cuenta.", variant: "destructive" });
+      toast({ title: "Error", description: t("accounting.allLinesNeedAccount"), variant: "destructive" });
       return;
     }
     if (!description.trim()) {
-      toast({ title: "Error", description: "La descripción es requerida.", variant: "destructive" });
+      toast({ title: "Error", description: t("accounting.descriptionRequired"), variant: "destructive" });
       return;
     }
 
@@ -142,7 +144,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
       if (lErr) throw lErr;
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Creado", description: "Asiento creado como borrador." });
+      toast({ title: t("accounting.created"), description: t("accounting.entryCreatedDraft") });
       reset();
       onOpenChange(false);
     } catch (err: any) {
@@ -156,33 +158,33 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nuevo Asiento Contable</DialogTitle>
-          <DialogDescription>Se creará como borrador para revisión.</DialogDescription>
+          <DialogTitle>{t("accounting.newJournalEntry")}</DialogTitle>
+          <DialogDescription>{t("accounting.draftDescription")}</DialogDescription>
         </DialogHeader>
 
         {/* Header fields */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div className="space-y-1">
-            <label className="text-sm font-medium">Fecha</label>
+            <label className="text-sm font-medium">{t("accounting.date")}</label>
             <Input type="date" value={journalDate} onChange={(e) => setJournalDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">Tipo</label>
+            <label className="text-sm font-medium">{t("accounting.type")}</label>
             <Select value={journalType} onValueChange={setJournalType}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="GJ">GJ – General</SelectItem>
-                <SelectItem value="PJ">PJ – Compras</SelectItem>
-                <SelectItem value="SJ">SJ – Ventas</SelectItem>
-                <SelectItem value="PRJ">PRJ – Nómina</SelectItem>
-                <SelectItem value="CDJ">CDJ – Desembolsos</SelectItem>
-                <SelectItem value="CRJ">CRJ – Recibos</SelectItem>
-                <SelectItem value="DEP">DEP – Depreciación</SelectItem>
+                <SelectItem value="GJ">GJ – {t("accounting.typeGeneral")}</SelectItem>
+                <SelectItem value="PJ">PJ – {t("accounting.typePurchases")}</SelectItem>
+                <SelectItem value="SJ">SJ – {t("accounting.typeSales")}</SelectItem>
+                <SelectItem value="PRJ">PRJ – {t("accounting.typePayroll")}</SelectItem>
+                <SelectItem value="CDJ">CDJ – {t("accounting.typeDisbursements")}</SelectItem>
+                <SelectItem value="CRJ">CRJ – {t("accounting.typeReceipts")}</SelectItem>
+                <SelectItem value="DEP">DEP – {t("accounting.typeDepreciation")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">Moneda</label>
+            <label className="text-sm font-medium">{t("accounting.currencyLabel")}</label>
             <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -196,12 +198,12 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-sm font-medium">Descripción</label>
+            <label className="text-sm font-medium">{t("accounting.description")}</label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">Referencia</label>
-            <Input value={referenceDescription} onChange={(e) => setReferenceDescription(e.target.value)} placeholder="Ej: Factura #001, Cheque #123" />
+            <label className="text-sm font-medium">{t("accounting.reference")}</label>
+            <Input value={referenceDescription} onChange={(e) => setReferenceDescription(e.target.value)} placeholder={t("accounting.referencePlaceholder")} />
           </div>
         </div>
 
@@ -210,12 +212,12 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-2 font-medium">Cuenta</th>
-                <th className="text-left p-2 font-medium w-[140px]">Descripción</th>
-                <th className="text-left p-2 font-medium w-[100px]">Proyecto</th>
-                <th className="text-left p-2 font-medium w-[80px]">CBS</th>
-                <th className="text-right p-2 font-medium w-[130px]">Débito</th>
-                <th className="text-right p-2 font-medium w-[130px]">Crédito</th>
+                <th className="text-left p-2 font-medium">{t("accounting.col.account")}</th>
+                <th className="text-left p-2 font-medium w-[140px]">{t("accounting.col.description")}</th>
+                <th className="text-left p-2 font-medium w-[100px]">{t("accounting.col.project")}</th>
+                <th className="text-left p-2 font-medium w-[80px]">{t("accounting.col.cbs")}</th>
+                <th className="text-right p-2 font-medium w-[130px]">{t("accounting.col.debit")}</th>
+                <th className="text-right p-2 font-medium w-[130px]">{t("accounting.col.credit")}</th>
                 <th className="w-[40px]" />
               </tr>
             </thead>
@@ -225,7 +227,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                   <td className="p-2">
                     <Select value={line.account_id} onValueChange={(v) => updateLine(idx, "account_id", v)}>
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Seleccionar cuenta" />
+                        <SelectValue placeholder={t("accounting.selectAccount")} />
                       </SelectTrigger>
                       <SelectContent>
                         {accounts.map((a) => (
@@ -241,7 +243,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                       className="h-8 text-xs"
                       value={line.description}
                       onChange={(e) => updateLine(idx, "description", e.target.value)}
-                      placeholder="Detalle"
+                      placeholder={t("accounting.detail")}
                     />
                   </td>
                   <td className="p-2">
@@ -249,7 +251,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                       className="h-8 text-xs"
                       value={line.project_code}
                       onChange={(e) => updateLine(idx, "project_code", e.target.value)}
-                      placeholder="Proyecto"
+                      placeholder={t("accounting.col.project")}
                     />
                   </td>
                   <td className="p-2">
@@ -257,7 +259,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
                       className="h-8 text-xs"
                       value={line.cbs_code}
                       onChange={(e) => updateLine(idx, "cbs_code", e.target.value)}
-                      placeholder="CBS"
+                      placeholder={t("accounting.col.cbs")}
                     />
                   </td>
                   <td className="p-2">
@@ -296,7 +298,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
             </tbody>
             <tfoot>
               <tr className="font-medium bg-muted/30">
-                <td colSpan={4} className="p-2 text-right">Totales</td>
+                <td colSpan={4} className="p-2 text-right">{t("accounting.totals")}</td>
                 <td className={`p-2 text-right ${!totals.balanced ? "text-destructive" : ""}`}>
                   {fmtNum(totals.totalDebit)}
                 </td>
@@ -311,18 +313,18 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
 
         {!totals.balanced && totals.totalDebit > 0 && (
           <p className="text-xs text-destructive">
-            Diferencia: {fmtNum(Math.abs(totals.totalDebit - totals.totalCredit))}
+            {t("accounting.difference")} {fmtNum(Math.abs(totals.totalDebit - totals.totalCredit))}
           </p>
         )}
 
         <Button variant="outline" size="sm" onClick={addLine} className="w-fit">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Agregar línea
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t("accounting.addLine")}
         </Button>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button onClick={handleSave} disabled={saving || !totals.balanced}>
-            Crear Borrador
+            {t("accounting.createDraft")}
           </Button>
         </DialogFooter>
       </DialogContent>

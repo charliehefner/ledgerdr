@@ -536,8 +536,8 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                           <TableCell className={`text-right font-mono ${lineItemsTotal < 0 ? "text-destructive" : ""}`}>
                             {lineItemsTotal !== 0 
                               ? (lineItemsTotal < 0 
-                                  ? `($${Math.abs(lineItemsTotal).toLocaleString()})` 
-                                  : `$${lineItemsTotal.toLocaleString()}`)
+                                  ? `($${formatMoney(Math.abs(lineItemsTotal))})` 
+                                  : `$${formatMoney(lineItemsTotal)}`)
                               : "–"}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">

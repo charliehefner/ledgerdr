@@ -204,7 +204,8 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast.success("Pago registrado con asiento contable");
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Pago registrado con asiento contable y transacción");
       onOpenChange(false);
       setPaymentAmount("");
       setBankAccountId("");

@@ -54,7 +54,7 @@ type SortDirection = "asc" | "desc" | null;
 
 export default function Reports() {
   const queryClient = useQueryClient();
-  const [limit, setLimit] = useState("150");
+  const [limit, setLimit] = useState("10000");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -569,15 +569,9 @@ export default function Reports() {
                   <SelectContent className="bg-popover">
                     <SelectItem value="50">50</SelectItem>
                     <SelectItem value="150">150</SelectItem>
-                    <SelectItem value="250">250</SelectItem>
-                    <SelectItem value="350">350</SelectItem>
-                    <SelectItem value="450">450</SelectItem>
-                    <SelectItem value="550">550</SelectItem>
-                    <SelectItem value="650">650</SelectItem>
-                    <SelectItem value="750">750</SelectItem>
-                    <SelectItem value="850">850</SelectItem>
-                    <SelectItem value="950">950</SelectItem>
-                    <SelectItem value="1000">1000</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                    <SelectItem value="1000">1,000</SelectItem>
+                    <SelectItem value="10000">Todos</SelectItem>
                   </SelectContent>
                 </Select>
                 <span className="text-sm text-muted-foreground">

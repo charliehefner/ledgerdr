@@ -1,8 +1,8 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 interface TransactionFormProps {
@@ -153,6 +154,28 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       return data || [];
     },
   });
+
+  // Credit note alert state
+  const [creditNotes, setCreditNotes] = useState<{ id: string; balance_remaining: number; currency: string; document_number: string | null }[]>([]);
+  
+  useEffect(() => {
+    const name = form.name?.trim();
+    if (!name || name.length < 2) {
+      setCreditNotes([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('ap_ar_documents')
+        .select('id, balance_remaining, currency, document_number')
+        .eq('contact_name', name)
+        .eq('document_type', 'credit_memo')
+        .not('status', 'in', '("paid","void")')
+        .gt('balance_remaining', 0);
+      setCreditNotes(data || []);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.name]);
 
   const uniqueNames = useMemo(() => {
     const names = new Set<string>();
@@ -996,6 +1019,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 }}
               />
             </div>
+
+            {creditNotes.length > 0 && (
+              <div className="md:col-span-3">
+                <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/20">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                    Este proveedor tiene {creditNotes.length} nota(s) de crédito pendiente(s) por{' '}
+                    <strong>
+                      {creditNotes.reduce((sum, cn) => sum + (cn.balance_remaining || 0), 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                    </strong>
+                    . Considere aplicarla(s) antes de registrar un nuevo pago.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{t('txForm.rnc')}</Label>

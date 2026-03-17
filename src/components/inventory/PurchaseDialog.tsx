@@ -29,6 +29,7 @@ import {
 import { CalendarIcon, Fuel } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { formatMoney } from "@/lib/formatters";
 
 interface PurchaseDialogProps {
   open: boolean;

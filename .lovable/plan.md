@@ -1,90 +1,54 @@
-## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
-### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
-- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
-- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
-- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-### ✅ 2. Journal Generation: Exchange Rate
-- `generate-journals` now reads `exchange_rate` from transactions
-- Sets `currency` and `exchange_rate` on created journals after RPC call
+# Accounting Documentation for Auditor Review
 
-### ✅ 3. Auto AP/AR Document Creation from Transactions
-- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
-- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
-- Links transaction ID via `linked_transaction_ids`
+## What to Create
 
-### ✅ 4. AP/AR Payment Generates Journal Entry
-- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
-- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
-- Requires bank account selection with mapped GL account
-- Records in `ap_ar_payments` audit trail table
+A single comprehensive document at `docs/ACCOUNTING_SYSTEM_GUIDE.md` covering only the accounting-related sections of the application, written for an external auditor/accountant audience.
 
-### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
-- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
-- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
-- Each line now includes a narrative `description` field
+## Document Structure
 
-### ✅ 6. AP/AR Payment Audit Trail Table
-- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
-- RLS: authenticated SELECT, admin/management/accountant INSERT
+1. **System Overview** — What LedgerDR is, the double-entry model, and the Source Document → Journal → Ledger flow.
 
-### ✅ 7. Payroll Journal Detail Integration (PRJ)
-- Closing payroll now generates detailed PRJ journal with:
-  - Debit: Salary Expense (7010), Employer TSS (6210)
-  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
-- Non-fatal: payroll close proceeds even if journal generation fails
+2. **Chart of Accounts** — ~419 accounts, hierarchical structure, bilingual descriptions, account types (ASSET/LIABILITY/EQUITY/INCOME/EXPENSE), account code ranges and their meaning.
 
-### ✅ 8. Bank GL Book Balance Display
-- BankAccountsList now shows "Saldo Contable" column
-- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
+3. **Transaction Entry** — Three directions (Purchase/Sale/Transfer), required fields, ITBIS handling, B11 withholdings (ITBIS Retenido, ISR Retenido), duplicate detection, cost centers (General/Agrícola/Industrial).
 
-### ✅ 9. Post Journal via Server-Side RPC
-- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
-- Ensures server-side balance validation before posting
+4. **Journal Entry System** — All 10 journal types (GJ, PJ, SJ, PRJ, CDJ, CRJ, DEP, RJ, CLJ, ADJ), auto-generation from transactions via edge function, draft → posted workflow, balanced debit/credit validation, line-level descriptions.
 
-### ✅ 10. Cost Center Filtering in Financial Reports
-- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
-- LEFT JOINs transactions to filter by cost_center when not "all"
-- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
+5. **AP/AR Sub-Ledger** — Document types (Factura Proveedor, Invoice, Credit Memo, Debit Note), automatic creation from transactions with due dates, payment recording and CDJ/CRJ journal generation, aging report, credit note alerts.
 
----
+6. **Financial Statements** — Trial Balance, P&L, Balance Sheet, Cash Flow (indirect method). All pull from `journal_lines` via `account_balances_from_journals` RPC. Unlinked transaction warnings.
 
-## Deep Technical Audit Fixes — IMPLEMENTED
+7. **Period Management** — Four-state lifecycle (open → closed → reported → locked), database-enforced immutability triggers, period closing journals (CLJ), exchange rate revaluation (ADJ).
 
-### ✅ Finding 1: Journal Generation for UUID pay_methods (CRITICAL)
-- Added `resolvePayAccountId()` helper: tries legacy `payment_method_accounts` mapping first, then falls back to `bank_accounts.chart_account_id` via UUID lookup
-- Both transfer and purchase/sale paths now use the dual-resolution flow
+8. **Treasury** — Bank accounts mapped to COA, book balance from posted journals, bank reconciliation (CSV/OFX/TXT import), petty cash, credit cards.
 
-### ⏳ Finding 2: Bank Accounts Missing GL Links (CRITICAL)
-- Waiting on accountant to provide correct chart_account_id for each bank account
+9. **Multi-Currency** — DOP/USD/EUR support, BCRD exchange rates, cross-currency transfer handling, unrealized FX revaluation at period-end against account 8510.
 
-### ✅ Finding 3: DGII 606 Forma de Pago (HIGH)
-- `getFormaDePago()` now accepts optional `bankAccounts` array parameter
-- Resolves UUID pay_methods via bank account_type: bank→02, credit_card→03, petty_cash→01
-- `DGIIReportsView` fetches bank accounts and passes to `DGII606Table`
+10. **DGII Tax Compliance** — 606 (Purchases), 607 (Sales), 608 (Cancellations), IT-1 (ITBIS declaration), IR-3 (ISR withholdings). Auto-classification trigger, export formats.
 
-### ✅ Finding 4: PaymentMethodMappingDialog Obsolete (MEDIUM)
-- Removed Settings gear button and `PaymentMethodMappingDialog` usage from JournalView
-- Component file preserved for backwards compatibility
+11. **Fixed Assets & Depreciation** — Asset categories, straight-line depreciation, DEP journal generation, linking to equipment/implements.
 
-### ✅ Finding 5: Cross-Currency Transfer Journal Balance (MEDIUM)
-- Simplified to always use `sourceAmount` for both debit and credit sides
-- Journal stays balanced; currency context captured in journal header metadata
+12. **Audit Trail** — Database triggers on 8 critical tables, JSON diffs, immutability of posted journals, reversal-only correction model, void cascading to AP/AR.
 
-### ✅ Finding 6: Voided Transaction Voids AP/AR Document (MEDIUM)
-- Created SQL trigger `trg_void_ap_ar_on_transaction_void` on transactions table
-- When `is_void` changes to true, auto-sets `status = 'void'` on linked AP/AR documents
+13. **Data Integrity Controls** — 18% ITBIS cap with override, period locking triggers, RLS policies, schema-poisoning hardening (explicit search_path), duplicate detection.
 
-### ✅ Finding 7: Exchange Rate on AP/AR Payment Journals (MEDIUM)
-- PaymentDialog now sets `currency` and `exchange_rate` on journals for non-DOP documents
-- Fetches latest exchange rate from `exchange_rates` table
+14. **Budget vs. Actual** — P&L budget grid, project-level budgets, automatic USD→DOP conversion, variance analysis.
 
-### ⏳ Finding 8: Client-Side Depreciation Loop (LOW)
-- Deferred — performance optimization, not correctness issue
+## Source Material
 
-### ✅ Finding 9: Unlinked Count Has No Date Filter (LOW)
-- Working as designed — Generate Journals processes ALL unlinked transactions
+- Existing `docs/USER_MANUAL.md` sections 4-9 for functional descriptions
+- `docs/accounting_schema_corrected.sql` for schema details
+- `docs/DATABASE_TECHNICAL_SPEC.md` for table structures and RLS
+- Memory context for architectural decisions and business rules
+- Edge function code (`generate-journals`) for journal mapping logic
 
-### ✅ Finding 10: Aging Report Currency Mixing (LOW)
-- Totals row now shows separate rows per currency instead of mixing DOP + USD
+## Approach
+
+- Written in professional accounting terminology suitable for a Dominican Republic auditor
+- Includes the account code range mapping (e.g., 10xx = Current Assets, 21xx = AP, 30xx = Revenue)
+- Documents the complete audit trail and internal controls
+- References DGII compliance specifics (NCF types, withholding rules)
+- Approximately 2,000-3,000 words, structured with clear headings
+

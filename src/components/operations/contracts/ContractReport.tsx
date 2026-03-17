@@ -43,6 +43,7 @@ import { FileText, DollarSign, Pencil, Trash2, Plus } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import { formatMoney } from "@/lib/formatters";
 import { ContractPayment, PaymentDialog } from "./PaymentDialog";
 
 interface ContractReportProps {

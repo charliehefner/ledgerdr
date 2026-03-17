@@ -649,7 +649,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                       <TableRow className="bg-emerald-50 dark:bg-emerald-950/20 font-semibold">
                         <TableCell colSpan={2}>{t("contracts.totalPaid")}</TableCell>
                         <TableCell className="text-right font-mono text-lg text-emerald-600">
-                          ${totalPaid.toLocaleString()}
+                          ${formatMoney(totalPaid)}
                         </TableCell>
                         <TableCell colSpan={2}></TableCell>
                       </TableRow>

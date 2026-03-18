@@ -326,7 +326,8 @@ export function BankReconciliationView() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <Select value={selectedBank} onValueChange={setSelectedBank}>
-            <SelectTrigger className="w-64">
+            <SelectTrigger className={`w-72 ${!selectedBank ? "border-primary ring-1 ring-primary/30 font-medium" : ""}`}>
+              <Landmark className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder={t("accounting.bank.selectAccount")} />
             </SelectTrigger>
             <SelectContent className="bg-popover">
@@ -335,8 +336,8 @@ export function BankReconciliationView() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={openNewBank}>
-            <Plus className="h-4 w-4 mr-1" /> {t("accounting.bank.account")}
+          <Button variant="ghost" size="icon" onClick={openNewBank} title={t("accounting.bank.newBankAccount")}>
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
         {selectedBank && (
@@ -359,7 +360,6 @@ export function BankReconciliationView() {
           icon={Landmark}
           title={t("accounting.bank.title")}
           description={t("accounting.bank.titleDesc")}
-          action={<Button onClick={openNewBank} size="sm"><Plus className="h-4 w-4 mr-1" />{t("accounting.bank.newBankAccount")}</Button>}
         />
       ) : linesLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>

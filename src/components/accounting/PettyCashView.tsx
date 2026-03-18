@@ -56,6 +56,7 @@ export function PettyCashView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [replenishFund, setReplenishFund] = useState<PettyCashAccount | null>(null);
+  const [selectedFundId, setSelectedFundId] = useState<string>("all");
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["treasury-petty-cash"],

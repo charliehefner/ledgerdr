@@ -1295,7 +1295,7 @@ export const en = {
   "treasury.pc.col.id": "ID",
   "treasury.pc.col.date": "Date",
   "treasury.pc.col.type": "Type",
-  "treasury.pc.col.name": "Name",
+  "treasury.pc.col.txName": "Name",
   "treasury.pc.col.description": "Description",
   "treasury.pc.col.amount": "Amount",
   "treasury.pc.col.balance": "Balance",

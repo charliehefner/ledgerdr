@@ -204,7 +204,7 @@ export function BankReconciliationView() {
     const refIdx = header.findIndex(h => h.includes("ref") || h.includes("doc") || h.includes("numero"));
     const balIdx = header.findIndex(h => h.includes("balance") || h.includes("saldo"));
     if (dateIdx === -1 || amtIdx === -1) {
-      throw new Error("No se encontraron columnas de fecha y monto.");
+      throw new Error(t("treasury.recon.noDateAmountCols"));
     }
     const linesToInsert: any[] = [];
     for (let i = 1; i < rows.length; i++) {

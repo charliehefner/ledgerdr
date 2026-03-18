@@ -1288,6 +1288,7 @@ export const en = {
   "treasury.pc.inactive": "Inactive",
   "treasury.pc.replenishFund": "Replenish Fund",
   "treasury.pc.recentTitle": "Recent Transactions (Petty Cash)",
+  "treasury.pc.allFunds": "All funds",
   "treasury.pc.expenses": "Expenses",
   "treasury.pc.recharges": "Recharges",
   "treasury.pc.noTxTitle": "No transactions",

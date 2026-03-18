@@ -1289,6 +1289,7 @@ export const es = {
   "treasury.pc.inactive": "Inactivo",
   "treasury.pc.replenishFund": "Reponer Fondo",
   "treasury.pc.recentTitle": "Transacciones Recientes (Caja Chica)",
+  "treasury.pc.allFunds": "Todos los fondos",
   "treasury.pc.expenses": "Gastos",
   "treasury.pc.recharges": "Recargas",
   "treasury.pc.noTxTitle": "Sin transacciones",

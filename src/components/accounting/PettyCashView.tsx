@@ -278,7 +278,18 @@ export function PettyCashView() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{t("treasury.pc.recentTitle")}</h3>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            <Select value={selectedFundId} onValueChange={setSelectedFundId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={t("treasury.pc.allFunds")} />
+              </SelectTrigger>
+              <SelectContent className="bg-popover">
+                <SelectItem value="all">{t("treasury.pc.allFunds")}</SelectItem>
+                {accounts.map(acct => (
+                  <SelectItem key={acct.id} value={acct.id}>{acct.account_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Badge variant="outline" className="text-base px-3 py-1">
               {t("treasury.pc.expenses")}: {fmtNum(totalExpenses)}
             </Badge>

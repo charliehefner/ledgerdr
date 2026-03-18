@@ -236,5 +236,3 @@ export function CreditCardsList() {
     </div>
   );
 }
-  );
-}

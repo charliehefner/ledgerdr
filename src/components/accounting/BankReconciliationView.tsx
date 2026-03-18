@@ -282,7 +282,7 @@ export function BankReconciliationView() {
         const existingRefs = new Set((existing || []).map((r: any) => r.reference));
         const newLines = parsed.filter(l => !l.reference || !existingRefs.has(l.reference));
         if (newLines.length === 0) {
-          toast({ title: "Sin líneas nuevas", description: "Todas las transacciones ya fueron importadas." });
+          toast({ title: t("treasury.recon.noNewLines"), description: t("treasury.recon.allAlreadyImported") });
         } else {
           const linesToInsert = newLines.map(l => ({ bank_account_id: selectedBank, ...l }));
           const { error } = await supabase.from("bank_statement_lines" as any).insert(linesToInsert as any);

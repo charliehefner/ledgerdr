@@ -290,8 +290,8 @@ export function BankReconciliationView() {
           count = newLines.length;
           const skipped = parsed.length - newLines.length;
           toast({
-            title: "Importación TXT exitosa",
-            description: `${count} líneas importadas${skipped > 0 ? `, ${skipped} duplicadas omitidas` : ""}.`,
+            title: t("treasury.recon.txtSuccess"),
+            description: `${count} ${t("treasury.recon.linesImported").replace("{count}", String(count))}${skipped > 0 ? `, ${t("treasury.recon.duplicatesSkipped").replace("{count}", String(skipped))}` : ""}.`,
           });
         }
       } else {

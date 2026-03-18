@@ -245,7 +245,7 @@ export function BankReconciliationView() {
     const existingRefs = new Set((existing || []).map((r: any) => r.reference));
     const newLines = lines.filter(l => !l.reference || !existingRefs.has(l.reference));
     if (newLines.length === 0) {
-      toast({ title: "Sin líneas nuevas", description: "Todas las transacciones ya fueron importadas." });
+      toast({ title: t("treasury.recon.noNewLines"), description: t("treasury.recon.allAlreadyImported") });
       return 0;
     }
     const linesToInsert = newLines.map(l => ({ bank_account_id: selectedBank, ...l }));

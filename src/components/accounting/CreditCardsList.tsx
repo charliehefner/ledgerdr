@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, Pencil, CreditCard } from "lucide-react";
+import { Plus, Pencil, CreditCard, List } from "lucide-react";
+import { CreditCardTransactionsDialog } from "./CreditCardTransactionsDialog";
 
 type CreditCardAccount = {
   id: string;
@@ -38,6 +39,8 @@ export function CreditCardsList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [txCardId, setTxCardId] = useState<string | null>(null);
+  const [txCardName, setTxCardName] = useState("");
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["treasury-credit-cards"],
@@ -173,10 +176,11 @@ export function CreditCardsList() {
                     <Badge variant={acct.is_active ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleActive(acct)}>
                       {acct.is_active ? "Activa" : "Inactiva"}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
-                  </TableCell>
+                   </TableCell>
+                   <TableCell>
+                     <Button variant="ghost" size="icon" onClick={() => { setTxCardId(acct.id); setTxCardName(acct.account_name); }} title="Ver movimientos"><List className="h-4 w-4" /></Button>
+                     <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
+                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -222,6 +226,13 @@ export function CreditCardsList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreditCardTransactionsDialog
+        cardId={txCardId}
+        cardName={txCardName}
+        open={!!txCardId}
+        onOpenChange={(open) => { if (!open) setTxCardId(null); }}
+      />
     </div>
   );
 }

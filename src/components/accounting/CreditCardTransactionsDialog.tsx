@@ -65,9 +65,9 @@ export function CreditCardTransactionsDialog({ cardId, cardName, open, onOpenCha
                     <TableRow key={tx.id} className={tx.is_void ? "opacity-50" : ""}>
                       <TableCell>
                         {isCharge ? (
-                          <ArrowUp className="h-4 w-4 text-destructive" title="Cargo" />
+                          <ArrowUp className="h-4 w-4 text-destructive" />
                         ) : (
-                          <ArrowDown className="h-4 w-4 text-green-600" title="Pago/Abono" />
+                          <ArrowDown className="h-4 w-4 text-primary" />
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{formatDate(tx.transaction_date)}</TableCell>

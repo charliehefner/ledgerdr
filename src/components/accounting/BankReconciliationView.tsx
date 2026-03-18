@@ -297,7 +297,7 @@ export function BankReconciliationView() {
       } else {
         count = (await handleCSVImport(text)) ?? 0;
         if (count > 0) {
-          toast({ title: "Importación exitosa", description: `Se importaron ${count} líneas.` });
+          toast({ title: t("treasury.recon.csvSuccess"), description: t("treasury.recon.csvImported").replace("{count}", String(count)) });
         }
       }
       if (count > 0) {

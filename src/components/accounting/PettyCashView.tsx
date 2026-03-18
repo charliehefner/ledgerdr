@@ -113,17 +113,9 @@ export function PettyCashView() {
   const { data: recentTx = [] } = useQuery({
     queryKey: ["petty-cash-transactions", pettyCashIds],
     queryFn: async () => {
-      if (pettyCashIds.length === 0) {
-        const { data, error } = await supabase
-          .from("transactions")
-          .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
-          .eq("pay_method", "petty_cash")
-          .order("transaction_date", { ascending: false })
-          .limit(50);
-        if (error) throw error;
-        return data as Transaction[];
-      }
-      const orFilter = `pay_method.eq.petty_cash,destination_acct_code.in.(${pettyCashIds.join(",")})`;
+      if (pettyCashIds.length === 0) return [] as Transaction[];
+      const idList = pettyCashIds.join(",");
+      const orFilter = `pay_method.in.(${idList}),destination_acct_code.in.(${idList})`;
       const { data, error } = await supabase
         .from("transactions")
         .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")

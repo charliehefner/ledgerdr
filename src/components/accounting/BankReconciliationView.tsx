@@ -304,7 +304,7 @@ export function BankReconciliationView() {
         queryClient.invalidateQueries({ queryKey: ["bank-lines", selectedBank] });
       }
     } catch (err: any) {
-      toast({ title: "Error de importación", description: err.message, variant: "destructive" });
+      toast({ title: t("treasury.recon.importError"), description: err.message, variant: "destructive" });
     }
     if (fileRef.current) fileRef.current.value = "";
   };

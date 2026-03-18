@@ -236,7 +236,7 @@ export function BankReconciliationView() {
 
   const handleOFXImport = async (text: string) => {
     const { lines, bankId, acctId, ledgerBal } = parseOFX(text);
-    if (lines.length === 0) throw new Error("No se encontraron transacciones en el archivo OFX.");
+    if (lines.length === 0) throw new Error(t("treasury.recon.noOFXTransactions"));
     const { data: existing } = await supabase
       .from("bank_statement_lines" as any)
       .select("reference")

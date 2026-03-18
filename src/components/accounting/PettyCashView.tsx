@@ -128,7 +128,7 @@ export function PettyCashView() {
   });
 
   const isRecharge = (tx: Transaction) =>
-    tx.pay_method !== "petty_cash" && pettyCashIds.includes(tx.destination_acct_code || "");
+    !pettyCashIds.includes(tx.pay_method || "") && pettyCashIds.includes(tx.destination_acct_code || "");
 
   const totalExpenses = recentTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
   const totalRecharges = recentTx.filter(tx => isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);

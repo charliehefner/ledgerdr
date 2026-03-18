@@ -17,6 +17,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { Plus, Pencil, Landmark } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type BankAccount = {
   id: string;
@@ -44,6 +45,7 @@ const emptyForm = {
 };
 
 export function BankAccountsList() {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,7 +64,6 @@ export function BankAccountsList() {
     },
   });
 
-  // Fetch GL balances for all accounts
   const { data: glBalances = [] } = useQuery({
     queryKey: ["bank-gl-balances"],
     queryFn: async () => {
@@ -107,7 +108,7 @@ export function BankAccountsList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treasury-bank-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
-      toast.success(editingId ? "Cuenta actualizada" : "Cuenta creada");
+      toast.success(editingId ? t("treasury.bank.accountUpdated") : t("treasury.bank.accountCreated"));
       setDialogOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -143,26 +144,26 @@ export function BankAccountsList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Cuentas Bancarias</h3>
-        <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nueva Cuenta</Button>
+        <h3 className="text-lg font-semibold">{t("treasury.bank.title")}</h3>
+        <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> {t("treasury.bank.newAccount")}</Button>
       </div>
 
       {isLoading ? (
-        <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+        <div className="p-8 text-center text-muted-foreground">{t("treasury.bank.loading")}</div>
       ) : accounts.length === 0 ? (
-        <EmptyState icon={Landmark} title="Sin cuentas bancarias" description="Agregue su primera cuenta bancaria." />
+        <EmptyState icon={Landmark} title={t("treasury.bank.emptyTitle")} description={t("treasury.bank.emptyDesc")} />
       ) : (
         <div className="border rounded-lg overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Banco</TableHead>
-                <TableHead>Número</TableHead>
-                <TableHead>Moneda</TableHead>
-                <TableHead>Cuenta Contable</TableHead>
-                <TableHead className="text-right">Saldo Contable</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>{t("treasury.bank.col.name")}</TableHead>
+                <TableHead>{t("treasury.bank.col.bank")}</TableHead>
+                <TableHead>{t("treasury.bank.col.number")}</TableHead>
+                <TableHead>{t("treasury.bank.col.currency")}</TableHead>
+                <TableHead>{t("treasury.bank.col.glAccount")}</TableHead>
+                <TableHead className="text-right">{t("treasury.bank.col.glBalance")}</TableHead>
+                <TableHead>{t("treasury.bank.col.status")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -189,7 +190,7 @@ export function BankAccountsList() {
                       className="cursor-pointer"
                       onClick={() => toggleActive(acct)}
                     >
-                      {acct.is_active ? "Activa" : "Inactiva"}
+                      {acct.is_active ? t("treasury.bank.active") : t("treasury.bank.inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -209,14 +210,14 @@ export function BankAccountsList() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Cuenta Bancaria" : "Nueva Cuenta Bancaria"}</DialogTitle>
+            <DialogTitle>{editingId ? t("treasury.bank.editTitle") : t("treasury.bank.newTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div><Label>Nombre de Cuenta *</Label><Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder="Ej: Cuenta Corriente" /></div>
-            <div><Label>Banco *</Label><Input value={form.bank_name} onChange={e => setForm(f => ({ ...f, bank_name: e.target.value }))} placeholder="Ej: BHD León" /></div>
-            <div><Label>Número de Cuenta</Label><Input value={form.account_number} onChange={e => setForm(f => ({ ...f, account_number: e.target.value }))} /></div>
+            <div><Label>{t("treasury.bank.accountName")}</Label><Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder={t("treasury.bank.accountNamePlaceholder")} /></div>
+            <div><Label>{t("treasury.bank.bankName")}</Label><Input value={form.bank_name} onChange={e => setForm(f => ({ ...f, bank_name: e.target.value }))} placeholder={t("treasury.bank.bankNamePlaceholder")} /></div>
+            <div><Label>{t("treasury.bank.accountNumber")}</Label><Input value={form.account_number} onChange={e => setForm(f => ({ ...f, account_number: e.target.value }))} /></div>
             <div>
-              <Label>Moneda</Label>
+              <Label>{t("treasury.bank.col.currency")}</Label>
               <Select value={form.currency} onValueChange={v => setForm(f => ({ ...f, currency: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
@@ -227,9 +228,9 @@ export function BankAccountsList() {
               </Select>
             </div>
             <div>
-              <Label>Cuenta Contable (GL)</Label>
+              <Label>{t("treasury.bank.glAccountLabel")}</Label>
               <Select value={form.chart_account_id} onValueChange={v => setForm(f => ({ ...f, chart_account_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("treasury.bank.selectAccount")} /></SelectTrigger>
                 <SelectContent className="bg-popover max-h-[200px]">
                   {chartAccounts.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.account_code} — {c.account_name}</SelectItem>
@@ -239,9 +240,9 @@ export function BankAccountsList() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("treasury.bank.cancel")}</Button>
             <Button onClick={() => saveMutation.mutate()} disabled={!form.account_name || !form.bank_name || saveMutation.isPending}>
-              {saveMutation.isPending ? "Guardando..." : editingId ? "Actualizar" : "Crear"}
+              {saveMutation.isPending ? t("treasury.bank.saving") : editingId ? t("treasury.bank.update") : t("treasury.bank.create")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type PettyCashAccount = {
   id: string;
@@ -31,13 +32,13 @@ const fmtNum = (n: number) =>
   n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [cashCounted, setCashCounted] = useState("");
   const [sourceAccountId, setSourceAccountId] = useState("");
 
   const fixedAmount = fund?.fixed_amount ?? 0;
 
-  // Fetch bank accounts (non-petty-cash, non-credit-card) as source options
   const { data: sourceAccounts = [] } = useQuery({
     queryKey: ["replenish-source-accounts"],
     queryFn: async () => {
@@ -53,7 +54,6 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
     enabled: open,
   });
 
-  // Fetch last replenishment date (last transfer TO this fund)
   const { data: lastReplenishment } = useQuery({
     queryKey: ["last-replenishment", fund?.id],
     queryFn: async () => {
@@ -71,7 +71,6 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
     enabled: open && !!fund,
   });
 
-  // Fetch expenses since last replenishment
   const { data: expensesSinceRecharge = 0 } = useQuery({
     queryKey: ["petty-cash-expenses-since", fund?.id, lastReplenishment],
     queryFn: async () => {
@@ -100,17 +99,17 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
   const createTransferMutation = useMutation({
     mutationFn: async () => {
       if (!fund || !sourceAccountId || replenishmentAmount <= 0) {
-        throw new Error("Datos incompletos para la reposición");
+        throw new Error(t("treasury.replenish.incomplete"));
       }
 
       const today = new Date().toISOString().split("T")[0];
       const overShortNote = Math.abs(overShort) > 0.005
-        ? ` | Sobrante/Faltante: ${fmtNum(overShort)}`
+        ? ` | ${t("treasury.replenish.overShort")} ${fmtNum(overShort)}`
         : "";
 
       const { error } = await supabase.from("transactions").insert({
         transaction_date: today,
-        description: `Reposición Caja Chica: ${fund.account_name}${overShortNote}`,
+        description: `${t("treasury.replenish.submit")}: ${fund.account_name}${overShortNote}`,
         amount: replenishmentAmount,
         currency: fund.currency || "DOP",
         transaction_direction: "payment",
@@ -126,7 +125,7 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
       queryClient.invalidateQueries({ queryKey: ["petty-cash-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["last-replenishment"] });
       queryClient.invalidateQueries({ queryKey: ["petty-cash-expenses-since"] });
-      toast.success("Reposición de caja chica registrada");
+      toast.success(t("treasury.replenish.success"));
       setCashCounted("");
       setSourceAccountId("");
       onOpenChange(false);
@@ -140,24 +139,23 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reponer Fondo — {fund?.account_name}</DialogTitle>
+          <DialogTitle>{t("treasury.replenish.title").replace("{name}", fund?.account_name || "")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Fund summary */}
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="text-muted-foreground">Monto Fijo:</div>
+            <div className="text-muted-foreground">{t("treasury.replenish.fixedAmount")}</div>
             <div className="font-mono font-semibold text-right">{fmtNum(fixedAmount)}</div>
 
-            <div className="text-muted-foreground">Gastos desde última reposición:</div>
+            <div className="text-muted-foreground">{t("treasury.replenish.expensesSince")}</div>
             <div className="font-mono text-right">{fmtNum(expensesSinceRecharge)}</div>
 
-            <div className="text-muted-foreground">Efectivo esperado:</div>
+            <div className="text-muted-foreground">{t("treasury.replenish.expectedCash")}</div>
             <div className="font-mono text-right">{fmtNum(expectedCash)}</div>
           </div>
 
           <div className="border-t pt-4">
-            <Label>Efectivo Contado *</Label>
+            <Label>{t("treasury.replenish.cashCounted")}</Label>
             <Input
               type="number"
               step="0.01"
@@ -169,25 +167,24 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
             />
           </div>
 
-          {/* Over/Short indicator */}
           {cashCounted && (
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="text-muted-foreground">Sobrante / Faltante:</div>
+              <div className="text-muted-foreground">{t("treasury.replenish.overShort")}</div>
               <div className="text-right font-mono flex items-center justify-end gap-1">
                 {Math.abs(overShort) < 0.005 ? (
                   <><CheckCircle className="h-4 w-4 text-primary" /> <span className="text-primary">0.00</span></>
                 ) : overShort > 0 ? (
                   <Badge variant="secondary">
-                    +{fmtNum(overShort)} Sobrante
+                    +{fmtNum(overShort)} {t("treasury.replenish.over")}
                   </Badge>
                 ) : (
                   <Badge variant="destructive">
-                    {fmtNum(overShort)} Faltante
+                    {fmtNum(overShort)} {t("treasury.replenish.short")}
                   </Badge>
                 )}
               </div>
 
-              <div className="text-muted-foreground font-medium">Monto a reponer:</div>
+              <div className="text-muted-foreground font-medium">{t("treasury.replenish.amountToReplenish")}</div>
               <div className="text-right font-mono font-bold text-lg">
                 {replenishmentAmount > 0 ? fmtNum(replenishmentAmount) : "0.00"}
               </div>
@@ -198,15 +195,15 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
             <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>
-                La diferencia de {fmtNum(Math.abs(overShort))} deberá registrarse manualmente en la cuenta de Sobrante/Faltante de Caja.
+                {t("treasury.replenish.overShortNote").replace("{amount}", fmtNum(Math.abs(overShort)))}
               </span>
             </div>
           )}
 
           <div className="border-t pt-4">
-            <Label>Cuenta Origen *</Label>
+            <Label>{t("treasury.replenish.sourceAccount")}</Label>
             <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar cuenta bancaria..." /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("treasury.replenish.selectBank")} /></SelectTrigger>
               <SelectContent className="bg-popover">
                 {sourceAccounts.map(a => (
                   <SelectItem key={a.id} value={a.id}>
@@ -219,9 +216,9 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("treasury.replenish.cancel")}</Button>
           <Button onClick={() => createTransferMutation.mutate()} disabled={!canSubmit}>
-            {createTransferMutation.isPending ? "Procesando..." : "Reponer Fondo"}
+            {createTransferMutation.isPending ? t("treasury.replenish.processing") : t("treasury.replenish.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

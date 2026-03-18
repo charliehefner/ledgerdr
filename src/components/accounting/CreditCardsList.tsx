@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, Pencil, CreditCard } from "lucide-react";
+import { Plus, Pencil, CreditCard, List } from "lucide-react";
+import { CreditCardTransactionsDialog } from "./CreditCardTransactionsDialog";
 
 type CreditCardAccount = {
   id: string;

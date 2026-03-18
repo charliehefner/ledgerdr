@@ -225,6 +225,15 @@ export function CreditCardsList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreditCardTransactionsDialog
+        cardId={txCardId}
+        cardName={txCardName}
+        open={!!txCardId}
+        onOpenChange={(open) => { if (!open) setTxCardId(null); }}
+      />
     </div>
+  );
+}
   );
 }

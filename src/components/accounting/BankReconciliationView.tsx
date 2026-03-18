@@ -228,7 +228,7 @@ export function BankReconciliationView() {
         balance: balIdx >= 0 ? parseFloat(cols[balIdx]?.replace(/[^0-9.-]/g, "")) || null : null,
       });
     }
-    if (linesToInsert.length === 0) throw new Error("No se encontraron líneas válidas en el archivo.");
+    if (linesToInsert.length === 0) throw new Error(t("treasury.recon.noValidLines"));
     const { error } = await supabase.from("bank_statement_lines" as any).insert(linesToInsert as any);
     if (error) throw error;
     return linesToInsert.length;

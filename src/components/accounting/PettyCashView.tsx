@@ -131,13 +131,23 @@ export function PettyCashView() {
   const isRecharge = (tx: Transaction) =>
     !pettyCashIds.includes(tx.pay_method || "") && pettyCashIds.includes(tx.destination_acct_code || "");
 
-  const totalExpenses = recentTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
-  const totalRecharges = recentTx.filter(tx => isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const filteredTx = useMemo(() => {
+    if (selectedFundId === "all") return recentTx;
+    return recentTx.filter(tx =>
+      tx.pay_method === selectedFundId || tx.destination_acct_code === selectedFundId
+    );
+  }, [recentTx, selectedFundId]);
+
+  const totalExpenses = filteredTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const totalRecharges = filteredTx.filter(tx => isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
   const txWithBalance = (() => {
-    if (recentTx.length === 0) return [];
-    const startingBalance = accounts[0]?.fixed_amount || 0;
-    const chronological = [...recentTx].reverse();
+    if (filteredTx.length === 0) return [];
+    const selectedAcct = selectedFundId !== "all"
+      ? accounts.find(a => a.id === selectedFundId)
+      : accounts[0];
+    const startingBalance = selectedAcct?.fixed_amount || 0;
+    const chronological = [...filteredTx].reverse();
     let balance = startingBalance;
     const withBal = chronological.map(tx => {
       if (isRecharge(tx)) {

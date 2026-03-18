@@ -177,7 +177,7 @@ export function CreditCardsList() {
                       {acct.is_active ? "Activa" : "Inactiva"}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => { setTxCardId(acct.id); setTxCardName(acct.account_name); }} title="Ver movimientos"><List className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>

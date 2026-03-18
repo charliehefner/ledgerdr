@@ -39,6 +39,8 @@ export function CreditCardsList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [txCardId, setTxCardId] = useState<string | null>(null);
+  const [txCardName, setTxCardName] = useState("");
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["treasury-credit-cards"],

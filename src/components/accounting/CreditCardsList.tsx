@@ -176,10 +176,11 @@ export function CreditCardsList() {
                     <Badge variant={acct.is_active ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleActive(acct)}>
                       {acct.is_active ? "Activa" : "Inactiva"}
                     </Badge>
-                  </TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => { setTxCardId(acct.id); setTxCardName(acct.account_name); }} title="Ver movimientos"><List className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
-                  </TableCell>
+                   </TableCell>
+                   <TableCell>
+                     <Button variant="ghost" size="icon" onClick={() => { setTxCardId(acct.id); setTxCardName(acct.account_name); }} title="Ver movimientos"><List className="h-4 w-4" /></Button>
+                     <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}><Pencil className="h-4 w-4" /></Button>
+                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>

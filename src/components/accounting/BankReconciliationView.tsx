@@ -253,12 +253,12 @@ export function BankReconciliationView() {
     if (error) throw error;
     const skipped = lines.length - newLines.length;
     const summary = [
-      `${newLines.length} líneas importadas`,
-      skipped > 0 ? `${skipped} duplicadas omitidas` : null,
-      acctId ? `Cuenta: ${acctId}` : null,
-      ledgerBal != null ? `Balance: ${ledgerBal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : null,
+      t("treasury.recon.linesImported").replace("{count}", String(newLines.length)),
+      skipped > 0 ? t("treasury.recon.duplicatesSkipped").replace("{count}", String(skipped)) : null,
+      acctId ? t("treasury.recon.account").replace("{id}", acctId) : null,
+      ledgerBal != null ? t("treasury.recon.balance").replace("{bal}", ledgerBal.toLocaleString("es-DO", { minimumFractionDigits: 2 })) : null,
     ].filter(Boolean).join(". ");
-    toast({ title: "Importación OFX exitosa", description: summary });
+    toast({ title: t("treasury.recon.ofxSuccess"), description: summary });
     return newLines.length;
   };
 

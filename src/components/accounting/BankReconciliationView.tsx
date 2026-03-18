@@ -273,7 +273,7 @@ export function BankReconciliationView() {
         count = (await handleOFXImport(text)) ?? 0;
       } else if (ext === "txt") {
         const parsed = parseTXT(text);
-        if (parsed.length === 0) throw new Error("No se encontraron transacciones válidas en el archivo TXT.");
+        if (parsed.length === 0) throw new Error(t("treasury.recon.noTXTTransactions"));
         const { data: existing } = await supabase
           .from("bank_statement_lines" as any)
           .select("reference")

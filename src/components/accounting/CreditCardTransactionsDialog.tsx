@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate, formatMoney } from "@/lib/formatters";
 import { Receipt, ArrowDown, ArrowUp } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Props = {
   cardId: string | null;
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function CreditCardTransactionsDialog({ cardId, cardName, open, onOpenChange }: Props) {
+  const { t } = useLanguage();
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["credit-card-transactions", cardId],
     enabled: open && !!cardId,
@@ -37,25 +39,25 @@ export function CreditCardTransactionsDialog({ cardId, cardName, open, onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Movimientos — {cardName}</DialogTitle>
+          <DialogTitle>{t("treasury.ccTx.title").replace("{name}", cardName)}</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+          <div className="p-8 text-center text-muted-foreground">{t("treasury.ccTx.loading")}</div>
         ) : transactions.length === 0 ? (
-          <EmptyState icon={Receipt} title="Sin movimientos" description="No hay transacciones registradas para esta tarjeta." />
+          <EmptyState icon={Receipt} title={t("treasury.ccTx.emptyTitle")} description={t("treasury.ccTx.emptyDesc")} />
         ) : (
           <div className="border rounded-lg overflow-auto flex-1">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[40px]" />
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead>Moneda</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>{t("treasury.ccTx.col.date")}</TableHead>
+                  <TableHead>{t("treasury.ccTx.col.description")}</TableHead>
+                  <TableHead>{t("treasury.ccTx.col.name")}</TableHead>
+                  <TableHead className="text-right">{t("treasury.ccTx.col.amount")}</TableHead>
+                  <TableHead>{t("treasury.ccTx.col.currency")}</TableHead>
+                  <TableHead>{t("treasury.ccTx.col.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -77,9 +79,9 @@ export function CreditCardTransactionsDialog({ cardId, cardName, open, onOpenCha
                       <TableCell>{tx.currency || "DOP"}</TableCell>
                       <TableCell>
                         {tx.is_void ? (
-                          <Badge variant="destructive">Anulada</Badge>
+                          <Badge variant="destructive">{t("treasury.ccTx.voided")}</Badge>
                         ) : (
-                          <Badge variant="outline">Activa</Badge>
+                          <Badge variant="outline">{t("treasury.ccTx.activeStatus")}</Badge>
                         )}
                       </TableCell>
                     </TableRow>

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type PettyCashAccount = {
   id: string;
@@ -49,6 +50,7 @@ type Transaction = {
 const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "", currency: "DOP", chart_account_id: "", fixed_amount: "" };
 
 export function PettyCashView() {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,7 +84,6 @@ export function PettyCashView() {
     },
   });
 
-  // Fetch GL balances for petty cash chart accounts
   const chartAccountIds = accounts.filter(a => a.chart_account_id).map(a => a.chart_account_id!);
   const { data: glBalances = [] } = useQuery({
     queryKey: ["petty-cash-gl-balances", chartAccountIds],
@@ -140,7 +141,6 @@ export function PettyCashView() {
   const totalExpenses = recentTx.filter(tx => !isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
   const totalRecharges = recentTx.filter(tx => isRecharge(tx)).reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
-  // Compute running balances
   const txWithBalance = (() => {
     if (recentTx.length === 0) return [];
     const startingBalance = accounts[0]?.fixed_amount || 0;
@@ -178,7 +178,7 @@ export function PettyCashView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treasury-petty-cash"] });
-      toast.success(editingId ? "Fondo actualizado" : "Fondo creado");
+      toast.success(editingId ? t("treasury.pc.fundUpdated") : t("treasury.pc.fundCreated"));
       setDialogOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -205,25 +205,25 @@ export function PettyCashView() {
       {/* Petty Cash Funds */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Fondos de Caja Chica</h3>
-          <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nuevo Fondo</Button>
+          <h3 className="text-lg font-semibold">{t("treasury.pc.title")}</h3>
+          <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> {t("treasury.pc.newFund")}</Button>
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+          <div className="p-8 text-center text-muted-foreground">{t("treasury.bank.loading")}</div>
         ) : accounts.length === 0 ? (
-          <EmptyState icon={Wallet} title="Sin fondos de caja chica" description="Cree un fondo de caja chica para comenzar." />
+          <EmptyState icon={Wallet} title={t("treasury.pc.emptyTitle")} description={t("treasury.pc.emptyDesc")} />
         ) : (
           <div className="border rounded-lg overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Moneda</TableHead>
-                   <TableHead className="text-right">Monto Fijo</TableHead>
-                   <TableHead className="text-right">Saldo Contable</TableHead>
-                   <TableHead>Cuenta Contable</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>{t("treasury.pc.col.name")}</TableHead>
+                  <TableHead>{t("treasury.pc.col.currency")}</TableHead>
+                   <TableHead className="text-right">{t("treasury.pc.col.fixedAmount")}</TableHead>
+                   <TableHead className="text-right">{t("treasury.pc.col.glBalance")}</TableHead>
+                   <TableHead>{t("treasury.pc.col.glAccount")}</TableHead>
+                  <TableHead>{t("treasury.pc.col.status")}</TableHead>
                   <TableHead className="w-[120px]" />
                 </TableRow>
               </TableHeader>
@@ -245,7 +245,7 @@ export function PettyCashView() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={acct.is_active ? "default" : "outline"}>
-                        {acct.is_active ? "Activo" : "Inactivo"}
+                        {acct.is_active ? t("treasury.pc.active") : t("treasury.pc.inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell className="flex gap-1">
@@ -256,7 +256,7 @@ export function PettyCashView() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="Reponer Fondo"
+                          title={t("treasury.pc.replenishFund")}
                           onClick={() => setReplenishFund(acct)}
                         >
                           <RefreshCw className="h-4 w-4" />
@@ -274,31 +274,31 @@ export function PettyCashView() {
       {/* Recent Petty Cash Transactions */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Transacciones Recientes (Caja Chica)</h3>
+          <h3 className="text-lg font-semibold">{t("treasury.pc.recentTitle")}</h3>
           <div className="flex gap-3">
             <Badge variant="outline" className="text-base px-3 py-1">
-              Gastos: {fmtNum(totalExpenses)}
+              {t("treasury.pc.expenses")}: {fmtNum(totalExpenses)}
             </Badge>
             <Badge variant="outline" className="text-base px-3 py-1 border-primary/50 text-primary">
-              Recargas: {fmtNum(totalRecharges)}
+              {t("treasury.pc.recharges")}: {fmtNum(totalRecharges)}
             </Badge>
           </div>
         </div>
 
         {recentTx.length === 0 ? (
-          <EmptyState icon={Wallet} title="Sin transacciones" description="Las transacciones con método de pago 'Caja Chica' aparecerán aquí." />
+          <EmptyState icon={Wallet} title={t("treasury.pc.noTxTitle")} description={t("treasury.pc.noTxDesc")} />
         ) : (
           <div className="border rounded-lg overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead>{t("treasury.pc.col.id")}</TableHead>
+                  <TableHead>{t("treasury.pc.col.date")}</TableHead>
+                  <TableHead>{t("treasury.pc.col.type")}</TableHead>
+                  <TableHead>{t("treasury.pc.col.txName")}</TableHead>
+                  <TableHead>{t("treasury.pc.col.description")}</TableHead>
+                  <TableHead className="text-right">{t("treasury.pc.col.amount")}</TableHead>
+                  <TableHead className="text-right">{t("treasury.pc.col.balance")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -308,7 +308,7 @@ export function PettyCashView() {
                     <TableCell>{format(new Date(tx.transaction_date + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
                     <TableCell>
                       <Badge variant={isRecharge(tx) ? "default" : "outline"}>
-                        {isRecharge(tx) ? "Recarga" : "Gasto"}
+                        {isRecharge(tx) ? t("treasury.pc.recharge") : t("treasury.pc.expense")}
                       </Badge>
                     </TableCell>
                     <TableCell>{tx.name || "—"}</TableCell>
@@ -328,11 +328,11 @@ export function PettyCashView() {
       {/* Fund Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editingId ? "Editar Fondo" : "Nuevo Fondo de Caja Chica"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? t("treasury.pc.editTitle") : t("treasury.pc.newTitle")}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div><Label>Nombre *</Label><Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder="Ej: Caja Chica Principal" /></div>
+            <div><Label>{t("treasury.pc.fundName")}</Label><Input value={form.account_name} onChange={e => setForm(f => ({ ...f, account_name: e.target.value }))} placeholder={t("treasury.pc.fundNamePlaceholder")} /></div>
             <div>
-              <Label>Monto Fijo del Fondo *</Label>
+              <Label>{t("treasury.pc.fixedAmountLabel")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -342,10 +342,10 @@ export function PettyCashView() {
                 placeholder="10000.00"
                 className="font-mono"
               />
-              <p className="text-xs text-muted-foreground mt-1">Monto al que se repondrá el fondo cada vez (sistema de fondo fijo).</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("treasury.pc.fixedAmountHint")}</p>
             </div>
             <div>
-              <Label>Moneda</Label>
+              <Label>{t("treasury.pc.col.currency")}</Label>
               <Select value={form.currency} onValueChange={v => setForm(f => ({ ...f, currency: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
@@ -356,9 +356,9 @@ export function PettyCashView() {
               </Select>
             </div>
             <div>
-              <Label>Cuenta Contable (GL)</Label>
+              <Label>{t("treasury.bank.glAccountLabel")}</Label>
               <Select value={form.chart_account_id} onValueChange={v => setForm(f => ({ ...f, chart_account_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("treasury.bank.selectAccount")} /></SelectTrigger>
                 <SelectContent className="bg-popover max-h-[200px]">
                   {chartAccounts.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.account_code} — {c.account_name}</SelectItem>
@@ -368,9 +368,9 @@ export function PettyCashView() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("treasury.bank.cancel")}</Button>
             <Button onClick={() => saveMutation.mutate()} disabled={!form.account_name || saveMutation.isPending}>
-              {saveMutation.isPending ? "Guardando..." : editingId ? "Actualizar" : "Crear"}
+              {saveMutation.isPending ? t("treasury.bank.saving") : editingId ? t("treasury.bank.update") : t("treasury.bank.create")}
             </Button>
           </DialogFooter>
         </DialogContent>

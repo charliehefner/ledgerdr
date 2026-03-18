@@ -196,7 +196,7 @@ export function BankReconciliationView() {
 
   const handleCSVImport = async (text: string) => {
     const rows = text.split("\n").filter(r => r.trim());
-    if (rows.length < 2) throw new Error("El archivo CSV debe tener al menos una fila de encabezado y una de datos.");
+    if (rows.length < 2) throw new Error(t("treasury.recon.csvMinRows"));
     const header = rows[0].split(",").map(h => h.trim().toLowerCase().replace(/"/g, ""));
     const dateIdx = header.findIndex(h => h.includes("fecha") || h.includes("date"));
     const descIdx = header.findIndex(h => h.includes("desc") || h.includes("concepto") || h.includes("detail"));
@@ -204,7 +204,7 @@ export function BankReconciliationView() {
     const refIdx = header.findIndex(h => h.includes("ref") || h.includes("doc") || h.includes("numero"));
     const balIdx = header.findIndex(h => h.includes("balance") || h.includes("saldo"));
     if (dateIdx === -1 || amtIdx === -1) {
-      throw new Error("No se encontraron columnas de fecha y monto.");
+      throw new Error(t("treasury.recon.noDateAmountCols"));
     }
     const linesToInsert: any[] = [];
     for (let i = 1; i < rows.length; i++) {
@@ -228,7 +228,7 @@ export function BankReconciliationView() {
         balance: balIdx >= 0 ? parseFloat(cols[balIdx]?.replace(/[^0-9.-]/g, "")) || null : null,
       });
     }
-    if (linesToInsert.length === 0) throw new Error("No se encontraron líneas válidas en el archivo.");
+    if (linesToInsert.length === 0) throw new Error(t("treasury.recon.noValidLines"));
     const { error } = await supabase.from("bank_statement_lines" as any).insert(linesToInsert as any);
     if (error) throw error;
     return linesToInsert.length;
@@ -236,7 +236,7 @@ export function BankReconciliationView() {
 
   const handleOFXImport = async (text: string) => {
     const { lines, bankId, acctId, ledgerBal } = parseOFX(text);
-    if (lines.length === 0) throw new Error("No se encontraron transacciones en el archivo OFX.");
+    if (lines.length === 0) throw new Error(t("treasury.recon.noOFXTransactions"));
     const { data: existing } = await supabase
       .from("bank_statement_lines" as any)
       .select("reference")
@@ -245,7 +245,7 @@ export function BankReconciliationView() {
     const existingRefs = new Set((existing || []).map((r: any) => r.reference));
     const newLines = lines.filter(l => !l.reference || !existingRefs.has(l.reference));
     if (newLines.length === 0) {
-      toast({ title: "Sin líneas nuevas", description: "Todas las transacciones ya fueron importadas." });
+      toast({ title: t("treasury.recon.noNewLines"), description: t("treasury.recon.allAlreadyImported") });
       return 0;
     }
     const linesToInsert = newLines.map(l => ({ bank_account_id: selectedBank, ...l }));
@@ -253,12 +253,12 @@ export function BankReconciliationView() {
     if (error) throw error;
     const skipped = lines.length - newLines.length;
     const summary = [
-      `${newLines.length} líneas importadas`,
-      skipped > 0 ? `${skipped} duplicadas omitidas` : null,
-      acctId ? `Cuenta: ${acctId}` : null,
-      ledgerBal != null ? `Balance: ${ledgerBal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : null,
+      t("treasury.recon.linesImported").replace("{count}", String(newLines.length)),
+      skipped > 0 ? t("treasury.recon.duplicatesSkipped").replace("{count}", String(skipped)) : null,
+      acctId ? t("treasury.recon.account").replace("{id}", acctId) : null,
+      ledgerBal != null ? t("treasury.recon.balance").replace("{bal}", ledgerBal.toLocaleString("es-DO", { minimumFractionDigits: 2 })) : null,
     ].filter(Boolean).join(". ");
-    toast({ title: "Importación OFX exitosa", description: summary });
+    toast({ title: t("treasury.recon.ofxSuccess"), description: summary });
     return newLines.length;
   };
 
@@ -273,7 +273,7 @@ export function BankReconciliationView() {
         count = (await handleOFXImport(text)) ?? 0;
       } else if (ext === "txt") {
         const parsed = parseTXT(text);
-        if (parsed.length === 0) throw new Error("No se encontraron transacciones válidas en el archivo TXT.");
+        if (parsed.length === 0) throw new Error(t("treasury.recon.noTXTTransactions"));
         const { data: existing } = await supabase
           .from("bank_statement_lines" as any)
           .select("reference")
@@ -282,7 +282,7 @@ export function BankReconciliationView() {
         const existingRefs = new Set((existing || []).map((r: any) => r.reference));
         const newLines = parsed.filter(l => !l.reference || !existingRefs.has(l.reference));
         if (newLines.length === 0) {
-          toast({ title: "Sin líneas nuevas", description: "Todas las transacciones ya fueron importadas." });
+          toast({ title: t("treasury.recon.noNewLines"), description: t("treasury.recon.allAlreadyImported") });
         } else {
           const linesToInsert = newLines.map(l => ({ bank_account_id: selectedBank, ...l }));
           const { error } = await supabase.from("bank_statement_lines" as any).insert(linesToInsert as any);
@@ -290,21 +290,21 @@ export function BankReconciliationView() {
           count = newLines.length;
           const skipped = parsed.length - newLines.length;
           toast({
-            title: "Importación TXT exitosa",
-            description: `${count} líneas importadas${skipped > 0 ? `, ${skipped} duplicadas omitidas` : ""}.`,
+            title: t("treasury.recon.txtSuccess"),
+            description: `${count} ${t("treasury.recon.linesImported").replace("{count}", String(count))}${skipped > 0 ? `, ${t("treasury.recon.duplicatesSkipped").replace("{count}", String(skipped))}` : ""}.`,
           });
         }
       } else {
         count = (await handleCSVImport(text)) ?? 0;
         if (count > 0) {
-          toast({ title: "Importación exitosa", description: `Se importaron ${count} líneas.` });
+          toast({ title: t("treasury.recon.csvSuccess"), description: t("treasury.recon.csvImported").replace("{count}", String(count)) });
         }
       }
       if (count > 0) {
         queryClient.invalidateQueries({ queryKey: ["bank-lines", selectedBank] });
       }
     } catch (err: any) {
-      toast({ title: "Error de importación", description: err.message, variant: "destructive" });
+      toast({ title: t("treasury.recon.importError"), description: err.message, variant: "destructive" });
     }
     if (fileRef.current) fileRef.current.value = "";
   };

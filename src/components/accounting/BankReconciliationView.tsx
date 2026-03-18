@@ -196,7 +196,7 @@ export function BankReconciliationView() {
 
   const handleCSVImport = async (text: string) => {
     const rows = text.split("\n").filter(r => r.trim());
-    if (rows.length < 2) throw new Error("El archivo CSV debe tener al menos una fila de encabezado y una de datos.");
+    if (rows.length < 2) throw new Error(t("treasury.recon.csvMinRows"));
     const header = rows[0].split(",").map(h => h.trim().toLowerCase().replace(/"/g, ""));
     const dateIdx = header.findIndex(h => h.includes("fecha") || h.includes("date"));
     const descIdx = header.findIndex(h => h.includes("desc") || h.includes("concepto") || h.includes("detail"));

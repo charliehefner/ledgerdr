@@ -448,6 +448,16 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       });
     });
 
+    // Include diesel in molecule summary
+    dieselUsageRows.forEach((row) => {
+      const moleculeName = row.inputName; // "Diesel Agrícola" or "Diesel Industrial"
+      if (!grouped[moleculeName]) {
+        grouped[moleculeName] = { totalAmount: 0, totalCost: 0, totalCO2e: 0, useUnit: "gal" };
+      }
+      grouped[moleculeName].totalAmount += row.amount;
+      grouped[moleculeName].totalCost += row.costPerUnit * row.amount;
+    });
+
     return Object.entries(grouped)
       .map(([name, g]) => ({
         moleculeName: name,

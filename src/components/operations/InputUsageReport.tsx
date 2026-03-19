@@ -165,7 +165,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fuel_transactions")
-        .select("id, equipment_id, gallons, transaction_date, transaction_type, tank_id, fuel_tanks!inner(fuel_type)")
+        .select("id, equipment_id, gallons, transaction_date, transaction_type, tank_id, fuel_tanks!inner(fuel_type, use_type)")
         .eq("transaction_type", "dispense");
       if (error) throw error;
       return data as Array<{
@@ -175,7 +175,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         transaction_date: string;
         transaction_type: string;
         tank_id: string;
-        fuel_tanks: { fuel_type: string };
+        fuel_tanks: { fuel_type: string; use_type: string };
       }>;
     },
   });
@@ -278,7 +278,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
     fuelTransactions.forEach((ft) => {
       if (!ft.equipment_id) return;
-      const txDate = ft.transaction_date.substring(0, 10); // extract date part
+      const txDate = ft.transaction_date.substring(0, 10);
       const txDateObj = parseDateLocal(txDate);
       const inDateRange = isWithinInterval(txDateObj, {
         start: startOfDay(startDate),
@@ -286,16 +286,19 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       });
       if (!inDateRange) return;
 
+      const dieselLabel = ft.fuel_tanks?.use_type === 'agriculture' ? "Diesel Agrícola"
+        : ft.fuel_tanks?.use_type === 'industry' ? "Diesel Industrial"
+        : "Diesel";
+
       const key = `${ft.equipment_id}__${txDate}`;
       const matchedOps = opsLookup.get(key) || [];
 
       if (matchedOps.length === 0) {
-        // No matching operation - still show the fuel usage but field = "Sin operación"
         results.push({
           operationId: `fuel-${ft.id}`,
           date: txDate,
           fieldName: "Sin operación",
-          inputName: "Diesel",
+          inputName: dieselLabel,
           inputUnit: "gal",
           amount: Number(ft.gallons) || 0,
           hectares: 0,
@@ -306,11 +309,9 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         return;
       }
 
-      // Distribute gallons proportionally by hectares, or evenly
       const totalHa = matchedOps.reduce((s, o) => s + (o.hectares_done || 0), 0);
       matchedOps.forEach((op) => {
         const field = fields?.find((f) => f.name === op.fields?.name);
-        // Apply farm/field filters
         if (selectedFarm !== "all" && field?.farm_id !== selectedFarm) return;
         if (selectedFields.length > 0 && field && !selectedFields.includes(field.id)) return;
 
@@ -324,7 +325,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           operationId: `fuel-${ft.id}-${op.id}`,
           date: op.operation_date,
           fieldName: op.fields?.name || "Unknown",
-          inputName: "Diesel",
+          inputName: dieselLabel,
           inputUnit: "gal",
           amount: share,
           hectares,
@@ -447,6 +448,16 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       });
     });
 
+    // Include diesel in molecule summary
+    dieselUsageRows.forEach((row) => {
+      const moleculeName = row.inputName; // "Diesel Agrícola" or "Diesel Industrial"
+      if (!grouped[moleculeName]) {
+        grouped[moleculeName] = { totalAmount: 0, totalCost: 0, totalCO2e: 0, useUnit: "gal" };
+      }
+      grouped[moleculeName].totalAmount += row.amount;
+      grouped[moleculeName].totalCost += row.costPerUnit * row.amount;
+    });
+
     return Object.entries(grouped)
       .map(([name, g]) => ({
         moleculeName: name,
@@ -457,7 +468,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         totalCO2e: g.totalCO2e,
       }))
       .sort((a, b) => a.moleculeName.localeCompare(b.moleculeName));
-  }, [operations, fields, inventoryItems, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap]);
+  }, [operations, fields, inventoryItems, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap, dieselUsageRows]);
 
   const handleFarmChange = (farmId: string) => {
     setSelectedFarm(farmId);

@@ -278,7 +278,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
     fuelTransactions.forEach((ft) => {
       if (!ft.equipment_id) return;
-      const txDate = ft.transaction_date.substring(0, 10); // extract date part
+      const txDate = ft.transaction_date.substring(0, 10);
       const txDateObj = parseDateLocal(txDate);
       const inDateRange = isWithinInterval(txDateObj, {
         start: startOfDay(startDate),
@@ -286,16 +286,19 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       });
       if (!inDateRange) return;
 
+      const dieselLabel = ft.fuel_tanks?.use_type === 'agriculture' ? "Diesel Agrícola"
+        : ft.fuel_tanks?.use_type === 'industry' ? "Diesel Industrial"
+        : "Diesel";
+
       const key = `${ft.equipment_id}__${txDate}`;
       const matchedOps = opsLookup.get(key) || [];
 
       if (matchedOps.length === 0) {
-        // No matching operation - still show the fuel usage but field = "Sin operación"
         results.push({
           operationId: `fuel-${ft.id}`,
           date: txDate,
           fieldName: "Sin operación",
-          inputName: "Diesel",
+          inputName: dieselLabel,
           inputUnit: "gal",
           amount: Number(ft.gallons) || 0,
           hectares: 0,
@@ -306,11 +309,9 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         return;
       }
 
-      // Distribute gallons proportionally by hectares, or evenly
       const totalHa = matchedOps.reduce((s, o) => s + (o.hectares_done || 0), 0);
       matchedOps.forEach((op) => {
         const field = fields?.find((f) => f.name === op.fields?.name);
-        // Apply farm/field filters
         if (selectedFarm !== "all" && field?.farm_id !== selectedFarm) return;
         if (selectedFields.length > 0 && field && !selectedFields.includes(field.id)) return;
 
@@ -324,7 +325,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           operationId: `fuel-${ft.id}-${op.id}`,
           date: op.operation_date,
           fieldName: op.fields?.name || "Unknown",
-          inputName: "Diesel",
+          inputName: dieselLabel,
           inputUnit: "gal",
           amount: share,
           hectares,

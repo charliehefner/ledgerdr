@@ -468,7 +468,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         totalCO2e: g.totalCO2e,
       }))
       .sort((a, b) => a.moleculeName.localeCompare(b.moleculeName));
-  }, [operations, fields, inventoryItems, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap]);
+  }, [operations, fields, inventoryItems, startDate, endDate, selectedInput, selectedFarm, selectedFields, hasSearched, costPerUnitMap, dieselUsageRows]);
 
   const handleFarmChange = (farmId: string) => {
     setSelectedFarm(farmId);

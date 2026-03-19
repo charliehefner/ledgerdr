@@ -1,75 +1,90 @@
+## Audit: Gaps to Commercial-Grade Accounting Software — IMPLEMENTED
 
+### ✅ 1. Journal Generation: Withholdings (ITBIS Retenido / ISR Retenido)
+- `generate-journals` now reads `itbis_retenido` and `isr_retenido` from transactions
+- Creates credit lines for accounts 2160 (ITBIS Retenido) and 2170 (ISR Retenido)
+- Bank credit amount is reduced by withholding totals to keep journal balanced
 
-# Fix: Hour Meter Trigger Doesn't Revert Old Tractor on Reassignment
+### ✅ 2. Journal Generation: Exchange Rate
+- `generate-journals` now reads `exchange_rate` from transactions
+- Sets `currency` and `exchange_rate` on created journals after RPC call
 
-## Problem
-The `update_tractor_hour_meter()` trigger only recalculates hours for `NEW.tractor_id`. When someone saves an operation with the wrong tractor, then corrects it, the original tractor keeps the inflated value permanently. This has now happened three times.
+### ✅ 3. Auto AP/AR Document Creation from Transactions
+- TransactionForm auto-creates `ap_ar_documents` record when `due_date` is present
+- Direction mapped from transaction_direction (sale→receivable, purchase→payable)
+- Links transaction ID via `linked_transaction_ids`
 
-## Root Cause (from data)
-On March 18 at 20:39 UTC, an operation with `end_hours = 7137.1` was created under JD 7280R (whose true max is 5072.7). At 20:45 it was corrected to JD3006 — but JD 7280R was never recalculated.
+### ✅ 4. AP/AR Payment Generates Journal Entry
+- PaymentDialog now creates CDJ (payable) or CRJ (receivable) journal with lines
+- Payable: Debit AP (2100) / Credit Bank; Receivable: Debit Bank / Credit AR (1200)
+- Requires bank account selection with mapped GL account
+- Records in `ap_ar_payments` audit trail table
 
-## Plan
+### ✅ 5. Sale Transactions: Direction-Aware Journal Lines
+- Sales (SJ): Debit bank/cash, Credit revenue account, Credit ITBIS por Pagar (2110)
+- Purchases (PJ): Debit expense, Debit ITBIS Pagado (1650), Credit bank/cash
+- Each line now includes a narrative `description` field
 
-### 1. Replace the trigger function (migration)
-Rewrite `update_tractor_hour_meter()` to handle all cases:
-- **INSERT**: recalculate `NEW.tractor_id`
-- **UPDATE where tractor changed**: recalculate BOTH `OLD.tractor_id` and `NEW.tractor_id`
-- **UPDATE same tractor**: recalculate `NEW.tractor_id`
-- **DELETE**: recalculate `OLD.tractor_id`
+### ✅ 6. AP/AR Payment Audit Trail Table
+- Created `ap_ar_payments` table (document_id, payment_date, amount, payment_method, bank_account_id, journal_id, created_by)
+- RLS: authenticated SELECT, admin/management/accountant INSERT
 
-Each recalculation uses `MAX(end_hours)` from operations for that tractor (not just "update if higher").
+### ✅ 7. Payroll Journal Detail Integration (PRJ)
+- Closing payroll now generates detailed PRJ journal with:
+  - Debit: Salary Expense (7010), Employer TSS (6210)
+  - Credit: TSS Liability (2180), ISR Withholding (2170), Loan Deductions (1130), Net Pay to Bank
+- Non-fatal: payroll close proceeds even if journal generation fails
 
-Update the trigger to fire on INSERT, UPDATE, **and DELETE**.
+### ✅ 8. Bank GL Book Balance Display
+- BankAccountsList now shows "Saldo Contable" column
+- Queries `account_balances_from_journals` and maps by chart_account_id → account_code
 
-### 2. Add hour-gap validation trigger (migration)
-Create a `validate_operation_hour_gap()` trigger that **blocks** saves when the gap between the tractor's last `end_hours` and the new `start_hours` exceeds 100 hours. This prevents wrong-tractor entries at the source.
+### ✅ 9. Post Journal via Server-Side RPC
+- JournalDetailDialog replaced direct `.update({ posted: true })` with `supabase.rpc("post_journal")`
+- Ensures server-side balance validation before posting
 
-### 3. Data repair (same migration)
-One-time UPDATE to set every tractor's `current_hour_meter = MAX(operations.end_hours)`, fixing JD 7280R (7137.1 → 5072.7) and any other silently corrupted tractors.
+### ✅ 10. Cost Center Filtering in Financial Reports
+- Extended `account_balances_from_journals` DB function with `p_cost_center` parameter
+- LEFT JOINs transactions to filter by cost_center when not "all"
+- P&L and Balance Sheet views now pass `p_cost_center` to RPC calls
 
-### 4. Frontend: hard-block on large gap (OperationsLogView.tsx)
-Change the existing gap warning to a blocking error — prevent form submission when gap > 100h, showing a message like "Hour gap too large (2064h). Check tractor selection."
+---
 
-### 5. Frontend: read-only hour meter (TractorsView.tsx)
-Make the `current_hour_meter` field read-only in edit mode with a label "Calculated from operations" to prevent manual overrides.
+## Deep Technical Audit Fixes — IMPLEMENTED
 
-## Technical Detail
+### ✅ Finding 1: Journal Generation for UUID pay_methods (CRITICAL)
+- Added `resolvePayAccountId()` helper: tries legacy `payment_method_accounts` mapping first, then falls back to `bank_accounts.chart_account_id` via UUID lookup
+- Both transfer and purchase/sale paths now use the dual-resolution flow
 
-**Migration SQL (key parts):**
-```sql
--- Rewritten trigger function
-CREATE OR REPLACE FUNCTION update_tractor_hour_meter()
-RETURNS trigger AS $$
-DECLARE max_h NUMERIC;
-BEGIN
-  -- Recalc NEW tractor
-  IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') AND NEW.tractor_id IS NOT NULL THEN
-    SELECT COALESCE(MAX(end_hours), 0) INTO max_h
-    FROM operations WHERE tractor_id = NEW.tractor_id AND end_hours IS NOT NULL;
-    UPDATE fuel_equipment SET current_hour_meter = max_h WHERE id = NEW.tractor_id;
-  END IF;
-  -- Recalc OLD tractor if changed or deleted
-  IF (TG_OP = 'DELETE' OR (TG_OP = 'UPDATE' AND OLD.tractor_id IS DISTINCT FROM NEW.tractor_id))
-     AND OLD.tractor_id IS NOT NULL THEN
-    SELECT COALESCE(MAX(end_hours), 0) INTO max_h
-    FROM operations WHERE tractor_id = OLD.tractor_id AND end_hours IS NOT NULL;
-    UPDATE fuel_equipment SET current_hour_meter = max_h WHERE id = OLD.tractor_id;
-  END IF;
-  RETURN COALESCE(NEW, OLD);
-END; $$ LANGUAGE plpgsql;
+### ⏳ Finding 2: Bank Accounts Missing GL Links (CRITICAL)
+- Waiting on accountant to provide correct chart_account_id for each bank account
 
--- Recreate trigger with DELETE
-DROP TRIGGER IF EXISTS update_tractor_hour_meter_trigger ON operations;
-CREATE TRIGGER update_tractor_hour_meter_trigger
-  AFTER INSERT OR UPDATE OR DELETE ON operations
-  FOR EACH ROW EXECUTE FUNCTION update_tractor_hour_meter();
+### ✅ Finding 3: DGII 606 Forma de Pago (HIGH)
+- `getFormaDePago()` now accepts optional `bankAccounts` array parameter
+- Resolves UUID pay_methods via bank account_type: bank→02, credit_card→03, petty_cash→01
+- `DGIIReportsView` fetches bank accounts and passes to `DGII606Table`
 
--- Validation trigger (block >100h gaps)
--- Data repair for all tractors
-```
+### ✅ Finding 4: PaymentMethodMappingDialog Obsolete (MEDIUM)
+- Removed Settings gear button and `PaymentMethodMappingDialog` usage from JournalView
+- Component file preserved for backwards compatibility
 
-**Files to modify:**
-- New migration file (trigger rewrite + validation + data repair)
-- `src/components/operations/OperationsLogView.tsx` (hard-block submit)
-- `src/components/fuel/TractorsView.tsx` (read-only hour meter)
+### ✅ Finding 5: Cross-Currency Transfer Journal Balance (MEDIUM)
+- Simplified to always use `sourceAmount` for both debit and credit sides
+- Journal stays balanced; currency context captured in journal header metadata
 
+### ✅ Finding 6: Voided Transaction Voids AP/AR Document (MEDIUM)
+- Created SQL trigger `trg_void_ap_ar_on_transaction_void` on transactions table
+- When `is_void` changes to true, auto-sets `status = 'void'` on linked AP/AR documents
+
+### ✅ Finding 7: Exchange Rate on AP/AR Payment Journals (MEDIUM)
+- PaymentDialog now sets `currency` and `exchange_rate` on journals for non-DOP documents
+- Fetches latest exchange rate from `exchange_rates` table
+
+### ⏳ Finding 8: Client-Side Depreciation Loop (LOW)
+- Deferred — performance optimization, not correctness issue
+
+### ✅ Finding 9: Unlinked Count Has No Date Filter (LOW)
+- Working as designed — Generate Journals processes ALL unlinked transactions
+
+### ✅ Finding 10: Aging Report Currency Mixing (LOW)
+- Totals row now shows separate rows per currency instead of mixing DOP + USD

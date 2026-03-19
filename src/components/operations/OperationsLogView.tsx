@@ -767,9 +767,28 @@ export function OperationsLogView() {
         return;
       }
 
-      // Check for hour meter gap
+      // Hard-block: check for hour meter gap > 100h
       const gapWarning = checkHourMeterGap(form.tractor_id, startHours, form.operation_date, operations);
       if (gapWarning) {
+        // Calculate numeric gap to decide block vs warn
+        const tractorOps = operations
+          ?.filter(op => op.tractor_id === form.tractor_id && op.end_hours != null)
+          .filter(op => parseDateLocal(op.operation_date) < form.operation_date)
+          .sort((a, b) => parseDateLocal(b.operation_date).getTime() - parseDateLocal(a.operation_date).getTime());
+        const lastEndHours = tractorOps?.[0]?.end_hours ?? null;
+        const gap = lastEndHours != null ? startHours - lastEndHours : 0;
+
+        if (gap > 100) {
+          toast({
+            title: "🚫 Horómetro Bloqueado",
+            description: `Salto de ${gap.toFixed(1)} horas es demasiado grande (máx 100h). Verifique el tractor seleccionado.`,
+            variant: "destructive",
+            duration: 10000,
+          });
+          return;
+        }
+
+        // Small gap: just warn
         toast({
           title: "⚠️ Alerta de Horómetro",
           description: gapWarning,

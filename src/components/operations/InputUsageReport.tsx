@@ -165,7 +165,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fuel_transactions")
-        .select("id, equipment_id, gallons, transaction_date, transaction_type, tank_id, fuel_tanks!inner(fuel_type)")
+        .select("id, equipment_id, gallons, transaction_date, transaction_type, tank_id, fuel_tanks!inner(fuel_type, use_type)")
         .eq("transaction_type", "dispense");
       if (error) throw error;
       return data as Array<{
@@ -175,7 +175,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         transaction_date: string;
         transaction_type: string;
         tank_id: string;
-        fuel_tanks: { fuel_type: string };
+        fuel_tanks: { fuel_type: string; use_type: string };
       }>;
     },
   });

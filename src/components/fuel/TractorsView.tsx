@@ -330,14 +330,29 @@ export function TractorsView() {
 
                   <div>
                     <Label>{t("equipment.form.hourMeter")}</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={form.current_hour_meter}
-                      onChange={(e) =>
-                        setForm({ ...form, current_hour_meter: e.target.value })
-                      }
-                    />
+                    {editingTractor ? (
+                      <div>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={form.current_hour_meter}
+                          disabled
+                          className="bg-muted cursor-not-allowed"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Calculado desde operaciones (solo lectura)
+                        </p>
+                      </div>
+                    ) : (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={form.current_hour_meter}
+                        onChange={(e) =>
+                          setForm({ ...form, current_hour_meter: e.target.value })
+                        }
+                      />
+                    )}
                   </div>
 
                   <div>

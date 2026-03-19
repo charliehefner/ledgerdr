@@ -35,18 +35,18 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     
-    // Validate JWT by getting user - MUST pass token explicitly for Lovable Cloud
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    // Validate JWT using getClaims (works with Lovable Cloud ES256 signing)
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
-    if (userError || !user) {
-      console.error('User auth error:', userError?.message || 'No user found');
+    if (claimsError || !claimsData?.claims) {
+      console.error('Claims error:', claimsError?.message || 'No claims found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = user.id;
+    const userId = claimsData.claims.sub as string;
     
     // Create admin client for service role operations
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       _user_id: userId 
     });
     
-    if (!roleData || !['admin', 'management', 'accountant', 'supervisor', 'viewer'].includes(roleData)) {
+    if (!roleData || !['admin', 'management', 'accountant', 'supervisor', 'viewer', 'driver'].includes(roleData)) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

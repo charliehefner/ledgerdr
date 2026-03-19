@@ -35,18 +35,18 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     
-    // Validate JWT using getClaims (works with Lovable Cloud ES256 signing)
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    // Validate user via getUser
+    const { data: userData, error: userError } = await supabase.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.error('Claims error:', claimsError?.message || 'No claims found');
+    if (userError || !userData?.user) {
+      console.error('Auth error:', userError?.message || 'No user found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = userData.user.id;
     
     // Create admin client for service role operations
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);

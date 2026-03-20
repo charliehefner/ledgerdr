@@ -5,7 +5,7 @@ import { ReceivablesView } from "@/components/accounting/ReceivablesView";
 import { PayablesView } from "@/components/accounting/PayablesView";
 
 export default function AccountsPayableReceivable() {
-  const [activeTab, setActiveTab] = useState("receivables");
+  const [activeTab, setActiveTab] = useState("payables");
   const { t } = useLanguage();
 
   return (

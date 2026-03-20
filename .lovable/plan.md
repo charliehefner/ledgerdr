@@ -1,23 +1,34 @@
 
 
-# Fix: AP/AR Account Prefix Mismatch
+# Fix: Repair Old AP Documents Still Linked to Account 2110
 
-## Problem
-Transaction 361 (credit purchase, DOP 55,134.21 to Charles Hefner) was saved correctly but no AP document was auto-created. The auto-creation code and the Payables list both use GL account prefix `'21%'` to find Accounts Payable accounts, but your chart of accounts has AP under `'24%'` (e.g., `2440 - Cuentas a pagar`). The `'21%'` prefix incorrectly matches tax reserve accounts (`2110`).
+## Status of Previous Fix
+- ✅ **Code fix confirmed**: Both `TransactionForm.tsx` (line 344) and `ApArDocumentList.tsx` (line 79) now use prefix `'24'` for payables
+- ✅ **New AP auto-creation works**: Credit purchases will correctly link to `2440`
+- ✅ **Transaction 361**: Already shows `2440` (was repaired in the previous migration)
+- ❌ **Old documents 349, 253, 254, etc.**: Still show `2110` — created before the fix
 
-## Fix
+## Plan
 
-### 1. Update account prefix in TransactionForm.tsx (line ~344)
-Change the payable prefix from `'21'` to `'24'` so auto-created AP documents link to `2440 - Cuentas a pagar`.
+### 1. Data repair migration
+Update all existing `ap_ar_documents` where `direction = 'payable'` and `account_id` points to a `21xx` account, reassigning them to the first postable `24xx` account (2440 - Cuentas a pagar).
 
-### 2. Update account prefix in ApArDocumentList.tsx (line 79)
-Change the payable prefix from `'21'` to `'24'` so the GL account dropdown and display show the correct AP accounts.
-
-### 3. Repair transaction 361
-Insert the missing AP document for transaction 361 via a one-time data patch (migration), linking it to the `2440` account with the correct amount, due date, and contact info.
+```sql
+UPDATE ap_ar_documents
+SET account_id = (
+  SELECT id FROM chart_of_accounts
+  WHERE account_code LIKE '24%'
+    AND allow_posting = true
+    AND deleted_at IS NULL
+  ORDER BY account_code LIMIT 1
+)
+WHERE direction = 'payable'
+  AND account_id IN (
+    SELECT id FROM chart_of_accounts
+    WHERE account_code LIKE '21%'
+  );
+```
 
 ### Files Modified
-- `src/components/transactions/TransactionForm.tsx` — change payable prefix `'21'` → `'24'`
-- `src/components/accounting/ApArDocumentList.tsx` — change payable prefix `'21'` → `'24'`
-- New migration — insert missing AP document for transaction 361
+- New migration only — no code changes needed
 

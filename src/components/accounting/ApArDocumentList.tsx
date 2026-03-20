@@ -76,7 +76,7 @@ export function ApArDocumentList({ direction }: Props) {
   });
 
   // Fetch relevant GL accounts for the direction
-  const accountPrefix = direction === "receivable" ? "12" : "21";
+  const accountPrefix = direction === "receivable" ? "12" : "24";
   const { data: glAccounts = [] } = useQuery({
     queryKey: ["ap-ar-gl-accounts", accountPrefix],
     queryFn: async () => {

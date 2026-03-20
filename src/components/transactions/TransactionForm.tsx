@@ -341,7 +341,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           }
           try {
             // Look up default AR/AP GL account
-            const acctPrefix = direction === 'receivable' ? '12' : '21';
+            const acctPrefix = direction === 'receivable' ? '12' : '24';
             const { data: defaultAcct } = await supabase
               .from('chart_of_accounts')
               .select('id')

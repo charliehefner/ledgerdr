@@ -8,9 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
-import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HelpPanelButtonProps {
@@ -19,31 +17,26 @@ interface HelpPanelButtonProps {
 
 export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
   const { language, t } = useLanguage();
-  const [content, setContent] = useState<string | null>(null);
+  const [exists, setExists] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const filePath = `/help/${language}/${chapter}.md`;
+  const filePath = `/help/${language}/${chapter}.pdf`;
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setNotFound(false);
-    setContent(null);
+    setExists(false);
 
-    fetch(filePath)
+    fetch(filePath, { method: "HEAD" })
       .then((res) => {
         if (!res.ok) throw new Error("Not found");
-        return res.text();
-      })
-      .then((text) => {
-        // Vite returns index.html for missing files in dev; detect that
-        if (text.includes("<!DOCTYPE") || text.includes("<html")) {
-          setNotFound(true);
-        } else {
-          setContent(text);
-        }
+        // Vite returns index.html for missing files in dev; detect via content-type
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("text/html")) throw new Error("Not found");
+        setExists(true);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -67,13 +60,13 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
         <TooltipContent>{t("help.openManual")}</TooltipContent>
       </Tooltip>
 
-      <SheetContent side="right" className="w-full sm:max-w-lg md:max-w-xl">
+      <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl">
         <SheetHeader className="flex flex-row items-center justify-between pr-8">
           <SheetTitle>{t("help.title")}</SheetTitle>
-          {content && !notFound && (
+          {exists && !notFound && (
             <a
               href={filePath}
-              download={`${chapter}.md`}
+              download={`${chapter}.pdf`}
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
               <Download className="h-3.5 w-3.5" />
@@ -82,7 +75,7 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
           )}
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-6rem)] mt-4 pr-2">
+        <div className="mt-4 h-[calc(100vh-6rem)]">
           {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -97,12 +90,14 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
             </div>
           )}
 
-          {content && !notFound && (
-            <article className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-foreground/90 prose-li:text-foreground/90 prose-strong:text-foreground">
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </article>
+          {exists && !notFound && (
+            <iframe
+              src={filePath}
+              className="w-full h-full border-0 rounded"
+              title={t("help.title")}
+            />
           )}
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );

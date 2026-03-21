@@ -1,21 +1,28 @@
 
 
-## Fix: ITBIS null constraint violation
+## Fix: Payment Method Not Rendering in Financial Ledger (Reports)
 
 ### Problem
-When creating a transaction without ITBIS (fuel, transportation, etc.), the form sends `undefined` for itbis. The `createTransaction` function in `api.ts` converts this to `null`, but the database column `itbis` has a `NOT NULL DEFAULT 0` constraint, causing the insert to fail.
-
-### Root Cause
-`api.ts` line ~299: `itbis: transaction.itbis || null` — should use `?? 0` instead of `|| null` to respect the DB default.
-
-Same issue exists for `itbis_retenido` and `isr_retenido` on the next lines.
+The Reports page (`src/pages/Reports.tsx`) displays `tx.pay_method` raw, which is often a bank account UUID. The Transactions page already resolves these UUIDs to human-readable names via `getPayMethodLabel()` backed by a `bank_accounts` query -- but Reports never implemented this.
 
 ### Fix
 
-**`src/lib/api.ts`** — In `createTransaction`, change:
-- `itbis: transaction.itbis || null` → `itbis: transaction.itbis ?? 0`
-- `itbis_retenido: transaction.itbis_retenido || null` → `itbis_retenido: transaction.itbis_retenido ?? 0`
-- `isr_retenido: transaction.isr_retenido || null` → `isr_retenido: transaction.isr_retenido ?? 0`
+**`src/pages/Reports.tsx`** -- three changes:
 
-One file, three line changes.
+1. **Add bank accounts query** (same pattern as `RecentTransactions.tsx`):
+   - Query `bank_accounts` table for `id, account_name, account_type, currency`
+
+2. **Add pay method resolution function**:
+   - `getPayMethodLabel()` that checks legacy string labels first (transfer_bdi, cash, etc.), then falls back to bank account UUID lookup, mirroring the existing logic in `RecentTransactions.tsx`
+
+3. **Replace raw display** on line 729:
+   - Change `{tx.pay_method || "-"}` to `{getPayMethodLabel(tx.pay_method)}`
+   - Also update the pay method filter dropdown to show resolved names
+   - Also update the export `getValue` for payMethod (line ~299) to use the same resolution
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/pages/Reports.tsx` | Add bank_accounts query, getPayMethodLabel helper, use it in table cell + filter + export |
 

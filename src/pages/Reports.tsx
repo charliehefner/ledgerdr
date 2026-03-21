@@ -26,6 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { getAllAttachmentUrls, AttachmentCategory } from "@/lib/attachments";
 import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 import { formatCurrency, formatDate } from "@/lib/formatters";

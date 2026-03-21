@@ -3499,6 +3499,7 @@ export type Database = {
               total_debit: number
             }[]
           }
+      close_day_labor_week: { Args: { p_week_ending: string }; Returns: string }
       count_unlinked_transactions: {
         Args: { p_end?: string; p_start?: string }
         Returns: number

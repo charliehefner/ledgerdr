@@ -621,7 +621,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2">
               <Label>{t('txForm.mainAccount')}</Label>
               <Select
-                value={form.master_acct_code}
+                value={form.master_acct_code || undefined}
                 onValueChange={(value) => updateField('master_acct_code', value)}
               >
                 <SelectTrigger>

@@ -834,4 +834,26 @@ AS $$
     AND NOT public.has_role(auth.uid(), 'admin')
     AND NOT public.has_role(auth.uid(), 'management')
 $$;
+
+CREATE OR REPLACE FUNCTION public.log_transaction_changes()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_user_id UUID;
+  v_fields TEXT[] := ARRAY['amount','description','transaction_date','master_acct_code','cbs_code','project_code','is_void','void_reason','cost_center'];
+  v_field TEXT;
+  v_old TEXT;
+  v_new TEXT;
+BEGIN
+  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  FOREACH v_field IN ARRAY v_fields LOOP
+    EXECUTE format('SELECT ($1).%I::text, ($2).%I::text', v_field, v_field)
+      INTO v_old, v_new USING OLD, NEW;
+    IF v_old IS DISTINCT FROM v_new THEN
+      INSERT INTO public.transaction_audit_log (transaction_id, changed_by, field_name, old_value, new_value)
+      VALUES (NEW.id, v_user_id, v_field, v_old, v_new);
+    END IF;
+  END LOOP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 `;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { HelpCircle, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,11 @@ import {
 } from "@/components/ui/sheet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface HelpPanelButtonProps {
   chapter: string;
@@ -21,10 +26,12 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(false);
+  const [numPages, setNumPages] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(600);
 
   const filePath = `/help/${language}/${chapter}.pdf`;
 
-  // Clean up blob URL when it changes or component unmounts
   useEffect(() => {
     return () => {
       if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -33,11 +40,11 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
 
   useEffect(() => {
     if (!open) {
-      // Revoke on close
       if (blobUrl) {
         URL.revokeObjectURL(blobUrl);
         setBlobUrl(null);
       }
+      setNumPages(0);
       return;
     }
     setLoading(true);
@@ -58,6 +65,17 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [open, filePath]);
+
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -92,7 +110,7 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
           )}
         </SheetHeader>
 
-        <div className="mt-4 h-[calc(100vh-6rem)]">
+        <div ref={containerRef} className="mt-4 h-[calc(100vh-6rem)] overflow-y-auto">
           {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -108,11 +126,24 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
           )}
 
           {blobUrl && (
-            <iframe
-              src={blobUrl}
-              className="w-full h-full border-0 rounded"
-              title={t("help.title")}
-            />
+            <Document
+              file={blobUrl}
+              onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+              loading={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              {Array.from({ length: numPages }, (_, i) => (
+                <Page
+                  key={i + 1}
+                  pageNumber={i + 1}
+                  width={containerWidth - 16}
+                  className="mb-2"
+                />
+              ))}
+            </Document>
           )}
         </div>
       </SheetContent>

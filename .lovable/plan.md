@@ -2,40 +2,29 @@
 
 ## Investigation Results
 
-**Root cause**: The manual document creation in `ApArDocumentList.tsx` (the "Add Document" form) does NOT explicitly set `status` or `amount_paid` when inserting into `ap_ar_documents`. It relies entirely on database column defaults. While the current default is `'open'`, document 361 was likely created during a window when the code or schema behaved differently, or via a direct insert that omitted the field.
+The `close_day_labor_week` database function **has never existed**. The week ending 2026-03-13 was successfully closed because the code at that time performed the close logic **inline** (direct INSERT into `transactions` + UPDATE on `day_labor_entries`). At some point between March 13 and now, the close code was refactored to call `supabase.rpc("close_day_labor_week", ...)`, but the corresponding database function was never created.
 
-The three insert paths are:
-1. **TransactionForm.tsx** — explicitly sets `status: 'open'`, `amount_paid: 0`, `balance_remaining` ✅
-2. **EditTransactionDialog.tsx** — explicitly sets `status: 'open'`, `amount_paid: 0` ✅
-3. **ApArDocumentList.tsx** — does NOT set `status`, `amount_paid`, or `balance_remaining` ⚠️
-
-Path #3 is the only one missing explicit values, making it vulnerable to default changes or edge cases.
-
----
+Historical closed weeks confirm the pattern: `pay_method` was `'Transfer BHD'` (the legacy string), and the current bank account is **BHD DOP 36900090011** (UUID: `84653770-3920-484a-8aa5-3dc8b71a0603`).
 
 ## Plan
 
-### Step 1: Fix existing data
-Update document 361's status from `'pending'` to `'open'` using the database insert tool (UPDATE query).
+### Step 1: Create the `close_day_labor_week` database function
 
-### Step 2: Make manual creation defensive
-In `ApArDocumentList.tsx`, add explicit values to the insert call:
-- `status: 'open'`
-- `amount_paid: 0`
+Create a `SECURITY DEFINER` function that:
+1. Validates unclosed entries exist for the given `week_ending_date`
+2. Calculates the total amount
+3. Inserts a transaction into `transactions` with:
+   - `master_acct_code = '7690'`
+   - `pay_method = '84653770-3920-484a-8aa5-3dc8b71a0603'` (BHD DOP account UUID)
+   - `currency = 'DOP'`, `transaction_direction = 'purchase'`, `is_internal = true`
+   - `description = 'Jornales Semana ' || formatted date`
+4. Marks all matching entries as `is_closed = true`
+5. Returns the new transaction ID
 
-This ensures the manual creation path matches the behavior of the other two insert paths.
+### Step 2: No frontend changes needed
 
-### Step 3: Add a database CHECK constraint
-Add a migration with a CHECK constraint on `ap_ar_documents.status` to only allow the four valid values: `open`, `partial`, `paid`, `void`. This prevents any future code from inserting an invalid status value at the database level.
-
-```sql
-ALTER TABLE public.ap_ar_documents
-ADD CONSTRAINT ap_ar_documents_status_check
-CHECK (status IN ('open', 'partial', 'paid', 'void'));
-```
+The existing `DayLaborView.tsx` RPC call already matches the function signature (`p_week_ending date`).
 
 ### Files changed
-- `src/components/accounting/ApArDocumentList.tsx` — add explicit `status` and `amount_paid` to insert
-- New migration — CHECK constraint on status column
-- Data fix — UPDATE document 361 status to `'open'`
+- New database migration — `close_day_labor_week` function
 

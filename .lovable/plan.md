@@ -1,66 +1,51 @@
 
 
-## Plan: Sync Transaction Edits to Existing AP/AR Documents
+## Plan: Fix Chrome PDF Blocking in Help Panel
 
 ### Problem
 
-When editing a transaction that already has a linked AP/AR document, the `EditTransactionDialog` only checks if a document exists and skips it. It never updates the existing document with the new contact name, RNC, amount, currency, or due date. It also doesn't invalidate the `ap-ar-documents` query cache.
+Chrome blocks PDF rendering inside `<iframe>` elements in certain contexts (particularly within Sheet/dialog overlays). This is a known Chrome behavior with embedded PDFs.
 
-### Fix
+### Solution
 
-In `src/components/invoices/EditTransactionDialog.tsx`, inside the AP/AR sync block (around line 296):
-
-**When `existingDoc` is found**, update it with the current transaction values:
-- `contact_name`
-- `contact_rnc`
-- `total_amount` → recalculate `balance_remaining` = new total - amount_paid
-- `currency`
-- `due_date`
-- `document_date`
-
-**After saving**, add `ap-ar-documents` to the query invalidation list (after line 352).
+Replace the direct `<iframe src="file.pdf">` approach with a **blob URL** strategy: fetch the PDF as a binary blob, create a local object URL, and render that in the iframe. This bypasses Chrome's PDF iframe restrictions because the browser treats blob URLs as same-origin content.
 
 ### Technical Details
 
-```tsx
-// When existingDoc IS found (new else branch at line 296):
-if (!existingDoc) {
-  // ... existing insert logic ...
-} else {
-  // Sync updated fields to existing AP/AR document
-  const txAmount = updates.amount !== undefined ? updates.amount : parseFloat(formData.amount);
-  const txCurrency = updates.currency || formData.currency || 'DOP';
-  const txDate = updates.transaction_date || formData.transaction_date;
-  
-  // Fetch current amount_paid to recalculate balance
-  const { data: fullDoc } = await supabase
-    .from('ap_ar_documents')
-    .select('amount_paid')
-    .eq('id', existingDoc.id)
-    .single();
-  
-  const amountPaid = fullDoc?.amount_paid || 0;
-  
-  await supabase.from('ap_ar_documents').update({
-    contact_name: updates.name || formData.name || undefined,
-    contact_rnc: updates.rnc !== undefined ? updates.rnc : undefined,
-    total_amount: txAmount,
-    balance_remaining: Math.max(0, txAmount - amountPaid),
-    currency: txCurrency,
-    due_date: effectiveDueDate || txDate,
-    document_date: txDate,
-  }).eq('id', existingDoc.id);
-}
-```
+In `HelpPanelButton.tsx`:
 
-Add cache invalidation:
+1. **Replace the HEAD check + iframe** with a single `fetch()` that downloads the full PDF
+2. Create a blob URL via `URL.createObjectURL(blob)`
+3. Use that blob URL as the iframe `src`
+4. Clean up the blob URL on close via `URL.revokeObjectURL()`
+
 ```tsx
-queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+// Fetch PDF as blob
+fetch(filePath)
+  .then(res => {
+    if (!res.ok) throw new Error();
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("text/html")) throw new Error();
+    return res.blob();
+  })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    setBlobUrl(url);
+  })
+  .catch(() => setNotFound(true));
+
+// Render with blob URL
+<iframe src={blobUrl} ... />
+
+// Cleanup on close
+useEffect(() => {
+  return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+}, [blobUrl]);
 ```
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/invoices/EditTransactionDialog.tsx` | Add update logic for existing AP/AR docs + invalidate cache |
+| `src/components/layout/HelpPanelButton.tsx` | Switch from direct PDF URL to blob URL approach |
 

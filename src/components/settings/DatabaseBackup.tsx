@@ -217,24 +217,31 @@ export function DatabaseBackup() {
           </div>
         )}
         
-        <Button 
-          onClick={handleExport} 
-          disabled={isExporting}
-          className="mt-4"
-          size="lg"
-        >
-          {isExporting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t("backup.exporting")} {Math.round(progress)}%
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              {t("backup.downloadBackup")}
-            </>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="mt-4"
+            size="lg"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t("backup.exporting")} {Math.round(progress)}%
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                {t("backup.downloadBackup")}
+              </>
+            )}
+          </Button>
+          {lastBackup && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Último respaldo: <span className="font-mono font-medium">{lastBackup}</span>
+            </p>
           )}
-        </Button>
+        </div>
       </div>
     </div>
   );

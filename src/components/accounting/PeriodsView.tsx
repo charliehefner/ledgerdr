@@ -148,6 +148,19 @@ export function PeriodsView() {
                       const currentIdx = statusOrder.indexOf(p.status);
                       const nextStatus = currentIdx < statusOrder.length - 1 ? statusOrder[currentIdx + 1] : null;
                       if (!nextStatus) return <span className="text-xs text-muted-foreground">{t("accounting.periods.statusLocked")}</span>;
+                      // Use checklist for open → closed transition
+                      if (p.status === "open") {
+                        return (
+                          <PeriodClosingChecklist
+                            periodId={p.id}
+                            startDate={p.start_date}
+                            endDate={p.end_date}
+                            nextStatusLabel={statusConfig[nextStatus].label}
+                            onConfirm={() => updateStatusMutation.mutate({ id: p.id, status: nextStatus })}
+                            isPending={updateStatusMutation.isPending}
+                          />
+                        );
+                      }
                       return (
                         <Button
                           size="sm"

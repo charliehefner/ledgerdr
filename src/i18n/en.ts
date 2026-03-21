@@ -303,6 +303,14 @@ export const en = {
   "accounting.periods.created": "Period created",
   "accounting.periods.updated": "Period updated",
 
+  // Accounting - Closing Checklist
+  "accounting.checklist.title": "Month-End Closing Checklist",
+  "accounting.checklist.description": "Review the following items before closing this period. Blocking issues must be resolved first.",
+  "accounting.checklist.unlinked": "Unlinked transactions (no journal)",
+  "accounting.checklist.unposted": "Unposted journals",
+  "accounting.checklist.missingFx": "Missing exchange rates (USD)",
+  "accounting.checklist.unreconciled": "Unreconciled bank lines",
+
   // Accounting - Period Closing
   "accounting.closing.generate": "Generate Closing",
   "accounting.closing.title": "Generate Closing Entry",

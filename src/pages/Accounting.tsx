@@ -22,6 +22,7 @@ export default function Accounting() {
       onTabChange={setActiveTab}
       headerIcon={<BookOpen className="h-6 w-6 text-primary" />}
       headerAccent
+      helpChapter="06-accounting"
       tabGroups={[
         {
           tabs: [

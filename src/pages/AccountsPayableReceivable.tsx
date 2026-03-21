@@ -14,6 +14,7 @@ export default function AccountsPayableReceivable() {
       subtitle={t("page.apar.subtitle")}
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      helpChapter="07-apar"
       tabGroups={[
         {
           tabs: [

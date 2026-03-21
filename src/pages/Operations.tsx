@@ -29,6 +29,7 @@ export default function Operations() {
       activeTab={activeTab}
       onTabChange={handleTabChange}
       hideChrome={mapExpanded}
+      helpChapter="14-operations"
       tabGroups={[
         {
           tabs: [

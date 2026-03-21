@@ -86,30 +86,6 @@ export type Database = {
         }
         Relationships: []
       }
-      accounts: {
-        Row: {
-          code: string
-          created_at: string
-          english_description: string
-          id: string
-          spanish_description: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          english_description: string
-          id?: string
-          spanish_description: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          english_description?: string
-          id?: string
-          spanish_description?: string
-        }
-        Relationships: []
-      }
       alert_configurations: {
         Row: {
           alert_type: string

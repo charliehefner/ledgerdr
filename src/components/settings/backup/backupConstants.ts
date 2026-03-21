@@ -1,6 +1,5 @@
 // Tables to export (order matters for foreign key dependencies)
 export const TABLES_TO_EXPORT = [
-  'accounts',
   'projects', 
   'cbs_codes',
   'user_roles',

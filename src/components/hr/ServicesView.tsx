@@ -502,7 +502,7 @@ export function ServicesView() {
             </div>
             <div className="space-y-2">
               <Label>Cuenta Maestra</Label>
-              <Select value={formData.master_acct_code}
+              <Select value={formData.master_acct_code || undefined}
                 onValueChange={(v) => setFormData({ ...formData, master_acct_code: v })}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
                 <SelectContent>

@@ -3,6 +3,7 @@ import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
 import { FuelTanksView } from "@/components/fuel/FuelTanksView";
 import { AgricultureFuelView } from "@/components/fuel/AgricultureFuelView";
 import { IndustryFuelView } from "@/components/fuel/IndustryFuelView";
+import { PendingSubmissionsView } from "@/components/fuel/PendingSubmissionsView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Fuel() {
@@ -32,6 +33,11 @@ export default function Fuel() {
               value: "tanks",
               label: t("fuel.tanks"),
               content: <FuelTanksView />,
+            },
+            {
+              value: "pending",
+              label: "Envíos Pendientes",
+              content: <PendingSubmissionsView />,
             },
           ],
         },

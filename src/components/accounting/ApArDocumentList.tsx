@@ -132,6 +132,7 @@ export function ApArDocumentList({ direction }: Props) {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const totalAmount = parseFloat(form.total_amount) || 0;
       const { error } = await supabase.from("ap_ar_documents").insert({
         direction,
         document_type: form.document_type,
@@ -141,10 +142,13 @@ export function ApArDocumentList({ direction }: Props) {
         document_date: form.document_date,
         due_date: form.due_date || null,
         currency: form.currency,
-        total_amount: parseFloat(form.total_amount) || 0,
+        total_amount: totalAmount,
         notes: form.notes || null,
         created_by: user?.id || null,
         account_id: form.account_id || null,
+        status: 'open',
+        amount_paid: 0,
+        balance_remaining: totalAmount,
       } as any);
       if (error) throw error;
     },

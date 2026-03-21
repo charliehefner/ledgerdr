@@ -22,6 +22,9 @@ export function DatabaseBackup() {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
+  const [lastBackup, setLastBackup] = useState<string | null>(() => 
+    localStorage.getItem("lastBackupTime")
+  );
   const { t, language } = useLanguage();
 
   const handleExport = async () => {
@@ -141,6 +144,11 @@ export function DatabaseBackup() {
       URL.revokeObjectURL(url);
       
       setProgress(100);
+      const now = new Date();
+      const backupTimeStr = now.toLocaleDateString('es-DO') + ' ' + 
+        now.toLocaleTimeString('es-DO', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      localStorage.setItem("lastBackupTime", backupTimeStr);
+      setLastBackup(backupTimeStr);
       const totalFiles = ncfAttachments.length + employeeDocuments.length;
       toast.success(
         t("backup.complete")
@@ -209,24 +217,31 @@ export function DatabaseBackup() {
           </div>
         )}
         
-        <Button 
-          onClick={handleExport} 
-          disabled={isExporting}
-          className="mt-4"
-          size="lg"
-        >
-          {isExporting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t("backup.exporting")} {Math.round(progress)}%
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              {t("backup.downloadBackup")}
-            </>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="mt-4"
+            size="lg"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t("backup.exporting")} {Math.round(progress)}%
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                {t("backup.downloadBackup")}
+              </>
+            )}
+          </Button>
+          {lastBackup && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Último respaldo: <span className="font-mono font-medium">{lastBackup}</span>
+            </p>
           )}
-        </Button>
+        </div>
       </div>
     </div>
   );

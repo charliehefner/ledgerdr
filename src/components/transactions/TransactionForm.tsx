@@ -310,6 +310,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         transaction_direction: form.transaction_direction,
         destination_acct_code: isTransfer ? transferDestCode : undefined,
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
+        dgii_tipo_bienes_servicios: form.transaction_direction === 'purchase' ? form.dgii_tipo_bienes_servicios || undefined : undefined,
         due_date: form.due_date || undefined,
         destination_amount: destinationAmount,
         itbis_override_reason: form.itbis_override_reason || undefined,

@@ -22,6 +22,9 @@ export function DatabaseBackup() {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
+  const [lastBackup, setLastBackup] = useState<string | null>(() => 
+    localStorage.getItem("lastBackupTime")
+  );
   const { t, language } = useLanguage();
 
   const handleExport = async () => {

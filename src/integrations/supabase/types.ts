@@ -2731,7 +2731,7 @@ export type Database = {
           id: string
           notes: string | null
           payment_date: string
-          transaction_id: string
+          transaction_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2741,7 +2741,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_date?: string
-          transaction_id: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2751,7 +2751,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_date?: string
-          transaction_id?: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2760,6 +2760,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -3079,24 +3086,32 @@ export type Database = {
           created_at: string
           document: string | null
           id: string
-          transaction_id: string
+          transaction_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           document?: string | null
           id?: string
-          transaction_id: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           document?: string | null
           id?: string
-          transaction_id?: string
+          transaction_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transaction_edits_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {

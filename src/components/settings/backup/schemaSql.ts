@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS transaction_attachments (
 
 CREATE TABLE IF NOT EXISTS transaction_edits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id TEXT NOT NULL,
+  transaction_id UUID REFERENCES transactions(id) ON DELETE SET NULL,
   document TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -449,7 +449,7 @@ CREATE TABLE IF NOT EXISTS service_contract_line_items (
 CREATE TABLE IF NOT EXISTS service_contract_payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   contract_id UUID NOT NULL REFERENCES service_contracts(id),
-  transaction_id TEXT NOT NULL,
+  transaction_id UUID REFERENCES transactions(id) ON DELETE SET NULL,
   payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
   amount NUMERIC NOT NULL DEFAULT 0,
   notes TEXT,

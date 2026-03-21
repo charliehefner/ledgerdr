@@ -518,7 +518,7 @@ CREATE TABLE IF NOT EXISTS cronograma_weeks (
 
 CREATE TABLE IF NOT EXISTS cronograma_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  week_ending_date DATE NOT NULL,
+  week_ending_date DATE NOT NULL REFERENCES cronograma_weeks(week_ending_date) ON DELETE RESTRICT,
   worker_name TEXT NOT NULL,
   worker_id UUID,
   worker_type TEXT NOT NULL,

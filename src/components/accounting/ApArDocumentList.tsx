@@ -11,7 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -19,7 +19,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, FileText, Receipt, DollarSign } from "lucide-react";
+import { Plus, FileText, Receipt, DollarSign, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog } from "./PaymentDialog";
 
@@ -51,6 +51,8 @@ const STATUS_COLORS: Record<string, string> = {
   void: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
+type DocTypeFilter = "all" | "invoices" | "advances";
+
 interface Props {
   direction: "receivable" | "payable";
 }
@@ -62,6 +64,10 @@ export function ApArDocumentList({ direction }: Props) {
   const canWrite = canWriteSection("ap-ar");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paymentDoc, setPaymentDoc] = useState<ApArDocument | null>(null);
+  const [allocDoc, setAllocDoc] = useState<ApArDocument | null>(null);
+  const [allocAmount, setAllocAmount] = useState("");
+  const [selectedAdvanceId, setSelectedAdvanceId] = useState("");
+  const [typeFilter, setTypeFilter] = useState<DocTypeFilter>("all");
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",
@@ -76,19 +82,26 @@ export function ApArDocumentList({ direction }: Props) {
   });
 
   // Fetch relevant GL accounts for the direction
-  const accountPrefix = direction === "receivable" ? "12" : "24";
   const { data: glAccounts = [] } = useQuery({
-    queryKey: ["ap-ar-gl-accounts", accountPrefix],
+    queryKey: ["ap-ar-gl-accounts", direction],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("chart_of_accounts")
-        .select("id, account_code, account_name")
-        .like("account_code", `${accountPrefix}%`)
-        .eq("allow_posting", true)
-        .is("deleted_at", null)
-        .order("account_code");
-      if (error) throw error;
-      return data || [];
+      // For payables, include both 24xx and 1690 accounts
+      const conditions = direction === "receivable"
+        ? [{ prefix: "12" }]
+        : [{ prefix: "24" }, { prefix: "1690" }];
+      
+      const results: { id: string; account_code: string; account_name: string }[] = [];
+      for (const cond of conditions) {
+        const { data, error } = await supabase
+          .from("chart_of_accounts")
+          .select("id, account_code, account_name")
+          .like("account_code", `${cond.prefix}%`)
+          .eq("allow_posting", true)
+          .is("deleted_at", null)
+          .order("account_code");
+        if (!error && data) results.push(...data);
+      }
+      return results;
     },
   });
 
@@ -111,11 +124,30 @@ export function ApArDocumentList({ direction }: Props) {
     },
   });
 
+  // Filter documents by type
+  const filteredDocuments = useMemo(() => {
+    if (typeFilter === "all") return documents;
+    if (typeFilter === "advances") return documents.filter(d => d.document_type === "advance");
+    return documents.filter(d => d.document_type !== "advance");
+  }, [documents, typeFilter]);
+
+  // Get available advances for the allocation dialog
+  const availableAdvances = useMemo(() => {
+    if (!allocDoc) return [];
+    return documents.filter(d =>
+      d.document_type === "advance" &&
+      d.contact_name === allocDoc.contact_name &&
+      d.status !== "paid" &&
+      d.status !== "void" &&
+      d.balance_remaining > 0
+    );
+  }, [documents, allocDoc]);
+
   // Aging summary
   const aging = useMemo(() => {
     const now = new Date();
     const buckets = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
-    documents.filter(d => d.status !== "paid" && d.status !== "void").forEach(d => {
+    documents.filter(d => d.status !== "paid" && d.status !== "void" && d.document_type !== "advance").forEach(d => {
       const due = d.due_date ? new Date(d.due_date) : new Date(d.document_date);
       const days = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
       const bal = d.balance_remaining;
@@ -129,6 +161,13 @@ export function ApArDocumentList({ direction }: Props) {
   }, [documents]);
 
   const totalOutstanding = aging.current + aging.d30 + aging.d60 + aging.d90 + aging.d90plus;
+
+  // Total advances outstanding
+  const totalAdvances = useMemo(() => {
+    return documents
+      .filter(d => d.document_type === "advance" && d.status !== "paid" && d.status !== "void")
+      .reduce((sum, d) => sum + d.balance_remaining, 0);
+  }, [documents]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -160,6 +199,30 @@ export function ApArDocumentList({ direction }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const allocateMutation = useMutation({
+    mutationFn: async () => {
+      if (!allocDoc || !selectedAdvanceId || !allocAmount) throw new Error("Missing data");
+      const amount = parseFloat(allocAmount);
+      if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
+      
+      const { error } = await supabase.from("advance_allocations" as any).insert({
+        advance_doc_id: selectedAdvanceId,
+        invoice_doc_id: allocDoc.id,
+        amount,
+        allocated_by: user?.id || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      setAllocDoc(null);
+      setAllocAmount("");
+      setSelectedAdvanceId("");
+      toast.success(t("apar.advanceApplied"));
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const resetForm = () => {
     setForm({
       document_type: "invoice",
@@ -175,10 +238,21 @@ export function ApArDocumentList({ direction }: Props) {
     });
   };
 
+  // Check if a doc row has available advances for same supplier
+  const hasAdvancesForContact = (contactName: string) => {
+    return documents.some(d =>
+      d.document_type === "advance" &&
+      d.contact_name === contactName &&
+      d.status !== "paid" &&
+      d.status !== "void" &&
+      d.balance_remaining > 0
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Aging Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
         {[
           { label: t("apar.agingCurrent"), value: aging.current },
           { label: t("apar.aging30"), value: aging.d30 },
@@ -186,8 +260,9 @@ export function ApArDocumentList({ direction }: Props) {
           { label: t("apar.aging90"), value: aging.d90 },
           { label: t("apar.aging90plus"), value: aging.d90plus },
           { label: t("common.total"), value: totalOutstanding },
+          ...(direction === "payable" ? [{ label: t("apar.advances"), value: totalAdvances }] : []),
         ].map((bucket, i) => (
-          <div key={i} className={`rounded-lg border p-3 ${i === 5 ? "bg-primary/5 border-primary/20" : ""}`}>
+          <div key={i} className={`rounded-lg border p-3 ${i === 5 ? "bg-primary/5 border-primary/20" : ""} ${i === 6 ? "bg-accent/50 border-accent" : ""}`}>
             <div className="text-xs text-muted-foreground">{bucket.label}</div>
             <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
               {formatCurrency(bucket.value, "DOP")}
@@ -197,10 +272,27 @@ export function ApArDocumentList({ direction }: Props) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          {documents.length} {t("acctReport.transactions")}
-        </span>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {filteredDocuments.length} {t("acctReport.transactions")}
+          </span>
+          {direction === "payable" && (
+            <div className="flex gap-1">
+              {(["all", "invoices", "advances"] as DocTypeFilter[]).map(filter => (
+                <Button
+                  key={filter}
+                  variant={typeFilter === filter ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setTypeFilter(filter)}
+                >
+                  {t(`apar.filter_${filter}`)}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
         {canWrite && (
           <Button variant="outline" size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" /> {t("apar.newDocument")}
@@ -210,7 +302,7 @@ export function ApArDocumentList({ direction }: Props) {
 
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
-      ) : documents.length === 0 ? (
+      ) : filteredDocuments.length === 0 ? (
         <EmptyState
           icon={Receipt}
           title={t("apar.noDocuments")}
@@ -231,11 +323,11 @@ export function ApArDocumentList({ direction }: Props) {
                 <TableHead className="text-right">{t("apar.amountPaid")}</TableHead>
                 <TableHead className="text-right">{t("apar.balance")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
-                <TableHead className="w-[60px]" />
+                <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.map(doc => (
+              {filteredDocuments.map(doc => (
                 <TableRow key={doc.id}>
                   <TableCell className="font-mono text-sm">{doc.document_number || "—"}</TableCell>
                   <TableCell>
@@ -260,16 +352,30 @@ export function ApArDocumentList({ direction }: Props) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {doc.status !== "paid" && doc.status !== "void" && canWrite && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Registrar Pago"
-                        onClick={() => setPaymentDoc(doc)}
-                      >
-                        <DollarSign className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="flex gap-1">
+                      {doc.status !== "paid" && doc.status !== "void" && canWrite && doc.document_type !== "advance" && (
+                        <>
+                          {hasAdvancesForContact(doc.contact_name) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("apar.applyAdvance")}
+                              onClick={() => { setAllocDoc(doc); setAllocAmount(""); setSelectedAdvanceId(""); }}
+                            >
+                              <ArrowLeftRight className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Registrar Pago"
+                            onClick={() => setPaymentDoc(doc)}
+                          >
+                            <DollarSign className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -361,6 +467,67 @@ export function ApArDocumentList({ direction }: Props) {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={() => createMutation.mutate()} disabled={!form.contact_name || !form.total_amount || !form.account_id || createMutation.isPending}>
               {createMutation.isPending ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Advance Allocation Dialog */}
+      <Dialog open={!!allocDoc} onOpenChange={open => { if (!open) setAllocDoc(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("apar.applyAdvance")}</DialogTitle>
+            <DialogDescription>
+              {allocDoc?.contact_name} — {t("apar.balance")}: {allocDoc ? formatCurrency(allocDoc.balance_remaining, allocDoc.currency) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {availableAdvances.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">{t("apar.noAdvances")}</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>{t("apar.availableAdvances")}</Label>
+                <Select value={selectedAdvanceId} onValueChange={v => {
+                  setSelectedAdvanceId(v);
+                  const adv = availableAdvances.find(a => a.id === v);
+                  if (adv && allocDoc) {
+                    setAllocAmount(Math.min(adv.balance_remaining, allocDoc.balance_remaining).toString());
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder={t("apar.selectAdvance")} /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {availableAdvances.map(adv => (
+                      <SelectItem key={adv.id} value={adv.id}>
+                        {formatDate(adv.document_date)} — {formatCurrency(adv.balance_remaining, adv.currency)}
+                        {adv.document_number ? ` (${adv.document_number})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>{t("apar.allocationAmount")}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={selectedAdvanceId ? Math.min(
+                    availableAdvances.find(a => a.id === selectedAdvanceId)?.balance_remaining || 0,
+                    allocDoc?.balance_remaining || 0
+                  ) : undefined}
+                  value={allocAmount}
+                  onChange={e => setAllocAmount(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAllocDoc(null)}>{t("common.cancel")}</Button>
+            <Button
+              onClick={() => allocateMutation.mutate()}
+              disabled={!selectedAdvanceId || !allocAmount || parseFloat(allocAmount) <= 0 || allocateMutation.isPending}
+            >
+              {allocateMutation.isPending ? t("common.saving") : t("apar.applyAdvance")}
             </Button>
           </DialogFooter>
         </DialogContent>

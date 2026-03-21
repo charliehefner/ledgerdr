@@ -1144,6 +1144,17 @@ export const es = {
   "apar.noDocuments": "Sin documentos",
   "apar.noDocumentsDesc": "Cree una factura o cuenta para comenzar.",
   "apar.statementPdf": "Generar Estado de Cuenta",
+  "apar.advance": "Anticipo",
+  "apar.advances": "Anticipos",
+  "apar.applyAdvance": "Aplicar Anticipo",
+  "apar.advanceApplied": "Anticipo aplicado exitosamente",
+  "apar.filter_all": "Todos",
+  "apar.filter_invoices": "Facturas",
+  "apar.filter_advances": "Anticipos",
+  "apar.availableAdvances": "Anticipos Disponibles",
+  "apar.selectAdvance": "Seleccionar anticipo...",
+  "apar.allocationAmount": "Monto a Aplicar",
+  "apar.noAdvances": "No hay anticipos disponibles para este proveedor.",
 
   // Aprobación de Asientos (kept for backward compat — primary keys above)
   "accounting.approvalPending": "Pendiente",

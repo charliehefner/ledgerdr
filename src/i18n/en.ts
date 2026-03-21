@@ -1143,6 +1143,17 @@ export const en = {
   "apar.noDocuments": "No documents",
   "apar.noDocumentsDesc": "Create an invoice or bill to get started.",
   "apar.statementPdf": "Generate Statement",
+  "apar.advance": "Advance",
+  "apar.advances": "Advances",
+  "apar.applyAdvance": "Apply Advance",
+  "apar.advanceApplied": "Advance applied successfully",
+  "apar.filter_all": "All",
+  "apar.filter_invoices": "Invoices",
+  "apar.filter_advances": "Advances",
+  "apar.availableAdvances": "Available Advances",
+  "apar.selectAdvance": "Select advance...",
+  "apar.allocationAmount": "Amount to Apply",
+  "apar.noAdvances": "No advances available for this vendor.",
 
   // Journal Approval (kept for backward compat — primary keys above)
   "accounting.approvalPending": "Pending",

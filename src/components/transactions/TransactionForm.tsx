@@ -668,7 +668,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 {t('txForm.cbsCode')} {requires1180Fields && '*'}
               </Label>
               <Select
-                value={form.cbs_code}
+                value={form.cbs_code || undefined}
                 onValueChange={(value) => updateField('cbs_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.cbs_code && 'border-destructive')}>

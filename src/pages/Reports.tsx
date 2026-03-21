@@ -758,7 +758,7 @@ export default function Reports() {
                               {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
                             </TableCell>
                           )}
-                          {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
+                          {columnVisibility.isVisible("payMethod") && <TableCell>{getPayMethodLabel(tx.pay_method)}</TableCell>}
                           {columnVisibility.isVisible("document") && (
                             <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
                           )}

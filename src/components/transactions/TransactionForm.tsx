@@ -6,7 +6,7 @@ import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
-import { TIPO_INGRESO } from '@/components/accounting/dgiiConstants';
+import { TIPO_INGRESO, TIPO_BIENES_SERVICIOS } from '@/components/accounting/dgiiConstants';
 import {
   fetchAccounts,
   fetchProjects,

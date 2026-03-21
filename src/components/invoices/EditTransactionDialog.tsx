@@ -38,7 +38,7 @@ import { toast } from "sonner";
 import { Ban, Loader2, Lock, Save } from "lucide-react";
 import { getDescription } from "@/lib/getDescription";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { TIPO_BIENES_SERVICIOS } from "@/components/accounting/dgiiConstants";
+import { TIPO_BIENES_SERVICIOS, TIPO_ANULACION } from "@/components/accounting/dgiiConstants";
 
 interface EditTransactionDialogProps {
   transaction: Transaction | null;
@@ -191,6 +191,7 @@ export function EditTransactionDialog({
         transfer_from_account: isTransfer ? (transaction.pay_method || "") : "",
         transfer_to_account: isTransfer ? (transaction.destination_acct_code || "") : "",
         transfer_dest_amount: isTransfer ? String(transaction.destination_amount || "") : "",
+        dgii_tipo_anulacion: (transaction as any).dgii_tipo_anulacion || "",
       };
       setFormData(newFormData);
       setOriginalFormData(newFormData);
@@ -260,6 +261,7 @@ export function EditTransactionDialog({
       if (formData.amount !== originalFormData.amount) updates.amount = parseFloat(formData.amount);
       if (formData.name !== originalFormData.name) updates.name = formData.name || null;
       if (formData.comments !== originalFormData.comments) updates.comments = formData.comments || null;
+      if ((formData as any).dgii_tipo_anulacion !== (originalFormData as any).dgii_tipo_anulacion) updates.dgii_tipo_anulacion = (formData as any).dgii_tipo_anulacion || null;
       if (formData.transaction_direction !== originalFormData.transaction_direction) updates.transaction_direction = formData.transaction_direction;
       
       // Handle transfer-specific field mapping
@@ -924,6 +926,31 @@ export function EditTransactionDialog({
                 )}
               </div>
             )}
+
+            {/* Tipo Anulación */}
+            <div className="space-y-2">
+              <Label>Tipo Anulación</Label>
+              {locked ? (
+                <Input value={(transaction as any)?.dgii_tipo_anulacion || ''} readOnly className="bg-muted" />
+              ) : (
+                <Select
+                  value={(formData as any).dgii_tipo_anulacion || ''}
+                  onValueChange={(value) => setFormData(f => ({ ...f, dgii_tipo_anulacion: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="">— Ninguno —</SelectItem>
+                    {Object.entries(TIPO_ANULACION).map(([code, desc]) => (
+                      <SelectItem key={code} value={code}>
+                        {code} - {desc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
             {/* Comments */}
             <div className="space-y-2">

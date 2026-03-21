@@ -6,7 +6,7 @@ import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
-import { TIPO_INGRESO } from '@/components/accounting/dgiiConstants';
+import { TIPO_INGRESO, TIPO_BIENES_SERVICIOS } from '@/components/accounting/dgiiConstants';
 import {
   fetchAccounts,
   fetchProjects,
@@ -74,6 +74,7 @@ const initialFormState = {
   itbis_override_reason: '',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
+  dgii_tipo_bienes_servicios: '',
   due_date: '',
   transfer_from_account: '',
   transfer_to_account: '',
@@ -309,6 +310,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         transaction_direction: form.transaction_direction,
         destination_acct_code: isTransfer ? transferDestCode : undefined,
         dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
+        dgii_tipo_bienes_servicios: form.transaction_direction === 'purchase' ? form.dgii_tipo_bienes_servicios || undefined : undefined,
         due_date: form.due_date || undefined,
         destination_amount: destinationAmount,
         itbis_override_reason: form.itbis_override_reason || undefined,
@@ -833,6 +835,28 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   {Object.entries(TIPO_INGRESO).map(([code, desc]) => (
+                    <SelectItem key={code} value={code}>
+                      {code} - {desc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Tipo de Bienes/Servicios - only for purchases */}
+          {form.transaction_direction === 'purchase' && (
+            <div className="space-y-2 max-w-xs">
+              <Label>Tipo Bienes/Servicios</Label>
+              <Select
+                value={form.dgii_tipo_bienes_servicios}
+                onValueChange={(value) => updateField('dgii_tipo_bienes_servicios', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, desc]) => (
                     <SelectItem key={code} value={code}>
                       {code} - {desc}
                     </SelectItem>

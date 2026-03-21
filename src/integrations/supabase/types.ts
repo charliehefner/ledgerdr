@@ -714,6 +714,13 @@ export type Database = {
             referencedRelation: "operations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_cronograma_entries_week"
+            columns: ["week_ending_date"]
+            isOneToOne: false
+            referencedRelation: "cronograma_weeks"
+            referencedColumns: ["week_ending_date"]
+          },
         ]
       }
       cronograma_weeks: {

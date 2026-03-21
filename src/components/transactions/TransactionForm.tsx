@@ -843,6 +843,28 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </Select>
             </div>
           )}
+
+          {/* Tipo de Bienes/Servicios - only for purchases */}
+          {form.transaction_direction === 'purchase' && (
+            <div className="space-y-2 max-w-xs">
+              <Label>Tipo Bienes/Servicios</Label>
+              <Select
+                value={form.dgii_tipo_bienes_servicios}
+                onValueChange={(value) => updateField('dgii_tipo_bienes_servicios', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, desc]) => (
+                    <SelectItem key={code} value={code}>
+                      {code} - {desc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label>{t('txForm.currency')}</Label>

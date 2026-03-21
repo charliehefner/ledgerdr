@@ -205,7 +205,7 @@ export function ApArDocumentList({ direction }: Props) {
       const amount = parseFloat(allocAmount);
       if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
       
-      const { error } = await supabase.from("advance_allocations" as any).insert({
+      const { error } = await supabase.from("advance_allocations").insert({
         advance_doc_id: selectedAdvanceId,
         invoice_doc_id: allocDoc.id,
         amount,

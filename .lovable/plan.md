@@ -1,51 +1,47 @@
 
 
-## Plan: Fix Chrome PDF Blocking in Help Panel
+## Plan: Replace iframe PDF with PDF.js Canvas Rendering
 
 ### Problem
 
-Chrome blocks PDF rendering inside `<iframe>` elements in certain contexts (particularly within Sheet/dialog overlays). This is a known Chrome behavior with embedded PDFs.
+Chrome's built-in PDF viewer plugin blocks PDF rendering inside iframes within Sheet/dialog overlays — even with blob URLs. This is a Chrome plugin limitation, not a same-origin issue.
 
 ### Solution
 
-Replace the direct `<iframe src="file.pdf">` approach with a **blob URL** strategy: fetch the PDF as a binary blob, create a local object URL, and render that in the iframe. This bypasses Chrome's PDF iframe restrictions because the browser treats blob URLs as same-origin content.
+Use `react-pdf` (a React wrapper around Mozilla's PDF.js) to render PDF pages as canvas elements. This completely bypasses Chrome's native PDF plugin and works in all contexts.
 
 ### Technical Details
 
-In `HelpPanelButton.tsx`:
+1. **Add dependency**: `react-pdf` (includes `pdfjs-dist`)
 
-1. **Replace the HEAD check + iframe** with a single `fetch()` that downloads the full PDF
-2. Create a blob URL via `URL.createObjectURL(blob)`
-3. Use that blob URL as the iframe `src`
-4. Clean up the blob URL on close via `URL.revokeObjectURL()`
+2. **Replace iframe** in `HelpPanelButton.tsx` with a `<Document>` + `<Page>` component from `react-pdf`:
+   - Fetch PDF as before (blob URL)
+   - Render all pages in a scrollable container
+   - Each page rendered as a canvas element
+
+3. **Configure PDF.js worker** using the CDN worker URL
 
 ```tsx
-// Fetch PDF as blob
-fetch(filePath)
-  .then(res => {
-    if (!res.ok) throw new Error();
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("text/html")) throw new Error();
-    return res.blob();
-  })
-  .then(blob => {
-    const url = URL.createObjectURL(blob);
-    setBlobUrl(url);
-  })
-  .catch(() => setNotFound(true));
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Render with blob URL
-<iframe src={blobUrl} ... />
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-// Cleanup on close
-useEffect(() => {
-  return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
-}, [blobUrl]);
+// Inside component:
+const [numPages, setNumPages] = useState(0);
+
+<Document file={blobUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
+  {Array.from({ length: numPages }, (_, i) => (
+    <Page key={i + 1} pageNumber={i + 1} width={containerWidth} />
+  ))}
+</Document>
 ```
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/layout/HelpPanelButton.tsx` | Switch from direct PDF URL to blob URL approach |
+| `package.json` | Add `react-pdf` dependency |
+| `src/components/layout/HelpPanelButton.tsx` | Replace iframe with react-pdf Document/Page rendering in a scrollable container |
 

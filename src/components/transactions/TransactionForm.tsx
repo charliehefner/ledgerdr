@@ -74,6 +74,7 @@ const initialFormState = {
   itbis_override_reason: '',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
+  dgii_tipo_bienes_servicios: '',
   due_date: '',
   transfer_from_account: '',
   transfer_to_account: '',

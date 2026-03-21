@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { MainLayout } from "./MainLayout";
+import { HelpPanelButton } from "./HelpPanelButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TabConfig {
@@ -25,6 +26,7 @@ interface TabbedPageLayoutProps {
   hideChrome?: boolean;
   headerIcon?: ReactNode;
   headerAccent?: boolean;
+  helpChapter?: string;
 }
 
 /**
@@ -40,6 +42,7 @@ export function TabbedPageLayout({
   hideChrome,
   headerIcon,
   headerAccent,
+  helpChapter,
 }: TabbedPageLayoutProps) {
   const hasMultipleGroups = tabGroups.length > 1;
 
@@ -59,7 +62,10 @@ export function TabbedPageLayout({
             </div>
           )}
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-foreground">{title}</h1>
+              {helpChapter && <HelpPanelButton chapter={helpChapter} />}
+            </div>
             {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
           </div>
         </header>

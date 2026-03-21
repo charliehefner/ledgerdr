@@ -130,6 +130,7 @@ export default function Budget() {
         onTabChange={setActiveTab}
         tabGroups={[{ tabs }]}
         actions={actions}
+        helpChapter="08-budget"
       />
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>

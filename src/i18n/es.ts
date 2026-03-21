@@ -1379,4 +1379,11 @@ export const es = {
   "contacts.banks": "Bancos",
   "contacts.addToCrm": "¿Desea agregar este contacto al CRM?",
   "contacts.added": "Contacto agregado al CRM",
+
+  // Help panel
+  "help.openManual": "Manual de Usuario",
+  "help.title": "Manual de Usuario",
+  "help.download": "Descargar",
+  "help.comingSoon": "Capítulo próximamente",
+  "help.comingSoonDesc": "Este capítulo de ayuda se está preparando y estará disponible pronto.",
 };

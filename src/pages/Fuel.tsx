@@ -16,6 +16,7 @@ export default function Fuel() {
       subtitle={t("page.fuel.subtitle")}
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      helpChapter="09-fuel"
       tabGroups={[
         {
           tabs: [

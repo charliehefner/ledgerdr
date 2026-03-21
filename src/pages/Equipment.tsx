@@ -15,6 +15,7 @@ export default function Equipment() {
       subtitle={t("page.equipment.subtitle")}
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      helpChapter="10-equipment"
       tabGroups={[
         {
           tabs: [

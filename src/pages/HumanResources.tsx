@@ -176,6 +176,7 @@ export default function HumanResources() {
         onTabChange={setActiveTab}
         tabGroups={tabGroups}
         actions={actions}
+        helpChapter="11-hr"
       />
 
       <EmployeeFormDialog

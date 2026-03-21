@@ -705,7 +705,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <div className="space-y-2">
                     <Label>{t('txForm.transferFrom')} *</Label>
                     <Select
-                      value={form.transfer_from_account}
+                      value={form.transfer_from_account || undefined}
                       onValueChange={(value) => {
                         updateField('transfer_from_account', value);
                         const acct = bankAccounts.find(a => a.id === value);

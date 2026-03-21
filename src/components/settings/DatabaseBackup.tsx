@@ -144,6 +144,7 @@ export function DatabaseBackup() {
       URL.revokeObjectURL(url);
       
       setProgress(100);
+      const now = new Date();
       const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
       const dd = String(now.getDate()).padStart(2, '0');
       const mon = months[now.getMonth()];

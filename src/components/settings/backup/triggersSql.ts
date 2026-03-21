@@ -132,4 +132,10 @@ CREATE TRIGGER sync_fuel_to_inventory
   AFTER INSERT OR UPDATE OR DELETE ON fuel_tanks
   FOR EACH ROW
   EXECUTE FUNCTION public.sync_fuel_tanks_to_inventory();
+
+-- Validate journal balance before posting
+CREATE TRIGGER validate_journal_before_post
+  BEFORE UPDATE ON journals
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_journal_balance();
 `;

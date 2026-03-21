@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS transaction_attachments (
 
 CREATE TABLE IF NOT EXISTS transaction_edits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id TEXT NOT NULL,
+  transaction_id UUID REFERENCES transactions(id) ON DELETE SET NULL,
   document TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

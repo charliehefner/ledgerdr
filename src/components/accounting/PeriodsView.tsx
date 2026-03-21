@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { PeriodClosingButton } from "./PeriodClosingButton";
 import { PeriodRevaluationButton } from "./PeriodRevaluationButton";
+import { PeriodClosingChecklist } from "./PeriodClosingChecklist";
 
 type PeriodStatus = "open" | "closed" | "reported" | "locked";
 

@@ -1,5 +1,3 @@
-
-
 ## Plan: Contextual Help Panel with Bilingual Markdown Chapters
 
 ### Overview
@@ -62,3 +60,25 @@ Chapters are added over time — the help button only appears on pages that have
 | `src/i18n/en.ts` | Add help panel strings |
 | `src/i18n/es.ts` | Add help panel strings |
 
+## Plan: Audit and Fix All Vulnerable Select Components — ✅ COMPLETED
+
+### Summary of Changes
+
+**Prevention layer added:**
+- `src/components/ui/select.tsx` — Dev-time console warning when `SelectItem` receives `value=""`
+
+**Pick-and-trigger selects fixed (`value=""` → `value={undefined}`):**
+- `src/components/herbicide/FieldSelectionSection.tsx`
+- `src/components/herbicide/ProductSelectionSection.tsx`
+
+**Nullable form selects fixed (`value={x}` → `value={x || undefined}`):**
+- `src/components/transactions/TransactionForm.tsx` — 8 selects (master_acct_code, project_code, cbs_code, dgii_tipo_ingreso, dgii_tipo_bienes_servicios, pay_method, transfer_from_account, transfer_to_account)
+- `src/components/accounting/JournalEntryForm.tsx` — journal line account_id
+- `src/components/accounting/BankAccountsList.tsx` — chart_account_id
+- `src/components/accounting/PaymentDialog.tsx` — bankAccountId
+- `src/components/hr/ServicesView.tsx` — provider_id, master_acct_code, pay_method
+
+**Already safe (no changes needed):**
+- Files using native `<select>` with `<option value="">` (DayLaborView, OperationsLogView, ContractedServicesView, RecurringEntriesView)
+- Files where Select always has non-empty default values (currency selectors, filter selects with "all" defaults)
+- `EditTransactionDialog.tsx` — previously fixed with `__none__` sentinel

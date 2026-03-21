@@ -975,7 +975,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2">
               <Label>{t('txForm.payMethod')}</Label>
               <Select
-                value={form.pay_method}
+                value={form.pay_method || undefined}
                 onValueChange={(value) => updateField('pay_method', value)}
               >
                 <SelectTrigger>

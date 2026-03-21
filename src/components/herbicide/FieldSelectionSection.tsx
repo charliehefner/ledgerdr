@@ -66,7 +66,7 @@ export function FieldSelectionSection({
       <CardContent className="space-y-4">
         {/* Add field selector */}
         <div className="flex gap-2">
-          <Select onValueChange={handleAddField} value="">
+          <Select onValueChange={handleAddField} value={undefined}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder={t("herbicide.selectField")} />
             </SelectTrigger>

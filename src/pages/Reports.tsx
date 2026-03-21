@@ -26,6 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { fetchRecentTransactions, fetchAccounts, Transaction } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { getAllAttachmentUrls, AttachmentCategory } from "@/lib/attachments";
 import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 import { formatCurrency, formatDate } from "@/lib/formatters";
@@ -83,6 +84,37 @@ export default function Reports() {
     queryKey: ['accounts'],
     queryFn: fetchAccounts,
   });
+
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['bank-accounts-lookup'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, account_name, account_type, currency')
+        .order('account_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const LEGACY_PAY_METHOD_LABELS: Record<string, string> = {
+    transfer_bdi: 'Transfer BDI',
+    transfer_bhd: 'Transfer BHD',
+    cash: 'Efectivo',
+    petty_cash: 'Caja Chica',
+    cc_management: 'CC Management',
+    cc_agri: 'CC Agrícola',
+    cc_industry: 'CC Industrial',
+    credit: 'Crédito',
+  };
+
+  const getPayMethodLabel = (payMethod: string | null): string => {
+    if (!payMethod) return '-';
+    if (LEGACY_PAY_METHOD_LABELS[payMethod]) return LEGACY_PAY_METHOD_LABELS[payMethod];
+    const bankAcct = bankAccounts.find(b => b.id === payMethod);
+    if (bankAcct) return `${bankAcct.account_name} (${bankAcct.currency})`;
+    return payMethod;
+  };
 
   // Exclude voided transactions from reports
   const nonVoidedTransactions = allTransactions.filter((tx) => !tx.is_void);
@@ -296,7 +328,7 @@ export default function Reports() {
     currency: { header: "Currency", width: 10, getValue: (tx) => tx.currency },
     amount: { header: "Amount", width: 15, getValue: (tx) => tx.amount },
     itbis: { header: "ITBIS", width: 12, getValue: (tx) => tx.itbis || "" },
-    payMethod: { header: "Pay Method", width: 18, getValue: (tx) => tx.pay_method || "-" },
+    payMethod: { header: "Pay Method", width: 18, getValue: (tx) => getPayMethodLabel(tx.pay_method) },
     document: { header: "Document", width: 15, getValue: (tx) => tx.document || "-" },
     name: { header: "Name", width: 20, getValue: (tx) => tx.name || "-" },
     exchangeRate: { header: "Exchange Rate", width: 15, getValue: (tx) => tx.exchange_rate || "-" },
@@ -509,12 +541,12 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="all">Todos los Métodos</SelectItem>
-                  <SelectItem value="transfer_bdi">Transfer BDI</SelectItem>
-                  <SelectItem value="transfer_bhd">Transfer BHD</SelectItem>
-                  <SelectItem value="cash">Efectivo</SelectItem>
-                  <SelectItem value="cc_management">CC Management</SelectItem>
-                  <SelectItem value="cc_agricultural">CC Agrícola</SelectItem>
-                  <SelectItem value="cc_industrial">CC Industrial</SelectItem>
+                  {Object.entries(LEGACY_PAY_METHOD_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                  {bankAccounts.map(ba => (
+                    <SelectItem key={ba.id} value={ba.id}>{ba.account_name} ({ba.currency})</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -726,7 +758,7 @@ export default function Reports() {
                               {tx.itbis ? formatCurrency(tx.itbis, tx.currency) : "-"}
                             </TableCell>
                           )}
-                          {columnVisibility.isVisible("payMethod") && <TableCell>{tx.pay_method || "-"}</TableCell>}
+                          {columnVisibility.isVisible("payMethod") && <TableCell>{getPayMethodLabel(tx.pay_method)}</TableCell>}
                           {columnVisibility.isVisible("document") && (
                             <TableCell className="truncate max-w-[100px]">{tx.document || "-"}</TableCell>
                           )}

@@ -143,16 +143,25 @@ export function TractorsView() {
   // Helper to get maintenance status for a tractor
   const getMaintenanceStatus = (tractor: TractorEquipment) => {
     const lastMaint = latestMaintenance.find(m => m.tractor_id === tractor.id);
+    if (!lastMaint && tractor.current_hour_meter === 0) {
+      return { hoursUntil: null, isOverdue: false, isDueSoon: false };
+    }
     const lastHours = lastMaint?.hour_meter_reading ?? 0;
     const hoursSinceMaint = tractor.current_hour_meter - lastHours;
     const hoursUntil = tractor.maintenance_interval_hours - hoursSinceMaint;
     
     return {
       hoursUntil,
-      isOverdue: hoursUntil < 0,
-      isDueSoon: hoursUntil >= 0 && hoursUntil <= 50,
+      isOverdue: hoursUntil <= 0,
+      isDueSoon: hoursUntil > 0 && hoursUntil <= 20,
     };
   };
+
+  // Check if any active tractor is overdue
+  const overdueTractors = useMemo(() => {
+    if (!tractors) return [];
+    return tractors.filter(t => t.is_active && getMaintenanceStatus(t).isOverdue);
+  }, [tractors, latestMaintenance]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {

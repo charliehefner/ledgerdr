@@ -949,14 +949,14 @@ export function EditTransactionDialog({
                 <Input value={(transaction as any)?.dgii_tipo_anulacion || ''} readOnly className="bg-muted" />
               ) : (
                 <Select
-                  value={(formData as any).dgii_tipo_anulacion || ''}
-                  onValueChange={(value) => setFormData(f => ({ ...f, dgii_tipo_anulacion: value }))}
+                  value={(formData as any).dgii_tipo_anulacion || '__none__'}
+                  onValueChange={(value) => setFormData(f => ({ ...f, dgii_tipo_anulacion: value === '__none__' ? '' : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    <SelectItem value="">— Ninguno —</SelectItem>
+                    <SelectItem value="__none__">— Ninguno —</SelectItem>
                     {Object.entries(TIPO_ANULACION).map(([code, desc]) => (
                       <SelectItem key={code} value={code}>
                         {code} - {desc}

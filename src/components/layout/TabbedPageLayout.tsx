@@ -42,6 +42,7 @@ export function TabbedPageLayout({
   hideChrome,
   headerIcon,
   headerAccent,
+  helpChapter,
 }: TabbedPageLayoutProps) {
   const hasMultipleGroups = tabGroups.length > 1;
 

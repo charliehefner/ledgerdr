@@ -147,6 +147,12 @@ CREATE POLICY "Management full access" ON journals FOR ALL USING (public.has_rol
 CREATE POLICY "Management full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'management'));
 CREATE POLICY "Management full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'management'));
 
+-- Transaction audit log (read-only for management/accountant, full for admin)
+ALTER TABLE transaction_audit_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admin full access" ON transaction_audit_log FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Management can view audit log" ON transaction_audit_log FOR SELECT USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Accountant can view audit log" ON transaction_audit_log FOR SELECT USING (public.has_role(auth.uid(), 'accountant'));
+
 -- =============================================
 -- SUPERVISOR ACCESS POLICIES
 -- =============================================

@@ -3088,6 +3088,47 @@ export type Database = {
           },
         ]
       }
+      transaction_audit_log: {
+        Row: {
+          change_reason: string | null
+          changed_at: string
+          changed_by: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          transaction_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          transaction_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_audit_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_edits: {
         Row: {
           created_at: string

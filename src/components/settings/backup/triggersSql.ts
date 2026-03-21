@@ -138,4 +138,10 @@ CREATE TRIGGER validate_journal_before_post
   BEFORE UPDATE ON journals
   FOR EACH ROW
   EXECUTE FUNCTION public.validate_journal_balance();
+
+-- Transaction field change audit log
+CREATE TRIGGER trg_log_transaction_changes
+  AFTER UPDATE ON transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION public.log_transaction_changes();
 `;

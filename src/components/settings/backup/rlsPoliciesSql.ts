@@ -214,6 +214,11 @@ CREATE POLICY "Accountant full access" ON cronograma_entries FOR ALL USING (publ
 CREATE POLICY "Accountant full access" ON rainfall_records FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
 CREATE POLICY "Accountant full access" ON jornaleros FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
 CREATE POLICY "Accountant full access" ON employee_loans FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON chart_of_accounts FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON accounting_periods FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON journals FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
 
 -- =============================================
 -- VIEWER ACCESS POLICIES (Read-only)

@@ -40,6 +40,7 @@ export const TABLES_TO_EXPORT = [
   'cronograma_entries',
   'rainfall_records',
   'jornaleros',
+  'exchange_rates',
   'scheduled_user_deletions',
 ] as const;
 

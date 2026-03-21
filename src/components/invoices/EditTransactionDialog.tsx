@@ -373,6 +373,7 @@ export function EditTransactionDialog({
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["allTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
       toast.success("Cambios guardados exitosamente");
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';

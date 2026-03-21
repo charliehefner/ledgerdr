@@ -261,4 +261,13 @@ CREATE POLICY "Driver can manage pending submissions" ON pending_fuel_submission
 
 -- User can view own role
 CREATE POLICY "Users can view own role" ON user_roles FOR SELECT USING (auth.uid() = user_id);
+
+-- =============================================
+-- ADVANCE ALLOCATIONS POLICIES
+-- =============================================
+ALTER TABLE advance_allocations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Management full access" ON advance_allocations FOR ALL USING (
+  public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'management') OR public.has_role(auth.uid(), 'accountant')
+);
+CREATE POLICY "Viewer can view" ON advance_allocations FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 `;

@@ -45,6 +45,11 @@ ALTER TABLE rainfall_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scheduled_user_deletions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payroll_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chart_of_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accounting_periods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fixed_assets ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- ADMIN FULL ACCESS POLICIES
@@ -89,6 +94,11 @@ CREATE POLICY "Admin full access" ON rainfall_records FOR ALL USING (public.has_
 CREATE POLICY "Admin full access" ON user_roles FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "Admin full access" ON scheduled_user_deletions FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "Admin full access" ON payroll_snapshots FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON chart_of_accounts FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON accounting_periods FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON journals FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 
 -- =============================================
 -- MANAGEMENT FULL ACCESS POLICIES
@@ -131,6 +141,11 @@ CREATE POLICY "Management full access" ON cronograma_weeks FOR ALL USING (public
 CREATE POLICY "Management full access" ON cronograma_entries FOR ALL USING (public.has_role(auth.uid(), 'management'));
 CREATE POLICY "Management full access" ON rainfall_records FOR ALL USING (public.has_role(auth.uid(), 'management'));
 CREATE POLICY "Management full access" ON payroll_snapshots FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON chart_of_accounts FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON accounting_periods FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON journals FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'management'));
 
 -- =============================================
 -- SUPERVISOR ACCESS POLICIES
@@ -199,6 +214,11 @@ CREATE POLICY "Accountant full access" ON cronograma_entries FOR ALL USING (publ
 CREATE POLICY "Accountant full access" ON rainfall_records FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
 CREATE POLICY "Accountant full access" ON jornaleros FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
 CREATE POLICY "Accountant full access" ON employee_loans FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON chart_of_accounts FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON accounting_periods FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON journals FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
+CREATE POLICY "Accountant full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'accountant'));
 
 -- =============================================
 -- VIEWER ACCESS POLICIES (Read-only)
@@ -219,6 +239,11 @@ CREATE POLICY "Viewer can view" ON fuel_tanks FOR SELECT USING (public.has_role(
 CREATE POLICY "Viewer can view" ON fuel_transactions FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 CREATE POLICY "Viewer can view" ON inventory_items FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 CREATE POLICY "Viewer can view" ON tractor_maintenance FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON chart_of_accounts FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON accounting_periods FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON journals FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON journal_lines FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON fixed_assets FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 
 -- =============================================
 -- DRIVER ACCESS POLICIES

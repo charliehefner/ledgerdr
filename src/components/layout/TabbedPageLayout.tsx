@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { MainLayout } from "./MainLayout";
+import { HelpPanelButton } from "./HelpPanelButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TabConfig {

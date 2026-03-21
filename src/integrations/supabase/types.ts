@@ -3143,7 +3143,7 @@ export type Database = {
           is_internal: boolean
           is_void: boolean
           isr_retenido: number | null
-          itbis: number | null
+          itbis: number
           itbis_override_reason: string | null
           itbis_retenido: number | null
           legacy_id: number | null
@@ -3182,7 +3182,7 @@ export type Database = {
           is_internal?: boolean
           is_void?: boolean
           isr_retenido?: number | null
-          itbis?: number | null
+          itbis?: number
           itbis_override_reason?: string | null
           itbis_retenido?: number | null
           legacy_id?: number | null
@@ -3221,7 +3221,7 @@ export type Database = {
           is_internal?: boolean
           is_void?: boolean
           isr_retenido?: number | null
-          itbis?: number | null
+          itbis?: number
           itbis_override_reason?: string | null
           itbis_retenido?: number | null
           legacy_id?: number | null

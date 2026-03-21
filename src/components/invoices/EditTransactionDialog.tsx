@@ -923,13 +923,14 @@ export function EditTransactionDialog({
                   <Input value={editedTipoBienes} readOnly className="bg-muted" />
                 ) : (
                   <Select
-                    value={editedTipoBienes}
-                    onValueChange={setEditedTipoBienes}
+                    value={editedTipoBienes || "__none__"}
+                    onValueChange={(v) => setEditedTipoBienes(v === "__none__" ? "" : v)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
+                      <SelectItem value="__none__">— Ninguno —</SelectItem>
                       {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
                         <SelectItem key={code} value={code}>
                           {code} - {label}

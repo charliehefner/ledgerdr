@@ -621,7 +621,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2">
               <Label>{t('txForm.mainAccount')}</Label>
               <Select
-                value={form.master_acct_code}
+                value={form.master_acct_code || undefined}
                 onValueChange={(value) => updateField('master_acct_code', value)}
               >
                 <SelectTrigger>
@@ -642,7 +642,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 {t('txForm.project')} {requires1180Fields && '*'}
               </Label>
               <Select
-                value={form.project_code}
+                value={form.project_code || undefined}
                 onValueChange={(value) => updateField('project_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.project_code && 'border-destructive')}>
@@ -668,7 +668,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 {t('txForm.cbsCode')} {requires1180Fields && '*'}
               </Label>
               <Select
-                value={form.cbs_code}
+                value={form.cbs_code || undefined}
                 onValueChange={(value) => updateField('cbs_code', value)}
               >
                 <SelectTrigger className={cn(requires1180Fields && !form.cbs_code && 'border-destructive')}>
@@ -705,7 +705,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <div className="space-y-2">
                     <Label>{t('txForm.transferFrom')} *</Label>
                     <Select
-                      value={form.transfer_from_account}
+                      value={form.transfer_from_account || undefined}
                       onValueChange={(value) => {
                         updateField('transfer_from_account', value);
                         const acct = bankAccounts.find(a => a.id === value);
@@ -737,7 +737,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <div className="space-y-2">
                     <Label>{t('txForm.transferTo')} *</Label>
                     <Select
-                      value={form.transfer_to_account}
+                      value={form.transfer_to_account || undefined}
                       onValueChange={(value) => updateField('transfer_to_account', value)}
                     >
                       <SelectTrigger>
@@ -827,7 +827,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2 max-w-xs">
               <Label>{t('txForm.tipoIngreso')}</Label>
               <Select
-                value={form.dgii_tipo_ingreso}
+                value={form.dgii_tipo_ingreso || undefined}
                 onValueChange={(value) => updateField('dgii_tipo_ingreso', value)}
               >
                 <SelectTrigger>
@@ -849,7 +849,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2 max-w-xs">
               <Label>Tipo Bienes/Servicios</Label>
               <Select
-                value={form.dgii_tipo_bienes_servicios}
+                value={form.dgii_tipo_bienes_servicios || undefined}
                 onValueChange={(value) => updateField('dgii_tipo_bienes_servicios', value)}
               >
                 <SelectTrigger>
@@ -975,7 +975,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2">
               <Label>{t('txForm.payMethod')}</Label>
               <Select
-                value={form.pay_method}
+                value={form.pay_method || undefined}
                 onValueChange={(value) => updateField('pay_method', value)}
               >
                 <SelectTrigger>

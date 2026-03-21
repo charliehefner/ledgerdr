@@ -225,7 +225,7 @@ export function JournalEntryForm({ open, onOpenChange }: JournalEntryFormProps) 
               {lines.map((line, idx) => (
                 <tr key={line.key} className="border-b border-border/30">
                   <td className="p-2">
-                    <Select value={line.account_id} onValueChange={(v) => updateLine(idx, "account_id", v)}>
+                    <Select value={line.account_id || undefined} onValueChange={(v) => updateLine(idx, "account_id", v)}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder={t("accounting.selectAccount")} />
                       </SelectTrigger>

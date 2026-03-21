@@ -252,7 +252,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
           </div>
           <div className="space-y-1">
             <Label>Cuenta Bancaria *</Label>
-            <Select value={bankAccountId} onValueChange={setBankAccountId}>
+            <Select value={bankAccountId || undefined} onValueChange={setBankAccountId}>
               <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
               <SelectContent className="bg-popover">
                 {bankAccounts.map(b => (

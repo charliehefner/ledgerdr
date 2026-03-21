@@ -475,7 +475,7 @@ export function ServicesView() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Prestador *</Label>
-              <Select value={formData.provider_id} onValueChange={(v) => setFormData({ ...formData, provider_id: v })}>
+              <Select value={formData.provider_id || undefined} onValueChange={(v) => setFormData({ ...formData, provider_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar prestador" /></SelectTrigger>
                 <SelectContent>
                   {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -502,7 +502,7 @@ export function ServicesView() {
             </div>
             <div className="space-y-2">
               <Label>Cuenta Maestra</Label>
-              <Select value={formData.master_acct_code}
+              <Select value={formData.master_acct_code || undefined}
                 onValueChange={(v) => setFormData({ ...formData, master_acct_code: v })}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
                 <SelectContent>
@@ -524,7 +524,7 @@ export function ServicesView() {
             </div>
             <div className="space-y-2">
               <Label>Pagado desde *</Label>
-              <Select value={formData.pay_method} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
+              <Select value={formData.pay_method || undefined} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
                 <SelectContent>
                   {bankAccounts.map((ba) => (

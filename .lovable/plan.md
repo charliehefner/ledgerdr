@@ -1,58 +1,84 @@
+## Plan: Contextual Help Panel with Bilingual Markdown Chapters
 
+### Overview
 
-## Plan: Audit and Fix All Vulnerable Select Components
+Add a `?` help icon next to page headings that opens a slide-out panel showing the relevant user manual chapter. Chapters are stored as markdown files in `public/help/{lang}/`, editable via the code editor, and added incrementally over time.
 
-### Problem
+### File Structure
 
-Radix `<Select value="">` crashes when the value is an empty string and no `<SelectItem value="">` exists. This affects any Select bound to nullable database columns or state that can be empty.
-
-### Approach
-
-Perform a project-wide audit of all 57 files using `<Select>` and apply the `__none__` sentinel pattern wherever the value can be null/empty.
-
-### Scope
-
-**Already fixed:** `EditTransactionDialog.tsx` (5 Selects), `OperationsLogView.tsx` (uses `__all__`)
-
-**Known vulnerable — needs fix:**
-- `src/components/herbicide/FieldSelectionSection.tsx` — `value=""`
-- `src/components/herbicide/ProductSelectionSection.tsx` — `value=""`
-
-**Needs audit for nullable values passed to Select:**
-- `TransactionForm.tsx` — `form.dgii_tipo_ingreso`, `form.dgii_tipo_bienes_servicios`, `form.master_acct_code` (all can be empty on form init)
-- `AccountingReportsView.tsx` — filter Selects initialized to `""`
-- `JournalDetailDialog.tsx` — `journalType`
-- All other Select usages across 57 files
-
-### Fix Pattern
-
-For every Select where the value can be `""` or `null`:
-
-```tsx
-// Before (crashes)
-<Select value={maybeEmpty}>
-
-// After (safe)
-<Select value={maybeEmpty || "__none__"} onValueChange={v => set(v === "__none__" ? "" : v)}>
-  <SelectContent>
-    <SelectItem value="__none__">— Select —</SelectItem>
-    ...
+```text
+public/help/
+  en/
+    14-operations.md      ← first chapter
+  es/
+    14-operations.md      ← first chapter
 ```
 
-For Selects used as "pick and trigger" (like Herbicide), change `value=""` to `value={undefined}` so Radix shows the placeholder without crashing.
+Chapters are added over time — the help button only appears on pages that have a corresponding file. Missing files show a "chapter coming soon" message.
 
-### Prevention
+### Implementation
 
-Add a runtime guard in `src/components/ui/select.tsx` — wrap `SelectItem` to throw a clear dev-only warning if `value=""` is passed, catching future mistakes at development time rather than in production.
+**Step 1 — Install `react-markdown`** dependency for rendering markdown in the panel.
+
+**Step 2 — Create `src/components/layout/HelpPanelButton.tsx`**
+
+- Small `HelpCircle` icon button
+- On click, fetches `/help/${language}/${chapter}.md` using the current language from `LanguageContext`
+- Opens a `Sheet` (right slide-out) displaying rendered markdown with Tailwind prose styling
+- Handles missing files gracefully with a "coming soon" fallback
+- Includes a download link for the raw `.md` file
+
+**Step 3 — Add `helpChapter` prop to `TabbedPageLayout.tsx`**
+
+- Optional `helpChapter?: string` prop
+- When provided, renders `HelpPanelButton` next to the title in the header
+
+**Step 4 — Wire into pages** — Add the `helpChapter` prop to each page component. Pages without a chapter file yet simply won't show the button (component checks file existence). Initial wiring for all pages with only Operations having actual content:
+
+| Page | `helpChapter` value |
+|------|-------------------|
+| Operations | `14-operations` |
+| Transactions | `04-transactions` |
+| Accounting | `06-accounting` |
+| All others | Mapped but file added later |
+
+**Step 5 — Create initial chapter files** — Create placeholder `public/help/en/14-operations.md` and `public/help/es/14-operations.md` with basic structure you can then edit with your Word content.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/ui/select.tsx` | Add dev-time guard on SelectItem empty value |
-| `src/components/herbicide/FieldSelectionSection.tsx` | Fix `value=""` → `value={undefined}` |
-| `src/components/herbicide/ProductSelectionSection.tsx` | Fix `value=""` → `value={undefined}` |
-| `src/components/transactions/TransactionForm.tsx` | Add sentinel for nullable DGII Selects |
-| `src/components/accounting/AccountingReportsView.tsx` | Add sentinel for filter Selects |
-| ~10 other files with nullable Select values | Apply sentinel pattern |
+| `package.json` | Add `react-markdown` |
+| `src/components/layout/HelpPanelButton.tsx` | New — help icon + sheet panel |
+| `src/components/layout/TabbedPageLayout.tsx` | Add `helpChapter` prop, render help button |
+| `src/pages/Transactions.tsx` | Add help button to header |
+| `src/pages/Operations.tsx` | Pass `helpChapter="14-operations"` |
+| `src/pages/Accounting.tsx` | Pass `helpChapter="06-accounting"` |
+| ~12 other page files | Pass appropriate `helpChapter` values |
+| `public/help/en/14-operations.md` | New — placeholder chapter |
+| `public/help/es/14-operations.md` | New — placeholder chapter |
+| `src/i18n/en.ts` | Add help panel strings |
+| `src/i18n/es.ts` | Add help panel strings |
 
+## Plan: Audit and Fix All Vulnerable Select Components — ✅ COMPLETED
+
+### Summary of Changes
+
+**Prevention layer added:**
+- `src/components/ui/select.tsx` — Dev-time console warning when `SelectItem` receives `value=""`
+
+**Pick-and-trigger selects fixed (`value=""` → `value={undefined}`):**
+- `src/components/herbicide/FieldSelectionSection.tsx`
+- `src/components/herbicide/ProductSelectionSection.tsx`
+
+**Nullable form selects fixed (`value={x}` → `value={x || undefined}`):**
+- `src/components/transactions/TransactionForm.tsx` — 8 selects (master_acct_code, project_code, cbs_code, dgii_tipo_ingreso, dgii_tipo_bienes_servicios, pay_method, transfer_from_account, transfer_to_account)
+- `src/components/accounting/JournalEntryForm.tsx` — journal line account_id
+- `src/components/accounting/BankAccountsList.tsx` — chart_account_id
+- `src/components/accounting/PaymentDialog.tsx` — bankAccountId
+- `src/components/hr/ServicesView.tsx` — provider_id, master_acct_code, pay_method
+
+**Already safe (no changes needed):**
+- Files using native `<select>` with `<option value="">` (DayLaborView, OperationsLogView, ContractedServicesView, RecurringEntriesView)
+- Files where Select always has non-empty default values (currency selectors, filter selects with "all" defaults)
+- `EditTransactionDialog.tsx` — previously fixed with `__none__` sentinel

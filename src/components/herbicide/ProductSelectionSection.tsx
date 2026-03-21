@@ -67,7 +67,7 @@ export function ProductSelectionSection({
       <CardContent className="space-y-3">
         {/* Add product selector */}
         <div className="flex gap-2">
-          <Select onValueChange={handleAddProduct} value="">
+          <Select onValueChange={handleAddProduct} value={undefined}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder={t("herbicide.selectProduct")} />
             </SelectTrigger>

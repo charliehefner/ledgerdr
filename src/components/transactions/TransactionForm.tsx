@@ -849,7 +849,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <div className="space-y-2 max-w-xs">
               <Label>Tipo Bienes/Servicios</Label>
               <Select
-                value={form.dgii_tipo_bienes_servicios}
+                value={form.dgii_tipo_bienes_servicios || undefined}
                 onValueChange={(value) => updateField('dgii_tipo_bienes_servicios', value)}
               >
                 <SelectTrigger>

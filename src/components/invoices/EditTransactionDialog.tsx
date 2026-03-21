@@ -191,6 +191,7 @@ export function EditTransactionDialog({
         transfer_from_account: isTransfer ? (transaction.pay_method || "") : "",
         transfer_to_account: isTransfer ? (transaction.destination_acct_code || "") : "",
         transfer_dest_amount: isTransfer ? String(transaction.destination_amount || "") : "",
+        dgii_tipo_anulacion: (transaction as any).dgii_tipo_anulacion || "",
       };
       setFormData(newFormData);
       setOriginalFormData(newFormData);

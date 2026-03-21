@@ -820,19 +820,33 @@ export function EditTransactionDialog({
                   })()} readOnly className="bg-muted" />
                 ) : (
                   <Select
-                    value={editedPayMethod}
-                    onValueChange={setEditedPayMethod}
+                    value={editedPayMethod || "__none__"}
+                    onValueChange={(v) => setEditedPayMethod(v === "__none__" ? "" : v)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('txForm.selectMethod')} />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
+                      <SelectItem value="__none__">{t('txForm.selectMethod')}</SelectItem>
                       {(() => {
                         const banks = bankAccounts.filter(a => a.account_type === 'bank');
                         const cards = bankAccounts.filter(a => a.account_type === 'credit_card');
                         const petty = bankAccounts.filter(a => a.account_type === 'petty_cash');
+
+                        // Check if current value is a legacy string not matching any bank account
+                        const legacyLabels: Record<string, string> = {
+                          transfer_bdi: 'Transfer BDI', transfer_bhd: 'Transfer BHD',
+                          cash: 'Efectivo', petty_cash: 'Caja Chica',
+                          cc_management: 'TC Gerencia', cc_agri: 'TC Agrícola',
+                          cc_industry: 'TC Industrial',
+                        };
+                        const isLegacy = editedPayMethod && legacyLabels[editedPayMethod] && !bankAccounts.find(a => a.id === editedPayMethod);
+
                         return (
                           <>
+                            {isLegacy && (
+                              <SelectItem value={editedPayMethod}>{legacyLabels[editedPayMethod]} (legacy)</SelectItem>
+                            )}
                             {banks.length > 0 && (
                               <SelectGroup>
                                 <SelectLabel>Bancos</SelectLabel>
@@ -909,13 +923,14 @@ export function EditTransactionDialog({
                   <Input value={editedTipoBienes} readOnly className="bg-muted" />
                 ) : (
                   <Select
-                    value={editedTipoBienes}
-                    onValueChange={setEditedTipoBienes}
+                    value={editedTipoBienes || "__none__"}
+                    onValueChange={(v) => setEditedTipoBienes(v === "__none__" ? "" : v)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
+                      <SelectItem value="__none__">— Ninguno —</SelectItem>
                       {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
                         <SelectItem key={code} value={code}>
                           {code} - {label}
@@ -934,14 +949,14 @@ export function EditTransactionDialog({
                 <Input value={(transaction as any)?.dgii_tipo_anulacion || ''} readOnly className="bg-muted" />
               ) : (
                 <Select
-                  value={(formData as any).dgii_tipo_anulacion || ''}
-                  onValueChange={(value) => setFormData(f => ({ ...f, dgii_tipo_anulacion: value }))}
+                  value={(formData as any).dgii_tipo_anulacion || '__none__'}
+                  onValueChange={(value) => setFormData(f => ({ ...f, dgii_tipo_anulacion: value === '__none__' ? '' : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    <SelectItem value="">— Ninguno —</SelectItem>
+                    <SelectItem value="__none__">— Ninguno —</SelectItem>
                     {Object.entries(TIPO_ANULACION).map(([code, desc]) => (
                       <SelectItem key={code} value={code}>
                         {code} - {desc}

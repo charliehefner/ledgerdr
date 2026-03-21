@@ -105,6 +105,18 @@ CREATE TABLE IF NOT EXISTS transaction_edits (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS transaction_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_id UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+  changed_by UUID NOT NULL,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  field_name TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  change_reason TEXT
+);
+CREATE INDEX idx_transaction_audit_log_tx_id ON transaction_audit_log(transaction_id);
+
 -- =============================================
 -- HR TABLES
 -- =============================================

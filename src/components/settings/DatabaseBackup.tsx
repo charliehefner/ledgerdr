@@ -237,7 +237,7 @@ export function DatabaseBackup() {
             )}
           </Button>
           <p className="mt-4 text-sm text-muted-foreground">
-            Último respaldo: <span className="font-mono font-medium">{lastBackup ?? "Nunca"}</span>
+            {language === 'es' ? 'Último respaldo' : 'Last backup'}: <span className="font-mono font-medium">{lastBackup ?? (language === 'es' ? 'Nunca' : 'Never')}</span>
           </p>
         </div>
       </div>

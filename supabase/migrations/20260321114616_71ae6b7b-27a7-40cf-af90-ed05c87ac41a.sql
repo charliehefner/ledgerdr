@@ -1,0 +1,1 @@
+UPDATE ap_ar_documents SET total_amount = 66332.15, updated_at = now() WHERE id = '8ccfb836-f213-4145-9b66-f5b4a2e4fb6f';

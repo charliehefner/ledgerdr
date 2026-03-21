@@ -1,34 +1,19 @@
 
 
-# Fix: Repair Old AP Documents Still Linked to Account 2110
+# Standardize payroll_snapshots Management Policy Name
 
-## Status of Previous Fix
-- ✅ **Code fix confirmed**: Both `TransactionForm.tsx` (line 344) and `ApArDocumentList.tsx` (line 79) now use prefix `'24'` for payables
-- ✅ **New AP auto-creation works**: Credit purchases will correctly link to `2440`
-- ✅ **Transaction 361**: Already shows `2440` (was repaired in the previous migration)
-- ❌ **Old documents 349, 253, 254, etc.**: Still show `2110` — created before the fix
+## Problem
+The `payroll_snapshots` table has a management policy named `"Management has full access to payroll snapshots"` instead of the standard `"Management full access"` used on all other tables.
 
 ## Plan
 
-### 1. Data repair migration
-Update all existing `ap_ar_documents` where `direction = 'payable'` and `account_id` points to a `21xx` account, reassigning them to the first postable `24xx` account (2440 - Cuentas a pagar).
+### 1. Database migration
+- Drop the existing policy `"Management has full access to payroll snapshots"` on `payroll_snapshots`
+- Create replacement policy `"Management full access"` on `payroll_snapshots` with the same logic: `FOR ALL USING (public.has_role(auth.uid(), 'management'))`
 
-```sql
-UPDATE ap_ar_documents
-SET account_id = (
-  SELECT id FROM chart_of_accounts
-  WHERE account_code LIKE '24%'
-    AND allow_posting = true
-    AND deleted_at IS NULL
-  ORDER BY account_code LIMIT 1
-)
-WHERE direction = 'payable'
-  AND account_id IN (
-    SELECT id FROM chart_of_accounts
-    WHERE account_code LIKE '21%'
-  );
-```
+### 2. Update rlsPoliciesSql.ts
+Verify the backup file already uses the standard name (it does per prior analysis), so no code change needed.
 
 ### Files Modified
-- New migration only — no code changes needed
+- New migration only
 

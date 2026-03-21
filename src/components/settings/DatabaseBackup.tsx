@@ -145,8 +145,12 @@ export function DatabaseBackup() {
       
       setProgress(100);
       const now = new Date();
-      const backupTimeStr = now.toLocaleDateString('es-DO') + ' ' + 
-        now.toLocaleTimeString('es-DO', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mon = months[now.getMonth()];
+      const yyyy = now.getFullYear();
+      const time = now.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const backupTimeStr = `${dd}${mon}${yyyy} ${time}`;
       localStorage.setItem("lastBackupTime", backupTimeStr);
       setLastBackup(backupTimeStr);
       const totalFiles = ncfAttachments.length + employeeDocuments.length;

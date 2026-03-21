@@ -331,8 +331,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         // Auto-create AP/AR document when due_date is present OR pay_method is credit
         const shouldCreateApAr = !isTransfer && form.transaction_direction !== 'payment'
           && (form.due_date || form.pay_method === 'credit');
-        if (shouldCreateApAr) {
-          const direction = form.transaction_direction === 'sale' ? 'receivable' : 'payable';
+        
+        // Auto-create advance AP/AR document when account starts with 1690
+        const isAdvance = form.master_acct_code.startsWith('1690');
+        
+        if (shouldCreateApAr || isAdvance) {
+          const direction = isAdvance ? 'payable' : (form.transaction_direction === 'sale' ? 'receivable' : 'payable');
           const totalAmount = parseFloat(form.amount);
           // Default due_date to +30 days if credit but no explicit due_date
           let dueDate = form.due_date;
@@ -342,8 +346,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             dueDate = formatDateLocal(d);
           }
           try {
-            // Look up default AR/AP GL account
-            const acctPrefix = direction === 'receivable' ? '12' : '24';
+            // Look up default GL account
+            const acctPrefix = isAdvance ? '1690' : (direction === 'receivable' ? '12' : '24');
             const { data: defaultAcct } = await supabase
               .from('chart_of_accounts')
               .select('id')
@@ -356,11 +360,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
             await supabase.from('ap_ar_documents').insert({
               direction,
+              document_type: isAdvance ? 'advance' : 'invoice',
               contact_name: form.name || form.description,
               contact_rnc: form.rnc || null,
               document_number: result.legacy_id?.toString() || null,
               document_date: formatDateLocal(form.transaction_date!),
-              due_date: dueDate,
+              due_date: isAdvance ? null : (dueDate || null),
               currency: form.currency,
               total_amount: totalAmount,
               amount_paid: 0,

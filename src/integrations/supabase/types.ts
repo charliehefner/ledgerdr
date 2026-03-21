@@ -86,6 +86,48 @@ export type Database = {
         }
         Relationships: []
       }
+      advance_allocations: {
+        Row: {
+          advance_doc_id: string
+          allocated_by: string | null
+          amount: number
+          created_at: string | null
+          id: string
+          invoice_doc_id: string
+        }
+        Insert: {
+          advance_doc_id: string
+          allocated_by?: string | null
+          amount: number
+          created_at?: string | null
+          id?: string
+          invoice_doc_id: string
+        }
+        Update: {
+          advance_doc_id?: string
+          allocated_by?: string | null
+          amount?: number
+          created_at?: string | null
+          id?: string
+          invoice_doc_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advance_allocations_advance_doc_id_fkey"
+            columns: ["advance_doc_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advance_allocations_invoice_doc_id_fkey"
+            columns: ["invoice_doc_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_configurations: {
         Row: {
           alert_type: string

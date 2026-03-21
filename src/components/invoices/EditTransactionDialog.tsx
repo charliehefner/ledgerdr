@@ -260,6 +260,7 @@ export function EditTransactionDialog({
       if (formData.amount !== originalFormData.amount) updates.amount = parseFloat(formData.amount);
       if (formData.name !== originalFormData.name) updates.name = formData.name || null;
       if (formData.comments !== originalFormData.comments) updates.comments = formData.comments || null;
+      if ((formData as any).dgii_tipo_anulacion !== (originalFormData as any).dgii_tipo_anulacion) updates.dgii_tipo_anulacion = (formData as any).dgii_tipo_anulacion || null;
       if (formData.transaction_direction !== originalFormData.transaction_direction) updates.transaction_direction = formData.transaction_direction;
       
       // Handle transfer-specific field mapping

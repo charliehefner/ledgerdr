@@ -144,6 +144,11 @@ export function DatabaseBackup() {
       URL.revokeObjectURL(url);
       
       setProgress(100);
+      const now = new Date();
+      const backupTimeStr = now.toLocaleDateString('es-DO') + ' ' + 
+        now.toLocaleTimeString('es-DO', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      localStorage.setItem("lastBackupTime", backupTimeStr);
+      setLastBackup(backupTimeStr);
       const totalFiles = ncfAttachments.length + employeeDocuments.length;
       toast.success(
         t("backup.complete")

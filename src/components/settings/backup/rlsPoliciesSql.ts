@@ -239,6 +239,11 @@ CREATE POLICY "Viewer can view" ON fuel_tanks FOR SELECT USING (public.has_role(
 CREATE POLICY "Viewer can view" ON fuel_transactions FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 CREATE POLICY "Viewer can view" ON inventory_items FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 CREATE POLICY "Viewer can view" ON tractor_maintenance FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON chart_of_accounts FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON accounting_periods FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON journals FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON journal_lines FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
+CREATE POLICY "Viewer can view" ON fixed_assets FOR SELECT USING (public.has_role(auth.uid(), 'viewer'));
 
 -- =============================================
 -- DRIVER ACCESS POLICIES

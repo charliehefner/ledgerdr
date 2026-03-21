@@ -432,6 +432,19 @@ export function TractorsView() {
         </div>
       </div>
 
+      {/* Overdue maintenance banner */}
+      {overdueTractors.length > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+          <p className="text-sm font-medium text-destructive">
+            ¡{overdueTractors.length} tractor{overdueTractors.length > 1 ? 'es' : ''} con mantenimiento vencido!{' '}
+            <span className="font-normal">
+              {overdueTractors.map(t => t.name).join(', ')}
+            </span>
+          </p>
+        </div>
+      )}
+
       {!tractors || tractors.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           {t("equipment.noTractors")}

@@ -26,6 +26,7 @@ interface TabbedPageLayoutProps {
   hideChrome?: boolean;
   headerIcon?: ReactNode;
   headerAccent?: boolean;
+  helpChapter?: string;
 }
 
 /**

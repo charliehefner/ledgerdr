@@ -303,6 +303,14 @@ export const es = {
   "accounting.periods.created": "Período creado",
   "accounting.periods.updated": "Período actualizado",
 
+  // Accounting - Closing Checklist
+  "accounting.checklist.title": "Lista de Verificación de Cierre",
+  "accounting.checklist.description": "Revise los siguientes puntos antes de cerrar este período. Los problemas bloqueantes deben resolverse primero.",
+  "accounting.checklist.unlinked": "Transacciones sin asiento contable",
+  "accounting.checklist.unposted": "Asientos sin publicar",
+  "accounting.checklist.missingFx": "Tasas de cambio faltantes (USD)",
+  "accounting.checklist.unreconciled": "Líneas bancarias sin conciliar",
+
   // Accounting - Period Closing
   "accounting.closing.generate": "Generar Cierre",
   "accounting.closing.title": "Generar Asiento de Cierre",

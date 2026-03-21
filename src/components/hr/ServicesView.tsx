@@ -524,7 +524,7 @@ export function ServicesView() {
             </div>
             <div className="space-y-2">
               <Label>Pagado desde *</Label>
-              <Select value={formData.pay_method} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
+              <Select value={formData.pay_method || undefined} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
                 <SelectContent>
                   {bankAccounts.map((ba) => (

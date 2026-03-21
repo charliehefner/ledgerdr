@@ -229,7 +229,7 @@ export function BankAccountsList() {
             </div>
             <div>
               <Label>{t("treasury.bank.glAccountLabel")}</Label>
-              <Select value={form.chart_account_id} onValueChange={v => setForm(f => ({ ...f, chart_account_id: v }))}>
+              <Select value={form.chart_account_id || undefined} onValueChange={v => setForm(f => ({ ...f, chart_account_id: v }))}>
                 <SelectTrigger><SelectValue placeholder={t("treasury.bank.selectAccount")} /></SelectTrigger>
                 <SelectContent className="bg-popover max-h-[200px]">
                   {chartAccounts.map(c => (

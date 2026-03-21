@@ -85,6 +85,37 @@ export default function Reports() {
     queryFn: fetchAccounts,
   });
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['bank-accounts-lookup'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, account_name, account_type, currency')
+        .order('account_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const LEGACY_PAY_METHOD_LABELS: Record<string, string> = {
+    transfer_bdi: 'Transfer BDI',
+    transfer_bhd: 'Transfer BHD',
+    cash: 'Efectivo',
+    petty_cash: 'Caja Chica',
+    cc_management: 'CC Management',
+    cc_agri: 'CC Agrícola',
+    cc_industry: 'CC Industrial',
+    credit: 'Crédito',
+  };
+
+  const getPayMethodLabel = (payMethod: string | null): string => {
+    if (!payMethod) return '-';
+    if (LEGACY_PAY_METHOD_LABELS[payMethod]) return LEGACY_PAY_METHOD_LABELS[payMethod];
+    const bankAcct = bankAccounts.find(b => b.id === payMethod);
+    if (bankAcct) return `${bankAcct.account_name} (${bankAcct.currency})`;
+    return payMethod;
+  };
+
   // Exclude voided transactions from reports
   const nonVoidedTransactions = allTransactions.filter((tx) => !tx.is_void);
 

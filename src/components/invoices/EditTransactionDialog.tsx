@@ -925,6 +925,31 @@ export function EditTransactionDialog({
               </div>
             )}
 
+            {/* Tipo Anulación */}
+            <div className="space-y-2">
+              <Label>Tipo Anulación</Label>
+              {locked ? (
+                <Input value={(transaction as any)?.dgii_tipo_anulacion || ''} readOnly className="bg-muted" />
+              ) : (
+                <Select
+                  value={(formData as any).dgii_tipo_anulacion || ''}
+                  onValueChange={(value) => setFormData(f => ({ ...f, dgii_tipo_anulacion: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="">— Ninguno —</SelectItem>
+                    {Object.entries(TIPO_ANULACION).map(([code, desc]) => (
+                      <SelectItem key={code} value={code}>
+                        {code} - {desc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
             {/* Comments */}
             <div className="space-y-2">
               <Label>Comentarios</Label>

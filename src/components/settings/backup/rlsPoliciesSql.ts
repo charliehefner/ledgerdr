@@ -94,6 +94,11 @@ CREATE POLICY "Admin full access" ON rainfall_records FOR ALL USING (public.has_
 CREATE POLICY "Admin full access" ON user_roles FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "Admin full access" ON scheduled_user_deletions FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "Admin full access" ON payroll_snapshots FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON chart_of_accounts FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON accounting_periods FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON journals FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admin full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 
 -- =============================================
 -- MANAGEMENT FULL ACCESS POLICIES

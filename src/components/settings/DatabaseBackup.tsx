@@ -236,11 +236,9 @@ export function DatabaseBackup() {
               </>
             )}
           </Button>
-          {lastBackup && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Último respaldo: <span className="font-mono font-medium">{lastBackup}</span>
-            </p>
-          )}
+          <p className="mt-4 text-sm text-muted-foreground">
+            Último respaldo: <span className="font-mono font-medium">{lastBackup ?? "Nunca"}</span>
+          </p>
         </div>
       </div>
     </div>

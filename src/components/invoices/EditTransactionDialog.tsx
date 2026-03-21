@@ -327,6 +327,29 @@ export function EditTransactionDialog({
               document_type: direction === 'receivable' ? 'invoice' : 'bill',
               document_number: transaction.legacy_id?.toString() || null,
             });
+          } else {
+            // Sync updated fields to existing AP/AR document
+            const txAmount = updates.amount !== undefined ? updates.amount : parseFloat(formData.amount);
+            const txCurrency = updates.currency || formData.currency || 'DOP';
+            const txDate = updates.transaction_date || formData.transaction_date;
+
+            const { data: fullDoc } = await supabase
+              .from('ap_ar_documents')
+              .select('amount_paid')
+              .eq('id', existingDoc.id)
+              .maybeSingle();
+
+            const amountPaid = fullDoc?.amount_paid || 0;
+
+            await supabase.from('ap_ar_documents').update({
+              contact_name: updates.name || formData.name || undefined,
+              contact_rnc: updates.rnc !== undefined ? updates.rnc : undefined,
+              total_amount: txAmount,
+              balance_remaining: Math.max(0, txAmount - amountPaid),
+              currency: txCurrency,
+              due_date: effectiveDueDate || txDate,
+              document_date: txDate,
+            }).eq('id', existingDoc.id);
           }
         } catch (apArError) {
           console.warn('AP/AR auto-creation failed (non-fatal):', apArError);
@@ -350,6 +373,7 @@ export function EditTransactionDialog({
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["allTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
       toast.success("Cambios guardados exitosamente");
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';

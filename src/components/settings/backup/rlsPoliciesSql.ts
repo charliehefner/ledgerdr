@@ -141,6 +141,11 @@ CREATE POLICY "Management full access" ON cronograma_weeks FOR ALL USING (public
 CREATE POLICY "Management full access" ON cronograma_entries FOR ALL USING (public.has_role(auth.uid(), 'management'));
 CREATE POLICY "Management full access" ON rainfall_records FOR ALL USING (public.has_role(auth.uid(), 'management'));
 CREATE POLICY "Management full access" ON payroll_snapshots FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON chart_of_accounts FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON accounting_periods FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON journals FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON journal_lines FOR ALL USING (public.has_role(auth.uid(), 'management'));
+CREATE POLICY "Management full access" ON fixed_assets FOR ALL USING (public.has_role(auth.uid(), 'management'));
 
 -- =============================================
 -- SUPERVISOR ACCESS POLICIES

@@ -17,26 +17,43 @@ interface HelpPanelButtonProps {
 
 export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
   const { language, t } = useLanguage();
-  const [exists, setExists] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(false);
 
   const filePath = `/help/${language}/${chapter}.pdf`;
 
+  // Clean up blob URL when it changes or component unmounts
   useEffect(() => {
-    if (!open) return;
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
+
+  useEffect(() => {
+    if (!open) {
+      // Revoke on close
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      return;
+    }
     setLoading(true);
     setNotFound(false);
-    setExists(false);
+    setBlobUrl(null);
 
-    fetch(filePath, { method: "HEAD" })
+    fetch(filePath)
       .then((res) => {
         if (!res.ok) throw new Error("Not found");
-        // Vite returns index.html for missing files in dev; detect via content-type
         const ct = res.headers.get("content-type") || "";
         if (ct.includes("text/html")) throw new Error("Not found");
-        setExists(true);
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        setBlobUrl(url);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -63,7 +80,7 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
       <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl">
         <SheetHeader className="flex flex-row items-center justify-between pr-8">
           <SheetTitle>{t("help.title")}</SheetTitle>
-          {exists && !notFound && (
+          {blobUrl && (
             <a
               href={filePath}
               download={`${chapter}.pdf`}
@@ -90,9 +107,9 @@ export function HelpPanelButton({ chapter }: HelpPanelButtonProps) {
             </div>
           )}
 
-          {exists && !notFound && (
+          {blobUrl && (
             <iframe
-              src={filePath}
+              src={blobUrl}
               className="w-full h-full border-0 rounded"
               title={t("help.title")}
             />

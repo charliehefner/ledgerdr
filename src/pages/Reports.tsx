@@ -541,12 +541,12 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="all">Todos los Métodos</SelectItem>
-                  <SelectItem value="transfer_bdi">Transfer BDI</SelectItem>
-                  <SelectItem value="transfer_bhd">Transfer BHD</SelectItem>
-                  <SelectItem value="cash">Efectivo</SelectItem>
-                  <SelectItem value="cc_management">CC Management</SelectItem>
-                  <SelectItem value="cc_agricultural">CC Agrícola</SelectItem>
-                  <SelectItem value="cc_industrial">CC Industrial</SelectItem>
+                  {Object.entries(LEGACY_PAY_METHOD_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                  {bankAccounts.map(ba => (
+                    <SelectItem key={ba.id} value={ba.id}>{ba.account_name} ({ba.currency})</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 

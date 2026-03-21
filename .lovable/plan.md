@@ -1,47 +1,66 @@
 
 
-## Plan: Switch Help System to PDF and Insert Spanish Operations Chapter
+## Plan: Sync Transaction Edits to Existing AP/AR Documents
 
-### What Changes
+### Problem
 
-1. **Modify `HelpPanelButton.tsx`** — Switch from markdown rendering to PDF display via `<iframe>`. The component will:
-   - Change file path from `.md` to `.pdf`
-   - Replace `ReactMarkdown` with an `<iframe>` using the browser's built-in PDF viewer
-   - Use a `HEAD` request to check file existence (for "coming soon" fallback)
-   - Update download link to point to PDF
-   - Remove `react-markdown` import
+When editing a transaction that already has a linked AP/AR document, the `EditTransactionDialog` only checks if a document exists and skips it. It never updates the existing document with the new contact name, RNC, amount, currency, or due date. It also doesn't invalidate the `ap-ar-documents` query cache.
 
-2. **Remove `react-markdown` dependency** from `package.json`
+### Fix
 
-3. **Copy uploaded PDF** — Place `cap5_operaciones.pdf` at `public/help/es/14-operations.pdf`
+In `src/components/invoices/EditTransactionDialog.tsx`, inside the AP/AR sync block (around line 296):
 
-4. **Keep English markdown** — Convert existing `public/help/en/14-operations.md` to remain as-is for now (or delete it since there's no English PDF yet; the "coming soon" fallback will show)
+**When `existingDoc` is found**, update it with the current transaction values:
+- `contact_name`
+- `contact_rnc`
+- `total_amount` → recalculate `balance_remaining` = new total - amount_paid
+- `currency`
+- `due_date`
+- `document_date`
 
-5. **Delete old Spanish markdown** — Remove `public/help/es/14-operations.md`
+**After saving**, add `ap-ar-documents` to the query invalidation list (after line 352).
 
 ### Technical Details
 
-The iframe approach in `HelpPanelButton.tsx`:
-
 ```tsx
-// Existence check via HEAD request
-fetch(filePath, { method: 'HEAD' })
-  .then(res => { if (!res.ok) throw new Error(); setExists(true); })
-  .catch(() => setNotFound(true))
-
-// Render
-<iframe src={filePath} className="w-full h-[calc(100vh-8rem)] border-0 rounded" />
+// When existingDoc IS found (new else branch at line 296):
+if (!existingDoc) {
+  // ... existing insert logic ...
+} else {
+  // Sync updated fields to existing AP/AR document
+  const txAmount = updates.amount !== undefined ? updates.amount : parseFloat(formData.amount);
+  const txCurrency = updates.currency || formData.currency || 'DOP';
+  const txDate = updates.transaction_date || formData.transaction_date;
+  
+  // Fetch current amount_paid to recalculate balance
+  const { data: fullDoc } = await supabase
+    .from('ap_ar_documents')
+    .select('amount_paid')
+    .eq('id', existingDoc.id)
+    .single();
+  
+  const amountPaid = fullDoc?.amount_paid || 0;
+  
+  await supabase.from('ap_ar_documents').update({
+    contact_name: updates.name || formData.name || undefined,
+    contact_rnc: updates.rnc !== undefined ? updates.rnc : undefined,
+    total_amount: txAmount,
+    balance_remaining: Math.max(0, txAmount - amountPaid),
+    currency: txCurrency,
+    due_date: effectiveDueDate || txDate,
+    document_date: txDate,
+  }).eq('id', existingDoc.id);
+}
 ```
 
-The panel width (`sm:max-w-lg md:max-w-xl`) will be widened to `sm:max-w-xl md:max-w-2xl` for better PDF readability.
+Add cache invalidation:
+```tsx
+queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+```
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/layout/HelpPanelButton.tsx` | Switch from markdown to PDF iframe |
-| `package.json` | Remove `react-markdown` |
-| `public/help/es/14-operations.pdf` | New — uploaded PDF |
-| `public/help/es/14-operations.md` | Delete |
-| `public/help/en/14-operations.md` | Delete (will show "coming soon" until English PDF provided) |
+| `src/components/invoices/EditTransactionDialog.tsx` | Add update logic for existing AP/AR docs + invalidate cache |
 

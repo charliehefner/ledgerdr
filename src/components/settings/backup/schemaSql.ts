@@ -856,4 +856,16 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- =============================================
+-- ADVANCE ALLOCATIONS
+-- =============================================
+CREATE TABLE IF NOT EXISTS advance_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  advance_doc_id UUID NOT NULL REFERENCES ap_ar_documents(id),
+  invoice_doc_id UUID NOT NULL REFERENCES ap_ar_documents(id),
+  amount NUMERIC NOT NULL CHECK (amount > 0),
+  allocated_by UUID,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 `;

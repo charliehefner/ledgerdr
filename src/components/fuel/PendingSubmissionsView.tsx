@@ -24,8 +24,8 @@ import { es } from "date-fns/locale";
 export function PendingSubmissionsView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { userRole } = useAuth();
-  const isAdmin = userRole === "admin" || userRole === "management";
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "management";
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ["pending-fuel-submissions"],

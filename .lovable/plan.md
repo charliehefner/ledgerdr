@@ -1,12 +1,19 @@
 
 
-## Add `exchange_rates` to Database Backup
+## Drop Legacy `accounts` Table
 
-The `exchange_rates` table is missing from the backup export list in `backupConstants.ts`. It needs to be added so daily BCRD rates are included in the IT migration package.
+The legacy `accounts` table (89 rows, flat codes) is completely unused by application code — no queries, no foreign keys reference it. The only reference is in the backup export list. Removing it eliminates confusion with the authoritative `chart_of_accounts` table.
 
-### Change
+### Step 1: Remove from backup export list
+**File: `src/components/settings/backup/backupConstants.ts`** — Remove `'accounts'` from `TABLES_TO_EXPORT`.
 
-**File: `src/components/settings/backup/backupConstants.ts`**
+### Step 2: Drop the table via migration
+```sql
+DROP TABLE IF EXISTS public.accounts;
+```
 
-Add `'exchange_rates'` to the `TABLES_TO_EXPORT` array. It has no foreign key dependencies, so it can be placed near the end of the list (before `scheduled_user_deletions`).
+This is safe because:
+- Zero application queries reference `from('accounts')`
+- No foreign keys point to it
+- All 89 codes exist in `chart_of_accounts`
 

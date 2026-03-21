@@ -143,16 +143,25 @@ export function TractorsView() {
   // Helper to get maintenance status for a tractor
   const getMaintenanceStatus = (tractor: TractorEquipment) => {
     const lastMaint = latestMaintenance.find(m => m.tractor_id === tractor.id);
+    if (!lastMaint && tractor.current_hour_meter === 0) {
+      return { hoursUntil: null, isOverdue: false, isDueSoon: false };
+    }
     const lastHours = lastMaint?.hour_meter_reading ?? 0;
     const hoursSinceMaint = tractor.current_hour_meter - lastHours;
     const hoursUntil = tractor.maintenance_interval_hours - hoursSinceMaint;
     
     return {
       hoursUntil,
-      isOverdue: hoursUntil < 0,
-      isDueSoon: hoursUntil >= 0 && hoursUntil <= 50,
+      isOverdue: hoursUntil <= 0,
+      isDueSoon: hoursUntil > 0 && hoursUntil <= 20,
     };
   };
+
+  // Check if any active tractor is overdue
+  const overdueTractors = useMemo(() => {
+    if (!tractors) return [];
+    return tractors.filter(t => t.is_active && getMaintenanceStatus(t).isOverdue);
+  }, [tractors, latestMaintenance]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof form) => {
@@ -423,6 +432,19 @@ export function TractorsView() {
         </div>
       </div>
 
+      {/* Overdue maintenance banner */}
+      {overdueTractors.length > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+          <p className="text-sm font-medium text-destructive">
+            ¡{overdueTractors.length} tractor{overdueTractors.length > 1 ? 'es' : ''} con mantenimiento vencido!{' '}
+            <span className="font-normal">
+              {overdueTractors.map(t => t.name).join(', ')}
+            </span>
+          </p>
+        </div>
+      )}
+
       {!tractors || tractors.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           {t("equipment.noTractors")}
@@ -470,18 +492,22 @@ export function TractorsView() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex items-center gap-1 cursor-pointer" onClick={() => setSelectedTractorForMaintenance(tractor)}>
-                                {maintStatus.isOverdue ? (
+                                {maintStatus.hoursUntil === null ? (
+                                  <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                    Sin datos
+                                  </Badge>
+                                ) : maintStatus.isOverdue ? (
                                   <Badge variant="destructive" className="gap-1">
                                     <AlertTriangle className="h-3 w-3" />
-                                    {Math.abs(Math.round(maintStatus.hoursUntil))} hrs vencido
+                                    VENCIDO — {Math.abs(Math.round(maintStatus.hoursUntil))} hrs
                                   </Badge>
                                 ) : maintStatus.isDueSoon ? (
-                                  <Badge variant="secondary" className="gap-1 bg-yellow-100 text-yellow-800">
+                                  <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                                     <Clock className="h-3 w-3" />
-                                    {Math.round(maintStatus.hoursUntil)} hrs
+                                    Próximo — {Math.round(maintStatus.hoursUntil)} hrs
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="gap-1 text-green-700 border-green-300">
+                                  <Badge variant="outline" className="gap-1 text-green-700 border-green-300 dark:text-green-400 dark:border-green-700">
                                     <CheckCircle className="h-3 w-3" />
                                     {Math.round(maintStatus.hoursUntil)} hrs
                                   </Badge>
@@ -489,7 +515,13 @@ export function TractorsView() {
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{maintStatus.isOverdue ? "Mantenimiento vencido" : `Próximo mant. en ${Math.round(maintStatus.hoursUntil)} hrs`}</p>
+                              {maintStatus.hoursUntil === null ? (
+                                <p>No hay datos de mantenimiento</p>
+                              ) : maintStatus.isOverdue ? (
+                                <p>¡Mantenimiento vencido por {Math.abs(Math.round(maintStatus.hoursUntil))} hrs!</p>
+                              ) : (
+                                <p>Próximo mant. en {Math.round(maintStatus.hoursUntil)} hrs</p>
+                              )}
                               <p className="text-xs text-muted-foreground">Intervalo: cada {tractor.maintenance_interval_hours} hrs</p>
                             </TooltipContent>
                           </Tooltip>

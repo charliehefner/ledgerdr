@@ -328,7 +328,7 @@ export default function Reports() {
     currency: { header: "Currency", width: 10, getValue: (tx) => tx.currency },
     amount: { header: "Amount", width: 15, getValue: (tx) => tx.amount },
     itbis: { header: "ITBIS", width: 12, getValue: (tx) => tx.itbis || "" },
-    payMethod: { header: "Pay Method", width: 18, getValue: (tx) => tx.pay_method || "-" },
+    payMethod: { header: "Pay Method", width: 18, getValue: (tx) => getPayMethodLabel(tx.pay_method) },
     document: { header: "Document", width: 15, getValue: (tx) => tx.document || "-" },
     name: { header: "Name", width: 20, getValue: (tx) => tx.name || "-" },
     exchangeRate: { header: "Exchange Rate", width: 15, getValue: (tx) => tx.exchange_rate || "-" },

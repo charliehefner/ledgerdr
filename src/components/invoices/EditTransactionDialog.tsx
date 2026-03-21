@@ -345,7 +345,6 @@ export function EditTransactionDialog({
               contact_name: updates.name || formData.name || undefined,
               contact_rnc: updates.rnc !== undefined ? updates.rnc : undefined,
               total_amount: txAmount,
-              balance_remaining: Math.max(0, txAmount - amountPaid),
               currency: txCurrency,
               due_date: effectiveDueDate || txDate,
               document_date: txDate,

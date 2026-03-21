@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Management has full access to payroll snapshots" ON public.payroll_snapshots;
+CREATE POLICY "Management full access" ON public.payroll_snapshots FOR ALL TO authenticated USING (public.has_role(auth.uid(), 'management')) WITH CHECK (public.has_role(auth.uid(), 'management'));

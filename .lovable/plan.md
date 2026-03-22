@@ -1,28 +1,47 @@
 
 
-## Fix: Payment Method Not Rendering in Financial Ledger (Reports)
+## Fix: Benefit Save Error "invalid input syntax for type uuid: undefined"
 
 ### Problem
-The Reports page (`src/pages/Reports.tsx`) displays `tx.pay_method` raw, which is often a bank account UUID. The Transactions page already resolves these UUIDs to human-readable names via `getPayMethodLabel()` backed by a `bank_accounts` query -- but Reports never implemented this.
+When saving a benefit in the Hoja de Tiempo, the `employee_id` arrives as the literal string `"undefined"` to the database. The most likely cause is a stale closure in the `DebouncedNumberInput` component — the 600ms debounce timer fires after the component has re-rendered with an undefined reference, or before data has fully loaded.
+
+### Root Cause Analysis
+The `DebouncedNumberInput` captures `onChange` (which contains `employee.id`) in a `setTimeout`. If the parent re-renders and the closure becomes stale, `employee.id` could resolve to `undefined`. There's no guard in `handleBenefitChange` to prevent saving with an invalid `employee_id`.
 
 ### Fix
 
-**`src/pages/Reports.tsx`** -- three changes:
+**`src/components/hr/PayrollTimeGrid.tsx`** — Two changes:
 
-1. **Add bank accounts query** (same pattern as `RecentTransactions.tsx`):
-   - Query `bank_accounts` table for `id, account_name, account_type, currency`
+1. **Guard in `handleBenefitChange`** — Early return if `employeeId` is falsy:
+   ```typescript
+   const handleBenefitChange = (employeeId: string, benefitType: string, value: string) => {
+     if (!employeeId) return;  // ← add guard
+     const amount = parseFloat(value) || 0;
+     saveEmployeeBenefit.mutate({ employee_id: employeeId, benefit_type: benefitType, amount });
+   };
+   ```
 
-2. **Add pay method resolution function**:
-   - `getPayMethodLabel()` that checks legacy string labels first (transfer_bdi, cash, etc.), then falls back to bank account UUID lookup, mirroring the existing logic in `RecentTransactions.tsx`
+2. **Fix stale closure in `DebouncedNumberInput`** — Use a ref for `onChange` so the timer always calls the latest callback:
+   ```typescript
+   function DebouncedNumberInput({ value: externalValue, onChange, className }) {
+     const [localValue, setLocalValue] = useState(String(externalValue || ""));
+     const timerRef = useRef(null);
+     const onChangeRef = useRef(onChange);
+     onChangeRef.current = onChange;  // always up-to-date
 
-3. **Replace raw display** on line 729:
-   - Change `{tx.pay_method || "-"}` to `{getPayMethodLabel(tx.pay_method)}`
-   - Also update the pay method filter dropdown to show resolved names
-   - Also update the export `getValue` for payMethod (line ~299) to use the same resolution
+     const handleChange = useCallback((e) => {
+       const val = e.target.value;
+       setLocalValue(val);
+       if (timerRef.current) clearTimeout(timerRef.current);
+       timerRef.current = setTimeout(() => onChangeRef.current(val), 600);
+     }, []); // stable callback, uses ref
+     ...
+   }
+   ```
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/Reports.tsx` | Add bank_accounts query, getPayMethodLabel helper, use it in table cell + filter + export |
+| `src/components/hr/PayrollTimeGrid.tsx` | Add guard in `handleBenefitChange`, fix stale closure in `DebouncedNumberInput` |
 

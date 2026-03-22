@@ -96,12 +96,15 @@ function DebouncedNumberInput({
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setLocalValue(val);
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onChange(val), 600);
-  }, [onChange]);
+    timerRef.current = setTimeout(() => onChangeRef.current(val), 600);
+  }, []);
 
   return (
     <Input
@@ -637,6 +640,7 @@ export function PayrollTimeGrid({
     benefitType: string,
     value: string
   ) => {
+    if (!employeeId) return;
     const amount = parseFloat(value) || 0;
     saveEmployeeBenefit.mutate({
       employee_id: employeeId,

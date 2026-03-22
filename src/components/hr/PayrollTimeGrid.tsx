@@ -637,6 +637,7 @@ export function PayrollTimeGrid({
     benefitType: string,
     value: string
   ) => {
+    if (!employeeId) return;
     const amount = parseFloat(value) || 0;
     saveEmployeeBenefit.mutate({
       employee_id: employeeId,

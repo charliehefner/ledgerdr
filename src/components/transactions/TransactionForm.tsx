@@ -385,6 +385,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
       toast.success(t('txForm.success'));
       setForm(getInitialFormState());
+      setFormKey(k => k + 1);
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';

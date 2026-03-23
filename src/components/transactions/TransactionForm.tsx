@@ -515,7 +515,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         <CardTitle>{t('txForm.title')}</CardTitle>
         <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
-      <CardContent>
+      <CardContent key={formKey}>
         {showCrmPrompt && pendingCrmContact && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
             <span className="text-sm flex-1">{t('contacts.addToCrm')} <strong>{pendingCrmContact.name}</strong> ({pendingCrmContact.rnc})</span>

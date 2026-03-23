@@ -154,14 +154,17 @@ export function FuelTanksView() {
       // Add to destination tank (re-fetch for latest level)
       const { data: freshDest } = await supabase
         .from("fuel_tanks")
-        .select("current_level_gallons, capacity_gallons")
+        .select("current_level_gallons, capacity_gallons, last_pump_end_reading")
         .eq("id", data.destination_tank_id)
         .maybeSingle();
       if (freshDest) {
         const newLevel = Math.min(freshDest.capacity_gallons, freshDest.current_level_gallons + gallons);
+        // Adjust pump gauge same as purchase refill logic
+        const oldPumpReading = freshDest.last_pump_end_reading ?? 0;
+        const newPumpReading = Math.max(0, oldPumpReading - gallons);
         const { error } = await supabase
           .from("fuel_tanks")
-          .update({ current_level_gallons: newLevel })
+          .update({ current_level_gallons: newLevel, last_pump_end_reading: newPumpReading })
           .eq("id", data.destination_tank_id);
         if (error) throw error;
       }

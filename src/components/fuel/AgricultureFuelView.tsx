@@ -167,7 +167,7 @@ export function AgricultureFuelView() {
           fuel_equipment(name, equipment_type)
         `)
         .eq("fuel_tanks.use_type", "agriculture")
-        .in("transaction_type", ["dispense", "refill"])
+        .in("transaction_type", ["dispense", "refill", "transfer"])
         .order("transaction_date", { ascending: false });
       if (error) throw error;
       return data as FuelTransaction[];

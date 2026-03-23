@@ -36,11 +36,13 @@ interface FuelTransaction {
   id: string;
   tank_id: string;
   equipment_id: string;
+  destination_tank_id: string | null;
+  transaction_type: string;
   transaction_date: string;
   gallons: number;
   notes: string | null;
   fuel_tanks: { name: string };
-  fuel_equipment: { name: string };
+  fuel_equipment: { name: string } | null;
 }
 
 export function TankHistoryView() {

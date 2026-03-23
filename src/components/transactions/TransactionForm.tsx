@@ -89,6 +89,7 @@ const getInitialFormState = () => ({
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(getInitialFormState);
+  const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCrmPrompt, setShowCrmPrompt] = useState(false);
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);

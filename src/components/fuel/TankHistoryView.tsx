@@ -73,8 +73,8 @@ export function TankHistoryView() {
         .from("fuel_transactions")
         .select(`
           *,
-          fuel_tanks!inner(name, use_type),
-          fuel_equipment!inner(name, equipment_type)
+          fuel_tanks!tank_id!inner(name, use_type),
+          fuel_equipment(name, equipment_type)
         `)
         .eq("fuel_tanks.use_type", "agriculture")
         .eq("transaction_type", "dispense")

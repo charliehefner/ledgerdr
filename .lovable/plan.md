@@ -1,47 +1,40 @@
 
 
-## Fix: Benefit Save Error "invalid input syntax for type uuid: undefined"
+## Feature: Cross-Tank Fuel Transfers
 
 ### Problem
-When saving a benefit in the Hoja de Tiempo, the `employee_id` arrives as the literal string `"undefined"` to the database. The most likely cause is a stale closure in the `DebouncedNumberInput` component — the 600ms debounce timer fires after the component has re-rendered with an undefined reference, or before data has fully loaded.
+When an agricultural mobile tank fuels an industrial tank (or vice versa), there's no way to record this. The system only supports `dispense` (to equipment) and `refill` (purchase). Tank-to-tank transfers across cost centers are not handled.
 
-### Root Cause Analysis
-The `DebouncedNumberInput` captures `onChange` (which contains `employee.id`) in a `setTimeout`. If the parent re-renders and the closure becomes stale, `employee.id` could resolve to `undefined`. There's no guard in `handleBenefitChange` to prevent saving with an invalid `employee_id`.
+### Solution
+Add a **"Tank Transfer"** transaction type that records fuel moving from one tank to another, updating both tank levels and inventory accordingly.
 
-### Fix
+### Database Changes
 
-**`src/components/hr/PayrollTimeGrid.tsx`** — Two changes:
+1. **Alter `fuel_transactions` CHECK constraint** — add `'transfer'` to allowed `transaction_type` values
+2. **Add `destination_tank_id` column** — nullable UUID referencing `fuel_tanks(id)`, used only for transfer transactions
+3. **RLS** — existing policies cover this since transfers are admin-initiated
 
-1. **Guard in `handleBenefitChange`** — Early return if `employeeId` is falsy:
-   ```typescript
-   const handleBenefitChange = (employeeId: string, benefitType: string, value: string) => {
-     if (!employeeId) return;  // ← add guard
-     const amount = parseFloat(value) || 0;
-     saveEmployeeBenefit.mutate({ employee_id: employeeId, benefit_type: benefitType, amount });
-   };
-   ```
+### UI Changes
 
-2. **Fix stale closure in `DebouncedNumberInput`** — Use a ref for `onChange` so the timer always calls the latest callback:
-   ```typescript
-   function DebouncedNumberInput({ value: externalValue, onChange, className }) {
-     const [localValue, setLocalValue] = useState(String(externalValue || ""));
-     const timerRef = useRef(null);
-     const onChangeRef = useRef(onChange);
-     onChangeRef.current = onChange;  // always up-to-date
+**`src/components/fuel/FuelTanksView.tsx`** — Add a "Transfer Between Tanks" button and dialog:
+- Source tank selector (any active tank)
+- Destination tank selector (filtered to exclude source, any `use_type`)
+- Gallons to transfer (validated against source tank level)
+- Optional notes field
+- On submit: insert `fuel_transaction` with `transaction_type = 'transfer'`, deduct from source tank's `current_level_gallons`, add to destination tank's `current_level_gallons`, and update both inventory items accordingly (deduct from source use_type inventory, add to destination use_type inventory)
 
-     const handleChange = useCallback((e) => {
-       const val = e.target.value;
-       setLocalValue(val);
-       if (timerRef.current) clearTimeout(timerRef.current);
-       timerRef.current = setTimeout(() => onChangeRef.current(val), 600);
-     }, []); // stable callback, uses ref
-     ...
-   }
-   ```
+**`src/components/fuel/AgricultureFuelView.tsx`** and **`IndustryFuelView.tsx`**:
+- Add `'transfer'` to the `transaction_type` filter so transfers appear in both views' reports
+- Display transfers with a distinct badge (e.g., orange "Transfer" badge)
+- Show source/destination tank names instead of equipment name for transfer rows
 
-### Files Changed
+### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/components/hr/PayrollTimeGrid.tsx` | Add guard in `handleBenefitChange`, fix stale closure in `DebouncedNumberInput` |
+| Migration SQL | Add `transfer` to CHECK constraint, add `destination_tank_id` column |
+| `src/components/fuel/FuelTanksView.tsx` | Add transfer dialog with source/destination tank pickers and gallons input |
+| `src/components/fuel/AgricultureFuelView.tsx` | Include `transfer` in query filter, render transfer rows with badge |
+| `src/components/fuel/IndustryFuelView.tsx` | Same as above |
+| `src/components/fuel/TankHistoryView.tsx` | Show transfers in tank history |
 

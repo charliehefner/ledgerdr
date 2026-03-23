@@ -51,7 +51,7 @@ interface TransactionFormProps {
   onSuccess: () => void;
 }
 
-const initialFormState = {
+const getInitialFormState = () => ({
   transaction_date: undefined as Date | undefined,
   master_acct_code: '',
   project_code: '',
@@ -84,7 +84,7 @@ const initialFormState = {
     payment_receipt: null,
     quote: null,
   } as CategoryAttachments,
-};
+});
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const queryClient = useQueryClient();

@@ -383,7 +383,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       }
 
       toast.success(t('txForm.success'));
-      setForm(initialFormState);
+      setForm(getInitialFormState());
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';

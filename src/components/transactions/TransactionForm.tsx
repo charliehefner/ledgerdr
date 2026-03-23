@@ -1116,7 +1116,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
           {/* Submit */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => setForm(getInitialFormState())} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => { setForm(getInitialFormState()); setFormKey(k => k + 1); }} disabled={isSubmitting}>
               {t('common.clear') || 'Limpiar'}
             </Button>
             <Button type="submit" disabled={isSubmitting || !isValid()}>

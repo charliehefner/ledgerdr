@@ -1034,18 +1034,19 @@ export function AgricultureFuelView() {
           <TableBody>
             {sortedTransactions.map((tx) => {
               const isRefill = tx.transaction_type === "refill";
+              const isTransfer = tx.transaction_type === "transfer";
               return (
-              <TableRow key={tx.id} className={isRefill ? "bg-green-50 dark:bg-green-950/20" : ""}>
+              <TableRow key={tx.id} className={isRefill ? "bg-green-50 dark:bg-green-950/20" : isTransfer ? "bg-orange-50 dark:bg-orange-950/20" : ""}>
                 <TableCell>
                   {format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell>{tx.fuel_tanks.name}</TableCell>
-                <TableCell>{tx.fuel_equipment?.name || (isRefill ? "— Purchase —" : "-")}</TableCell>
+                <TableCell>{tx.fuel_equipment?.name || (isRefill ? "— Purchase —" : isTransfer ? "— Transfer —" : "-")}</TableCell>
                 <TableCell>{tx.hour_meter_reading != null ? `${tx.hour_meter_reading} hrs` : "-"}</TableCell>
                 <TableCell>{tx.pump_start_reading != null ? tx.pump_start_reading : "-"}</TableCell>
                 <TableCell>{tx.pump_end_reading != null ? tx.pump_end_reading : "-"}</TableCell>
-                <TableCell className={cn("font-medium", isRefill ? "text-green-600 dark:text-green-400" : "text-destructive")}>
-                  {isRefill ? `+${tx.gallons.toFixed(1)}` : `-${tx.gallons.toFixed(1)}`} gal
+                <TableCell className={cn("font-medium", isRefill ? "text-green-600 dark:text-green-400" : isTransfer ? "text-orange-600 dark:text-orange-400" : "text-destructive")}>
+                  {isRefill ? `+${tx.gallons.toFixed(1)}` : isTransfer ? `↔${tx.gallons.toFixed(1)}` : `-${tx.gallons.toFixed(1)}`} gal
                 </TableCell>
                 <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
                 {isAdmin && (

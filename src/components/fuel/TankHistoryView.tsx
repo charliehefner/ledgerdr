@@ -265,15 +265,25 @@ export function TankHistoryView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedTransactions.map((tx) => (
-              <TableRow key={tx.id}>
+            {sortedTransactions.map((tx) => {
+              const isTransfer = tx.transaction_type === "transfer";
+              const isRefill = tx.transaction_type === "refill";
+              return (
+              <TableRow key={tx.id} className={isTransfer ? "bg-orange-50 dark:bg-orange-950/20" : isRefill ? "bg-green-50 dark:bg-green-950/20" : ""}>
                 <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
                 <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
-                <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
+                <TableCell>
+                  {isTransfer ? (
+                    <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                      <ArrowLeftRight className="h-3 w-3" /> Transfer
+                    </span>
+                  ) : isRefill ? "— Purchase —" : tx.fuel_equipment?.name || "-"}
+                </TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
                 <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}

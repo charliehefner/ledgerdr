@@ -51,7 +51,7 @@ interface TransactionFormProps {
   onSuccess: () => void;
 }
 
-const initialFormState = {
+const getInitialFormState = () => ({
   transaction_date: undefined as Date | undefined,
   master_acct_code: '',
   project_code: '',
@@ -84,11 +84,11 @@ const initialFormState = {
     payment_receipt: null,
     quote: null,
   } as CategoryAttachments,
-};
+});
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState(initialFormState);
+  const [form, setForm] = useState(getInitialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCrmPrompt, setShowCrmPrompt] = useState(false);
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
@@ -383,7 +383,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       }
 
       toast.success(t('txForm.success'));
-      setForm(initialFormState);
+      setForm(getInitialFormState());
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
@@ -1114,7 +1114,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
           {/* Submit */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => setForm(initialFormState)} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => setForm(getInitialFormState())} disabled={isSubmitting}>
               {t('common.clear') || 'Limpiar'}
             </Button>
             <Button type="submit" disabled={isSubmitting || !isValid()}>

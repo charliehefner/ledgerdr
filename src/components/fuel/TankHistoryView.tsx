@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Fuel, CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Fuel, CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeftRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { parseDateLocal } from "@/lib/dateUtils";

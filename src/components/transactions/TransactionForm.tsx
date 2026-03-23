@@ -89,6 +89,7 @@ const getInitialFormState = () => ({
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(getInitialFormState);
+  const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCrmPrompt, setShowCrmPrompt] = useState(false);
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
@@ -384,6 +385,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
       toast.success(t('txForm.success'));
       setForm(getInitialFormState());
+      setFormKey(k => k + 1);
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
@@ -513,7 +515,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         <CardTitle>{t('txForm.title')}</CardTitle>
         <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
-      <CardContent>
+      <CardContent key={formKey}>
         {showCrmPrompt && pendingCrmContact && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
             <span className="text-sm flex-1">{t('contacts.addToCrm')} <strong>{pendingCrmContact.name}</strong> ({pendingCrmContact.rnc})</span>
@@ -1114,7 +1116,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
           {/* Submit */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => setForm(getInitialFormState())} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => { setForm(getInitialFormState()); setFormKey(k => k + 1); }} disabled={isSubmitting}>
               {t('common.clear') || 'Limpiar'}
             </Button>
             <Button type="submit" disabled={isSubmitting || !isValid()}>

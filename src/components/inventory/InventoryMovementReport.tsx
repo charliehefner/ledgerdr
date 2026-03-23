@@ -123,7 +123,7 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fuel_transactions")
-        .select("gallons, transaction_date, fuel_tanks!inner(fuel_type)")
+        .select("gallons, transaction_date, fuel_tanks!tank_id!inner(fuel_type)")
         .eq("transaction_type", "dispense")
         .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
         .lte("transaction_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");

@@ -1579,6 +1579,7 @@ export type Database = {
       fuel_transactions: {
         Row: {
           created_at: string
+          destination_tank_id: string | null
           equipment_id: string | null
           gallons: number
           gallons_per_hour: number | null
@@ -1596,6 +1597,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          destination_tank_id?: string | null
           equipment_id?: string | null
           gallons: number
           gallons_per_hour?: number | null
@@ -1613,6 +1615,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          destination_tank_id?: string | null
           equipment_id?: string | null
           gallons?: number
           gallons_per_hour?: number | null
@@ -1629,6 +1632,13 @@ export type Database = {
           transaction_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fuel_transactions_destination_tank_id_fkey"
+            columns: ["destination_tank_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_tanks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fuel_transactions_equipment_id_fkey"
             columns: ["equipment_id"]

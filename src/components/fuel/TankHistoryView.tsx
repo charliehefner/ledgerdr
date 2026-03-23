@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Fuel, CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Fuel, CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeftRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -36,11 +36,13 @@ interface FuelTransaction {
   id: string;
   tank_id: string;
   equipment_id: string;
+  destination_tank_id: string | null;
+  transaction_type: string;
   transaction_date: string;
   gallons: number;
   notes: string | null;
   fuel_tanks: { name: string };
-  fuel_equipment: { name: string };
+  fuel_equipment: { name: string } | null;
 }
 
 export function TankHistoryView() {
@@ -73,11 +75,11 @@ export function TankHistoryView() {
         .from("fuel_transactions")
         .select(`
           *,
-          fuel_tanks!inner(name, use_type),
-          fuel_equipment!inner(name, equipment_type)
+          fuel_tanks!tank_id!inner(name, use_type),
+          fuel_equipment(name, equipment_type)
         `)
         .eq("fuel_tanks.use_type", "agriculture")
-        .eq("transaction_type", "dispense")
+        .in("transaction_type", ["dispense", "refill", "transfer"])
         .order("transaction_date", { ascending: false });
       if (error) throw error;
       return data as FuelTransaction[];
@@ -263,15 +265,25 @@ export function TankHistoryView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedTransactions.map((tx) => (
-              <TableRow key={tx.id}>
+            {sortedTransactions.map((tx) => {
+              const isTransfer = tx.transaction_type === "transfer";
+              const isRefill = tx.transaction_type === "refill";
+              return (
+              <TableRow key={tx.id} className={isTransfer ? "bg-orange-50 dark:bg-orange-950/20" : isRefill ? "bg-green-50 dark:bg-green-950/20" : ""}>
                 <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
                 <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
-                <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
+                <TableCell>
+                  {isTransfer ? (
+                    <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                      <ArrowLeftRight className="h-3 w-3" /> Transfer
+                    </span>
+                  ) : isRefill ? "— Purchase —" : tx.fuel_equipment?.name || "-"}
+                </TableCell>
                 <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
                 <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}

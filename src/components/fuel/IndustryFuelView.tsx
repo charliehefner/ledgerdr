@@ -124,7 +124,7 @@ export function IndustryFuelView() {
         .from("fuel_transactions")
         .select(`
           *,
-          fuel_tanks!inner(name, use_type),
+          fuel_tanks!tank_id!inner(name, use_type),
           fuel_equipment(name)
         `)
         .eq("fuel_tanks.use_type", "industry")

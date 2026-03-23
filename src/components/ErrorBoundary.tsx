@@ -18,6 +18,15 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    const msg = error.message?.toLowerCase() || "";
+    if (
+      msg.includes("insertbefore") ||
+      msg.includes("removechild") ||
+      msg.includes("failed to execute")
+    ) {
+      console.warn("[ErrorBoundary] Suppressed browser extension DOM error:", error.message);
+      return { hasError: false, error: null };
+    }
     return { hasError: true, error };
   }
 

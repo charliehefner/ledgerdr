@@ -6,6 +6,7 @@ import { getAllAttachmentUrls, AttachmentCategory } from "@/lib/attachments";
 import { getDescription } from "@/lib/getDescription";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
+import { HelpPanelButton } from "@/components/layout/HelpPanelButton";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,7 +109,7 @@ export default function Dashboard() {
   };
 
   return (
-    <MainLayout title={t("page.dashboard.title")} subtitle={t("page.dashboard.subtitle")}>
+    <MainLayout title={t("page.dashboard.title")} subtitle={t("page.dashboard.subtitle")} headerExtra={<HelpPanelButton chapter="01-introduction" />}>
       <div className="space-y-6 animate-fade-in">
         {/* Fiscal Documents Report */}
         <FiscalDocumentsReport />

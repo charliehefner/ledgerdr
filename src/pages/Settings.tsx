@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { HelpPanelButton } from "@/components/layout/HelpPanelButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,7 @@ export default function Settings() {
   };
 
   return (
-    <MainLayout title={t("page.settings.title")} subtitle={t("page.settings.subtitle")}>
+    <MainLayout title={t("page.settings.title")} subtitle={t("page.settings.subtitle")} headerExtra={<HelpPanelButton chapter="02-getting-started" />}>
       <div className="space-y-6" role="main" aria-label={t("page.settings.title")}>
         {/* Access Restriction Banner */}
         {!canModifySettings && (

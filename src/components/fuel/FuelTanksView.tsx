@@ -159,9 +159,9 @@ export function FuelTanksView() {
         .maybeSingle();
       if (freshDest) {
         const newLevel = Math.min(freshDest.capacity_gallons, freshDest.current_level_gallons + gallons);
-        // Adjust pump gauge same as purchase refill logic
+        // Adjust pump gauge: adding fuel increases the reading
         const oldPumpReading = freshDest.last_pump_end_reading ?? 0;
-        const newPumpReading = Math.max(0, oldPumpReading - gallons);
+        const newPumpReading = oldPumpReading + gallons;
         const { error } = await supabase
           .from("fuel_tanks")
           .update({ current_level_gallons: newLevel, last_pump_end_reading: newPumpReading })

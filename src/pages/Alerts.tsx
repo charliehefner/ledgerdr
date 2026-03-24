@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bell, SettingsIcon } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { HelpPanelButton } from "@/components/layout/HelpPanelButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertSector } from "@/components/alerts/AlertSector";
@@ -44,7 +45,10 @@ export default function Alerts() {
           <div className="flex items-center gap-3">
             <Bell className="h-6 w-6 text-primary" />
             <div>
-              <h1 className="text-xl font-bold text-foreground">Alertas Internas</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-foreground">Alertas Internas</h1>
+                <HelpPanelButton chapter="10-administration" />
+              </div>
               <p className="text-sm text-muted-foreground">
                 {isLoading ? "Cargando..." : `${totalAlerts} alerta${totalAlerts !== 1 ? "s" : ""} activa${totalAlerts !== 1 ? "s" : ""}`}
               </p>

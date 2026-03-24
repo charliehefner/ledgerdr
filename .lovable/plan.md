@@ -1,37 +1,23 @@
 
 
-## Fix: Adjust Destination Tank Pump Gauge on Transfer
+## Fix: Correct Mobile Tank's Stale Pump Reading via Data Migration
 
 ### Problem
-When fuel is transferred to a destination tank, the `current_level_gallons` is updated but `last_pump_end_reading` is not adjusted. Since the pump gauge counts consumed fuel (starts high when empty, resets toward 0 when refilled), adding fuel to a tank must adjust the reading — same as a purchase refill does.
-
-Without this fix, the next dispense from the destination tank will fail pump start validation because the expected reading won't account for the transferred fuel.
+The Mobile tank received a 197.5-gallon transfer **before** the pump gauge fix was deployed. The automatic adjustment code is now in place (lines 162-164 of FuelTanksView.tsx), so all future transfers will correctly adjust the pump reading. However, the Mobile tank's `last_pump_end_reading` is still stale at 97.5 from the old transfer.
 
 ### Solution
-Apply the same pump reading adjustment used during purchases: `new_reading = Math.max(0, old_reading - gallons_transferred)`.
+Run a one-time database correction to recalculate the Mobile tank's `last_pump_end_reading` based on what it should have been after the 197.5-gallon transfer. No UI changes needed — the automatic logic is already correct for future transfers.
 
-### Changes
+### Steps
 
-**`src/components/fuel/FuelTanksView.tsx`** — In the `transferMutation`, after updating the destination tank's `current_level_gallons`, also fetch and adjust `last_pump_end_reading`:
+1. **Query** the Mobile tank to get its current `last_pump_end_reading` and confirm the stale value
+2. **Calculate** the corrected reading: `Math.max(0, 97.5 - 197.5) = 0` — the pump gauge should have reset to 0 after receiving that much fuel
+3. **Update** the Mobile tank's `last_pump_end_reading` to the corrected value via a database query
 
-```typescript
-// Current code only updates current_level_gallons on destination
-// Add: adjust pump reading same as purchase refill logic
-const oldPumpReading = freshDest.last_pump_end_reading ?? 0;
-const newPumpReading = Math.max(0, oldPumpReading - gallons);
+This is a data-only fix. The code is already correct — no file changes required.
 
-await supabase
-  .from("fuel_tanks")
-  .update({ 
-    current_level_gallons: newLevel,
-    last_pump_end_reading: newPumpReading 
-  })
-  .eq("id", data.destination_tank_id);
-```
-
-The source tank's pump reading stays unchanged since the fuel isn't dispensed through the pump meter — it's a direct transfer.
-
-| File | Change |
-|------|--------|
-| `src/components/fuel/FuelTanksView.tsx` | Adjust destination tank's `last_pump_end_reading` during transfer (same logic as purchase refill) |
+| Action | Detail |
+|--------|--------|
+| Database query | Update Mobile tank's `last_pump_end_reading` to corrected value |
+| Code changes | None — automatic adjustment already deployed |
 

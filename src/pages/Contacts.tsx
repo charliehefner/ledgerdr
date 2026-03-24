@@ -9,6 +9,7 @@ import { Plus, Search, Trash2, Star, Building2, History, Check } from 'lucide-re
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { HelpPanelButton } from '@/components/layout/HelpPanelButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -258,7 +259,10 @@ export default function Contacts() {
     <MainLayout>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">{t('contacts.title')}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{t('contacts.title')}</h1>
+            <HelpPanelButton chapter="03-navigation" />
+          </div>
           <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" />{t('common.add')}</Button>
         </div>
 

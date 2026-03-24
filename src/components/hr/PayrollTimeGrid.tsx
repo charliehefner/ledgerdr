@@ -223,6 +223,13 @@ export function PayrollTimeGrid({
   // Mutation to save timesheet entry (upsert to avoid duplicate key errors)
   const saveTimesheet = useMutation({
     mutationFn: async (entry: Omit<TimesheetEntry, "id"> & { id?: string }) => {
+      // Refresh session if JWT is about to expire or already expired
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) throw new Error("Sesión expirada. Por favor, vuelva a iniciar sesión.");
+      }
+
       const { error } = await supabase
         .from("employee_timesheets")
         .upsert(

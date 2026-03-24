@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { HelpPanelButton } from "@/components/layout/HelpPanelButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -464,6 +465,7 @@ export default function Reports() {
     <MainLayout
       title="Reports"
       subtitle="Transaction analytics and exports"
+      headerExtra={<HelpPanelButton chapter="08-dgii" />}
       actions={
         <div className="flex gap-2">
           <DropdownMenu>

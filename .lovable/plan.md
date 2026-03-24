@@ -1,23 +1,25 @@
 
 
-## Fix: Correct Mobile Tank's Stale Pump Reading via Data Migration
+## Place Chapter 1 (Introduction) Help PDFs
 
-### Problem
-The Mobile tank received a 197.5-gallon transfer **before** the pump gauge fix was deployed. The automatic adjustment code is now in place (lines 162-164 of FuelTanksView.tsx), so all future transfers will correctly adjust the pump reading. However, the Mobile tank's `last_pump_end_reading` is still stale at 97.5 from the old transfer.
+### Assessment
+Chapter 1 covers the **system overview, module map, and key concepts** — it's a general introduction, not tied to any specific module. The best home for it is the **Dashboard** page, which is the first thing users see after login and serves as the system's front door.
 
-### Solution
-Run a one-time database correction to recalculate the Mobile tank's `last_pump_end_reading` based on what it should have been after the 197.5-gallon transfer. No UI changes needed — the automatic logic is already correct for future transfers.
+### Current State
+- The Dashboard page uses `MainLayout` directly (not `TabbedPageLayout`), so it doesn't have a `helpChapter` prop today.
+- Existing help PDFs live in `public/help/en/` and `public/help/es/`.
 
 ### Steps
 
-1. **Query** the Mobile tank to get its current `last_pump_end_reading` and confirm the stale value
-2. **Calculate** the corrected reading: `Math.max(0, 97.5 - 197.5) = 0` — the pump gauge should have reset to 0 after receiving that much fuel
-3. **Update** the Mobile tank's `last_pump_end_reading` to the corrected value via a database query
+1. **Copy PDFs** into the help directory:
+   - `public/help/en/01-introduction.pdf` ← from `ch1_introduction.pdf`
+   - `public/help/es/01-introduction.pdf` ← from `cap1_introduccion.pdf`
 
-This is a data-only fix. The code is already correct — no file changes required.
+2. **Add the HelpPanelButton to Dashboard**: Import `HelpPanelButton` in `src/pages/Dashboard.tsx` and place it next to the Dashboard title heading, using `chapter="01-introduction"` — matching the pattern used on all other pages.
 
-| Action | Detail |
-|--------|--------|
-| Database query | Update Mobile tank's `last_pump_end_reading` to corrected value |
-| Code changes | None — automatic adjustment already deployed |
+| File | Change |
+|------|--------|
+| `public/help/en/01-introduction.pdf` | New file (copy from upload) |
+| `public/help/es/01-introduction.pdf` | New file (copy from upload) |
+| `src/pages/Dashboard.tsx` | Add `HelpPanelButton` next to title |
 

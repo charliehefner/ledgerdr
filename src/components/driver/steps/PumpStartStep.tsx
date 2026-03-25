@@ -175,9 +175,31 @@ export function PumpStartStep({ data, onUpdate, isAdmin = false }: PumpStartStep
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             La lectura difiere {difference?.toFixed(2)} gal del valor esperado ({expectedValue.toLocaleString()}).
-            Verifique que está en el tanque correcto.
+            {!isAdmin && " Contacte a un administrador para continuar."}
+            {isAdmin && " Verifique que está en el tanque correcto."}
           </AlertDescription>
         </Alert>
+      )}
+
+      {isOutOfTolerance && isAdmin && (
+        <div className="flex items-start space-x-3 p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+          <Checkbox
+            id="pump-override"
+            checked={!!data.pumpStartOverride}
+            onCheckedChange={(checked) =>
+              onUpdate({ pumpStartOverride: checked === true })
+            }
+          />
+          <div className="space-y-1">
+            <Label htmlFor="pump-override" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+              <ShieldAlert className="h-4 w-4 text-amber-600" />
+              Override de administrador
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Confirmo que la lectura de {data.pumpStartReading?.toLocaleString()} gal es correcta a pesar de la diferencia con el valor esperado.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

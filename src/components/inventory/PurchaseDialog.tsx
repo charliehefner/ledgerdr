@@ -126,10 +126,7 @@ export function PurchaseDialog({
 
       // For fuel items, update the tank level (trigger will sync to inventory)
       if (isFuelItem && data.tank_id) {
-        let newTankLevel: number;
-        let newPumpReading: number;
-
-        // Fetch current tank state including pump reading
+        // Fetch current tank state
         const { data: currentTank, error: tankFetchError } = await supabase
           .from("fuel_tanks")
           .select("current_level_gallons, last_pump_end_reading")
@@ -139,25 +136,23 @@ export function PurchaseDialog({
         if (tankFetchError) throw tankFetchError;
         if (!currentTank) throw new Error("Tank not found");
 
-        const oldPumpReading = currentTank.last_pump_end_reading ?? 0;
+        const newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
+
+        // Build update: always update level, only reset pump if explicitly requested
+        const tankUpdate: Record<string, number> = {
+          current_level_gallons: newTankLevel,
+        };
 
         if (data.reset_tank_gauge) {
-          // Reset: tank is full, pump reading goes to 0
-          newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
-          newPumpReading = 0;
-        } else {
-          // Normal refill: add to level, subtract from pump reading
-          // Pump reading decreases because adding fuel "rewinds" the counter
-          newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
-          newPumpReading = Math.max(0, oldPumpReading - addedQuantity);
+          // User explicitly confirms the physical pump gauge was reset to 0
+          tankUpdate.last_pump_end_reading = 0;
         }
+        // Otherwise do NOT touch last_pump_end_reading — the physical pump
+        // gauge doesn't change when a tanker truck refills the tank
 
         const { error: tankUpdateError } = await supabase
           .from("fuel_tanks")
-          .update({ 
-            current_level_gallons: newTankLevel,
-            last_pump_end_reading: newPumpReading,
-          })
+          .update(tankUpdate)
           .eq("id", data.tank_id);
 
         if (tankUpdateError) throw tankUpdateError;

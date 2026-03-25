@@ -40,6 +40,7 @@ export function PumpStartStep({ data, onUpdate, isAdmin = false }: PumpStartStep
     onUpdate({
       pumpStartPhoto: imageData,
       pumpStartReading: extractedValue,
+      pumpStartOverride: false,
     });
     setShowCamera(false);
   };
@@ -47,9 +48,9 @@ export function PumpStartStep({ data, onUpdate, isAdmin = false }: PumpStartStep
   const handleManualInput = (value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
-      onUpdate({ pumpStartReading: numValue });
+      onUpdate({ pumpStartReading: numValue, pumpStartOverride: false });
     } else if (value === "") {
-      onUpdate({ pumpStartReading: undefined });
+      onUpdate({ pumpStartReading: undefined, pumpStartOverride: false });
     }
   };
 

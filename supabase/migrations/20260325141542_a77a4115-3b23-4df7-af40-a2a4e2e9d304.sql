@@ -1,0 +1,1 @@
+UPDATE fuel_tanks SET last_pump_end_reading = 197.5 WHERE id = '69e477b5-6c1f-4b14-88d4-4a13df41c789' AND last_pump_end_reading = 0;

@@ -11,6 +11,7 @@ import { PumpEndStep } from "./steps/PumpEndStep";
 import { ReviewStep } from "./steps/ReviewStep";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FuelingWizardProps {
   onClose: () => void;
@@ -28,6 +29,7 @@ export interface FuelingData {
   expectedPumpStart: number;
   pumpStartReading: number;
   pumpStartPhoto?: string;
+  pumpStartOverride?: boolean;
   pumpEndReading: number;
   pumpEndPhoto?: string;
 }

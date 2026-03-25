@@ -41,6 +41,7 @@ interface FuelTank {
   use_type: string;
   current_level_gallons: number;
   is_active: boolean;
+  last_pump_end_reading: number | null;
 }
 
 export function FuelTanksView() {
@@ -61,8 +62,14 @@ export function FuelTanksView() {
     notes: "",
   });
 
+  const [isGaugeResetOpen, setIsGaugeResetOpen] = useState(false);
+  const [gaugeResetTank, setGaugeResetTank] = useState<FuelTank | null>(null);
+  const [gaugeResetForm, setGaugeResetForm] = useState({ newReading: "0", notes: "" });
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "management";
 
   const { data: tanks = [], isLoading } = useQuery({
     queryKey: ["fuelTanks"],
@@ -255,6 +262,35 @@ export function FuelTanksView() {
       return;
     }
     transferMutation.mutate(transferForm);
+  };
+
+  const gaugeResetMutation = useMutation({
+    mutationFn: async () => {
+      if (!gaugeResetTank) throw new Error("No tank selected");
+      const newReading = parseFloat(gaugeResetForm.newReading);
+      if (isNaN(newReading) || newReading < 0) throw new Error("Invalid reading value");
+      const { error } = await supabase
+        .from("fuel_tanks")
+        .update({ last_pump_end_reading: newReading })
+        .eq("id", gaugeResetTank.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
+      toast({ title: "Gauge reset", description: `${gaugeResetTank?.name} gauge set to ${gaugeResetForm.newReading}.` });
+      setIsGaugeResetOpen(false);
+      setGaugeResetTank(null);
+      setGaugeResetForm({ newReading: "0", notes: "" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleGaugeReset = (tank: FuelTank) => {
+    setGaugeResetTank(tank);
+    setGaugeResetForm({ newReading: "0", notes: "" });
+    setIsGaugeResetOpen(true);
   };
 
   const sourceTank = activeTanks.find((t) => t.id === transferForm.source_tank_id);
@@ -522,13 +558,25 @@ export function FuelTanksView() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(tank)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(tank)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Reset pump gauge"
+                          onClick={() => handleGaugeReset(tank)}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -536,6 +584,54 @@ export function FuelTanksView() {
           </TableBody>
         </Table>
       )}
+
+      {/* Gauge Reset Dialog */}
+      <Dialog open={isGaugeResetOpen} onOpenChange={setIsGaugeResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Reset Pump Gauge
+            </DialogTitle>
+          </DialogHeader>
+          {gaugeResetTank && (
+            <div className="space-y-4">
+              <div>
+                <Label>Tank</Label>
+                <Input value={gaugeResetTank.name} disabled />
+              </div>
+              <div>
+                <Label>Current Gauge Reading</Label>
+                <Input value={(gaugeResetTank.last_pump_end_reading ?? 0).toFixed(1)} disabled />
+              </div>
+              <div>
+                <Label>New Gauge Reading</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={gaugeResetForm.newReading}
+                  onChange={(e) => setGaugeResetForm({ ...gaugeResetForm, newReading: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Reason (optional)</Label>
+                <Textarea
+                  value={gaugeResetForm.notes}
+                  onChange={(e) => setGaugeResetForm({ ...gaugeResetForm, notes: e.target.value })}
+                  placeholder="e.g., Supervisor reset gauge after refueling"
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsGaugeResetOpen(false)}>Cancel</Button>
+                <Button onClick={() => gaugeResetMutation.mutate()} disabled={gaugeResetMutation.isPending}>
+                  {gaugeResetMutation.isPending ? "Resetting..." : "Reset Gauge"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

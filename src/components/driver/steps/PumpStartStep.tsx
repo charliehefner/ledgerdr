@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Camera, Keyboard, AlertCircle, CheckCircle2, Gauge } from "lucide-react";
+import { Camera, Keyboard, AlertCircle, CheckCircle2, Gauge, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MeterPhotoCapture } from "../MeterPhotoCapture";
 import { StepHeader } from "../StepHeader";
 import type { FuelingData } from "../FuelingWizard";
@@ -12,11 +13,12 @@ import type { FuelingData } from "../FuelingWizard";
 interface PumpStartStepProps {
   data: Partial<FuelingData>;
   onUpdate: (data: Partial<FuelingData>) => void;
+  isAdmin?: boolean;
 }
 
 const TOLERANCE = 0.2; // ±0.2 gallons tolerance
 
-export function PumpStartStep({ data, onUpdate }: PumpStartStepProps) {
+export function PumpStartStep({ data, onUpdate, isAdmin = false }: PumpStartStepProps) {
   const [mode, setMode] = useState<"photo" | "manual">("photo");
   const [showCamera, setShowCamera] = useState(false);
   const [hasPreFilled, setHasPreFilled] = useState(false);

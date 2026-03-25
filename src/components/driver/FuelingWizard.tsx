@@ -49,8 +49,18 @@ export function FuelingWizard({ onClose, onComplete }: FuelingWizardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addSubmission } = useOfflineQueue();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'management';
+  const PUMP_TOLERANCE = 0.2;
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
+
+  const isPumpStartWithinTolerance = (): boolean => {
+    if (data.pumpStartReading === undefined) return false;
+    const diff = Math.abs(data.pumpStartReading - (data.expectedPumpStart || 0));
+    return diff <= PUMP_TOLERANCE;
+  };
 
   const canProceed = (): boolean => {
     switch (currentStep) {
@@ -61,7 +71,11 @@ export function FuelingWizard({ onClose, onComplete }: FuelingWizardProps) {
       case 2: // Tank
         return !!data.tankId;
       case 3: // Pump start
-        return data.pumpStartReading !== undefined;
+        if (data.pumpStartReading === undefined) return false;
+        // Within tolerance → always OK
+        if (isPumpStartWithinTolerance()) return true;
+        // Out of tolerance → only admin with explicit override
+        return isAdmin && !!data.pumpStartOverride;
       case 4: // Pump end
         return data.pumpEndReading !== undefined && data.pumpEndReading > (data.pumpStartReading || 0);
       case 5: // Review

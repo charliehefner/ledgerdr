@@ -1,25 +1,29 @@
 
 
-## Place Chapter 1 (Introduction) Help PDFs
+## Plan: Admin Pump Gauge Reset
 
-### Assessment
-Chapter 1 covers the **system overview, module map, and key concepts** — it's a general introduction, not tied to any specific module. The best home for it is the **Dashboard** page, which is the first thing users see after login and serves as the system's front door.
+### Problem
+When a supervisor or driver physically resets a tank's pump gauge (e.g., to zero), there's no way in the UI to update the stored `last_pump_end_reading` value. Currently this requires direct database intervention.
 
-### Current State
-- The Dashboard page uses `MainLayout` directly (not `TabbedPageLayout`), so it doesn't have a `helpChapter` prop today.
-- Existing help PDFs live in `public/help/en/` and `public/help/es/`.
+### Solution
+Add a **"Reset Pump Gauge"** button on the **Fuel Tanks** view, visible only to admin/management users. Clicking it opens a small dialog where the admin selects a tank and enters the new gauge value (defaulting to 0). This directly updates `last_pump_end_reading` in the database.
 
-### Steps
+### Changes
 
-1. **Copy PDFs** into the help directory:
-   - `public/help/en/01-introduction.pdf` ← from `ch1_introduction.pdf`
-   - `public/help/es/01-introduction.pdf` ← from `cap1_introduccion.pdf`
+**1. `src/components/fuel/FuelTanksView.tsx`**
+- Add a "Reset Gauge" action button (with a `RotateCcw` icon) on each tank row, visible only to admin/management users
+- Clicking opens a confirmation dialog with:
+  - Tank name (read-only)
+  - Current gauge reading (read-only)
+  - New gauge value input (defaults to 0)
+  - Reason/notes field (optional, for audit trail)
+- On confirm: updates `last_pump_end_reading` on the `fuel_tanks` table and invalidates queries
 
-2. **Add the HelpPanelButton to Dashboard**: Import `HelpPanelButton` in `src/pages/Dashboard.tsx` and place it next to the Dashboard title heading, using `chapter="01-introduction"` — matching the pattern used on all other pages.
+**2. Keep the existing wizard override as-is**
+- The tolerance bypass in the Fueling Wizard remains useful — it handles cases where the reading legitimately differs but doesn't need a full reset (e.g., slight mechanical drift)
 
-| File | Change |
-|------|--------|
-| `public/help/en/01-introduction.pdf` | New file (copy from upload) |
-| `public/help/es/01-introduction.pdf` | New file (copy from upload) |
-| `src/pages/Dashboard.tsx` | Add `HelpPanelButton` next to title |
+### What stays the same
+- The existing ±0.2 tolerance validation in the wizard
+- The "Reset tank gauge" checkbox in PurchaseDialog (for purchase-time resets)
+- All other pump reading automation
 

@@ -165,7 +165,7 @@ export function FuelingWizard({ onClose, onComplete }: FuelingWizardProps) {
       case 2:
         return <TankStep data={data} onUpdate={updateData} />;
       case 3:
-        return <PumpStartStep data={data} onUpdate={updateData} />;
+        return <PumpStartStep data={data} onUpdate={updateData} isAdmin={isAdmin} />;
       case 4:
         return <PumpEndStep data={data} onUpdate={updateData} />;
       case 5:

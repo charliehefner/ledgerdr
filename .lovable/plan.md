@@ -1,92 +1,49 @@
 
 
-## Plan: Add Industrial Page
+## Analysis: Same-Day Hour Meter Gap False Positive
 
-### Overview
-Create a new "Industrial" page at `/industrial` with three sub-tabs: Horas Planta, Carretas, and Trucks. Accessible to admin and supervisor roles only.
+### Root Cause
+The `checkHourMeterGap` function in `src/components/operations/utils.ts` (line 59) filters previous operations using a **strict less-than** date comparison:
 
-### Database (3 new tables via migration)
+```typescript
+.filter(op => {
+  const opDate = parseDateLocal(op.operation_date);
+  return opDate < operationDate;  // ← excludes same-day operations
+})
+```
 
-**1. `industrial_plant_hours`**
-- `id` (uuid, PK, default gen_random_uuid())
-- `date` (date)
-- `start_hour_meter` (numeric)
-- `finish_hour_meter` (numeric)
-- `notes` (text)
-- `created_at`, `updated_at` (timestamptz)
-- `created_by` (uuid, references auth.users)
+When Ronny enters the **second** operation on the same day, the first operation is excluded from the comparison because its date is **equal**, not **less than**. The gap check then compares against the previous *day's* last operation, triggering a false gap warning.
 
-**2. `industrial_carretas`**
-- `id` (uuid, PK)
-- `datetime_out` (timestamptz) — fecha/hora saliendo
-- `datetime_in` (timestamptz) — fecha/hora entrando
-- `tare` (numeric)
-- `payload` (numeric)
-- `weigh_ticket_number` (text)
-- `notes` (text)
-- `created_at`, `updated_at`, `created_by`
+Additionally, the `operations` list used by this check comes from React Query cache. After saving the first operation, the list IS invalidated and refetched (the save mutation calls `invalidateQueries`), so the data is fresh. The bug is purely the date filter.
 
-**3. `industrial_trucks`**
-- `id` (uuid, PK)
-- `datetime_in` (timestamptz) — fecha/hora entrando (trucks originate outside)
-- `datetime_out` (timestamptz) — fecha/hora saliendo
-- `tare` (numeric)
-- `payload` (numeric)
-- `weigh_ticket_number` (text)
-- `destination_payload` (text)
-- `notes` (text)
-- `created_at`, `updated_at`, `created_by`
+### Fix (single file: `src/components/operations/utils.ts`)
 
-All fields nullable (no required inputs). RLS policies for admin + supervisor read/write. Enable realtime not needed initially.
+Change the date comparison from `<` to `<=` so same-day operations are included:
 
-### Permissions (`src/lib/permissions.ts`)
-- Add `"industrial"` to `Section` type
-- Add to `sectionPermissions`: `["admin", "supervisor"]` (management intentionally excluded per request — admin + supervisor only)
-- Add to `writePermissions`: `["admin", "supervisor"]`
-- Add to `routeToSection`: `"/industrial": "industrial"`
+```typescript
+return opDate < operationDate;
+// becomes:
+return opDate <= operationDate;
+```
 
-### Sidebar (`src/components/layout/Sidebar.tsx`)
-- Add nav item: `{ nameKey: "nav.industrial", href: "/industrial", icon: Factory, section: "industrial" }`
-- Import `Factory` from lucide-react
+Then add an exclusion for the current operation's own ID (to avoid self-comparison when editing). This requires passing an optional `excludeId` parameter.
 
-### Router (`src/App.tsx`)
-- Add route: `/industrial` → `<Industrial />` wrapped in `<ProtectedRoute>`
+Alternatively, since the function already sorts by date descending and picks the most recent `end_hours`, simply changing `<` to `<=` is sufficient — it will correctly find the first operation's `end_hours` from the same day.
 
-### Page (`src/pages/Industrial.tsx`)
-- Uses `TabbedPageLayout` with three tabs: "plant-hours", "carretas", "trucks"
-- Each tab renders its own view component
+### Also: Auto-populate start_hours from tractor's current_hour_meter
 
-### View Components (3 new files)
-Each follows the same pattern used in `IndustryFuelView.tsx`:
+As a UX improvement, when a tractor is selected, auto-fill the `start_hours` field with the tractor's `current_hour_meter` (which the DB trigger keeps up to date). This requires:
 
-**`src/components/industrial/PlantHoursView.tsx`**
-- Table: Date, Start Hour Meter, Finish Hour Meter, Hours (calculated display)
-- Add dialog with date picker, two numeric inputs
-- Export dropdown (PDF/Excel) using `useExport` hook
+1. Invalidating the `["tractors"]` query after saving an operation (already done via operations invalidation, but we should explicitly add it)
+2. Adding an `onChange` handler for the tractor dropdown that sets `start_hours` to the selected tractor's `current_hour_meter`
 
-**`src/components/industrial/CarretasView.tsx`**
-- Table: Fecha/Hora Saliendo, Fecha/Hora Entrando, Tare, Payload, Weigh Ticket #
-- Add dialog with datetime inputs, numeric inputs, text input
-- Export dropdown (PDF/Excel)
+### Summary of Changes
 
-**`src/components/industrial/TrucksView.tsx`**
-- Table: Fecha/Hora Entrando, Fecha/Hora Saliendo, Tare, Payload, Weigh Ticket #, Destination Payload
-- Note column order reflects trucks originating from outside (entering first)
-- Add dialog, export dropdown (PDF/Excel)
-
-### i18n (`src/i18n/en.ts`, `src/i18n/es.ts`)
-- Add keys for `nav.industrial`, page title/subtitle, and field labels
-
-### Files Changed
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/lib/permissions.ts` | Add "industrial" section |
-| `src/components/layout/Sidebar.tsx` | Add nav item |
-| `src/App.tsx` | Add route |
-| `src/pages/Industrial.tsx` | New page |
-| `src/components/industrial/PlantHoursView.tsx` | New component |
-| `src/components/industrial/CarretasView.tsx` | New component |
-| `src/components/industrial/TrucksView.tsx` | New component |
-| `src/i18n/en.ts`, `src/i18n/es.ts` | Add translations |
-| Migration SQL | 3 new tables + RLS |
+| `src/components/operations/utils.ts` | Change `opDate < operationDate` → `opDate <= operationDate` in `checkHourMeterGap`, and exclude current operation ID |
+| `src/components/operations/OperationsLogView.tsx` | Auto-populate `start_hours` when tractor is selected; invalidate `["tractors"]` query after save |
+
+### Answer to Ronny
+No, he does **not** need to wait. This is a bug — the gap check ignores same-day operations. The fix will include same-day operations in the comparison and also auto-fill the start hours from the tractor's updated meter reading.
 

@@ -190,28 +190,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const requires1180Fields = form.master_acct_code === '1180';
 
   const checkForDuplicate = () => {
-    if (!form.transaction_date || !form.master_acct_code || !form.amount) {
-      return false;
-    }
-    
+    const doc = (form.document || '').trim();
+    // No NCF entered — nothing to check
+    if (!doc) return false;
     // Skip duplicate check for Nomina (payroll) transactions
-    if (form.description.toLowerCase().includes('nomina')) {
-      return false;
-    }
-    
-    const formDate = formatDateLocal(form.transaction_date);
-    const formAmount = parseFloat(form.amount);
-    const formName = (form.name || '').trim().toLowerCase();
-    
+    if (form.description.toLowerCase().includes('nomina')) return false;
+
     return existingTransactions.some(tx => {
-      const txDate = tx.transaction_date?.split('T')[0];
-      const txName = (tx.name || '').trim().toLowerCase();
-      return (
-        txDate === formDate &&
-        tx.master_acct_code === form.master_acct_code &&
-        tx.amount === formAmount &&
-        txName === formName
-      );
+      const txDoc = (tx.document || '').trim();
+      return txDoc === doc;
     });
   };
 

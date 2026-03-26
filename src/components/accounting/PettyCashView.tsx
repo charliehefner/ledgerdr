@@ -121,6 +121,7 @@ export function PettyCashView() {
         .from("transactions")
         .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
         .or(orFilter)
+        .eq("is_void", false)
         .order("transaction_date", { ascending: false })
         .limit(50);
       if (error) throw error;

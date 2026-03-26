@@ -1,25 +1,23 @@
 
 
-## Plan: Clean Up Petty Cash Funds
+## Fix: Update Legacy Petty Cash Transactions
 
-### Current State
-Three petty cash funds exist:
-1. **"Caja Chica"** → GL 1910 (Efectivo en mano) — **1 transaction**
-2. **"Caja Chica Industria"** → GL 1912 — **4 transactions**
-3. **"Caja Chica Finca"** → GL 1911 — **0 transactions** ← to delete
+### Problem
+Transactions 270–282 (and possibly others) use the legacy string `pay_method = 'petty_cash'` instead of the fund UUID. The Treasury petty cash view filters by UUID, so these transactions are invisible.
 
-### Action
-1. **Delete** the "Caja Chica Finca" fund (id `552f80f4-3592-445a-bafc-30220cef84f7`) since it has zero transactions
-2. **Update** the remaining "Caja Chica" fund to:
-   - Rename to **"Caja Chica Finca"**
-   - Re-map its GL account from 1910 → **1911** (Caja Chica Finca)
+### Fix
+Single data UPDATE via the insert tool — no code or schema changes needed:
 
-This leaves two funds:
-- **Caja Chica Finca** → GL 1911
-- **Caja Chica Industria** → GL 1912
+```sql
+UPDATE transactions
+SET pay_method = '31227d8e-93c7-4ce7-99fc-99a91255ef5d'
+WHERE pay_method = 'petty_cash'
+  AND is_void = false;
+```
 
-### Technical Details
-- Two data operations via the insert tool (DELETE + UPDATE on `bank_accounts`)
-- No schema/migration changes needed
-- No code changes needed
+This remaps all legacy `petty_cash` transactions to the **Caja Chica Finca** fund UUID, making them visible in Treasury.
+
+### Scope
+- Data-only fix, no file changes
+- Will first count affected rows to confirm scope before updating
 

@@ -11,6 +11,7 @@ export const es = {
   "nav.rainfall": "Pluviometría",
   "nav.settings": "Configuración",
   "nav.alerts": "Alertas",
+  "nav.industrial": "Industrial",
   
   // Sidebar sections
   "sidebar.menu": "Menú",

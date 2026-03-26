@@ -23,6 +23,7 @@ import {
   Wallet,
   Landmark,
   Building2,
+  Factory,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";
@@ -65,6 +66,7 @@ const sectionColors: Record<Section, string> = {
   budget: "",
   treasury: "",
   contacts: "",
+  industrial: "bg-section-fuel",
   "driver-portal": "",
 };
 
@@ -86,6 +88,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.herbicide", href: "/herbicide", icon: Beaker, section: "herbicide" },
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
   { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
+  { nameKey: "nav.industrial", href: "/industrial", icon: Factory, section: "industrial" },
 ];
 
 const secondaryNav: NavItem[] = [

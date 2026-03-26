@@ -11,6 +11,7 @@ export const en = {
   "nav.rainfall": "Rainfall",
   "nav.settings": "Settings",
   "nav.alerts": "Alerts",
+  "nav.industrial": "Industrial",
   
   // Sidebar sections
   "sidebar.menu": "Menu",

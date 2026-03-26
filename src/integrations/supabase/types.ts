@@ -1700,6 +1700,120 @@ export type Database = {
         }
         Relationships: []
       }
+      industrial_carretas: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          datetime_in: string | null
+          datetime_out: string | null
+          id: string
+          notes: string | null
+          payload: number | null
+          tare: number | null
+          updated_at: string
+          weigh_ticket_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          datetime_in?: string | null
+          datetime_out?: string | null
+          id?: string
+          notes?: string | null
+          payload?: number | null
+          tare?: number | null
+          updated_at?: string
+          weigh_ticket_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          datetime_in?: string | null
+          datetime_out?: string | null
+          id?: string
+          notes?: string | null
+          payload?: number | null
+          tare?: number | null
+          updated_at?: string
+          weigh_ticket_number?: string | null
+        }
+        Relationships: []
+      }
+      industrial_plant_hours: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string | null
+          finish_hour_meter: number | null
+          id: string
+          notes: string | null
+          start_hour_meter: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          finish_hour_meter?: number | null
+          id?: string
+          notes?: string | null
+          start_hour_meter?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          finish_hour_meter?: number | null
+          id?: string
+          notes?: string | null
+          start_hour_meter?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      industrial_trucks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          datetime_in: string | null
+          datetime_out: string | null
+          destination_payload: string | null
+          id: string
+          notes: string | null
+          payload: number | null
+          tare: number | null
+          updated_at: string
+          weigh_ticket_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          datetime_in?: string | null
+          datetime_out?: string | null
+          destination_payload?: string | null
+          id?: string
+          notes?: string | null
+          payload?: number | null
+          tare?: number | null
+          updated_at?: string
+          weigh_ticket_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          datetime_in?: string | null
+          datetime_out?: string | null
+          destination_payload?: string | null
+          id?: string
+          notes?: string | null
+          payload?: number | null
+          tare?: number | null
+          updated_at?: string
+          weigh_ticket_number?: string | null
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           cas_number: string | null

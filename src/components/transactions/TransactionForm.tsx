@@ -195,6 +195,10 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (!doc) return null;
     // Skip duplicate check for Nomina (payroll) transactions
     if (form.description.toLowerCase().includes('nomina')) return null;
+    // Only check duplicates for real NCFs (e.g. B0100000001) or numeric sequences
+    // Skip generic words like "Recibo", "Factura", etc.
+    const isNcf = /^[BbEe]\d{2}/i.test(doc) || /^\d{8,}$/.test(doc);
+    if (!isNcf) return null;
 
     return existingTransactions.find(tx => {
       const txDoc = (tx.document || '').trim();

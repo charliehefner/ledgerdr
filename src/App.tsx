@@ -30,6 +30,7 @@ import ResetPassword from "./pages/ResetPassword";
 import DriverPortal from "./pages/DriverPortal";
 import NotFound from "./pages/NotFound";
 import Contacts from "./pages/Contacts";
+import Industrial from "./pages/Industrial";
 import InstallApp from "./pages/InstallApp";
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />
                 <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+                <Route path="/industrial" element={<ProtectedRoute><Industrial /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>

@@ -1219,7 +1219,7 @@ export function OperationsLogView() {
                     <div>
                       <Label>{t("operations.form.operator")}</Label>
                       <Select
-                        value={form.driver}
+                        value={form.driver || undefined}
                         onValueChange={(val) => setForm({ ...form, driver: val })}
                       >
                         <SelectTrigger>

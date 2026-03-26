@@ -192,14 +192,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const checkForDuplicate = () => {
     const doc = (form.document || '').trim();
     // No NCF entered — nothing to check
-    if (!doc) return false;
+    if (!doc) return null;
     // Skip duplicate check for Nomina (payroll) transactions
-    if (form.description.toLowerCase().includes('nomina')) return false;
+    if (form.description.toLowerCase().includes('nomina')) return null;
 
-    return existingTransactions.some(tx => {
+    return existingTransactions.find(tx => {
       const txDoc = (tx.document || '').trim();
       return txDoc === doc;
-    });
+    }) || null;
   };
 
   const isValid = () => {
@@ -245,8 +245,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       return;
     }
 
-    if (checkForDuplicate()) {
-      toast.error(t('txForm.duplicate'));
+    const clashingTx = checkForDuplicate();
+    if (clashingTx) {
+      const txNum = clashingTx.legacy_id ? `#${clashingTx.legacy_id}` : '';
+      const txName = clashingTx.description || '';
+      const txDate = clashingTx.transaction_date || '';
+      const txAmt = clashingTx.amount != null
+        ? parseFloat(String(clashingTx.amount)).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '';
+      toast.error(`Duplicado: NCF ya usado en transacción ${txNum} — ${txName}, ${txDate}, ${txAmt}`);
       return;
     }
 

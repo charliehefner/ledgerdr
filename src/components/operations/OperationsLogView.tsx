@@ -1218,21 +1218,17 @@ export function OperationsLogView() {
                     {/* Driver field - dropdown from tractor_operators */}
                     <div>
                       <Label>{t("operations.form.operator")}</Label>
-                      <Select
-                        value={form.driver || undefined}
-                        onValueChange={(val) => setForm({ ...form, driver: val })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("operations.form.operatorPlaceholder")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tractorOperators.map((op) => (
-                            <SelectItem key={op.id} value={op.name}>
-                              {op.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        list="tractor-operators-list"
+                        value={form.driver}
+                        onChange={(e) => setForm({ ...form, driver: e.target.value })}
+                        placeholder={t("operations.form.operatorPlaceholder")}
+                      />
+                      <datalist id="tractor-operators-list">
+                        {tractorOperators.map((op) => (
+                          <option key={op.id} value={op.name} />
+                        ))}
+                      </datalist>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">

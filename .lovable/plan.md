@@ -1,49 +1,47 @@
 
 
-## Plan: Repurpose Unused Accounts and Add Missing ADM Accounts
+## Plan: Re-remap Bank GL Codes to Match ADM Exactly
 
-### Summary
-Update 10 existing account descriptions to match ADM Cloud usage, and insert ~43 new accounts that ADM actively uses but are missing from the database.
+### Key Insight
+Journal lines reference accounts by UUID, not by code. So we just rename the `account_code` on existing chart_of_accounts rows — no journal_lines need to move.
 
-### Part 1: Repurpose Existing Accounts (UPDATE via insert tool)
+### Step 1: Rename GL Accounts (single migration)
 
-| Code | Current Description | ADM Description | Notes |
-|------|-------------------|-----------------|-------|
-| 1020 | Concessions | Cuentas por Pagar a Accionistas Charles Hefner | Also change type ASSET→LIABILITY |
-| 1258 | Accumulated write-downs of computers | Advance to Suppliers USD | |
-| 1259 | Accumulated amortization of computers | Advance to Suppliers DOP | |
-| 1299 | Accum. amort. other tangible assets | Depreciación Acum. de Mobiliarios y Equipos Sin NCF | |
-| 1510 | Accounts receivebles | Accounts receivebles USD | Add currency context |
-| 1670 | Short-term receivables affiliated co. | Short-term receivables affiliated co. -Charles Hefner | |
-| 2441 | Exchange rate adj. accounts payable | Accounts Payable -Business Credit Card-3746 | |
-| 2470 | Accounts payables, affiliated co. | Accounts payables, affiliated companies DOP | |
-| 2820 | Current liabilities to employees | Current liabilities to employees (SRL) to pay | |
-| 2890 | Other current liabilities | Other current liabilities (N07-07) | |
+Using temporary codes to avoid unique constraint conflicts during the swap:
 
-All 10 were confirmed to have **zero transactions** in the previous analysis.
+| UUID | Current Code → Temp → Final | Final ADM Name |
+|------|-----|------|
+| ad3e634c | 1940 → soft-delete | *(was header "Cuentas Bancarias ADM")* |
+| 69d968ce | 1942 → soft-delete | *(was "BDI USD regular" — merged into Premium)* |
+| 8b00af84 | 1941 → **1940** | Other bank account-4010176533-DOP |
+| aff84712 | 1946 → **1942** | Premium Bank BDI--4010176526 US$ |
+| 4d729f39 | 1943 → **1943** (rename only) | Other bank accountI-4010176501-EURO |
+| 214f5030 | 1944 → **1945** | Other bank account- BHD-36900090011 |
+| 1d98d04f | 1945 → **1946** | Other bank account- BHD-US\$36900090020 |
 
-### Part 2: Add Missing ADM Accounts (INSERT via insert tool)
+### Step 2: Add Missing ADM Accounts
 
-**Header accounts** (allow_posting = false):
-1000, 1100, 1200, 1500, 2000, 3400, 3600, 5600, 6000
+| Code | Name | Type |
+|------|------|------|
+| 1944 | Premium Banco BDI-4010176501-EURO | ASSET (bank, EUR) |
+| 1948 | Other bank account- EUR \$4010176501 | ASSET (bank, EUR) |
 
-**Posting accounts** (~34 accounts) including:
-- Assets: 1211, 1213, 1632, 1641, 1642, 1643, 1801, 1802, 1947
-- Liabilities: 2101, 2291, 2292, 2361, 2442, 2443, 2444, 2445, 2446, 2447, 2741, 2891
-- Equity: 8900, 8998
-- Income: 3421
-- Cost: 7514, 8011, 8013, 8017
-- Expense: 5801, 5802, 5803, 8331, 8431, 781000
+*(1947 "Tarjeta de credito 3746" already exists)*
 
-Each account will use the ADM descriptions (English + Spanish) and appropriate `account_type` mapping.
+### Step 3: Merge Bank Accounts
 
-### What Won't Change
-- Bank accounts (1931–1936 vs 1940–1948) — deferred to a separate migration
-- Credit card accounts 2851–2853 — kept as-is alongside new ADM credit card accounts
-- No schema changes needed — data-only operations
-- No code changes needed — all accounts use the same `chart_of_accounts` table structure
+- **Delete** the "BDI USD regular" bank_accounts row (75aaff36) since user confirmed only Premium exists
+- **Update display names** on remaining 5 bank_accounts rows to match ADM names
+- **Fix Premium account_number** from "1942" to the correct value
 
-### Risk Assessment
-- **Repurposing**: Zero risk (all confirmed dormant)
-- **Adding**: Zero risk (purely additive, no conflicts)
+### What Does NOT Need to Change
+- **Zero journal_lines need to move** — they reference UUIDs, and those UUIDs keep their data
+- **85 BHD DOP journal lines** stay on UUID 214f5030 (code just relabels from 1944→1945)
+- **`bank_accounts.chart_account_id`** stays the same for all rows (UUIDs unchanged)
+- **`payment_method_accounts`** stays correct (references UUIDs)
+- **`close_day_labor_week` function** hardcodes UUID 84653770 (BHD DOP) — unchanged
+- **No app code changes** — zero hardcoded 194x references in src/
+
+### Risk
+Effectively zero — purely relabeling metadata on existing UUIDs. All foreign key references remain intact.
 

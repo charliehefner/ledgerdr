@@ -110,12 +110,31 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "system",
-            content: `You are an OCR assistant specialized in extracting data from Dominican Republic receipts and invoices (comprobantes fiscales). Extract the following fields and return ONLY a valid JSON object with no additional text:
+            content: `You are an OCR assistant specialized in extracting data from Dominican Republic receipts and invoices (comprobantes fiscales).
 
+STEP 1 — ANNOTATIONS (do this FIRST, before reading receipt content):
+Scan all four corners and margins of the image for annotations. These can be HANDWRITTEN (pen/pencil), TYPED, PRINTED, or RUBBER-STAMPED — not just handwriting.
+
+- UPPER-LEFT AREA: Look for a payment method identifier. Common forms include:
+  "cc industria", "cc ind", "ind", "industria" → return "cc_industry"
+  "cc agri", "agri", "agr", "agricola" → return "cc_agri"
+  "cc management", "cc mgt", "mgmt", "management", "cc admin" → return "cc_management"
+  "efectivo", "cash", "eft" → return "cash"
+  "transferencia", "transfer", "trans" → return "bank_transfer"
+  If found, use this value for pay_method (overrides any printed payment info on the receipt).
+
+- UPPER-RIGHT AREA: Look for a 4-digit number (e.g. 5611, 7010, 7690, 5210, 6110). It is often circled, underlined, boxed, or written larger than surrounding text. This is the accounting code — return it as master_acct_code.
+
+Do NOT confuse these margin annotations with printed receipt data like invoice numbers, RNC, or dates.
+
+STEP 2 — RECEIPT DATA:
+Extract the printed receipt/invoice fields:
+
+Return ONLY a valid JSON object with no additional text:
 {
   "vendor_name": "merchant/seller name",
   "rnc": "RNC number (9-11 digits)",
@@ -125,20 +144,16 @@ serve(async (req) => {
   "document": "NCF or receipt number (e.g. B0100000123, E310000000001)",
   "pay_method": "cash" or "cc_management" or "cc_agri" or "cc_industry" or "bank_transfer" or null,
   "description": "short summary of items purchased, e.g. '8.45 gal diesel', 'office supplies', 'materiales de oficina'",
-  "master_acct_code": "4-digit account code if handwritten on receipt, or null"
+  "master_acct_code": "4-digit account code from annotation, or null"
 }
 
-Rules:
+Additional rules:
 - For date, use YYYY-MM-DD format. Dominican dates are typically DD/MM/YYYY.
 - For amount and itbis, return numbers without currency symbols.
 - For RNC, look for patterns like "RNC: 123456789" or "R.N.C. 123456789".
 - For document/NCF, look for patterns starting with B01, B02, B04, B14, B15, B16, B17, E31, E32, E33, E34, E41, E43, E44, E45, E46, E47.
-- For pay_method, if you see credit card info return "cc_management", if cash/efectivo return "cash", if transfer/transferencia return "bank_transfer", otherwise null.
-- HANDWRITTEN NOTES (important — these are pen annotations, not printed text):
-  - TOP-LEFT CORNER: Look for a handwritten credit card identifier. Map as follows: "cc industria" → "cc_industry", "cc agri" → "cc_agri", "cc management" → "cc_management". If found, use this value for pay_method instead of the default.
-  - UPPER-RIGHT QUADRANT: Look for a handwritten 4-digit number (e.g. 5611, 7010, 7690). This is the account code — return it as master_acct_code.
-  - Do NOT confuse handwritten annotations with printed receipt data.
-- If you cannot determine a field, use null for strings and null for numbers.
+- If no annotation found for pay_method, infer from printed receipt: credit card → "cc_management", cash/efectivo → "cash", transfer → "bank_transfer", otherwise null.
+- If you cannot determine a field, use null.
 - Return ONLY the JSON object, no markdown, no explanation.`,
           },
           {
@@ -146,7 +161,7 @@ Rules:
             content: [
               {
                 type: "text",
-                text: "Extract the receipt data from this image.",
+                text: "Extract the receipt data from this image. Pay special attention to any annotations in the upper-left and upper-right corners/margins of the image — these contain the payment method and account code respectively. They may be handwritten, typed, or stamped.",
               },
               {
                 type: "image_url",

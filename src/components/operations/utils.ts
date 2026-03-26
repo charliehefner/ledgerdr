@@ -49,18 +49,24 @@ export function checkHourMeterGap(
   tractorId: string,
   startHours: number,
   operationDate: Date,
-  operations: Operation[] | undefined
+  operations: Operation[] | undefined,
+  excludeOperationId?: string
 ): string | null {
   if (!operations || !tractorId) return null;
   
-  // Find the most recent operation on this tractor before the current date
+  // Find the most recent operation on this tractor on or before the current date
   const tractorOps = operations
     .filter(op => op.tractor_id === tractorId && op.end_hours != null)
+    .filter(op => excludeOperationId ? op.id !== excludeOperationId : true)
     .filter(op => {
       const opDate = parseDateLocal(op.operation_date);
-      return opDate < operationDate;
+      return opDate <= operationDate;
     })
-    .sort((a, b) => parseDateLocal(b.operation_date).getTime() - parseDateLocal(a.operation_date).getTime());
+    .sort((a, b) => {
+      const dateDiff = parseDateLocal(b.operation_date).getTime() - parseDateLocal(a.operation_date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return (b.end_hours ?? 0) - (a.end_hours ?? 0);
+    });
   
   if (tractorOps.length > 0) {
     const lastOp = tractorOps[0];

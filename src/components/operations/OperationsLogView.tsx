@@ -768,12 +768,13 @@ export function OperationsLogView() {
       }
 
       // Hard-block: check for hour meter gap > 100h
-      const gapWarning = checkHourMeterGap(form.tractor_id, startHours, form.operation_date, operations);
+      const gapWarning = checkHourMeterGap(form.tractor_id, startHours, form.operation_date, operations, editingOperation?.id);
       if (gapWarning) {
         // Calculate numeric gap to decide block vs warn
         const tractorOps = operations
           ?.filter(op => op.tractor_id === form.tractor_id && op.end_hours != null)
-          .filter(op => parseDateLocal(op.operation_date) < form.operation_date)
+          .filter(op => editingOperation ? op.id !== editingOperation.id : true)
+          .filter(op => parseDateLocal(op.operation_date) <= form.operation_date)
           .sort((a, b) => parseDateLocal(b.operation_date).getTime() - parseDateLocal(a.operation_date).getTime());
         const lastEndHours = tractorOps?.[0]?.end_hours ?? null;
         const gap = lastEndHours != null ? startHours - lastEndHours : 0;
@@ -1177,7 +1178,17 @@ export function OperationsLogView() {
                         <select
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           value={form.tractor_id}
-                          onChange={(e) => setForm({ ...form, tractor_id: e.target.value })}
+                          onChange={(e) => {
+                            const tractorId = e.target.value;
+                            const tractor = tractors?.find(t => t.id === tractorId);
+                            setForm(prev => ({
+                              ...prev,
+                              tractor_id: tractorId,
+                              start_hours: (!editingOperation && tractor?.current_hour_meter)
+                                ? tractor.current_hour_meter.toString()
+                                : prev.start_hours,
+                            }));
+                          }}
                         >
                           <option value="">{t("operations.form.selectTractor")}</option>
                           {tractors?.map((tr) => (

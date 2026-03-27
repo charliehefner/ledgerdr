@@ -64,6 +64,30 @@ export function AgingReportView() {
     },
   });
 
+  // Fetch latest exchange rates for DOP conversion
+  const { data: exchangeRates } = useQuery({
+    queryKey: ["exchange-rates-latest-aging"],
+    queryFn: async () => {
+      const rates: Record<string, number> = { DOP: 1 };
+      for (const pair of ["USD/DOP", "EUR/DOP"]) {
+        const { data } = await supabase
+          .from("exchange_rates")
+          .select("sell_rate")
+          .eq("currency_pair", pair)
+          .order("rate_date", { ascending: false })
+          .limit(1);
+        if (data && data.length > 0) {
+          const currency = pair.split("/")[0];
+          rates[currency] = data[0].sell_rate;
+        }
+      }
+      return rates;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const rates = exchangeRates || { DOP: 1, USD: 1, EUR: 1 };
+
   const filtered = useMemo(() =>
     dirFilter === "both" ? documents : documents.filter(d => d.direction === dirFilter),
     [documents, dirFilter]
@@ -232,6 +256,30 @@ export function AgingReportView() {
                   <TableCell className="text-right font-mono">{fmtNum(totals.total)}</TableCell>
                 </TableRow>
               ))}
+              {totalsByCurrency.length > 1 && (() => {
+                const dopEquiv = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 };
+                totalsByCurrency.forEach(([currency, totals]) => {
+                  const r = rates[currency] || 1;
+                  dopEquiv.current += totals.current * r;
+                  dopEquiv.days30 += totals.days30 * r;
+                  dopEquiv.days60 += totals.days60 * r;
+                  dopEquiv.days90 += totals.days90 * r;
+                  dopEquiv.over90 += totals.over90 * r;
+                  dopEquiv.total += totals.total * r;
+                });
+                return (
+                  <TableRow className="bg-primary/10 font-bold">
+                    <TableCell className="text-right">TOTAL RD$ EQUIV.</TableCell>
+                    <TableCell>DOP</TableCell>
+                    <TableCell className="text-right font-mono">{fmtNum(dopEquiv.current)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmtNum(dopEquiv.days30)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmtNum(dopEquiv.days60)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmtNum(dopEquiv.days90)}</TableCell>
+                    <TableCell className="text-right font-mono text-destructive">{fmtNum(dopEquiv.over90)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmtNum(dopEquiv.total)}</TableCell>
+                  </TableRow>
+                );
+              })()}
             </TableBody>
           </Table>
         </div>

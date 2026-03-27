@@ -18,12 +18,6 @@ import { Plus, Trash2, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const TYPE_LABELS: Record<string, { es: string; en: string }> = {
-  truck: { es: "Camión", en: "Truck" },
-  trailer: { es: "Trailer", en: "Trailer" },
-  wagon: { es: "Vagón", en: "Wagon" },
-};
-
 export function TransportationManager() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -57,7 +51,7 @@ export function TransportationManager() {
       setOpen(false);
       setName("");
       setUnitType("");
-      toast({ title: "Unidad agregada" });
+      toast({ title: t("transport.save") });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -69,7 +63,6 @@ export function TransportationManager() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transportation-units"] });
-      toast({ title: "Unidad eliminada" });
     },
   });
 
@@ -81,6 +74,15 @@ export function TransportationManager() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["transportation-units"] }),
   });
 
+  const typeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      truck: "transport.truck",
+      trailer: "transport.trailer",
+      wagon: "transport.wagon",
+    };
+    return map[type] ? t(map[type]) : type;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -89,32 +91,32 @@ export function TransportationManager() {
             <Truck className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold">{t("Transportation", "Transporte")}</h3>
-            <p className="text-sm text-muted-foreground">{t("Manage transportation units", "Gestionar unidades de transporte")}</p>
+            <h3 className="font-semibold">{t("transport.title")}</h3>
+            <p className="text-sm text-muted-foreground">{t("transport.subtitle")}</p>
           </div>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-1" /> {t("Add", "Agregar")}</Button>
+            <Button><Plus className="h-4 w-4 mr-1" /> {t("transport.add")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{t("New Transportation Unit", "Nueva Unidad de Transporte")}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("transport.newUnit")}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
-                <Label>{t("Name / Identifier", "Nombre / Identificador")}</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("e.g. Bigab03", "Ej: Bigab03")} />
+                <Label>{t("transport.nameLabel")}</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("transport.namePlaceholder")} />
               </div>
               <div>
-                <Label>{t("Type", "Tipo")}</Label>
+                <Label>{t("transport.typeLabel")}</Label>
                 <Select value={unitType || undefined} onValueChange={setUnitType}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t("Select type", "Seleccionar tipo")} />
+                    <SelectValue placeholder={t("transport.typePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="truck">{t("Truck", "Camión")}</SelectItem>
-                    <SelectItem value="trailer">{t("Trailer", "Trailer")}</SelectItem>
-                    <SelectItem value="wagon">{t("Wagon", "Vagón")}</SelectItem>
+                    <SelectItem value="truck">{t("transport.truck")}</SelectItem>
+                    <SelectItem value="trailer">{t("transport.trailer")}</SelectItem>
+                    <SelectItem value="wagon">{t("transport.wagon")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -123,7 +125,7 @@ export function TransportationManager() {
               onClick={() => addMutation.mutate()}
               disabled={addMutation.isPending || !name.trim() || !unitType}
             >
-              {t("Save", "Guardar")}
+              {t("transport.save")}
             </Button>
           </DialogContent>
         </Dialog>
@@ -133,28 +135,28 @@ export function TransportationManager() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t("Name", "Nombre")}</TableHead>
-              <TableHead>{t("Type", "Tipo")}</TableHead>
-              <TableHead>{t("Status", "Estado")}</TableHead>
+              <TableHead>{t("transport.name")}</TableHead>
+              <TableHead>{t("transport.type")}</TableHead>
+              <TableHead>{t("transport.status")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t("Loading...", "Cargando...")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t("transport.loading")}</TableCell></TableRow>
             ) : units.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t("No units", "Sin unidades")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t("transport.noUnits")}</TableCell></TableRow>
             ) : units.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
-                <TableCell>{TYPE_LABELS[u.unit_type]?.[t("en", "es") as "en" | "es"] || u.unit_type}</TableCell>
+                <TableCell>{typeLabel(u.unit_type)}</TableCell>
                 <TableCell>
                   <Badge
                     variant={u.is_active ? "default" : "secondary"}
                     className="cursor-pointer"
                     onClick={() => toggleMutation.mutate({ id: u.id, is_active: !u.is_active })}
                   >
-                    {u.is_active ? t("Active", "Activo") : t("Inactive", "Inactivo")}
+                    {u.is_active ? t("transport.active") : t("transport.inactive")}
                   </Badge>
                 </TableCell>
                 <TableCell>

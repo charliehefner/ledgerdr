@@ -46,6 +46,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { shouldCreateApAr as shouldCreateApArUtil, getApArAccountCode, getApArDirection, getDefaultDueDate } from './apArUtils';
 
 interface TransactionFormProps {
   onSuccess: () => void;

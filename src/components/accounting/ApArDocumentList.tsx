@@ -335,25 +335,67 @@ export function ApArDocumentList({ direction }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Aging Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
-        {[
-          { label: t("apar.agingCurrent"), value: aging.current },
-          { label: t("apar.aging30"), value: aging.d30 },
-          { label: t("apar.aging60"), value: aging.d60 },
-          { label: t("apar.aging90"), value: aging.d90 },
-          { label: t("apar.aging90plus"), value: aging.d90plus },
-          { label: t("common.total"), value: totalOutstanding },
-          ...(direction === "payable" ? [{ label: t("apar.advances"), value: totalAdvances }] : []),
-        ].map((bucket, i) => (
-          <div key={i} className={`rounded-lg border p-3 ${i === 5 ? "bg-primary/5 border-primary/20" : ""} ${i === 6 ? "bg-accent/50 border-accent" : ""}`}>
-            <div className="text-xs text-muted-foreground">{bucket.label}</div>
-            <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
-              {formatCurrency(bucket.value, "DOP")}
+      {/* Aging Summary — per currency */}
+      {activeCurrencies.map(cur => {
+        const b = agingByCurrency[cur];
+        if (!b) return null;
+        const total = bucketTotal(b);
+        const advTotal = totalAdvancesByCurrency[cur] || 0;
+        return (
+          <div key={cur}>
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className={`text-xs ${CURRENCY_BADGE_COLORS[cur] || ""}`}>{cur}</Badge>
+              {cur !== "DOP" && rates[cur] && (
+                <span className="text-xs text-muted-foreground">Tasa: {rates[cur].toFixed(2)}</span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+              {[
+                { label: t("apar.agingCurrent"), value: b.current },
+                { label: t("apar.aging30"), value: b.d30 },
+                { label: t("apar.aging60"), value: b.d60 },
+                { label: t("apar.aging90"), value: b.d90 },
+                { label: t("apar.aging90plus"), value: b.d90plus },
+                { label: t("common.total"), value: total },
+                ...(direction === "payable" ? [{ label: t("apar.advances"), value: advTotal }] : []),
+              ].map((bucket, i) => (
+                <div key={i} className={`rounded-lg border p-2 ${i === 5 ? "bg-primary/5 border-primary/20" : ""} ${i === 6 ? "bg-accent/50 border-accent" : ""}`}>
+                  <div className="text-xs text-muted-foreground">{bucket.label}</div>
+                  <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
+                    {formatCurrency(bucket.value, cur)}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
+
+      {/* DOP Equivalent totals (only if multiple currencies) */}
+      {activeCurrencies.length > 1 && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="outline" className="text-xs bg-muted border-muted-foreground/20">RD$ Equivalente</Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+            {[
+              { label: t("apar.agingCurrent"), value: agingDopEquivalent.current },
+              { label: t("apar.aging30"), value: agingDopEquivalent.d30 },
+              { label: t("apar.aging60"), value: agingDopEquivalent.d60 },
+              { label: t("apar.aging90"), value: agingDopEquivalent.d90 },
+              { label: t("apar.aging90plus"), value: agingDopEquivalent.d90plus },
+              { label: t("common.total"), value: bucketTotal(agingDopEquivalent) },
+            ].map((bucket, i) => (
+              <div key={i} className={`rounded-lg border p-2 border-dashed ${i === 5 ? "bg-primary/5 border-primary/30" : "border-muted-foreground/20"}`}>
+                <div className="text-xs text-muted-foreground">{bucket.label}</div>
+                <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
+                  {formatCurrency(bucket.value, "DOP")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -372,6 +414,21 @@ export function ApArDocumentList({ direction }: Props) {
                   onClick={() => setTypeFilter(filter)}
                 >
                   {t(`apar.filter_${filter}`)}
+                </Button>
+              ))}
+            </div>
+          )}
+          {activeCurrencies.length > 1 && (
+            <div className="flex gap-1 ml-2">
+              {(["all", ...activeCurrencies] as CurrencyFilter[]).map(cur => (
+                <Button
+                  key={cur}
+                  variant={currencyFilter === cur ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setCurrencyFilter(cur)}
+                >
+                  {cur === "all" ? t("apar.filter_all") : cur}
                 </Button>
               ))}
             </div>
@@ -406,6 +463,7 @@ export function ApArDocumentList({ direction }: Props) {
                 <TableHead className="text-right">{t("apar.totalAmount")}</TableHead>
                 <TableHead className="text-right">{t("apar.amountPaid")}</TableHead>
                 <TableHead className="text-right">{t("apar.balance")}</TableHead>
+                <TableHead>{t("common.currency")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
@@ -429,6 +487,11 @@ export function ApArDocumentList({ direction }: Props) {
                   <TableCell className="text-right">{formatCurrency(doc.amount_paid, doc.currency)}</TableCell>
                   <TableCell className={`text-right font-medium ${doc.balance_remaining > 0 ? "text-destructive" : ""}`}>
                     {formatCurrency(doc.balance_remaining, doc.currency)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-xs ${CURRENCY_BADGE_COLORS[doc.currency] || ""}`}>
+                      {doc.currency}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={STATUS_COLORS[doc.status] || ""}>
@@ -464,6 +527,46 @@ export function ApArDocumentList({ direction }: Props) {
                 </TableRow>
               ))}
             </TableBody>
+            {/* Footer totals per currency */}
+            <TableFooter>
+              {Object.entries(footerTotals).map(([cur, t_]) => (
+                <TableRow key={cur}>
+                  <TableCell colSpan={6} className="text-right font-medium">
+                    Subtotal {cur}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(t_.total, cur)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(t_.paid, cur)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(t_.balance, cur)}</TableCell>
+                  <TableCell colSpan={3} />
+                </TableRow>
+              ))}
+              {Object.keys(footerTotals).length > 1 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-right font-medium">
+                    Total RD$ Equivalente
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(
+                      Object.entries(footerTotals).reduce((s, [c, v]) => s + v.total * (rates[c] || 1), 0),
+                      "DOP"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(
+                      Object.entries(footerTotals).reduce((s, [c, v]) => s + v.paid * (rates[c] || 1), 0),
+                      "DOP"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(
+                      Object.entries(footerTotals).reduce((s, [c, v]) => s + v.balance * (rates[c] || 1), 0),
+                      "DOP"
+                    )}
+                  </TableCell>
+                  <TableCell colSpan={3} />
+                </TableRow>
+              )}
+            </TableFooter>
           </Table>
         </div>
       )}

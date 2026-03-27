@@ -1707,6 +1707,7 @@ export type Database = {
           datetime_in: string | null
           datetime_out: string | null
           id: string
+          identifier: string | null
           notes: string | null
           payload: number | null
           tare: number | null
@@ -1719,6 +1720,7 @@ export type Database = {
           datetime_in?: string | null
           datetime_out?: string | null
           id?: string
+          identifier?: string | null
           notes?: string | null
           payload?: number | null
           tare?: number | null
@@ -1731,6 +1733,7 @@ export type Database = {
           datetime_in?: string | null
           datetime_out?: string | null
           id?: string
+          identifier?: string | null
           notes?: string | null
           payload?: number | null
           tare?: number | null
@@ -1780,6 +1783,7 @@ export type Database = {
           datetime_out: string | null
           destination_payload: string | null
           id: string
+          identifier: string | null
           notes: string | null
           payload: number | null
           tare: number | null
@@ -1793,6 +1797,7 @@ export type Database = {
           datetime_out?: string | null
           destination_payload?: string | null
           id?: string
+          identifier?: string | null
           notes?: string | null
           payload?: number | null
           tare?: number | null
@@ -1806,6 +1811,7 @@ export type Database = {
           datetime_out?: string | null
           destination_payload?: string | null
           id?: string
+          identifier?: string | null
           notes?: string | null
           payload?: number | null
           tare?: number | null
@@ -3444,6 +3450,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transportation_units: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          unit_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          unit_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          unit_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tss_parameters: {
         Row: {

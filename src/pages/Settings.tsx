@@ -27,7 +27,8 @@ import {
   QrCode,
   Store,
   Satellite,
-  BookOpen
+  BookOpen,
+  Truck
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,7 @@ import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
+import { TransportationManager } from "@/components/settings/TransportationManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -132,6 +134,12 @@ export default function Settings() {
               <TabsTrigger value="operators">
                 <Users className="h-4 w-4 mr-2" />
                 Operadores
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="transportation">
+                <Truck className="h-4 w-4 mr-2" />
+                Transporte
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -323,6 +331,14 @@ export default function Settings() {
             <TabsContent value="operators" className="mt-6">
               <div className="max-w-3xl">
                 <TractorOperatorsManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="transportation" className="mt-6">
+              <div className="max-w-4xl">
+                <TransportationManager />
               </div>
             </TabsContent>
           )}

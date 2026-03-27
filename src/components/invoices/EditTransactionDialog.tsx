@@ -284,7 +284,7 @@ export function EditTransactionDialog({
       const effectiveDueDate = updates.due_date !== undefined ? updates.due_date : formData.due_date;
       const effectiveDirection = updates.transaction_direction || formData.transaction_direction;
 
-      if (transaction.id && (effectivePayMethod === 'credit' || effectiveDueDate) && effectiveDirection !== 'payment') {
+      if (transaction.id && (effectivePayMethod === 'credit' || effectiveDueDate) && effectiveDirection !== 'payment' && effectiveDirection !== 'investment') {
         try {
           // Check if AP/AR document already exists for this transaction
           const { data: existingDoc } = await supabase

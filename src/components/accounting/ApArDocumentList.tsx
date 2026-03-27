@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -51,7 +51,22 @@ const STATUS_COLORS: Record<string, string> = {
   void: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
+const CURRENCY_BADGE_COLORS: Record<string, string> = {
+  DOP: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  USD: "bg-blue-100 text-blue-800 border-blue-200",
+  EUR: "bg-purple-100 text-purple-800 border-purple-200",
+};
+
 type DocTypeFilter = "all" | "invoices" | "advances";
+type CurrencyFilter = "all" | "DOP" | "USD" | "EUR";
+
+interface AgingBuckets {
+  current: number;
+  d30: number;
+  d60: number;
+  d90: number;
+  d90plus: number;
+}
 
 interface Props {
   direction: "receivable" | "payable";

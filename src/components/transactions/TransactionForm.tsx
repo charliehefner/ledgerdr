@@ -737,6 +737,17 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                             <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
                           ))}
                         </SelectGroup>
+                        {headOfficeAccounts.length > 0 && (
+                          <>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Casa Matriz</SelectLabel>
+                              {headOfficeAccounts.map(a => (
+                                <SelectItem key={a.id} value={`coa:${a.account_code}`}>{a.account_code} - {a.account_name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

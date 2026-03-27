@@ -175,7 +175,7 @@ export function EditTransactionDialog({
       const costCenterValue = (transaction as any).cost_center || "general";
       const itbisOverrideValue = (transaction as any).itbis_override_reason || "";
 
-      const isTransfer = (transaction.transaction_direction || "purchase") === "payment";
+      const isTransfer = (transaction.transaction_direction || "purchase") === "payment" || (transaction.transaction_direction || "purchase") === "investment";
       const newFormData = {
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
         due_date: transaction.due_date?.split("T")[0] || "",
@@ -265,7 +265,7 @@ export function EditTransactionDialog({
       if (formData.transaction_direction !== originalFormData.transaction_direction) updates.transaction_direction = formData.transaction_direction;
       
       // Handle transfer-specific field mapping
-      if (formData.transaction_direction === 'payment') {
+      if (formData.transaction_direction === 'payment' || formData.transaction_direction === 'investment') {
         if (formData.transfer_from_account !== originalFormData.transfer_from_account) updates.pay_method = formData.transfer_from_account || null;
         if (formData.transfer_to_account !== originalFormData.transfer_to_account) {
           let destCode = formData.transfer_to_account;
@@ -465,7 +465,8 @@ export function EditTransactionDialog({
                     value={
                       formData.transaction_direction === 'purchase' ? 'Compra' :
                       formData.transaction_direction === 'sale' ? 'Venta' :
-                      formData.transaction_direction === 'payment' ? 'Transferencia' : ''
+                      formData.transaction_direction === 'payment' ? 'Transferencia' :
+                      formData.transaction_direction === 'investment' ? 'Inversión' : ''
                     }
                     readOnly
                     className="bg-muted"
@@ -482,6 +483,7 @@ export function EditTransactionDialog({
                       <SelectItem value="purchase">Compra</SelectItem>
                       <SelectItem value="sale">Venta</SelectItem>
                       <SelectItem value="payment">Transferencia</SelectItem>
+                      <SelectItem value="investment">Inversión</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -591,7 +593,7 @@ export function EditTransactionDialog({
 
 
             {/* Transfer From/To - for payment (transfer) */}
-            {formData.transaction_direction === 'payment' && (() => {
+            {(formData.transaction_direction === 'payment' || formData.transaction_direction === 'investment') && (() => {
               const fromAccount = bankAccounts.find(a => a.id === formData.transfer_from_account);
               const toAccountId = formData.transfer_to_account?.startsWith('coa:') ? null : formData.transfer_to_account;
               const toAccount = toAccountId ? bankAccounts.find(a => a.id === toAccountId) : null;

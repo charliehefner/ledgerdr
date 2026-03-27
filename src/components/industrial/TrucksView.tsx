@@ -25,7 +25,7 @@ const fmtDt = (v: string | null) => v ? format(new Date(v), "dd/MM/yyyy HH:mm") 
 
 export function TrucksView() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ datetime_in: "", datetime_out: "", tare: "", payload: "", weigh_ticket_number: "", destination_payload: "", notes: "" });
+  const [form, setForm] = useState({ datetime_in: "", datetime_out: "", tare: "", payload: "", weigh_ticket_number: "", destination_payload: "", notes: "", identifier: "" });
   const { toast } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();

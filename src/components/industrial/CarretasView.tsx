@@ -25,7 +25,7 @@ const fmtDt = (v: string | null) => v ? format(new Date(v), "dd/MM/yyyy HH:mm") 
 
 export function CarretasView() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ datetime_out: "", datetime_in: "", tare: "", payload: "", weigh_ticket_number: "", notes: "" });
+  const [form, setForm] = useState({ datetime_out: "", datetime_in: "", tare: "", payload: "", weigh_ticket_number: "", notes: "", identifier: "" });
   const { toast } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();

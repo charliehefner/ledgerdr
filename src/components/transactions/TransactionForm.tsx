@@ -394,7 +394,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
           } catch (apArErr) {
             console.error('Auto AP/AR creation error:', apArErr);
-            toast({ title: "Aviso", description: "Error creando documento CxP/CxC automático", variant: "destructive" });
+            toast.error("Error creando documento CxP/CxC automático");
           }
         }
       }

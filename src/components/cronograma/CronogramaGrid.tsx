@@ -284,6 +284,15 @@ export function CronogramaGrid() {
       time_slot: "morning" | "afternoon";
     }) => {
       const currentUserId = user?.id || null;
+
+      // Ensure week row exists before inserting entry (FK constraint)
+      const { error: weekError } = await supabase
+        .from("cronograma_weeks")
+        .upsert(
+          { week_ending_date: entry.week_ending_date, is_closed: false },
+          { onConflict: "week_ending_date", ignoreDuplicates: true }
+        );
+      if (weekError) throw weekError;
       
       // Find existing entry
       const existing = entries.find(

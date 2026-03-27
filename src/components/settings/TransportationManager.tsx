@@ -16,11 +16,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const TYPE_LABELS: Record<string, string> = {
-  truck: "Camión",
-  trailer: "Trailer",
-  wagon: "Vagón",
+const TYPE_LABELS: Record<string, { es: string; en: string }> = {
+  truck: { es: "Camión", en: "Truck" },
+  trailer: { es: "Trailer", en: "Trailer" },
+  wagon: { es: "Vagón", en: "Wagon" },
 };
 
 export function TransportationManager() {
@@ -28,6 +29,7 @@ export function TransportationManager() {
   const [name, setName] = useState("");
   const [unitType, setUnitType] = useState<string>("");
   const { toast } = useToast();
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   const { data: units = [], isLoading } = useQuery({
@@ -87,32 +89,32 @@ export function TransportationManager() {
             <Truck className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold">Transporte</h3>
-            <p className="text-sm text-muted-foreground">Gestionar unidades de transporte</p>
+            <h3 className="font-semibold">{t("Transportation", "Transporte")}</h3>
+            <p className="text-sm text-muted-foreground">{t("Manage transportation units", "Gestionar unidades de transporte")}</p>
           </div>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-1" /> Agregar</Button>
+            <Button><Plus className="h-4 w-4 mr-1" /> {t("Add", "Agregar")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nueva Unidad de Transporte</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("New Transportation Unit", "Nueva Unidad de Transporte")}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
-                <Label>Nombre / Identificador</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Bigab03" />
+                <Label>{t("Name / Identifier", "Nombre / Identificador")}</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("e.g. Bigab03", "Ej: Bigab03")} />
               </div>
               <div>
-                <Label>Tipo</Label>
+                <Label>{t("Type", "Tipo")}</Label>
                 <Select value={unitType || undefined} onValueChange={setUnitType}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
+                    <SelectValue placeholder={t("Select type", "Seleccionar tipo")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="truck">Camión</SelectItem>
-                    <SelectItem value="trailer">Trailer</SelectItem>
-                    <SelectItem value="wagon">Vagón</SelectItem>
+                    <SelectItem value="truck">{t("Truck", "Camión")}</SelectItem>
+                    <SelectItem value="trailer">{t("Trailer", "Trailer")}</SelectItem>
+                    <SelectItem value="wagon">{t("Wagon", "Vagón")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -121,7 +123,7 @@ export function TransportationManager() {
               onClick={() => addMutation.mutate()}
               disabled={addMutation.isPending || !name.trim() || !unitType}
             >
-              Guardar
+              {t("Save", "Guardar")}
             </Button>
           </DialogContent>
         </Dialog>
@@ -131,28 +133,28 @@ export function TransportationManager() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>{t("Name", "Nombre")}</TableHead>
+              <TableHead>{t("Type", "Tipo")}</TableHead>
+              <TableHead>{t("Status", "Estado")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t("Loading...", "Cargando...")}</TableCell></TableRow>
             ) : units.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Sin unidades</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t("No units", "Sin unidades")}</TableCell></TableRow>
             ) : units.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
-                <TableCell>{TYPE_LABELS[u.unit_type] || u.unit_type}</TableCell>
+                <TableCell>{TYPE_LABELS[u.unit_type]?.[t("en", "es") as "en" | "es"] || u.unit_type}</TableCell>
                 <TableCell>
                   <Badge
                     variant={u.is_active ? "default" : "secondary"}
                     className="cursor-pointer"
                     onClick={() => toggleMutation.mutate({ id: u.id, is_active: !u.is_active })}
                   >
-                    {u.is_active ? "Activo" : "Inactivo"}
+                    {u.is_active ? t("Active", "Activo") : t("Inactive", "Inactivo")}
                   </Badge>
                 </TableCell>
                 <TableCell>

@@ -45,6 +45,19 @@ export function TrucksView() {
     },
   });
 
+  const { data: transportUnits = [] } = useQuery({
+    queryKey: ["transportation-units-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transportation_units")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const addMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("industrial_trucks").insert({
@@ -54,6 +67,7 @@ export function TrucksView() {
         payload: form.payload ? Number(form.payload) : null,
         weigh_ticket_number: form.weigh_ticket_number || null,
         destination_payload: form.destination_payload || null,
+        identifier: form.identifier || null,
         notes: form.notes || null,
         created_by: user?.id,
       });
@@ -62,7 +76,7 @@ export function TrucksView() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["industrial-trucks"] });
       setOpen(false);
-      setForm({ datetime_in: "", datetime_out: "", tare: "", payload: "", weigh_ticket_number: "", destination_payload: "", notes: "" });
+      setForm({ datetime_in: "", datetime_out: "", tare: "", payload: "", weigh_ticket_number: "", destination_payload: "", notes: "", identifier: "" });
       toast({ title: "Registro agregado" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -119,6 +133,17 @@ export function TrucksView() {
           <DialogContent>
             <DialogHeader><DialogTitle>Nuevo Camión</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
+              <div>
+                <Label>Identificador</Label>
+                <Select value={form.identifier || undefined} onValueChange={(v) => setForm({ ...form, identifier: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar unidad" /></SelectTrigger>
+                  <SelectContent>
+                    {transportUnits.map((u) => (
+                      <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Fecha/Hora Entrando</Label><Input type="datetime-local" value={form.datetime_in} onChange={(e) => setForm({ ...form, datetime_in: e.target.value })} /></div>
               <div><Label>Fecha/Hora Saliendo</Label><Input type="datetime-local" value={form.datetime_out} onChange={(e) => setForm({ ...form, datetime_out: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -148,6 +173,7 @@ export function TrucksView() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Identificador</TableHead>
               <TableHead>Entrada</TableHead>
               <TableHead>Salida</TableHead>
               <TableHead>Tara</TableHead>
@@ -160,11 +186,12 @@ export function TrucksView() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Sin registros</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Sin registros</TableCell></TableRow>
             ) : rows.map((r) => (
               <TableRow key={r.id}>
+                <TableCell className="font-medium">{r.identifier || "—"}</TableCell>
                 <TableCell>{fmtDt(r.datetime_in)}</TableCell>
                 <TableCell>{fmtDt(r.datetime_out)}</TableCell>
                 <TableCell>{r.tare ?? "—"}</TableCell>

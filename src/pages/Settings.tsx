@@ -27,7 +27,8 @@ import {
   QrCode,
   Store,
   Satellite,
-  BookOpen
+  BookOpen,
+  Truck
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,7 @@ import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
+import { TransportationManager } from "@/components/settings/TransportationManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();

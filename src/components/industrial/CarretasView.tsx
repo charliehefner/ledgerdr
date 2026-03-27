@@ -45,6 +45,19 @@ export function CarretasView() {
     },
   });
 
+  const { data: transportUnits = [] } = useQuery({
+    queryKey: ["transportation-units-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transportation_units")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const addMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("industrial_carretas").insert({
@@ -53,6 +66,7 @@ export function CarretasView() {
         tare: form.tare ? Number(form.tare) : null,
         payload: form.payload ? Number(form.payload) : null,
         weigh_ticket_number: form.weigh_ticket_number || null,
+        identifier: form.identifier || null,
         notes: form.notes || null,
         created_by: user?.id,
       });
@@ -61,7 +75,7 @@ export function CarretasView() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["industrial-carretas"] });
       setOpen(false);
-      setForm({ datetime_out: "", datetime_in: "", tare: "", payload: "", weigh_ticket_number: "", notes: "" });
+      setForm({ datetime_out: "", datetime_in: "", tare: "", payload: "", weigh_ticket_number: "", notes: "", identifier: "" });
       toast({ title: "Registro agregado" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -117,6 +131,17 @@ export function CarretasView() {
           <DialogContent>
             <DialogHeader><DialogTitle>Nueva Carreta</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
+              <div>
+                <Label>Identificador</Label>
+                <Select value={form.identifier || undefined} onValueChange={(v) => setForm({ ...form, identifier: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar unidad" /></SelectTrigger>
+                  <SelectContent>
+                    {transportUnits.map((u) => (
+                      <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Fecha/Hora Saliendo</Label><Input type="datetime-local" value={form.datetime_out} onChange={(e) => setForm({ ...form, datetime_out: e.target.value })} /></div>
               <div><Label>Fecha/Hora Entrando</Label><Input type="datetime-local" value={form.datetime_in} onChange={(e) => setForm({ ...form, datetime_in: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -145,6 +170,7 @@ export function CarretasView() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Identificador</TableHead>
               <TableHead>Salida</TableHead>
               <TableHead>Entrada</TableHead>
               <TableHead>Tara</TableHead>
@@ -156,11 +182,12 @@ export function CarretasView() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Sin registros</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Sin registros</TableCell></TableRow>
             ) : rows.map((r) => (
               <TableRow key={r.id}>
+                <TableCell className="font-medium">{r.identifier || "—"}</TableCell>
                 <TableCell>{fmtDt(r.datetime_out)}</TableCell>
                 <TableCell>{fmtDt(r.datetime_in)}</TableCell>
                 <TableCell>{r.tare ?? "—"}</TableCell>

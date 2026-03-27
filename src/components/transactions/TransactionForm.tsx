@@ -70,7 +70,7 @@ const getInitialFormState = () => ({
   comments: '',
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
-  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment',
+  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment' | 'investment',
   itbis_override_reason: '',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
@@ -213,7 +213,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
       return false;
     }
-    if (form.transaction_direction === 'payment') {
+    if (form.transaction_direction === 'payment' || form.transaction_direction === 'investment') {
       if (!form.transfer_from_account || !form.transfer_to_account) return false;
       // Prevent self-transfer
       if (form.transfer_from_account === form.transfer_to_account) return false;
@@ -265,7 +265,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
     try {
       const isB11 = form.document?.toUpperCase().startsWith('B11');
-      const isTransfer = form.transaction_direction === 'payment';
+      const isTransfer = form.transaction_direction === 'payment' || form.transaction_direction === 'investment';
       
       // For transfers, map the from/to accounts
       // transfer_from_account = bank_accounts.id → used as pay_method identifier
@@ -328,7 +328,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
 
         // Auto-create AP/AR document when due_date is present OR pay_method is credit
-        const shouldCreateApAr = !isTransfer && form.transaction_direction !== 'payment'
+        const shouldCreateApAr = !isTransfer && form.transaction_direction !== 'payment' && form.transaction_direction !== 'investment'
           && (form.due_date || form.pay_method === 'credit');
         
         // Auto-create advance AP/AR document when account starts with 1690
@@ -583,12 +583,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               <Label>{t('txForm.direction')}</Label>
               <Select
                 value={form.transaction_direction}
-                onValueChange={(value: 'purchase' | 'sale' | 'payment') => {
+                onValueChange={(value: 'purchase' | 'sale' | 'payment' | 'investment') => {
                   updateField('transaction_direction', value);
-                  if (value === 'payment') {
+                  if (value === 'payment' || value === 'investment') {
                     updateField('master_acct_code', '0000');
                   }
-                  if (value !== 'payment') {
+                  if (value !== 'payment' && value !== 'investment') {
                     updateField('transfer_from_account', '');
                     updateField('transfer_to_account', '');
                     updateField('transfer_dest_amount', '');
@@ -602,6 +602,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   <SelectItem value="purchase">{t('txForm.purchase')}</SelectItem>
                   <SelectItem value="sale">{t('txForm.sale')}</SelectItem>
                   <SelectItem value="payment">{t('txForm.payment')}</SelectItem>
+                  <SelectItem value="investment">{t('txForm.investment')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -697,7 +698,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
 
           {/* Transfer From/To - only for transfer (payment) transactions */}
-          {form.transaction_direction === 'payment' && (() => {
+          {(form.transaction_direction === 'payment' || form.transaction_direction === 'investment') && (() => {
             const fromAccount = bankAccounts.find(a => a.id === form.transfer_from_account);
             const toAccount = bankAccounts.find(a => a.id === form.transfer_to_account);
             const fromCurrency = fromAccount?.currency || '';
@@ -736,6 +737,17 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                             <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency || 'DOP'})</SelectItem>
                           ))}
                         </SelectGroup>
+                        {headOfficeAccounts.length > 0 && (
+                          <>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-muted-foreground">Casa Matriz</SelectLabel>
+                              {headOfficeAccounts.map(a => (
+                                <SelectItem key={a.id} value={`coa:${a.account_code}`}>{a.account_code} - {a.account_name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

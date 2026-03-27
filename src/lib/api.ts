@@ -44,7 +44,7 @@ export interface Transaction {
   void_reason?: string;
   voided_at?: string;
   attachment_url?: string;
-  transaction_direction?: 'purchase' | 'sale' | 'payment';
+  transaction_direction?: 'purchase' | 'sale' | 'payment' | 'investment';
   destination_acct_code?: string;
   dgii_tipo_ingreso?: string;
   dgii_tipo_bienes_servicios?: string;
@@ -122,7 +122,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     currency: t.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: t.is_internal ?? false,
     cost_center: (t.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
-    transaction_direction: (t.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
+    transaction_direction: (t.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment' | 'investment',
   }));
 }
 
@@ -198,7 +198,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
     currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
-    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment' | 'investment',
     destination_acct_code: data.destination_acct_code || undefined,
   };
 }
@@ -288,7 +288,7 @@ export async function updateTransaction(id: string, transaction: Partial<Transac
     currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
-    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment' | 'investment',
   };
 }
 
@@ -329,6 +329,6 @@ export async function voidTransaction(id: string | number): Promise<Transaction>
     currency: data.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: data.is_internal ?? false,
     cost_center: (data.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
-    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment',
+    transaction_direction: (data.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment' | 'investment',
   };
 }

@@ -1010,6 +1010,7 @@ export const en = {
   "txForm.cliente": "Customer",
   "txForm.credit": "Credit",
   "txForm.payment": "Transfer",
+  "txForm.investment": "Investment",
   "txForm.transferFrom": "From Account",
   "txForm.transferTo": "To Account",
   "txForm.selectFromAccount": "Select source account",

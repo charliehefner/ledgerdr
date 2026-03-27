@@ -1,42 +1,42 @@
 
 
-## Add "Investment" Transaction Type + JORD AB as Source/Destination
+## Fix: Investment Transaction Validation Bug
 
-### Summary
-Add a 4th transaction direction called **Investment** and add **JORD AB** as both a source and destination option in the transfer account dropdowns.
+### Root Cause
+
+There is a **mismatch between the UI cross-currency detection and the validation logic** when JORD AB (a COA account, not a bank account) is selected as From or To:
+
+**UI logic** (line 702-706) — defaults currency to `''` (empty string) when account is not found in `bankAccounts`:
+```
+fromCurrency = fromAccount?.currency || '';  // '' when COA
+```
+Result: `isCrossCurrency = '' && ...` → always `false` → **cross-currency dest amount field never shows**
+
+**Validation logic** (line 221-225) — defaults currency to `'DOP'` when account is not found:
+```
+fromCur = fromAcct?.currency || 'DOP';  // 'DOP' when COA
+```
+Result: If the other account is USD, validation thinks it's cross-currency, requires `transfer_dest_amount`, but that field was never shown → **validation silently fails**
+
+Even without JORD AB, the generic "required fields" error message doesn't tell the user *which* field is missing.
 
 ### Changes
 
-#### 1. Add `investment` transaction direction
+**`src/components/transactions/TransactionForm.tsx`** — two fixes:
 
-**`src/components/transactions/TransactionForm.tsx`**
-- Update the type union to include `'investment'` alongside `purchase | sale | payment`
-- Add `<SelectItem value="investment">` to the direction dropdown
-- Investment behaves like a **transfer** (from/to accounts, internal, account code `0000`), so reuse the same transfer UI logic:
-  - When `investment` is selected, set `master_acct_code` to `0000` and show the From/To account selectors
-  - Update all `=== 'payment'` checks to also match `'investment'` (validation, form clearing, submission mapping)
+1. **Align cross-currency defaults**: In the UI rendering block (line ~702-706), change the currency defaults from `''` to `'DOP'` to match validation:
+   ```ts
+   const fromCurrency = fromAccount?.currency || 'DOP';
+   const toCurrency = toAccount?.currency || 'DOP';
+   const isCrossCurrency = fromCurrency !== toCurrency;
+   ```
+   This ensures the cross-currency dest amount field **shows** when it's actually needed.
 
-**`src/lib/api.ts`**
-- Update the `transaction_direction` type to include `'investment'`
+2. **Improve error messages**: In the `handleSubmit` validation block (line ~241-249), add specific messages for investment/transfer failures:
+   - Missing From account → "Seleccione cuenta origen"
+   - Missing To account → "Seleccione cuenta destino"
+   - Self-transfer → "Origen y destino no pueden ser iguales"
+   - Missing cross-currency amount → "Ingrese monto destino para transferencia multi-moneda"
 
-**`src/i18n/en.ts`** and **`src/i18n/es.ts`**
-- Add `"txForm.investment": "Investment"` (en) / `"txForm.investment": "Inversión"` (es)
-
-#### 2. Add JORD AB to both Source and Destination dropdowns
-
-Currently, the "Casa Matriz" (JORD AB, account `2160`) only appears in the **To** dropdown. Changes:
-
-**`src/components/transactions/TransactionForm.tsx`**
-- Add the `headOfficeAccounts` group to the **From** (source) dropdown as well, with a "Casa Matriz" section — same pattern as the To dropdown
-- This allows JORD AB as both source and destination for transfers and investments
-
-#### 3. No database changes needed
-- The `transaction_direction` column is `text`, not an enum — it already accepts any string value
-- Account `2160` already exists in `chart_of_accounts`
-- Correct account linkage will be configured later per user request
-
-### Technical notes
-- The `isTransfer` logic (line ~268) will become `const isTransfer = form.transaction_direction === 'payment' || form.transaction_direction === 'investment'`
-- Investment transactions will be marked `is_internal: true` like transfers
-- The `EditTransactionDialog` may also need the investment option added if it has a direction selector
+No database changes needed.
 

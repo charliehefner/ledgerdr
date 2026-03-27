@@ -1,61 +1,44 @@
 
 
-# Automated Tests Plan
+# Multi-Currency Separation in AP/AR (Payables & Receivables)
 
-The testing infrastructure (vitest, jsdom, setup file) is already in place. We will add unit tests for the key logic areas that have caused recent bugs.
+## Problem
+The aging summary and totals in the AP/AR view sum all document balances regardless of currency. A USD $1,000 payable and a DOP $1,000 payable are added together as $2,000, which is meaningless.
 
-## What We Will Test
+## Solution
+Split the aging summary and table by currency, and add a consolidated DOP-equivalent total using the latest exchange rate.
 
-### 1. AP/AR Account Assignment Logic (new file)
-**`src/components/transactions/__tests__/apArAccountLogic.test.ts`**
+## Changes
 
-Extract the AP/AR account code selection logic into a pure testable function, then test:
-- Credit purchase → returns `2101`
-- Sale with due date → returns `1210`
-- Advance (1690 account) → returns `1690`
-- Default due date calculation: credit with no due_date → +30 days
-- `shouldCreateApAr` conditions: returns true for credit/due_date, false for transfers/payments
+### 1. `src/components/accounting/ApArDocumentList.tsx`
 
-### 2. QuickEntry Auto-Categorization (new file)
-**`src/components/accounting/__tests__/quickEntryAutoCategory.test.ts`**
+**Aging summary — currency-aware buckets:**
+- Compute aging buckets per currency (DOP, USD, EUR separately)
+- Show a row of aging cards per currency
+- Add a "Total RD$ Equivalente" row that converts foreign currencies using the latest exchange rate
 
-The `matchAutoCategory` function is already pure but not exported. Export it and test:
-- "COMISIÓN bancaria" → `6520`
-- "IMPUESTO LEY 123" → `6530`
-- "ITBIS retenido" → `1650`
-- "INTERÉS mensual" → `6510`
-- Unmatched description → `null`
-- Null description → `null`
+**Fetch exchange rate:**
+- Add a query to fetch the latest USD_DOP and EUR_DOP sell rates from `exchange_rates` table (already used elsewhere in the system)
 
-### 3. Journal Generation Hook (new file)
-**`src/components/accounting/__tests__/useJournalGeneration.test.ts`**
+**Table grouping:**
+- Add a currency filter (All / DOP / USD / EUR) to the toolbar so users can focus on one currency
+- Show a currency badge on each row for clarity
 
-Mock Supabase and test:
-- `countUnlinked` calls the correct RPC
-- `generate` handles success with created count
-- `generate` handles skipped entries with toast warning
-- `generate` handles errors gracefully
+**Totals row:**
+- Add a table footer showing subtotals per visible currency and a DOP-equivalent grand total
 
-## Implementation Details
+### 2. No database changes needed
+All data (currency field, exchange rates) already exists.
 
-### Extracting testable logic
-The AP/AR logic in `TransactionForm.tsx` is embedded in a 400-line submit handler. We will:
-1. Extract `getApArAccountCode(isAdvance, direction)` and `shouldCreateApAr(form, isTransfer)` into `src/components/transactions/apArUtils.ts`
-2. Export `matchAutoCategory` from `QuickEntryDialog.tsx`
-3. Update the original files to import from the new utility
+## Technical Details
 
-### Mocking strategy
-- Supabase calls: mock with `vi.mock('@/integrations/supabase/client')`
-- React Query: mock `useQueryClient`
-- Toast: mock `@/hooks/use-toast`
+- Reuse the existing `exchange_rates` table query pattern (seen in `PaymentDialog.tsx` and elsewhere)
+- The aging `useMemo` will return `Record<string, AgingBuckets>` keyed by currency
+- DOP equivalent calculation: `amount * sell_rate` for USD/EUR, `amount * 1` for DOP
+- `formatCurrency` already handles currency symbols correctly
 
-### Files changed/created
-| File | Action |
+## Files Modified
+| File | Change |
 |------|--------|
-| `src/components/transactions/apArUtils.ts` | **Create** — extracted pure functions |
-| `src/components/transactions/__tests__/apArUtils.test.ts` | **Create** — tests |
-| `src/components/transactions/TransactionForm.tsx` | **Edit** — import from apArUtils |
-| `src/components/accounting/QuickEntryDialog.tsx` | **Edit** — export matchAutoCategory |
-| `src/components/accounting/__tests__/quickEntryAutoCategory.test.ts` | **Create** — tests |
-| `src/components/accounting/__tests__/useJournalGeneration.test.ts` | **Create** — tests |
+| `src/components/accounting/ApArDocumentList.tsx` | Add exchange rate query, per-currency aging, currency filter, DOP-equivalent totals |
 

@@ -70,7 +70,7 @@ const getInitialFormState = () => ({
   comments: '',
   exchange_rate: '',
   cost_center: 'general' as 'general' | 'agricultural' | 'industrial',
-  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment',
+  transaction_direction: 'purchase' as 'purchase' | 'sale' | 'payment' | 'investment',
   itbis_override_reason: '',
   destination_acct_code: '',
   dgii_tipo_ingreso: '',

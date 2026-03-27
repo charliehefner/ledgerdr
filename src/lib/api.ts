@@ -44,7 +44,7 @@ export interface Transaction {
   void_reason?: string;
   voided_at?: string;
   attachment_url?: string;
-  transaction_direction?: 'purchase' | 'sale' | 'payment';
+  transaction_direction?: 'purchase' | 'sale' | 'payment' | 'investment';
   destination_acct_code?: string;
   dgii_tipo_ingreso?: string;
   dgii_tipo_bienes_servicios?: string;

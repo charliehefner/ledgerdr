@@ -1,56 +1,61 @@
 
 
-## Problem
+# Automated Tests Plan
 
-Transaction 416 (AS Electricidad, credit, due 2026-04-27) correctly triggered the AP/AR auto-creation logic, but the insert **silently failed**. The reason: `balance_remaining` is a database-generated column (`total_amount - amount_paid`), and the code on line 388 tries to explicitly set it in the insert payload. Postgres rejects writes to generated columns, and the error is swallowed by the `catch` block.
+The testing infrastructure (vitest, jsdom, setup file) is already in place. We will add unit tests for the key logic areas that have caused recent bugs.
 
-## Fix
+## What We Will Test
 
-**File: `src/components/transactions/TransactionForm.tsx`** (lines 377-393)
+### 1. AP/AR Account Assignment Logic (new file)
+**`src/components/transactions/__tests__/apArAccountLogic.test.ts`**
 
-1. **Remove `balance_remaining`** from the insert payload — the database computes it automatically.
+Extract the AP/AR account code selection logic into a pure testable function, then test:
+- Credit purchase → returns `2101`
+- Sale with due date → returns `1210`
+- Advance (1690 account) → returns `1690`
+- Default due date calculation: credit with no due_date → +30 days
+- `shouldCreateApAr` conditions: returns true for credit/due_date, false for transfers/payments
 
-2. **Surface the error to the user** — change the `catch` block to show a toast instead of silently logging.
+### 2. QuickEntry Auto-Categorization (new file)
+**`src/components/accounting/__tests__/quickEntryAutoCategory.test.ts`**
 
-```typescript
-// Before (line 388):
-balance_remaining: totalAmount,  // ← REMOVE this line
+The `matchAutoCategory` function is already pure but not exported. Export it and test:
+- "COMISIÓN bancaria" → `6520`
+- "IMPUESTO LEY 123" → `6530`
+- "ITBIS retenido" → `1650`
+- "INTERÉS mensual" → `6510`
+- Unmatched description → `null`
+- Null description → `null`
 
-// After: just omit balance_remaining entirely
-await supabase.from('ap_ar_documents').insert({
-  direction,
-  document_type: isAdvance ? 'advance' : 'invoice',
-  contact_name: form.name || form.description,
-  contact_rnc: form.rnc || null,
-  document_number: result.legacy_id?.toString() || null,
-  document_date: formatDateLocal(form.transaction_date!),
-  due_date: isAdvance ? null : (dueDate || null),
-  currency: form.currency,
-  total_amount: totalAmount,
-  amount_paid: 0,
-  status: 'open',
-  linked_transaction_ids: [result.id],
-  notes: form.description,
-  account_id: defaultAcct?.id || null,
-} as any);
-```
+### 3. Journal Generation Hook (new file)
+**`src/components/accounting/__tests__/useJournalGeneration.test.ts`**
 
-Also update the catch block (line 395-397) to warn the user:
-```typescript
-} catch (apArErr) {
-  console.error('Auto AP/AR creation error:', apArErr);
-  toast.error('Error creando documento CxP/CxC automático');
-}
-```
+Mock Supabase and test:
+- `countUnlinked` calls the correct RPC
+- `generate` handles success with created count
+- `generate` handles skipped entries with toast warning
+- `generate` handles errors gracefully
 
-## Existing Transaction 416
+## Implementation Details
 
-After the code fix, transaction 416's AP/AR document still needs to be created. Options:
-- Manually insert it via a one-time migration
-- Or simply edit and re-save transaction 416 from the Edit dialog (which should also be checked for the same `balance_remaining` bug)
+### Extracting testable logic
+The AP/AR logic in `TransactionForm.tsx` is embedded in a 400-line submit handler. We will:
+1. Extract `getApArAccountCode(isAdvance, direction)` and `shouldCreateApAr(form, isTransfer)` into `src/components/transactions/apArUtils.ts`
+2. Export `matchAutoCategory` from `QuickEntryDialog.tsx`
+3. Update the original files to import from the new utility
 
-## Impact
-- Fixes silent AP/AR creation failures for all future credit/due-date transactions
-- No database changes needed
-- One line removal + one toast addition
+### Mocking strategy
+- Supabase calls: mock with `vi.mock('@/integrations/supabase/client')`
+- React Query: mock `useQueryClient`
+- Toast: mock `@/hooks/use-toast`
+
+### Files changed/created
+| File | Action |
+|------|--------|
+| `src/components/transactions/apArUtils.ts` | **Create** — extracted pure functions |
+| `src/components/transactions/__tests__/apArUtils.test.ts` | **Create** — tests |
+| `src/components/transactions/TransactionForm.tsx` | **Edit** — import from apArUtils |
+| `src/components/accounting/QuickEntryDialog.tsx` | **Edit** — export matchAutoCategory |
+| `src/components/accounting/__tests__/quickEntryAutoCategory.test.ts` | **Create** — tests |
+| `src/components/accounting/__tests__/useJournalGeneration.test.ts` | **Create** — tests |
 

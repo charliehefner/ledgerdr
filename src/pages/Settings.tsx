@@ -137,6 +137,12 @@ export default function Settings() {
               </TabsTrigger>
             )}
             {canModifySettings && (
+              <TabsTrigger value="transportation">
+                <Truck className="h-4 w-4 mr-2" />
+                Transporte
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
               <TabsTrigger value="chart-of-accounts">
                 <BookOpen className="h-4 w-4 mr-2" />
                 {t("accounting.chartOfAccounts")}
@@ -325,6 +331,14 @@ export default function Settings() {
             <TabsContent value="operators" className="mt-6">
               <div className="max-w-3xl">
                 <TractorOperatorsManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="transportation" className="mt-6">
+              <div className="max-w-4xl">
+                <TransportationManager />
               </div>
             </TabsContent>
           )}

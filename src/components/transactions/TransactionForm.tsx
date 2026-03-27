@@ -363,15 +363,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           }
           try {
             // Look up default GL account
-            const acctPrefix = isAdvance ? '1690' : (direction === 'receivable' ? '12' : '24');
+            const acctCode = isAdvance ? '1690' : (direction === 'receivable' ? '1210' : '2101');
             const { data: defaultAcct } = await supabase
               .from('chart_of_accounts')
               .select('id')
-              .like('account_code', `${acctPrefix}%`)
+              .eq('account_code', acctCode)
               .eq('allow_posting', true)
               .is('deleted_at', null)
-              .order('account_code')
-              .limit(1)
               .maybeSingle();
 
             await supabase.from('ap_ar_documents').insert({

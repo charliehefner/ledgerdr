@@ -295,16 +295,14 @@ export function EditTransactionDialog({
 
           if (!existingDoc) {
             const direction = effectiveDirection === 'sale' ? 'receivable' : 'payable';
-            const acctPrefix = direction === 'receivable' ? '12' : '21';
+            const acctCode = direction === 'receivable' ? '1210' : '2101';
 
             const { data: defaultAcct } = await supabase
               .from('chart_of_accounts')
               .select('id')
               .is('deleted_at', null)
               .eq('allow_posting', true)
-              .like('account_code', `${acctPrefix}%`)
-              .order('account_code')
-              .limit(1)
+              .eq('account_code', acctCode)
               .maybeSingle();
 
             const txAmount = updates.amount !== undefined ? updates.amount : parseFloat(formData.amount);

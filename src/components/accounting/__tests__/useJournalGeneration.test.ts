@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useJournalGeneration } from "../useJournalGeneration";
 
 // Mock supabase
 const mockRpc = vi.fn();
@@ -18,12 +17,14 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
-// Mock toast
-const mockToast = vi.fn();
+// Mock toast - use vi.hoisted to avoid hoisting issues
+const mockToast = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/use-toast", () => ({
   toast: mockToast,
   useToast: () => ({ toast: mockToast }),
 }));
+
+import { useJournalGeneration } from "../useJournalGeneration";
 
 beforeEach(() => {
   vi.clearAllMocks();

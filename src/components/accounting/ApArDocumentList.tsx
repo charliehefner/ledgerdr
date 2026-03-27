@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -51,7 +51,22 @@ const STATUS_COLORS: Record<string, string> = {
   void: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
+const CURRENCY_BADGE_COLORS: Record<string, string> = {
+  DOP: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  USD: "bg-blue-100 text-blue-800 border-blue-200",
+  EUR: "bg-purple-100 text-purple-800 border-purple-200",
+};
+
 type DocTypeFilter = "all" | "invoices" | "advances";
+type CurrencyFilter = "all" | "DOP" | "USD" | "EUR";
+
+interface AgingBuckets {
+  current: number;
+  d30: number;
+  d60: number;
+  d90: number;
+  d90plus: number;
+}
 
 interface Props {
   direction: "receivable" | "payable";
@@ -68,6 +83,7 @@ export function ApArDocumentList({ direction }: Props) {
   const [allocAmount, setAllocAmount] = useState("");
   const [selectedAdvanceId, setSelectedAdvanceId] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocTypeFilter>("all");
+  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",
@@ -124,12 +140,38 @@ export function ApArDocumentList({ direction }: Props) {
     },
   });
 
-  // Filter documents by type
+  // Fetch latest exchange rates for DOP conversion
+  const { data: exchangeRates } = useQuery({
+    queryKey: ["exchange-rates-latest"],
+    queryFn: async () => {
+      const rates: Record<string, number> = { DOP: 1 };
+      for (const pair of ["USD_DOP", "EUR_DOP"]) {
+        const { data } = await supabase
+          .from("exchange_rates")
+          .select("sell_rate")
+          .eq("currency_pair", pair)
+          .order("rate_date", { ascending: false })
+          .limit(1);
+        if (data && data.length > 0) {
+          const currency = pair.split("_")[0];
+          rates[currency] = data[0].sell_rate;
+        }
+      }
+      return rates;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const rates = exchangeRates || { DOP: 1, USD: 1, EUR: 1 };
+
+  // Filter documents by type and currency
   const filteredDocuments = useMemo(() => {
-    if (typeFilter === "all") return documents;
-    if (typeFilter === "advances") return documents.filter(d => d.document_type === "advance");
-    return documents.filter(d => d.document_type !== "advance");
-  }, [documents, typeFilter]);
+    let docs = documents;
+    if (typeFilter === "advances") docs = docs.filter(d => d.document_type === "advance");
+    else if (typeFilter === "invoices") docs = docs.filter(d => d.document_type !== "advance");
+    if (currencyFilter !== "all") docs = docs.filter(d => d.currency === currencyFilter);
+    return docs;
+  }, [documents, typeFilter, currencyFilter]);
 
   // Get available advances for the allocation dialog
   const availableAdvances = useMemo(() => {
@@ -143,11 +185,22 @@ export function ApArDocumentList({ direction }: Props) {
     );
   }, [documents, allocDoc]);
 
-  // Aging summary
-  const aging = useMemo(() => {
+  // Currencies present in the data
+  const activeCurrencies = useMemo(() => {
+    const set = new Set(documents.map(d => d.currency));
+    return ["DOP", "USD", "EUR"].filter(c => set.has(c));
+  }, [documents]);
+
+  // Aging summary per currency
+  const agingByCurrency = useMemo(() => {
     const now = new Date();
-    const buckets = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    const result: Record<string, AgingBuckets> = {};
+    for (const cur of activeCurrencies) {
+      result[cur] = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    }
     documents.filter(d => d.status !== "paid" && d.status !== "void" && d.document_type !== "advance").forEach(d => {
+      const buckets = result[d.currency];
+      if (!buckets) return;
       const due = d.due_date ? new Date(d.due_date) : new Date(d.document_date);
       const days = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
       const bal = d.balance_remaining;
@@ -157,17 +210,48 @@ export function ApArDocumentList({ direction }: Props) {
       else if (days <= 90) buckets.d90 += bal;
       else buckets.d90plus += bal;
     });
-    return buckets;
-  }, [documents]);
+    return result;
+  }, [documents, activeCurrencies]);
 
-  const totalOutstanding = aging.current + aging.d30 + aging.d60 + aging.d90 + aging.d90plus;
+  // DOP equivalent aging
+  const agingDopEquivalent = useMemo(() => {
+    const totals: AgingBuckets = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    for (const cur of activeCurrencies) {
+      const b = agingByCurrency[cur];
+      const rate = rates[cur] || 1;
+      totals.current += b.current * rate;
+      totals.d30 += b.d30 * rate;
+      totals.d60 += b.d60 * rate;
+      totals.d90 += b.d90 * rate;
+      totals.d90plus += b.d90plus * rate;
+    }
+    return totals;
+  }, [agingByCurrency, activeCurrencies, rates]);
 
-  // Total advances outstanding
-  const totalAdvances = useMemo(() => {
-    return documents
+  const bucketTotal = (b: AgingBuckets) => b.current + b.d30 + b.d60 + b.d90 + b.d90plus;
+
+  // Total advances outstanding per currency
+  const totalAdvancesByCurrency = useMemo(() => {
+    const result: Record<string, number> = {};
+    documents
       .filter(d => d.document_type === "advance" && d.status !== "paid" && d.status !== "void")
-      .reduce((sum, d) => sum + d.balance_remaining, 0);
+      .forEach(d => {
+        result[d.currency] = (result[d.currency] || 0) + d.balance_remaining;
+      });
+    return result;
   }, [documents]);
+
+  // Table footer totals per currency for visible docs
+  const footerTotals = useMemo(() => {
+    const result: Record<string, { total: number; paid: number; balance: number }> = {};
+    filteredDocuments.forEach(d => {
+      if (!result[d.currency]) result[d.currency] = { total: 0, paid: 0, balance: 0 };
+      result[d.currency].total += d.total_amount;
+      result[d.currency].paid += d.amount_paid;
+      result[d.currency].balance += d.balance_remaining;
+    });
+    return result;
+  }, [filteredDocuments]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -251,25 +335,67 @@ export function ApArDocumentList({ direction }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Aging Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
-        {[
-          { label: t("apar.agingCurrent"), value: aging.current },
-          { label: t("apar.aging30"), value: aging.d30 },
-          { label: t("apar.aging60"), value: aging.d60 },
-          { label: t("apar.aging90"), value: aging.d90 },
-          { label: t("apar.aging90plus"), value: aging.d90plus },
-          { label: t("common.total"), value: totalOutstanding },
-          ...(direction === "payable" ? [{ label: t("apar.advances"), value: totalAdvances }] : []),
-        ].map((bucket, i) => (
-          <div key={i} className={`rounded-lg border p-3 ${i === 5 ? "bg-primary/5 border-primary/20" : ""} ${i === 6 ? "bg-accent/50 border-accent" : ""}`}>
-            <div className="text-xs text-muted-foreground">{bucket.label}</div>
-            <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
-              {formatCurrency(bucket.value, "DOP")}
+      {/* Aging Summary — per currency */}
+      {activeCurrencies.map(cur => {
+        const b = agingByCurrency[cur];
+        if (!b) return null;
+        const total = bucketTotal(b);
+        const advTotal = totalAdvancesByCurrency[cur] || 0;
+        return (
+          <div key={cur}>
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className={`text-xs ${CURRENCY_BADGE_COLORS[cur] || ""}`}>{cur}</Badge>
+              {cur !== "DOP" && rates[cur] && (
+                <span className="text-xs text-muted-foreground">Tasa: {rates[cur].toFixed(2)}</span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+              {[
+                { label: t("apar.agingCurrent"), value: b.current },
+                { label: t("apar.aging30"), value: b.d30 },
+                { label: t("apar.aging60"), value: b.d60 },
+                { label: t("apar.aging90"), value: b.d90 },
+                { label: t("apar.aging90plus"), value: b.d90plus },
+                { label: t("common.total"), value: total },
+                ...(direction === "payable" ? [{ label: t("apar.advances"), value: advTotal }] : []),
+              ].map((bucket, i) => (
+                <div key={i} className={`rounded-lg border p-2 ${i === 5 ? "bg-primary/5 border-primary/20" : ""} ${i === 6 ? "bg-accent/50 border-accent" : ""}`}>
+                  <div className="text-xs text-muted-foreground">{bucket.label}</div>
+                  <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
+                    {formatCurrency(bucket.value, cur)}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
+
+      {/* DOP Equivalent totals (only if multiple currencies) */}
+      {activeCurrencies.length > 1 && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="outline" className="text-xs bg-muted border-muted-foreground/20">RD$ Equivalente</Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+            {[
+              { label: t("apar.agingCurrent"), value: agingDopEquivalent.current },
+              { label: t("apar.aging30"), value: agingDopEquivalent.d30 },
+              { label: t("apar.aging60"), value: agingDopEquivalent.d60 },
+              { label: t("apar.aging90"), value: agingDopEquivalent.d90 },
+              { label: t("apar.aging90plus"), value: agingDopEquivalent.d90plus },
+              { label: t("common.total"), value: bucketTotal(agingDopEquivalent) },
+            ].map((bucket, i) => (
+              <div key={i} className={`rounded-lg border p-2 border-dashed ${i === 5 ? "bg-primary/5 border-primary/30" : "border-muted-foreground/20"}`}>
+                <div className="text-xs text-muted-foreground">{bucket.label}</div>
+                <div className={`text-sm font-semibold ${bucket.value > 0 && i > 0 && i < 5 ? "text-destructive" : ""}`}>
+                  {formatCurrency(bucket.value, "DOP")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -288,6 +414,21 @@ export function ApArDocumentList({ direction }: Props) {
                   onClick={() => setTypeFilter(filter)}
                 >
                   {t(`apar.filter_${filter}`)}
+                </Button>
+              ))}
+            </div>
+          )}
+          {activeCurrencies.length > 1 && (
+            <div className="flex gap-1 ml-2">
+              {(["all", ...activeCurrencies] as CurrencyFilter[]).map(cur => (
+                <Button
+                  key={cur}
+                  variant={currencyFilter === cur ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setCurrencyFilter(cur)}
+                >
+                  {cur === "all" ? t("apar.filter_all") : cur}
                 </Button>
               ))}
             </div>
@@ -322,6 +463,7 @@ export function ApArDocumentList({ direction }: Props) {
                 <TableHead className="text-right">{t("apar.totalAmount")}</TableHead>
                 <TableHead className="text-right">{t("apar.amountPaid")}</TableHead>
                 <TableHead className="text-right">{t("apar.balance")}</TableHead>
+                <TableHead>{t("common.currency")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
@@ -345,6 +487,11 @@ export function ApArDocumentList({ direction }: Props) {
                   <TableCell className="text-right">{formatCurrency(doc.amount_paid, doc.currency)}</TableCell>
                   <TableCell className={`text-right font-medium ${doc.balance_remaining > 0 ? "text-destructive" : ""}`}>
                     {formatCurrency(doc.balance_remaining, doc.currency)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-xs ${CURRENCY_BADGE_COLORS[doc.currency] || ""}`}>
+                      {doc.currency}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={STATUS_COLORS[doc.status] || ""}>
@@ -380,6 +527,46 @@ export function ApArDocumentList({ direction }: Props) {
                 </TableRow>
               ))}
             </TableBody>
+            {/* Footer totals per currency */}
+            <TableFooter>
+              {Object.entries(footerTotals).map(([cur, t_]) => (
+                <TableRow key={cur}>
+                  <TableCell colSpan={6} className="text-right font-medium">
+                    Subtotal {cur}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(t_.total, cur)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(t_.paid, cur)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(t_.balance, cur)}</TableCell>
+                  <TableCell colSpan={3} />
+                </TableRow>
+              ))}
+              {Object.keys(footerTotals).length > 1 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-right font-medium">
+                    Total RD$ Equivalente
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(
+                      Object.entries(footerTotals).reduce((s, [c, v]) => s + v.total * (rates[c] || 1), 0),
+                      "DOP"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(
+                      Object.entries(footerTotals).reduce((s, [c, v]) => s + v.paid * (rates[c] || 1), 0),
+                      "DOP"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(
+                      Object.entries(footerTotals).reduce((s, [c, v]) => s + v.balance * (rates[c] || 1), 0),
+                      "DOP"
+                    )}
+                  </TableCell>
+                  <TableCell colSpan={3} />
+                </TableRow>
+              )}
+            </TableFooter>
           </Table>
         </div>
       )}

@@ -328,8 +328,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
 
         // Auto-create AP/AR document when due_date is present OR pay_method is credit
-        const shouldCreateApAr = !isTransfer && formData.transaction_direction !== 'payment' && formData.transaction_direction !== 'investment'
-          && (formData.due_date || formData.pay_method === 'credit');
+        const shouldCreateApAr = !isTransfer && form.transaction_direction !== 'payment' && form.transaction_direction !== 'investment'
+          && (form.due_date || form.pay_method === 'credit');
         
         // Auto-create advance AP/AR document when account starts with 1690
         const isAdvance = form.master_acct_code.startsWith('1690');

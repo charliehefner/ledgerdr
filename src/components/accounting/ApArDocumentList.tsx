@@ -140,12 +140,38 @@ export function ApArDocumentList({ direction }: Props) {
     },
   });
 
-  // Filter documents by type
+  // Fetch latest exchange rates for DOP conversion
+  const { data: exchangeRates } = useQuery({
+    queryKey: ["exchange-rates-latest"],
+    queryFn: async () => {
+      const rates: Record<string, number> = { DOP: 1 };
+      for (const pair of ["USD_DOP", "EUR_DOP"]) {
+        const { data } = await supabase
+          .from("exchange_rates")
+          .select("sell_rate")
+          .eq("currency_pair", pair)
+          .order("rate_date", { ascending: false })
+          .limit(1);
+        if (data && data.length > 0) {
+          const currency = pair.split("_")[0];
+          rates[currency] = data[0].sell_rate;
+        }
+      }
+      return rates;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const rates = exchangeRates || { DOP: 1, USD: 1, EUR: 1 };
+
+  // Filter documents by type and currency
   const filteredDocuments = useMemo(() => {
-    if (typeFilter === "all") return documents;
-    if (typeFilter === "advances") return documents.filter(d => d.document_type === "advance");
-    return documents.filter(d => d.document_type !== "advance");
-  }, [documents, typeFilter]);
+    let docs = documents;
+    if (typeFilter === "advances") docs = docs.filter(d => d.document_type === "advance");
+    else if (typeFilter === "invoices") docs = docs.filter(d => d.document_type !== "advance");
+    if (currencyFilter !== "all") docs = docs.filter(d => d.currency === currencyFilter);
+    return docs;
+  }, [documents, typeFilter, currencyFilter]);
 
   // Get available advances for the allocation dialog
   const availableAdvances = useMemo(() => {
@@ -159,11 +185,22 @@ export function ApArDocumentList({ direction }: Props) {
     );
   }, [documents, allocDoc]);
 
-  // Aging summary
-  const aging = useMemo(() => {
+  // Currencies present in the data
+  const activeCurrencies = useMemo(() => {
+    const set = new Set(documents.map(d => d.currency));
+    return ["DOP", "USD", "EUR"].filter(c => set.has(c));
+  }, [documents]);
+
+  // Aging summary per currency
+  const agingByCurrency = useMemo(() => {
     const now = new Date();
-    const buckets = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    const result: Record<string, AgingBuckets> = {};
+    for (const cur of activeCurrencies) {
+      result[cur] = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    }
     documents.filter(d => d.status !== "paid" && d.status !== "void" && d.document_type !== "advance").forEach(d => {
+      const buckets = result[d.currency];
+      if (!buckets) return;
       const due = d.due_date ? new Date(d.due_date) : new Date(d.document_date);
       const days = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
       const bal = d.balance_remaining;
@@ -173,17 +210,48 @@ export function ApArDocumentList({ direction }: Props) {
       else if (days <= 90) buckets.d90 += bal;
       else buckets.d90plus += bal;
     });
-    return buckets;
-  }, [documents]);
+    return result;
+  }, [documents, activeCurrencies]);
 
-  const totalOutstanding = aging.current + aging.d30 + aging.d60 + aging.d90 + aging.d90plus;
+  // DOP equivalent aging
+  const agingDopEquivalent = useMemo(() => {
+    const totals: AgingBuckets = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    for (const cur of activeCurrencies) {
+      const b = agingByCurrency[cur];
+      const rate = rates[cur] || 1;
+      totals.current += b.current * rate;
+      totals.d30 += b.d30 * rate;
+      totals.d60 += b.d60 * rate;
+      totals.d90 += b.d90 * rate;
+      totals.d90plus += b.d90plus * rate;
+    }
+    return totals;
+  }, [agingByCurrency, activeCurrencies, rates]);
 
-  // Total advances outstanding
-  const totalAdvances = useMemo(() => {
-    return documents
+  const bucketTotal = (b: AgingBuckets) => b.current + b.d30 + b.d60 + b.d90 + b.d90plus;
+
+  // Total advances outstanding per currency
+  const totalAdvancesByCurrency = useMemo(() => {
+    const result: Record<string, number> = {};
+    documents
       .filter(d => d.document_type === "advance" && d.status !== "paid" && d.status !== "void")
-      .reduce((sum, d) => sum + d.balance_remaining, 0);
+      .forEach(d => {
+        result[d.currency] = (result[d.currency] || 0) + d.balance_remaining;
+      });
+    return result;
   }, [documents]);
+
+  // Table footer totals per currency for visible docs
+  const footerTotals = useMemo(() => {
+    const result: Record<string, { total: number; paid: number; balance: number }> = {};
+    filteredDocuments.forEach(d => {
+      if (!result[d.currency]) result[d.currency] = { total: 0, paid: 0, balance: 0 };
+      result[d.currency].total += d.total_amount;
+      result[d.currency].paid += d.amount_paid;
+      result[d.currency].balance += d.balance_remaining;
+    });
+    return result;
+  }, [filteredDocuments]);
 
   const createMutation = useMutation({
     mutationFn: async () => {

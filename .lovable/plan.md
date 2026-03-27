@@ -1,27 +1,42 @@
 
 
-## Record Petty Cash Reset Transfer
+## Add "Investment" Transaction Type + JORD AB as Source/Destination
 
-### What we'll do
-Insert a **transfer transaction** of **DOP 5,378.93** from **BHD DOP 36900090011** to **Caja Chica Finca**, dated today. This resets the petty cash starting balance going forward.
+### Summary
+Add a 4th transaction direction called **Investment** and add **JORD AB** as both a source and destination option in the transfer account dropdowns.
 
-### Steps
+### Changes
 
-1. **Insert a transfer transaction** into the `transactions` table:
-   - `transaction_date`: today (2026-03-26)
-   - `amount`: 5378.93
-   - `currency`: DOP
-   - `transaction_direction`: payment (transfer)
-   - `pay_method`: `84653770-3920-484a-8aa5-3dc8b71a0603` (BHD DOP)
-   - `destination_acct_code`: `31227d8e-93c7-4ce7-99fc-99a91255ef5d` (Caja Chica Finca)
-   - `description`: "Transferencia a Caja Chica Finca — reinicio de fondo"
-   - `is_internal`: true
-   - `master_acct_code`: "0000" (internal transfer)
+#### 1. Add `investment` transaction direction
 
-2. **No code changes needed** — this is a data operation only. The transaction will appear in the Petty Cash view as a recharge and will set the running balance baseline.
+**`src/components/transactions/TransactionForm.tsx`**
+- Update the type union to include `'investment'` alongside `purchase | sale | payment`
+- Add `<SelectItem value="investment">` to the direction dropdown
+- Investment behaves like a **transfer** (from/to accounts, internal, account code `0000`), so reuse the same transfer UI logic:
+  - When `investment` is selected, set `master_acct_code` to `0000` and show the From/To account selectors
+  - Update all `=== 'payment'` checks to also match `'investment'` (validation, form clearing, submission mapping)
 
-3. **Fixed amount stays at 5,000** as requested — no schema or config changes.
+**`src/lib/api.ts`**
+- Update the `transaction_direction` type to include `'investment'`
 
-### Result
-After this transfer, the Petty Cash Finca running balance will start from 5,378.93 and all future expenses/replenishments will track from there.
+**`src/i18n/en.ts`** and **`src/i18n/es.ts`**
+- Add `"txForm.investment": "Investment"` (en) / `"txForm.investment": "Inversión"` (es)
+
+#### 2. Add JORD AB to both Source and Destination dropdowns
+
+Currently, the "Casa Matriz" (JORD AB, account `2160`) only appears in the **To** dropdown. Changes:
+
+**`src/components/transactions/TransactionForm.tsx`**
+- Add the `headOfficeAccounts` group to the **From** (source) dropdown as well, with a "Casa Matriz" section — same pattern as the To dropdown
+- This allows JORD AB as both source and destination for transfers and investments
+
+#### 3. No database changes needed
+- The `transaction_direction` column is `text`, not an enum — it already accepts any string value
+- Account `2160` already exists in `chart_of_accounts`
+- Correct account linkage will be configured later per user request
+
+### Technical notes
+- The `isTransfer` logic (line ~268) will become `const isTransfer = form.transaction_direction === 'payment' || form.transaction_direction === 'investment'`
+- Investment transactions will be marked `is_internal: true` like transfers
+- The `EditTransactionDialog` may also need the investment option added if it has a direction selector
 

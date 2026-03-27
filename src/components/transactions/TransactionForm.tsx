@@ -239,7 +239,24 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     e.preventDefault();
 
     if (!isValid()) {
-      if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
+      const isTransfer = form.transaction_direction === 'payment' || form.transaction_direction === 'investment';
+      if (isTransfer && !form.transfer_from_account) {
+        toast.error("Seleccione cuenta origen");
+      } else if (isTransfer && !form.transfer_to_account) {
+        toast.error("Seleccione cuenta destino");
+      } else if (isTransfer && form.transfer_from_account === form.transfer_to_account) {
+        toast.error("Origen y destino no pueden ser iguales");
+      } else if (isTransfer && !form.transfer_dest_amount) {
+        const fromAcct = bankAccounts.find(a => a.id === form.transfer_from_account);
+        const toAcct = bankAccounts.find(a => a.id === form.transfer_to_account);
+        const fromCur = fromAcct?.currency || 'DOP';
+        const toCur = toAcct?.currency || 'DOP';
+        if (fromCur !== toCur) {
+          toast.error("Ingrese monto destino para transferencia multi-moneda");
+        } else {
+          toast.error(t('txForm.requiredFields'));
+        }
+      } else if (requires1180Fields && (!form.project_code || !form.cbs_code)) {
         toast.error(t('txForm.projectCbsRequired'));
       } else if (form.itbis && form.amount && !form.itbis_override_reason && parseFloat(form.itbis) > parseFloat(form.amount) * 0.18) {
         toast.error(t('txForm.itbisExceeds'));
@@ -701,9 +718,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           {(form.transaction_direction === 'payment' || form.transaction_direction === 'investment') && (() => {
             const fromAccount = bankAccounts.find(a => a.id === form.transfer_from_account);
             const toAccount = bankAccounts.find(a => a.id === form.transfer_to_account);
-            const fromCurrency = fromAccount?.currency || '';
-            const toCurrency = toAccount?.currency || '';
-            const isCrossCurrency = fromCurrency && toCurrency && fromCurrency !== toCurrency;
+            const fromCurrency = fromAccount?.currency || 'DOP';
+            const toCurrency = toAccount?.currency || 'DOP';
+            const isCrossCurrency = fromCurrency !== toCurrency;
 
             return (
               <div className="space-y-4">

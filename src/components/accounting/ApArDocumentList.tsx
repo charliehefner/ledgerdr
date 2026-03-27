@@ -145,7 +145,7 @@ export function ApArDocumentList({ direction }: Props) {
     queryKey: ["exchange-rates-latest"],
     queryFn: async () => {
       const rates: Record<string, number> = { DOP: 1 };
-      for (const pair of ["USD_DOP", "EUR_DOP"]) {
+      for (const pair of ["USD/DOP", "EUR/DOP"]) {
         const { data } = await supabase
           .from("exchange_rates")
           .select("sell_rate")
@@ -153,7 +153,7 @@ export function ApArDocumentList({ direction }: Props) {
           .order("rate_date", { ascending: false })
           .limit(1);
         if (data && data.length > 0) {
-          const currency = pair.split("_")[0];
+          const currency = pair.split("/")[0];
           rates[currency] = data[0].sell_rate;
         }
       }

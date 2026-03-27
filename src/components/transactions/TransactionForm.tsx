@@ -385,7 +385,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               currency: form.currency,
               total_amount: totalAmount,
               amount_paid: 0,
-              balance_remaining: totalAmount,
+              
               status: 'open',
               linked_transaction_ids: [result.id],
               notes: form.description,
@@ -394,6 +394,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
           } catch (apArErr) {
             console.error('Auto AP/AR creation error:', apArErr);
+            toast({ title: "Aviso", description: "Error creando documento CxP/CxC automático", variant: "destructive" });
           }
         }
       }

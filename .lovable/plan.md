@@ -1,44 +1,21 @@
 
 
-# Multi-Currency Separation in AP/AR (Payables & Receivables)
+# Fix: Exchange Rate Query Uses Wrong Currency Pair Format
 
-## Problem
-The aging summary and totals in the AP/AR view sum all document balances regardless of currency. A USD $1,000 payable and a DOP $1,000 payable are added together as $2,000, which is meaningless.
+## Root Cause
+The `exchange_rates` table stores currency pairs as `USD/DOP` (with a slash), but the code in `ApArDocumentList.tsx` queries for `USD_DOP` (with an underscore). The query returns no results, so the fallback rate of `1` is used — making USD amounts appear equal to DOP.
 
-## Solution
-Split the aging summary and table by currency, and add a consolidated DOP-equivalent total using the latest exchange rate.
+The same bug exists in `AgingReportView.tsx`.
 
-## Changes
+## Fix
 
-### 1. `src/components/accounting/ApArDocumentList.tsx`
+### `src/components/accounting/ApArDocumentList.tsx` (line 148)
+Change the query pairs from `["USD_DOP", "EUR_DOP"]` to `["USD/DOP", "EUR/DOP"]`, and update the currency key extraction to split on `"/"` instead of `"_"`.
 
-**Aging summary — currency-aware buckets:**
-- Compute aging buckets per currency (DOP, USD, EUR separately)
-- Show a row of aging cards per currency
-- Add a "Total RD$ Equivalente" row that converts foreign currencies using the latest exchange rate
+### `src/components/accounting/AgingReportView.tsx`
+This file has no exchange rate query currently — it groups by currency in its totals row but doesn't convert. Add a DOP-equivalent grand total row using the same exchange rate query pattern (with the correct `USD/DOP` format).
 
-**Fetch exchange rate:**
-- Add a query to fetch the latest USD_DOP and EUR_DOP sell rates from `exchange_rates` table (already used elsewhere in the system)
-
-**Table grouping:**
-- Add a currency filter (All / DOP / USD / EUR) to the toolbar so users can focus on one currency
-- Show a currency badge on each row for clarity
-
-**Totals row:**
-- Add a table footer showing subtotals per visible currency and a DOP-equivalent grand total
-
-### 2. No database changes needed
-All data (currency field, exchange rates) already exists.
-
-## Technical Details
-
-- Reuse the existing `exchange_rates` table query pattern (seen in `PaymentDialog.tsx` and elsewhere)
-- The aging `useMemo` will return `Record<string, AgingBuckets>` keyed by currency
-- DOP equivalent calculation: `amount * sell_rate` for USD/EUR, `amount * 1` for DOP
-- `formatCurrency` already handles currency symbols correctly
-
-## Files Modified
-| File | Change |
-|------|--------|
-| `src/components/accounting/ApArDocumentList.tsx` | Add exchange rate query, per-currency aging, currency filter, DOP-equivalent totals |
+## Scope
+- 2 files changed
+- No database changes
 

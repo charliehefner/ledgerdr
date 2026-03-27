@@ -344,26 +344,26 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
 
-        // Auto-create AP/AR document when due_date is present OR pay_method is credit
-        const shouldCreateApAr = !isTransfer && form.transaction_direction !== 'payment' && form.transaction_direction !== 'investment'
-          && (form.due_date || form.pay_method === 'credit');
-        
-        // Auto-create advance AP/AR document when account starts with 1690
+        // Auto-create AP/AR document
+        const apArForm = {
+          transaction_direction: form.transaction_direction,
+          pay_method: form.pay_method,
+          due_date: form.due_date,
+          master_acct_code: form.master_acct_code,
+        };
         const isAdvance = form.master_acct_code.startsWith('1690');
         
-        if (shouldCreateApAr || isAdvance) {
-          const direction = isAdvance ? 'payable' : (form.transaction_direction === 'sale' ? 'receivable' : 'payable');
+        if (shouldCreateApArUtil(apArForm, isTransfer) || isAdvance) {
+          const direction = getApArDirection(apArForm);
           const totalAmount = parseFloat(form.amount);
           // Default due_date to +30 days if credit but no explicit due_date
           let dueDate = form.due_date;
           if (!dueDate && form.pay_method === 'credit') {
-            const d = new Date(form.transaction_date!);
-            d.setDate(d.getDate() + 30);
-            dueDate = formatDateLocal(d);
+            dueDate = getDefaultDueDate(form.transaction_date!);
           }
           try {
             // Look up default GL account
-            const acctCode = isAdvance ? '1690' : (direction === 'receivable' ? '1210' : '2101');
+            const acctCode = getApArAccountCode(isAdvance, direction);
             const { data: defaultAcct } = await supabase
               .from('chart_of_accounts')
               .select('id')

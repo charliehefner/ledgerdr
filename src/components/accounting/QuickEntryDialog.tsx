@@ -20,7 +20,7 @@ const AUTO_RULES: { pattern: RegExp; accountCode: string; label: string }[] = [
   { pattern: /INTER[EÉ]S/i, accountCode: "6510", label: "Gastos por Intereses" },
 ];
 
-function matchAutoCategory(description: string | null): string | null {
+export function matchAutoCategory(description: string | null): string | null {
   if (!description) return null;
   for (const rule of AUTO_RULES) {
     if (rule.pattern.test(description)) return rule.accountCode;

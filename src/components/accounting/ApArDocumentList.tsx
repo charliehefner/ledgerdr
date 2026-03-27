@@ -83,7 +83,7 @@ export function ApArDocumentList({ direction }: Props) {
   const [allocAmount, setAllocAmount] = useState("");
   const [selectedAdvanceId, setSelectedAdvanceId] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocTypeFilter>("all");
-  const [form, setForm] = useState({
+  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
     document_type: "invoice",
     contact_name: "",
     contact_rnc: "",

@@ -91,7 +91,7 @@ export function EditTransactionDialog({
     amount: "",
     name: "",
     comments: "",
-    transaction_direction: "purchase" as "purchase" | "sale" | "payment",
+    transaction_direction: "purchase" as "purchase" | "sale" | "payment" | "investment",
     destination_acct_code: "",
     transfer_from_account: "",
     transfer_to_account: "",

@@ -75,7 +75,7 @@ export function TractorMaintenanceDialog({
         .from("tractor_maintenance")
         .select("*")
         .eq("tractor_id", tractorId)
-        .order("hour_meter_reading", { ascending: false });
+        .order("maintenance_date", { ascending: false });
       if (error) throw error;
       return data as MaintenanceRecord[];
     },

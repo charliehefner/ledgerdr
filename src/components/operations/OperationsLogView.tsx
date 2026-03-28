@@ -186,7 +186,7 @@ export function OperationsLogView() {
       const { data, error } = await supabase
         .from("tractor_maintenance")
         .select("tractor_id, hour_meter_reading")
-        .order("hour_meter_reading", { ascending: false });
+        .order("maintenance_date", { ascending: false });
       if (error) throw error;
       
       const latestByTractor = new Map<string, number>();

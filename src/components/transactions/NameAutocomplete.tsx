@@ -32,11 +32,17 @@ export function NameAutocomplete({ value, onChange, suggestions, onContactSelect
     staleTime: 5 * 60 * 1000,
   });
 
-  // Merge CRM contacts + legacy suggestions, deduplicated
+  // Merge CRM contacts + legacy suggestions, deduplicating case-insensitively
   const allNames = (() => {
     const contactNames = contacts.map(c => c.name);
-    const merged = new Set([...contactNames, ...suggestions]);
-    return Array.from(merged).sort((a, b) => a.localeCompare(b, 'es'));
+    const contactNamesLower = new Set(contactNames.map(n => n.toLowerCase()));
+    // Only keep legacy suggestions not already covered by a CRM contact
+    const uniqueLegacy = suggestions.filter(s => !contactNamesLower.has(s.toLowerCase()));
+    // CRM contacts first (canonical), then remaining legacy names
+    return [
+      ...contactNames.sort((a, b) => a.localeCompare(b, 'es')),
+      ...uniqueLegacy.sort((a, b) => a.localeCompare(b, 'es')),
+    ];
   })();
 
   const filtered = value.trim()

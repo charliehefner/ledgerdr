@@ -1,21 +1,27 @@
 
 
-# Fix: Exchange Rate Query Uses Wrong Currency Pair Format
+# Fix: Smarter Autocomplete Deduplication (Keep Both Sources)
 
-## Root Cause
-The `exchange_rates` table stores currency pairs as `USD/DOP` (with a slash), but the code in `ApArDocumentList.tsx` queries for `USD_DOP` (with an underscore). The query returns no results, so the fallback rate of `1` is used — making USD amounts appear equal to DOP.
+## Problem
+Legacy transaction names still appear alongside cleaned CRM contacts, causing duplicates. But removing legacy names entirely would lose suggestions for vendors not yet in CRM, leading to new inconsistencies.
 
-The same bug exists in `AgingReportView.tsx`.
+## Solution
+Keep both sources, but suppress legacy names that are already represented by a CRM contact.
 
-## Fix
+## Changes — `src/components/transactions/NameAutocomplete.tsx`
 
-### `src/components/accounting/ApArDocumentList.tsx` (line 148)
-Change the query pairs from `["USD_DOP", "EUR_DOP"]` to `["USD/DOP", "EUR/DOP"]`, and update the currency key extraction to split on `"/"` instead of `"_"`.
+1. **Build a case-insensitive Set of CRM contact names** for fast lookup
+2. **Filter legacy `suggestions`**: only include a legacy name if no CRM contact matches it case-insensitively
+3. **CRM contacts appear first** in the merged list (they're canonical), followed by remaining legacy names
+4. This way:
+   - Cleaned CRM contacts always win over old variations
+   - Vendors not yet in CRM still appear as suggestions from transaction history
+   - No data loss, no new duplicate risk
 
-### `src/components/accounting/AgingReportView.tsx`
-This file has no exchange rate query currently — it groups by currency in its totals row but doesn't convert. Add a DOP-equivalent grand total row using the same exchange rate query pattern (with the correct `USD/DOP` format).
+## Files Modified
+| File | Change |
+|------|--------|
+| `src/components/transactions/NameAutocomplete.tsx` | Case-insensitive dedup of legacy suggestions against CRM contacts; CRM contacts sorted first |
 
-## Scope
-- 2 files changed
-- No database changes
+No changes needed in `TransactionForm.tsx` — keep passing `suggestions` as-is.
 

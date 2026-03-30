@@ -1213,7 +1213,7 @@ export function PayrollSummary({
           <TableBody>
             {payrollData.map((p) => (
               <TableRow key={p.employee.id}>
-                <TableCell className="font-medium">{p.employee.name}</TableCell>
+                <TableCell className="font-medium sticky left-0 z-10 bg-background">{p.employee.name}</TableCell>
                 <TableCell className="text-right font-mono">
                   {formatCurrency(p.basePay)}
                 </TableCell>

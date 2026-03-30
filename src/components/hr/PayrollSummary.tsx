@@ -1189,11 +1189,11 @@ export function PayrollSummary({
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded-lg">
+      <div className="overflow-auto border rounded-lg max-h-[70vh]">
         <Table className="table-auto">
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-20 bg-background">
             <TableRow>
-              <TableHead className="whitespace-nowrap">Empleado</TableHead>
+              <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Empleado</TableHead>
               <TableHead className="text-right whitespace-nowrap">Salario Base</TableHead>
               <TableHead className="text-right font-bold whitespace-nowrap">Pago Neto</TableHead>
               <TableHead className="text-right whitespace-nowrap">Beneficios</TableHead>
@@ -1213,7 +1213,7 @@ export function PayrollSummary({
           <TableBody>
             {payrollData.map((p) => (
               <TableRow key={p.employee.id}>
-                <TableCell className="font-medium">{p.employee.name}</TableCell>
+                <TableCell className="font-medium sticky left-0 z-10 bg-background">{p.employee.name}</TableCell>
                 <TableCell className="text-right font-mono">
                   {formatCurrency(p.basePay)}
                 </TableCell>
@@ -1261,7 +1261,7 @@ export function PayrollSummary({
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/50 font-bold">
-              <TableCell>TOTALES</TableCell>
+              <TableCell className="sticky left-0 z-10 bg-muted/50">TOTALES</TableCell>
               <TableCell className="text-right font-mono">
                 {formatCurrency(totals.basePay)}
               </TableCell>

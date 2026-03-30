@@ -1261,7 +1261,7 @@ export function PayrollSummary({
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/50 font-bold">
-              <TableCell>TOTALES</TableCell>
+              <TableCell className="sticky left-0 z-10 bg-muted/50">TOTALES</TableCell>
               <TableCell className="text-right font-mono">
                 {formatCurrency(totals.basePay)}
               </TableCell>

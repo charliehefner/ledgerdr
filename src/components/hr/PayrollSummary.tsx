@@ -1306,7 +1306,7 @@ export function PayrollSummary({
               </TableCell>
             </TableRow>
           </TableFooter>
-        </Table>
+        </table>
       </div>
 
       <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>

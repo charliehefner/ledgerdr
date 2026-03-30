@@ -1189,8 +1189,8 @@ export function PayrollSummary({
         </div>
       </div>
 
-      <div className="overflow-auto border rounded-lg max-h-[70vh]">
-        <Table className="table-auto">
+      <div className="overflow-auto border rounded-lg max-h-[70vh] relative">
+        <table className="w-full caption-bottom text-sm table-auto">
           <TableHeader className="sticky top-0 z-20 bg-background">
             <TableRow>
               <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Empleado</TableHead>
@@ -1306,7 +1306,7 @@ export function PayrollSummary({
               </TableCell>
             </TableRow>
           </TableFooter>
-        </Table>
+        </table>
       </div>
 
       <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>

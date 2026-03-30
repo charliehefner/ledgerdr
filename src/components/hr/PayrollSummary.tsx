@@ -1189,11 +1189,11 @@ export function PayrollSummary({
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded-lg">
+      <div className="overflow-auto border rounded-lg max-h-[70vh]">
         <Table className="table-auto">
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-20 bg-background">
             <TableRow>
-              <TableHead className="whitespace-nowrap">Empleado</TableHead>
+              <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Empleado</TableHead>
               <TableHead className="text-right whitespace-nowrap">Salario Base</TableHead>
               <TableHead className="text-right font-bold whitespace-nowrap">Pago Neto</TableHead>
               <TableHead className="text-right whitespace-nowrap">Beneficios</TableHead>

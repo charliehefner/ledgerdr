@@ -15,6 +15,7 @@ interface UnlinkedTransaction {
   itbis_retenido: number | null;
   isr_retenido: number | null;
   master_acct_code: string | null;
+  account_id: string | null;
   pay_method: string | null;
   cost_center: string | null;
   transaction_direction: string | null;
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
       db.from("bank_accounts").select("id, chart_account_id, currency"),
       db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null).limit(10000),
       db.from("transactions")
-        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate")
+        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true })
         .limit(10000),
@@ -210,12 +211,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Standard purchase/sale
-        const mainAccountId = txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null;
+        // Prefer UUID FK (account_id) over legacy text code lookup
+        const mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
         // Finding 1 fix: resolve pay_method via legacy mapping OR bank_accounts UUID
         const payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
 
-        if (!mainAccountId) { skipped.push(`${label}: cuenta "${txn.master_acct_code}" no encontrada`); continue; }
+        if (!mainAccountId) { skipped.push(`${label}: cuenta "${txn.master_acct_code}" no encontrada (account_id nulo)`); continue; }
         if (!payAccountId) { skipped.push(`${label}: método pago "${txn.pay_method}" sin mapeo`); continue; }
 
         const journalType = isSale ? "SJ" : "PJ";

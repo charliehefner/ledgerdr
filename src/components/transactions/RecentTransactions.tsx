@@ -188,7 +188,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                         <div>
                           <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
                           <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                            {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                            {tx.master_acct_code ? getAccountDescription(tx) : ""}
                           </p>
                         </div>
                       </TableCell>

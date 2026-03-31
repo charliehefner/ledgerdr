@@ -901,7 +901,35 @@ export function OperationsLogView() {
       })) || [];
       updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs, currentInputs: normalizedInputs });
     } else {
+      // Duplicate detection: check existing operations for same field/type/date/inputs
+      const dateStr = formatDateLocal(form.operation_date);
+      const matchingOps = operations?.filter(
+        op => op.field_id === form.field_id
+          && op.operation_type_id === form.operation_type_id
+          && op.operation_date === dateStr
+      ) || [];
+
+      if (matchingOps.length > 0) {
+        const currentInputIds = normalizedInputs.map(i => i.inventory_item_id).sort().join(",");
+        const hasDuplicate = matchingOps.some(op => {
+          const existingIds = (op.operation_inputs || []).map(i => i.inventory_item_id).sort().join(",");
+          return existingIds === currentInputIds;
+        });
+
+        if (hasDuplicate) {
+          setPendingDuplicate({ data: { ...form }, currentInputs: normalizedInputs });
+          return;
+        }
+      }
+
       mutation.mutate({ data: form, currentInputs: normalizedInputs });
+    }
+  };
+
+  const confirmDuplicateSave = () => {
+    if (pendingDuplicate) {
+      mutation.mutate(pendingDuplicate);
+      setPendingDuplicate(null);
     }
   };
 

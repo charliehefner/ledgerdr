@@ -117,10 +117,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "advance_allocations_advance_doc_id_fkey"
+            columns: ["advance_doc_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "advance_allocations_invoice_doc_id_fkey"
             columns: ["invoice_doc_id"]
             isOneToOne: false
             referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advance_allocations_invoice_doc_id_fkey"
+            columns: ["invoice_doc_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
             referencedColumns: ["id"]
           },
         ]
@@ -177,6 +191,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_document_transactions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
             referencedColumns: ["id"]
           },
           {
@@ -322,6 +343,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
             referencedColumns: ["id"]
           },
           {
@@ -1225,6 +1253,13 @@ export type Database = {
             referencedRelation: "payroll_periods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_timesheets_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "v_payroll_summary"
+            referencedColumns: ["period_id"]
+          },
         ]
       }
       employee_vacations: {
@@ -1567,6 +1602,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fixed_assets_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "v_fuel_consumption"
+            referencedColumns: ["equipment_id"]
+          },
+          {
             foreignKeyName: "fixed_assets_implement_id_fkey"
             columns: ["implement_id"]
             isOneToOne: false
@@ -1750,6 +1792,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_transactions_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "v_fuel_consumption"
+            referencedColumns: ["equipment_id"]
           },
           {
             foreignKeyName: "fuel_transactions_tank_id_fkey"
@@ -2042,6 +2091,13 @@ export type Database = {
             referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventory_purchases_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_low_stock"
+            referencedColumns: ["id"]
+          },
         ]
       }
       jornaleros: {
@@ -2331,6 +2387,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "operation_inputs_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_low_stock"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "operation_inputs_operation_id_fkey"
             columns: ["operation_id"]
             isOneToOne: false
@@ -2440,6 +2503,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "v_fuel_consumption"
+            referencedColumns: ["equipment_id"]
           },
         ]
       }
@@ -2582,6 +2652,13 @@ export type Database = {
             referencedRelation: "payroll_periods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payroll_snapshots_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "v_payroll_summary"
+            referencedColumns: ["period_id"]
+          },
         ]
       }
       pending_fuel_submissions: {
@@ -2668,6 +2745,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "payroll_periods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_employee_benefits_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "v_payroll_summary"
+            referencedColumns: ["period_id"]
           },
         ]
       }
@@ -3304,6 +3388,13 @@ export type Database = {
             referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tractor_maintenance_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "v_fuel_consumption"
+            referencedColumns: ["equipment_id"]
+          },
         ]
       }
       tractor_operators: {
@@ -3824,6 +3915,142 @@ export type Database = {
         }
         Relationships: []
       }
+      v_ap_ar_aging: {
+        Row: {
+          aging_bucket: string | null
+          amount_paid: number | null
+          balance_remaining: number | null
+          contact_name: string | null
+          contact_rnc: string | null
+          currency: string | null
+          days_overdue: number | null
+          direction: string | null
+          document_date: string | null
+          document_number: string | null
+          document_type: string | null
+          due_date: string | null
+          id: string | null
+          total_amount: number | null
+          total_amount_dop: number | null
+        }
+        Insert: {
+          aging_bucket?: never
+          amount_paid?: number | null
+          balance_remaining?: number | null
+          contact_name?: string | null
+          contact_rnc?: string | null
+          currency?: string | null
+          days_overdue?: never
+          direction?: string | null
+          document_date?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          due_date?: string | null
+          id?: string | null
+          total_amount?: number | null
+          total_amount_dop?: number | null
+        }
+        Update: {
+          aging_bucket?: never
+          amount_paid?: number | null
+          balance_remaining?: number | null
+          contact_name?: string | null
+          contact_rnc?: string | null
+          currency?: string | null
+          days_overdue?: never
+          direction?: string | null
+          document_date?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          due_date?: string | null
+          id?: string | null
+          total_amount?: number | null
+          total_amount_dop?: number | null
+        }
+        Relationships: []
+      }
+      v_fuel_consumption: {
+        Row: {
+          avg_gallons_per_hour: number | null
+          dispense_count: number | null
+          equipment_id: string | null
+          equipment_name: string | null
+          equipment_type: string | null
+          month: string | null
+          total_gallons: number | null
+        }
+        Relationships: []
+      }
+      v_inventory_low_stock: {
+        Row: {
+          commercial_name: string | null
+          current_quantity: number | null
+          function: Database["public"]["Enums"]["inventory_function"] | null
+          id: string | null
+          minimum_stock: number | null
+          molecule_name: string | null
+          price_per_purchase_unit: number | null
+          shortage: number | null
+          supplier: string | null
+          use_unit: string | null
+        }
+        Insert: {
+          commercial_name?: string | null
+          current_quantity?: number | null
+          function?: Database["public"]["Enums"]["inventory_function"] | null
+          id?: string | null
+          minimum_stock?: number | null
+          molecule_name?: string | null
+          price_per_purchase_unit?: number | null
+          shortage?: never
+          supplier?: string | null
+          use_unit?: string | null
+        }
+        Update: {
+          commercial_name?: string | null
+          current_quantity?: number | null
+          function?: Database["public"]["Enums"]["inventory_function"] | null
+          id?: string | null
+          minimum_stock?: number | null
+          molecule_name?: string | null
+          price_per_purchase_unit?: number | null
+          shortage?: never
+          supplier?: string | null
+          use_unit?: string | null
+        }
+        Relationships: []
+      }
+      v_payroll_summary: {
+        Row: {
+          employee_count: number | null
+          end_date: string | null
+          period_id: string | null
+          start_date: string | null
+          status: string | null
+          total_base_pay: number | null
+          total_benefits: number | null
+          total_gross_pay: number | null
+          total_holiday_pay: number | null
+          total_isr: number | null
+          total_loan_deductions: number | null
+          total_net_pay: number | null
+          total_overtime: number | null
+          total_tss: number | null
+        }
+        Relationships: []
+      }
+      v_transactions_by_cost_center: {
+        Row: {
+          cost_center: string | null
+          currency: string | null
+          month: string | null
+          total_amount: number | null
+          total_amount_dop: number | null
+          total_itbis: number | null
+          transaction_count: number | null
+        }
+        Relationships: []
+      }
       v_transactions_with_dop: {
         Row: {
           amount: number | null
@@ -3860,6 +4087,17 @@ export type Database = {
           is_void?: boolean | null
           master_acct_code?: string | null
           transaction_date?: string | null
+        }
+        Relationships: []
+      }
+      v_trial_balance: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          account_type: string | null
+          balance: number | null
+          total_credits: number | null
+          total_debits: number | null
         }
         Relationships: []
       }
@@ -3965,6 +4203,26 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_balance_sheet: {
+        Args: { p_as_of_date?: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_type: string
+          balance: number
+        }[]
+      }
+      get_cost_per_field: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          farm_name: string
+          field_id: string
+          field_name: string
+          hectares_worked: number
+          input_cost_dop: number
+          operation_count: number
+        }[]
+      }
       get_exchange_rate: {
         Args: { p_currency: string; p_date: string; p_rate_type?: string }
         Returns: number
@@ -3983,6 +4241,20 @@ export type Database = {
       get_hours_until_maintenance: {
         Args: { p_tractor_id: string }
         Returns: number
+      }
+      get_profit_loss: {
+        Args: {
+          p_cost_center?: string
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: {
+          account_code: string
+          account_name: string
+          category: string
+          total_amount_dop: number
+          transaction_count: number
+        }[]
       }
       get_user_role: {
         Args: { _user_id: string }

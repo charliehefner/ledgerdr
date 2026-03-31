@@ -18,9 +18,11 @@ export function ProfitLossTab() {
   const { data, isLoading } = useQuery({
     queryKey: ["rpc_get_profit_loss", startDate, endDate, costCenter],
     queryFn: async () => {
-      const args: Record<string, string> = { p_start_date: startDate, p_end_date: endDate };
-      if (costCenter) args.p_cost_center = costCenter;
-      const { data, error } = await supabase.rpc("get_profit_loss", args);
+      const { data, error } = await supabase.rpc("get_profit_loss", {
+        p_start_date: startDate,
+        p_end_date: endDate,
+        ...(costCenter ? { p_cost_center: costCenter } : {}),
+      });
       if (error) throw error;
       return data;
     },

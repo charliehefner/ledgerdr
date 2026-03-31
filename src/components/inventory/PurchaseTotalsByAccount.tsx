@@ -48,9 +48,12 @@ export function PurchaseTotalsByAccount() {
     const matchingTx = nonVoidedTransactions.filter((tx) => {
       const txDate = parseDateLocal(tx.transaction_date);
       if (txDate < dateRange.start || txDate > dateRange.end) return false;
+      // Use master_acct_code (backfilled from UUID join in fetchRecentTransactions)
+      const acctCode = tx.master_acct_code;
+      const cbsCode = tx.cbs_code;
       return (
-        (tx.master_acct_code && pair.accounts.includes(tx.master_acct_code)) ||
-        tx.cbs_code?.startsWith(pair.cbs)
+        (acctCode && pair.accounts.includes(acctCode)) ||
+        cbsCode?.startsWith(pair.cbs)
       );
     });
     const totalDOP = matchingTx

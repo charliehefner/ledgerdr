@@ -32,6 +32,7 @@ import NotFound from "./pages/NotFound";
 import Contacts from "./pages/Contacts";
 import Industrial from "./pages/Industrial";
 import InstallApp from "./pages/InstallApp";
+import AnalyticsReports from "./pages/AnalyticsReports";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

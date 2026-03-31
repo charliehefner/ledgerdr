@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { Paperclip, Upload, Loader2, Camera, FileImage, FileText, Receipt, Quote } from 'lucide-react';
+import { Paperclip, Upload, Loader2, Camera, FileImage, FileText, Receipt, Quote, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { saveAttachment, getSignedAttachmentUrl, AttachmentCategory } from '@/lib/attachments';
+import {
+  saveAttachment,
+  getSignedAttachmentUrl,
+  deleteAttachmentById,
+  getAttachmentsByCategoryMulti,
+  AttachmentCategory,
+  TransactionAttachment,
+  CategoryAttachmentsMulti,
+} from '@/lib/attachments';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -30,6 +38,7 @@ import { generateAttachmentFileName } from '@/lib/attachmentNaming';
 
 interface MultiAttachmentCellProps {
   transactionId: string;
+  /** Legacy single-per-category prop – still accepted for backward compat */
   attachments: Record<AttachmentCategory, string | null>;
   onUpdate: () => void;
   showCategories?: AttachmentCategory[];
@@ -43,7 +52,7 @@ const categoryConfig: Record<AttachmentCategory, { icon: typeof FileText; labelE
 
 export function MultiAttachmentCell({ 
   transactionId, 
-  attachments, 
+  attachments: _legacyAttachments,
   onUpdate,
   showCategories = ['ncf', 'payment_receipt', 'quote']
 }: MultiAttachmentCellProps) {
@@ -54,12 +63,11 @@ export function MultiAttachmentCell({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageName, setImageName] = useState('');
-  const [signedUrls, setSignedUrls] = useState<Record<AttachmentCategory, string | null>>({
-    ncf: null,
-    payment_receipt: null,
-    quote: null
+  const [multiAttachments, setMultiAttachments] = useState<CategoryAttachmentsMulti>({
+    ncf: [], payment_receipt: [], quote: []
   });
-  const [isLoadingUrls, setIsLoadingUrls] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
   
   const { language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,56 +75,49 @@ export function MultiAttachmentCell({
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Memoize showCategories to prevent infinite re-renders
-  const categoriesKey = showCategories.join(',');
-  
-  // Fetch signed URLs for all attachments with error handling
+  // Fetch multi-per-category attachments
   useEffect(() => {
     let isMounted = true;
     
-    async function fetchSignedUrls() {
-      setIsLoadingUrls(true);
-      const urls: Record<AttachmentCategory, string | null> = { ncf: null, payment_receipt: null, quote: null };
-      
+    async function load() {
+      setIsLoading(true);
       try {
-        // Process each category in parallel with individual error handling
-        const promises = showCategories.map(async (category) => {
-          if (attachments[category]) {
+        const data = await getAttachmentsByCategoryMulti(transactionId);
+        if (!isMounted) return;
+        setMultiAttachments(data);
+
+        // Resolve signed URLs for all attachments
+        const allItems = Object.values(data).flat();
+        const urlEntries = await Promise.all(
+          allItems.map(async (item) => {
             try {
-              const url = await getSignedAttachmentUrl(attachments[category]!);
-              return { category, url };
+              const url = await getSignedAttachmentUrl(item.attachment_url);
+              return [item.id, url] as const;
             } catch {
-              return { category, url: null };
+              return [item.id, null] as const;
             }
-          }
-          return { category, url: null };
-        });
-        
-        const results = await Promise.all(promises);
-        
+          })
+        );
+
         if (isMounted) {
-          results.forEach(({ category, url }) => {
-            urls[category] = url;
+          const urls: Record<string, string> = {};
+          urlEntries.forEach(([id, url]) => {
+            if (url) urls[id] = url;
           });
           setSignedUrls(urls);
         }
-      } catch (error) {
-        // Silently fail - just show no previews
-        console.warn('Failed to fetch signed URLs');
+      } catch {
+        // silent
       } finally {
-        if (isMounted) {
-          setIsLoadingUrls(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     }
-    
-    fetchSignedUrls();
-    
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attachments.ncf, attachments.payment_receipt, attachments.quote, categoriesKey]);
+
+    load();
+    return () => { isMounted = false; };
+  }, [transactionId, _legacyAttachments.ncf, _legacyAttachments.payment_receipt, _legacyAttachments.quote]);
+
+  const totalCount = showCategories.reduce((sum, cat) => sum + multiAttachments[cat].length, 0);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,7 +147,7 @@ export function MultiAttachmentCell({
 
       const { error: uploadError } = await supabase.storage
         .from('transaction-attachments')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -174,6 +175,16 @@ export function MultiAttachmentCell({
   const handleUploadClick = (category: AttachmentCategory) => {
     setUploadingCategory(category);
     fileInputRef.current?.click();
+  };
+
+  const handleDeleteAttachment = async (attachment: TransactionAttachment) => {
+    const success = await deleteAttachmentById(attachment.id);
+    if (success) {
+      toast.success(language === 'es' ? 'Adjunto eliminado' : 'Attachment deleted');
+      onUpdate();
+    } else {
+      toast.error(language === 'es' ? 'Error al eliminar' : 'Failed to delete');
+    }
   };
 
   const startCamera = (category: AttachmentCategory) => {
@@ -250,13 +261,10 @@ export function MultiAttachmentCell({
     setImageName('');
   };
 
-  // Count how many attachments exist
-  const attachmentCount = showCategories.filter(cat => attachments[cat]).length;
-  const hasAnyAttachment = attachmentCount > 0;
-
   // Get first available image for hover preview
   const firstImageUrl = showCategories
-    .map(cat => signedUrls[cat])
+    .flatMap(cat => multiAttachments[cat])
+    .map(a => signedUrls[a.id])
     .find(url => url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url));
 
   return (
@@ -276,18 +284,18 @@ export function MultiAttachmentCell({
             <DropdownMenuTrigger asChild>
               <button
                 className={`inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors gap-0.5 ${
-                  hasAnyAttachment ? 'text-primary' : 'text-muted-foreground'
+                  totalCount > 0 ? 'text-primary' : 'text-muted-foreground'
                 }`}
-                disabled={isUploading || isLoadingUrls}
-                title={hasAnyAttachment ? `${attachmentCount} adjuntos` : 'Agregar adjunto'}
+                disabled={isUploading || isLoading}
+                title={totalCount > 0 ? `${totalCount} adjuntos` : 'Agregar adjunto'}
               >
-                {isUploading || isLoadingUrls ? (
+                {isUploading || isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
                     <Paperclip className="h-4 w-4" />
-                    {attachmentCount > 0 && (
-                      <span className="text-xs font-medium">{attachmentCount}</span>
+                    {totalCount > 0 && (
+                      <span className="text-xs font-medium">{totalCount}</span>
                     )}
                   </>
                 )}
@@ -295,48 +303,73 @@ export function MultiAttachmentCell({
             </DropdownMenuTrigger>
           </HoverCardTrigger>
           
-          <DropdownMenuContent align="center" className="bg-popover z-50 w-56">
-            {showCategories.map(category => {
+          <DropdownMenuContent align="center" className="bg-popover z-50 w-64">
+            {showCategories.map((category, catIdx) => {
               const config = categoryConfig[category];
               const Icon = config.icon;
               const label = language === 'es' ? config.labelEs : config.labelEn;
-              const hasAttachment = !!attachments[category];
-              const signedUrl = signedUrls[category];
+              const items = multiAttachments[category];
 
               return (
                 <div key={category}>
                   <DropdownMenuLabel className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <Icon className={`h-3 w-3 ${config.color}`} />
                     {label}
-                    {hasAttachment && <span className="text-green-600">✓</span>}
+                    {items.length > 0 && (
+                      <span className="text-xs text-green-600">({items.length})</span>
+                    )}
                   </DropdownMenuLabel>
                   
-                  {hasAttachment && signedUrl && (
-                    <DropdownMenuItem asChild>
-                      <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                        <FileImage className="mr-2 h-4 w-4" />
-                        {language === 'es' ? 'Ver' : 'View'}
-                      </a>
-                    </DropdownMenuItem>
-                  )}
+                  {/* Existing attachments */}
+                  {items.map((att, idx) => {
+                    const url = signedUrls[att.id];
+                    return (
+                      <div key={att.id} className="flex items-center px-2 py-1 text-sm">
+                        {url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center gap-2 hover:underline truncate text-foreground"
+                          >
+                            <FileImage className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">
+                              {label} {items.length > 1 ? `#${idx + 1}` : ''}
+                            </span>
+                          </a>
+                        ) : (
+                          <span className="flex-1 flex items-center gap-2 text-muted-foreground truncate">
+                            <FileImage className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">
+                              {label} {items.length > 1 ? `#${idx + 1}` : ''}
+                            </span>
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteAttachment(att)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
                   
+                  {/* Add more actions */}
                   <DropdownMenuItem onClick={() => handleUploadClick(category)}>
                     <Upload className="mr-2 h-4 w-4" />
-                    {hasAttachment 
-                      ? (language === 'es' ? 'Reemplazar archivo' : 'Replace file')
-                      : (language === 'es' ? 'Subir archivo' : 'Upload file')
-                    }
+                    {language === 'es' ? 'Subir archivo' : 'Upload file'}
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem onClick={() => startCamera(category)}>
                     <Camera className="mr-2 h-4 w-4" />
-                    {hasAttachment 
-                      ? (language === 'es' ? 'Reemplazar con cámara' : 'Replace with camera')
-                      : (language === 'es' ? 'Usar cámara' : 'Use camera')
-                    }
+                    {language === 'es' ? 'Usar cámara' : 'Use camera'}
                   </DropdownMenuItem>
                   
-                  {category !== showCategories[showCategories.length - 1] && (
+                  {catIdx !== showCategories.length - 1 && (
                     <DropdownMenuSeparator />
                   )}
                 </div>

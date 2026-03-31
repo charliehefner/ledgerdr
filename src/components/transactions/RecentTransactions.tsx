@@ -19,10 +19,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
+import { fetchRecentTransactions, Transaction } from '@/lib/api';
 import { getAllAttachmentUrls, AttachmentCategory } from '@/lib/attachments';
 import { supabase } from '@/integrations/supabase/client';
-import { getDescription } from '@/lib/getDescription';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { MultiAttachmentCell } from './MultiAttachmentCell';
 import { EditTransactionDialog } from '@/components/invoices/EditTransactionDialog';
@@ -75,10 +74,13 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     enabled: attachmentIds.length > 0,
   });
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: fetchAccounts,
-  });
+  // Account descriptions now come from FK joins in fetchRecentTransactions
+  const getAccountDescription = (tx: Transaction) => {
+    if (language === 'es') {
+      return tx.account_spanish_description || tx.account_english_description || tx.account_name || tx.master_acct_code || '';
+    }
+    return tx.account_english_description || tx.account_name || tx.master_acct_code || '';
+  };
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ['bank-accounts-lookup'],
@@ -91,11 +93,6 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
       return data;
     },
   });
-
-  const getAccountDescription = (code: string) => {
-    const account = accounts.find(a => a.code === code);
-    return account ? getDescription(account, language) : code;
-  };
 
   const LEGACY_PAY_METHOD_LABELS: Record<string, string> = {
     transfer_bdi: t('txForm.transferBdi'),
@@ -111,7 +108,6 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const getPayMethodLabel = (payMethod: string | null): string => {
     if (!payMethod) return '-';
     if (LEGACY_PAY_METHOD_LABELS[payMethod]) return LEGACY_PAY_METHOD_LABELS[payMethod];
-    // Check if it's a bank account UUID
     const bankAcct = bankAccounts.find(b => b.id === payMethod);
     if (bankAcct) return `${bankAcct.account_name} (${bankAcct.currency})`;
     return payMethod;
@@ -191,7 +187,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                         <div>
                           <p className="font-mono font-medium">{tx.master_acct_code || "-"}</p>
                           <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                            {tx.master_acct_code ? getAccountDescription(tx.master_acct_code) : ""}
+                            {tx.master_acct_code ? getAccountDescription(tx) : ""}
                           </p>
                         </div>
                       </TableCell>

@@ -19,6 +19,7 @@ export type Section =
   | "transactions"
   | "invoices"
   | "reports"
+  | "analytics"
   | "hr"
   | "inventory"
   | "fuel"

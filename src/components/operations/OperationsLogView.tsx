@@ -1659,6 +1659,27 @@ export function OperationsLogView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Duplicate Operation Confirmation Dialog */}
+      <AlertDialog open={!!pendingDuplicate} onOpenChange={(open) => !open && setPendingDuplicate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Operación Duplicada
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya existe una operación idéntica (mismo campo, tipo de operación, fecha e insumos) registrada para este día. ¿Desea guardarla de todos modos?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDuplicateSave}>
+              Guardar de todos modos
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

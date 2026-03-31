@@ -155,6 +155,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ap_ar_document_transactions: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_document_transactions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_document_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ap_ar_documents: {
         Row: {
           account_id: string | null
@@ -171,7 +207,6 @@ export type Database = {
           document_type: string
           due_date: string | null
           id: string
-          linked_transaction_ids: string[] | null
           notes: string | null
           status: string
           total_amount: number
@@ -192,7 +227,6 @@ export type Database = {
           document_type?: string
           due_date?: string | null
           id?: string
-          linked_transaction_ids?: string[] | null
           notes?: string | null
           status?: string
           total_amount?: number
@@ -213,7 +247,6 @@ export type Database = {
           document_type?: string
           due_date?: string | null
           id?: string
-          linked_transaction_ids?: string[] | null
           notes?: string | null
           status?: string
           total_amount?: number
@@ -3428,6 +3461,27 @@ export type Database = {
           voided_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_transactions_account"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_cbs"
+            columns: ["cbs_id"]
+            isOneToOne: false
+            referencedRelation: "cbs_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_account_id_fkey"
             columns: ["account_id"]

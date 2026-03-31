@@ -24,12 +24,12 @@ export function FxRevaluationButton() {
   const [date, setDate] = useState<Date>(new Date());
   const [periodId, setPeriodId] = useState<string>("");
   const { toast } = useToast();
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   // Only admin and accountant
-  if (role !== "admin" && role !== "accountant") return null;
+  if (user?.role !== "admin" && user?.role !== "accountant") return null;
 
   const { data: periods = [] } = useQuery({
     queryKey: ["accounting-periods-open"],

@@ -81,6 +81,7 @@ export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
   const [deleteOperationId, setDeleteOperationId] = useState<string | null>(null);
+  const [pendingDuplicate, setPendingDuplicate] = useState<{ data: typeof form; currentInputs: OperationInput[] } | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { user } = useAuth();
@@ -900,7 +901,35 @@ export function OperationsLogView() {
       })) || [];
       updateMutation.mutate({ operationId: editingOperation.id, data: form, originalInputs, currentInputs: normalizedInputs });
     } else {
+      // Duplicate detection: check existing operations for same field/type/date/inputs
+      const dateStr = formatDateLocal(form.operation_date);
+      const matchingOps = operations?.filter(
+        op => op.field_id === form.field_id
+          && op.operation_type_id === form.operation_type_id
+          && op.operation_date === dateStr
+      ) || [];
+
+      if (matchingOps.length > 0) {
+        const currentInputIds = normalizedInputs.map(i => i.inventory_item_id).sort().join(",");
+        const hasDuplicate = matchingOps.some(op => {
+          const existingIds = (op.operation_inputs || []).map(i => i.inventory_item_id).sort().join(",");
+          return existingIds === currentInputIds;
+        });
+
+        if (hasDuplicate) {
+          setPendingDuplicate({ data: { ...form }, currentInputs: normalizedInputs });
+          return;
+        }
+      }
+
       mutation.mutate({ data: form, currentInputs: normalizedInputs });
+    }
+  };
+
+  const confirmDuplicateSave = () => {
+    if (pendingDuplicate) {
+      mutation.mutate(pendingDuplicate);
+      setPendingDuplicate(null);
     }
   };
 
@@ -1626,6 +1655,27 @@ export function OperationsLogView() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? t("common.deleting") : t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate Operation Confirmation Dialog */}
+      <AlertDialog open={!!pendingDuplicate} onOpenChange={(open) => !open && setPendingDuplicate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Operación Duplicada
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya existe una operación idéntica (mismo campo, tipo de operación, fecha e insumos) registrada para este día. ¿Desea guardarla de todos modos?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDuplicateSave}>
+              Guardar de todos modos
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

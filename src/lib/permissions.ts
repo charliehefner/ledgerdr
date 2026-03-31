@@ -149,6 +149,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   transactions: ["admin", "management", "accountant"],
   invoices: ["admin", "management", "accountant"],
   reports: ["admin", "management", "accountant"],
+  analytics: ["admin", "management", "accountant"],
   hr: ["admin", "management", "accountant"],
   inventory: ["admin", "management", "supervisor"],
   fuel: ["admin", "management", "supervisor"],

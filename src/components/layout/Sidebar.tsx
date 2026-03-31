@@ -76,6 +76,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" },
   { nameKey: "nav.transactions", href: "/transactions", icon: ArrowRightLeft, section: "transactions" },
   { nameKey: "nav.reports", href: "/reports", icon: BarChart3, section: "reports" },
+  { nameKey: "nav.analytics", href: "/analytics", icon: BarChart3, section: "analytics" },
   { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
   { nameKey: "nav.apar", href: "/accounts", icon: Receipt, section: "ap-ar" },
   { nameKey: "nav.budget", href: "/budget", icon: Wallet, section: "budget" },

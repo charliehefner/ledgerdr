@@ -858,6 +858,47 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================
+-- AP/AR DOCUMENTS (Accounts Payable / Receivable)
+-- =============================================
+CREATE TABLE IF NOT EXISTS ap_ar_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_type TEXT NOT NULL DEFAULT 'bill',
+  direction TEXT NOT NULL,
+  contact_name TEXT NOT NULL,
+  contact_rnc TEXT,
+  document_number TEXT,
+  document_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_date DATE,
+  currency TEXT NOT NULL DEFAULT 'DOP',
+  total_amount NUMERIC NOT NULL DEFAULT 0,
+  amount_paid NUMERIC NOT NULL DEFAULT 0,
+  balance_remaining NUMERIC GENERATED ALWAYS AS (total_amount - amount_paid) STORED,
+  status TEXT NOT NULL DEFAULT 'open',
+  account_id UUID REFERENCES chart_of_accounts(id),
+  linked_transaction_ids UUID[],
+  notes TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- =============================================
+-- AP/AR PAYMENTS
+-- =============================================
+CREATE TABLE IF NOT EXISTS ap_ar_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES ap_ar_documents(id),
+  payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  amount NUMERIC NOT NULL,
+  payment_method TEXT,
+  bank_account_id UUID REFERENCES bank_accounts(id),
+  journal_id UUID REFERENCES journals(id),
+  notes TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- =============================================
 -- ADVANCE ALLOCATIONS
 -- =============================================
 CREATE TABLE IF NOT EXISTS advance_allocations (

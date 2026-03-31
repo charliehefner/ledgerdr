@@ -1401,6 +1401,61 @@ export type Database = {
           },
         ]
       }
+      fixed_asset_depreciation_entries: {
+        Row: {
+          accumulated_at_period_end: number
+          asset_id: string
+          created_at: string
+          depreciation_amount: number
+          id: string
+          journal_id: string | null
+          notes: string | null
+          period_id: string
+        }
+        Insert: {
+          accumulated_at_period_end?: number
+          asset_id: string
+          created_at?: string
+          depreciation_amount?: number
+          id?: string
+          journal_id?: string | null
+          notes?: string | null
+          period_id: string
+        }
+        Update: {
+          accumulated_at_period_end?: number
+          asset_id?: string
+          created_at?: string
+          depreciation_amount?: number
+          id?: string
+          journal_id?: string | null
+          notes?: string | null
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_asset_depreciation_entries_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_asset_depreciation_entries_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_asset_depreciation_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixed_assets: {
         Row: {
           accumulated_depreciation: number

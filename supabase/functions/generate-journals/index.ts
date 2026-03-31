@@ -15,6 +15,7 @@ interface UnlinkedTransaction {
   itbis_retenido: number | null;
   isr_retenido: number | null;
   master_acct_code: string | null;
+  account_id: string | null;
   pay_method: string | null;
   cost_center: string | null;
   transaction_direction: string | null;

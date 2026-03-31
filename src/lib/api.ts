@@ -22,8 +22,11 @@ export interface Transaction {
   id?: string;
   legacy_id?: number;
   transaction_date: string;
+  /** @deprecated Use account_id + joined account_name/account_english_description instead. Backfilled from FK join for compatibility. */
   master_acct_code: string;
+  /** @deprecated Use project_id + joined project_english_description instead. Backfilled from FK join for compatibility. */
   project_code?: string;
+  /** @deprecated Use cbs_id + joined cbs_english_description instead. Backfilled from FK join for compatibility. */
   cbs_code?: string;
   purchase_date?: string;
   description: string;
@@ -51,11 +54,11 @@ export interface Transaction {
   due_date?: string;
   destination_amount?: number;
   itbis_override_reason?: string;
-  // UUID FK columns
+  // UUID FK columns (preferred)
   account_id?: string;
   project_id?: string;
   cbs_id?: string;
-  // Joined descriptions (populated by fetchRecentTransactions)
+  // Joined descriptions (populated by fetchRecentTransactions FK joins)
   account_name?: string;
   account_english_description?: string;
   account_spanish_description?: string;

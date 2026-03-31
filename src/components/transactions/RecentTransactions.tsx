@@ -142,6 +142,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 {columnVisibility.isVisible("description") && <TableHead>{t("common.description")}</TableHead>}
                 {columnVisibility.isVisible("currency") && <TableHead>{t("col.currency")}</TableHead>}
                 {columnVisibility.isVisible("amount") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
+                {columnVisibility.isVisible("amountDop") && <TableHead className="text-right">RD$</TableHead>}
                 {columnVisibility.isVisible("payMethod") && <TableHead>{t("col.payMethod")}</TableHead>}
                 {columnVisibility.isVisible("document") && <TableHead>{t("col.document")}</TableHead>}
                 {columnVisibility.isVisible("name") && <TableHead>{t("common.name")}</TableHead>}

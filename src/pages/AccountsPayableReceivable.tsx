@@ -16,7 +16,7 @@ export default function AccountsPayableReceivable() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       helpChapter="07-apar"
-      headerActions={<FxRevaluationButton />}
+      actions={<FxRevaluationButton />}
       tabGroups={[
         {
           tabs: [

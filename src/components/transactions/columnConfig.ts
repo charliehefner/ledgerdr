@@ -68,6 +68,7 @@ export const DASHBOARD_COLUMNS: ColumnConfig[] = [
   { key: "description", label: "Description / Descripción", defaultVisible: true },
   { key: "currency", label: "Currency / Moneda", defaultVisible: true },
   { key: "amount", label: "Amount / Monto", defaultVisible: true },
+  { key: "amountDop", label: "Amount DOP / Monto RD$", defaultVisible: false },
   { key: "itbis", label: "ITBIS", defaultVisible: false },
   { key: "payMethod", label: "Pay Method / Método Pago", defaultVisible: false },
   { key: "document", label: "Document / Documento", defaultVisible: true },

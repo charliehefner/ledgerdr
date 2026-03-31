@@ -202,6 +202,13 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                         {formatCurrency(tx.amount, tx.currency)}
                       </TableCell>
                     )}
+                    {columnVisibility.isVisible("amountDop") && (
+                      <TableCell className="text-right font-mono text-muted-foreground">
+                        {tx.currency !== 'DOP' && (tx as any).amount_base_currency
+                          ? formatCurrency((tx as any).amount_base_currency, 'DOP')
+                          : tx.currency === 'DOP' ? '-' : '-'}
+                      </TableCell>
+                    )}
                     {columnVisibility.isVisible("payMethod") && <TableCell>{getPayMethodLabel(tx.pay_method)}</TableCell>}
                     {columnVisibility.isVisible("document") && (
                       <TableCell className="truncate max-w-[120px]">{tx.document || "-"}</TableCell>

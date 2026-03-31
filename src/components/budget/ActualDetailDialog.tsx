@@ -62,7 +62,7 @@ export function ActualDetailDialog({
         .select("id, legacy_id, transaction_date, name, amount, currency")
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
-        .eq("is_void", false);
+        .eq("is_void", false) as any;
 
       if (budgetType === "project") {
         query = query.eq("project_code", projectCode!);

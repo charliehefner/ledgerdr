@@ -3,6 +3,7 @@ export const en = {
   "nav.dashboard": "Pending Docs",
   "nav.transactions": "Transactions",
   "nav.reports": "Financial (Ledger)",
+  "nav.analytics": "Analytics",
   "nav.hr": "Human Resources",
   "nav.inventory": "Inventory",
   "nav.fuel": "Fuel",

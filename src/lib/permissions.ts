@@ -19,6 +19,7 @@ export type Section =
   | "transactions"
   | "invoices"
   | "reports"
+  | "analytics"
   | "hr"
   | "inventory"
   | "fuel"
@@ -111,6 +112,7 @@ export const routeToSection: Record<string, Section> = {
   "/contacts": "contacts",
   "/industrial": "industrial",
   "/driver-portal": "driver-portal",
+  "/analytics": "analytics",
 };
 
 // Permission matrix: which roles can access which sections
@@ -119,6 +121,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   transactions: ["admin", "management", "accountant", "viewer"],
   invoices: ["admin", "management", "accountant", "viewer"],
   reports: ["admin", "management", "accountant", "viewer"],
+  analytics: ["admin", "management", "accountant", "viewer"],
   hr: ["admin", "management", "accountant", "supervisor"],
   inventory: ["admin", "management", "supervisor", "viewer"],
   fuel: ["admin", "management", "supervisor", "viewer"],
@@ -146,6 +149,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   transactions: ["admin", "management", "accountant"],
   invoices: ["admin", "management", "accountant"],
   reports: ["admin", "management", "accountant"],
+  analytics: ["admin", "management", "accountant"],
   hr: ["admin", "management", "accountant"],
   inventory: ["admin", "management", "supervisor"],
   fuel: ["admin", "management", "supervisor"],

@@ -32,6 +32,7 @@ import NotFound from "./pages/NotFound";
 import Contacts from "./pages/Contacts";
 import Industrial from "./pages/Industrial";
 import InstallApp from "./pages/InstallApp";
+import AnalyticsReports from "./pages/AnalyticsReports";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -84,6 +85,7 @@ const App = () => (
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />
                 <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
                 <Route path="/industrial" element={<ProtectedRoute><Industrial /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute><AnalyticsReports /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>

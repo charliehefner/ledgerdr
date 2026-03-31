@@ -3,6 +3,7 @@ export const es = {
   "nav.dashboard": "Docs Pendientes",
   "nav.transactions": "Transacciones",
   "nav.reports": "Financiero (Ledger)",
+  "nav.analytics": "Analíticos",
   "nav.hr": "Recursos Humanos",
   "nav.inventory": "Inventario",
   "nav.fuel": "Combustible",

@@ -1,0 +1,1 @@
+ALTER TABLE public.transaction_attachments DROP CONSTRAINT transaction_attachments_txid_category_unique;

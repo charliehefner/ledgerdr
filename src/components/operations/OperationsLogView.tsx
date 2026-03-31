@@ -81,6 +81,7 @@ export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
   const [deleteOperationId, setDeleteOperationId] = useState<string | null>(null);
+  const [pendingDuplicate, setPendingDuplicate] = useState<{ data: typeof form; currentInputs: OperationInput[] } | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const { user } = useAuth();

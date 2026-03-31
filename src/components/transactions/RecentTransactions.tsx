@@ -83,6 +83,18 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     return tx.account_english_description || tx.account_name || tx.master_acct_code || '';
   };
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['bank-accounts-lookup'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, account_name, account_type, currency')
+        .order('account_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const LEGACY_PAY_METHOD_LABELS: Record<string, string> = {
     transfer_bdi: t('txForm.transferBdi'),
     transfer_bhd: t('txForm.transferBhd'),
@@ -97,7 +109,6 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const getPayMethodLabel = (payMethod: string | null): string => {
     if (!payMethod) return '-';
     if (LEGACY_PAY_METHOD_LABELS[payMethod]) return LEGACY_PAY_METHOD_LABELS[payMethod];
-    // Check if it's a bank account UUID
     const bankAcct = bankAccounts.find(b => b.id === payMethod);
     if (bankAcct) return `${bankAcct.account_name} (${bankAcct.currency})`;
     return payMethod;

@@ -1868,6 +1868,7 @@ export type Database = {
           purchase_unit_type: string
           sack_weight_kg: number | null
           supplier: string | null
+          system_key: string | null
           updated_at: string
           use_unit: string
         }
@@ -1888,6 +1889,7 @@ export type Database = {
           purchase_unit_type?: string
           sack_weight_kg?: number | null
           supplier?: string | null
+          system_key?: string | null
           updated_at?: string
           use_unit?: string
         }
@@ -1908,6 +1910,7 @@ export type Database = {
           purchase_unit_type?: string
           sack_weight_kg?: number | null
           supplier?: string | null
+          system_key?: string | null
           updated_at?: string
           use_unit?: string
         }

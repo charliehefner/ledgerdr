@@ -1,27 +1,40 @@
 
 
-# Fix: Smarter Autocomplete Deduplication (Keep Both Sources)
+# Duplicate Operation Detection with Override
 
 ## Problem
-Legacy transaction names still appear alongside cleaned CRM contacts, causing duplicates. But removing legacy names entirely would lose suggestions for vendors not yet in CRM, leading to new inconsistencies.
+The Operations Log allows saving identical operations (same field, same operation type, same date, same inputs) without any warning, leading to accidental duplicates.
 
 ## Solution
-Keep both sources, but suppress legacy names that are already represented by a CRM contact.
+Add a client-side duplicate check before inserting a new operation. When a potential duplicate is detected, show a confirmation dialog allowing the user to override and save anyway.
 
-## Changes — `src/components/transactions/NameAutocomplete.tsx`
+## Detection Criteria
+An operation is a **potential duplicate** when an existing record matches ALL of:
+- Same `field_id`
+- Same `operation_type_id`  
+- Same `operation_date`
+- Same set of `inventory_item_id` values in inputs (order-independent)
 
-1. **Build a case-insensitive Set of CRM contact names** for fast lookup
-2. **Filter legacy `suggestions`**: only include a legacy name if no CRM contact matches it case-insensitively
-3. **CRM contacts appear first** in the merged list (they're canonical), followed by remaining legacy names
-4. This way:
-   - Cleaned CRM contacts always win over old variations
-   - Vendors not yet in CRM still appear as suggestions from transaction history
-   - No data loss, no new duplicate risk
+## Changes — `src/components/operations/OperationsLogView.tsx`
 
-## Files Modified
+1. **Before insert**, query `operations` + `operation_inputs` for the same date/field/operation_type
+2. **Compare input sets**: if the existing operation's input item IDs match the current ones, flag as duplicate
+3. **Show a confirmation dialog** (using existing `AlertDialog` pattern already in file) with message like:  
+   *"An identical operation was already recorded for this field on this date. Save anyway?"*
+4. If user confirms → proceed with insert as normal
+5. If user cancels → return to form without saving
+
+### Implementation detail
+- Add state: `pendingDuplicate` (holds the form data when a duplicate is detected)
+- In `mutation.mutationFn`, move the duplicate check to a pre-save function
+- On duplicate detected: set `pendingDuplicate` and open confirmation dialog
+- On confirm: call mutation with a `skipDuplicateCheck` flag
+- Reuse existing `AlertDialog` imports already in the file
+
+## Scope
 | File | Change |
 |------|--------|
-| `src/components/transactions/NameAutocomplete.tsx` | Case-insensitive dedup of legacy suggestions against CRM contacts; CRM contacts sorted first |
+| `src/components/operations/OperationsLogView.tsx` | Add duplicate detection query before insert, add confirmation dialog, add override state |
 
-No changes needed in `TransactionForm.tsx` — keep passing `suggestions` as-is.
+No database changes needed — this is a client-side UX guard.
 

@@ -67,9 +67,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   rnc TEXT,
   document TEXT,
   pay_method TEXT,
-  master_acct_code TEXT,
-  cbs_code TEXT,
-  project_code TEXT,
+  master_acct_code TEXT, -- DEPRECATED: use account_id FK instead
+  cbs_code TEXT, -- DEPRECATED: use cbs_id FK instead
+  project_code TEXT, -- DEPRECATED: use project_id FK instead
   comments TEXT,
   is_internal BOOLEAN NOT NULL DEFAULT false,
   is_void BOOLEAN NOT NULL DEFAULT false,
@@ -80,9 +80,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   dgii_tipo_bienes_servicios TEXT CHECK (dgii_tipo_bienes_servicios IS NULL OR dgii_tipo_bienes_servicios IN ('01','02','03','04','05','06','07','08','09','10','11','12','13')),
   dgii_tipo_ingreso TEXT CHECK (dgii_tipo_ingreso IS NULL OR dgii_tipo_ingreso IN ('01','02','03','04','05','06')),
   dgii_tipo_anulacion TEXT CHECK (dgii_tipo_anulacion IS NULL OR dgii_tipo_anulacion IN ('01','02','03','04','05','06','07','08','09','10')),
-  account_id UUID,
-  project_id UUID,
-  cbs_id UUID,
+  account_id UUID REFERENCES chart_of_accounts(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  cbs_id UUID REFERENCES cbs_codes(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

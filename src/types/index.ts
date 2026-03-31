@@ -242,8 +242,11 @@ export interface FuelTransaction {
 export interface Transaction {
   id: string;
   transaction_date: string;
+  /** @deprecated Use account_id FK join instead. Kept for backward compatibility. */
   master_acct_code: string | null;
+  /** @deprecated Use cbs_id FK join instead. Kept for backward compatibility. */
   cbs_code: string | null;
+  /** @deprecated Use project_id FK join instead. Kept for backward compatibility. */
   project_code: string | null;
   description: string;
   currency: string;
@@ -267,6 +270,18 @@ export interface Transaction {
   dgii_tipo_bienes_servicios: string | null;
   dgii_tipo_ingreso: string | null;
   dgii_tipo_anulacion: string | null;
+  // UUID FK columns
+  account_id?: string | null;
+  project_id?: string | null;
+  cbs_id?: string | null;
+  // Joined descriptions (populated by FK joins)
+  account_name?: string | null;
+  account_english_description?: string | null;
+  account_spanish_description?: string | null;
+  project_english_description?: string | null;
+  project_spanish_description?: string | null;
+  cbs_english_description?: string | null;
+  cbs_spanish_description?: string | null;
 }
 
 // =====================

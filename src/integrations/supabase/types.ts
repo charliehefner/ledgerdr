@@ -57,7 +57,6 @@ export type Database = {
           is_closed: boolean | null
           period_name: string
           start_date: string
-          status: string
           updated_at: string | null
         }
         Insert: {
@@ -69,7 +68,6 @@ export type Database = {
           is_closed?: boolean | null
           period_name: string
           start_date: string
-          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -81,7 +79,6 @@ export type Database = {
           is_closed?: boolean | null
           period_name?: string
           start_date?: string
-          status?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -2007,7 +2004,7 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           id: string
-          journal_id: string | null
+          journal_id: string
           project_code: string | null
           tax_code_id: string | null
           updated_at: string | null
@@ -2022,7 +2019,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           id?: string
-          journal_id?: string | null
+          journal_id: string
           project_code?: string | null
           tax_code_id?: string | null
           updated_at?: string | null
@@ -2037,7 +2034,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           id?: string
-          journal_id?: string | null
+          journal_id?: string
           project_code?: string | null
           tax_code_id?: string | null
           updated_at?: string | null

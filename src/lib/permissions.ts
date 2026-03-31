@@ -121,6 +121,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   transactions: ["admin", "management", "accountant", "viewer"],
   invoices: ["admin", "management", "accountant", "viewer"],
   reports: ["admin", "management", "accountant", "viewer"],
+  analytics: ["admin", "management", "accountant", "viewer"],
   hr: ["admin", "management", "accountant", "supervisor"],
   inventory: ["admin", "management", "supervisor", "viewer"],
   fuel: ["admin", "management", "supervisor", "viewer"],

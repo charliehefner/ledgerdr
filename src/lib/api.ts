@@ -51,6 +51,19 @@ export interface Transaction {
   due_date?: string;
   destination_amount?: number;
   itbis_override_reason?: string;
+  // UUID FK columns
+  account_id?: string;
+  project_id?: string;
+  cbs_id?: string;
+  // Joined descriptions (populated by fetchRecentTransactions)
+  account_name?: string;
+  account_english_description?: string;
+  account_spanish_description?: string;
+  project_name?: string;
+  project_english_description?: string;
+  project_spanish_description?: string;
+  cbs_english_description?: string;
+  cbs_spanish_description?: string;
 }
 
 // ============================================

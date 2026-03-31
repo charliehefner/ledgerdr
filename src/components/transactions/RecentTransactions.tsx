@@ -75,26 +75,12 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     enabled: attachmentIds.length > 0,
   });
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: fetchAccounts,
-  });
-
-  const { data: bankAccounts = [] } = useQuery({
-    queryKey: ['bank-accounts-lookup'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('id, account_name, account_type, currency')
-        .order('account_name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const getAccountDescription = (code: string) => {
-    const account = accounts.find(a => a.code === code);
-    return account ? getDescription(account, language) : code;
+  // Account descriptions now come from FK joins in fetchRecentTransactions
+  const getAccountDescription = (tx: Transaction) => {
+    if (language === 'es') {
+      return tx.account_spanish_description || tx.account_english_description || tx.account_name || tx.master_acct_code || '';
+    }
+    return tx.account_english_description || tx.account_name || tx.master_acct_code || '';
   };
 
   const LEGACY_PAY_METHOD_LABELS: Record<string, string> = {

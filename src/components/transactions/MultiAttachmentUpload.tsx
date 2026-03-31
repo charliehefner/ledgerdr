@@ -272,7 +272,6 @@ export function MultiAttachmentUpload({ attachments, onUpload, onClear }: MultiA
       <DropdownMenuItem 
         key={`${category}-${useCamera ? 'camera' : 'file'}`}
         onClick={() => useCamera ? startCamera(category) : handleFileClick(category)}
-        disabled={hasAttachment}
         className="flex items-center justify-between"
       >
         <span className="flex items-center gap-2">

@@ -3,10 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 export type AttachmentCategory = 'ncf' | 'payment_receipt' | 'quote';
 
 export interface TransactionAttachment {
+  id: string;
   transaction_id: string;
   attachment_url: string;
   attachment_category: AttachmentCategory;
+  created_at: string;
 }
+
+/** Single URL per category (legacy compat – returns first found) */
+export type CategoryAttachmentsSingle = Record<AttachmentCategory, string | null>;
+
+/** Multiple URLs per category */
+export type CategoryAttachmentsMulti = Record<AttachmentCategory, TransactionAttachment[]>;
 
 // Get attachment file path for a transaction from local database (legacy - single attachment)
 export async function getAttachmentUrl(transactionId: string): Promise<string | null> {
@@ -14,6 +22,7 @@ export async function getAttachmentUrl(transactionId: string): Promise<string | 
     .from('transaction_attachments')
     .select('attachment_url')
     .eq('transaction_id', transactionId)
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -24,8 +33,8 @@ export async function getAttachmentUrl(transactionId: string): Promise<string | 
   return data?.attachment_url || null;
 }
 
-// Get all attachments for a transaction by category
-export async function getAttachmentsByCategory(transactionId: string): Promise<Record<AttachmentCategory, string | null>> {
+// Get all attachments for a transaction by category (single per category – legacy compat)
+export async function getAttachmentsByCategory(transactionId: string): Promise<CategoryAttachmentsSingle> {
   const { data, error } = await supabase
     .from('transaction_attachments')
     .select('attachment_url, attachment_category')
@@ -36,7 +45,7 @@ export async function getAttachmentsByCategory(transactionId: string): Promise<R
     return { ncf: null, payment_receipt: null, quote: null };
   }
 
-  const result: Record<AttachmentCategory, string | null> = {
+  const result: CategoryAttachmentsSingle = {
     ncf: null,
     payment_receipt: null,
     quote: null
@@ -44,8 +53,33 @@ export async function getAttachmentsByCategory(transactionId: string): Promise<R
 
   data?.forEach(item => {
     const category = item.attachment_category as AttachmentCategory;
-    if (category in result) {
+    if (category in result && !result[category]) {
       result[category] = item.attachment_url;
+    }
+  });
+
+  return result;
+}
+
+// Get ALL attachments for a transaction grouped by category (supports multiple per category)
+export async function getAttachmentsByCategoryMulti(transactionId: string): Promise<CategoryAttachmentsMulti> {
+  const { data, error } = await supabase
+    .from('transaction_attachments')
+    .select('id, transaction_id, attachment_url, attachment_category, created_at')
+    .eq('transaction_id', transactionId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching attachments:', error);
+    return { ncf: [], payment_receipt: [], quote: [] };
+  }
+
+  const result: CategoryAttachmentsMulti = { ncf: [], payment_receipt: [], quote: [] };
+
+  data?.forEach(item => {
+    const category = item.attachment_category as AttachmentCategory;
+    if (category in result) {
+      result[category].push(item as TransactionAttachment);
     }
   });
 
@@ -69,14 +103,16 @@ export async function getAttachmentUrls(transactionIds: string[]): Promise<Recor
 
   const result: Record<string, string> = {};
   data?.forEach(item => {
-    result[item.transaction_id] = item.attachment_url;
+    if (!result[item.transaction_id]) {
+      result[item.transaction_id] = item.attachment_url;
+    }
   });
 
   return result;
 }
 
-// Get all attachments for multiple transactions, organized by transaction and category
-export async function getAllAttachmentUrls(transactionIds: string[]): Promise<Record<string, Record<AttachmentCategory, string | null>>> {
+// Get all attachments for multiple transactions, organized by transaction and category (first per category for compat)
+export async function getAllAttachmentUrls(transactionIds: string[]): Promise<Record<string, CategoryAttachmentsSingle>> {
   if (transactionIds.length === 0) return {};
 
   const { data, error } = await supabase
@@ -89,9 +125,8 @@ export async function getAllAttachmentUrls(transactionIds: string[]): Promise<Re
     return {};
   }
 
-  const result: Record<string, Record<AttachmentCategory, string | null>> = {};
+  const result: Record<string, CategoryAttachmentsSingle> = {};
   
-  // Initialize all transactions with empty categories
   transactionIds.forEach(id => {
     result[id] = { ncf: null, payment_receipt: null, quote: null };
   });
@@ -99,7 +134,7 @@ export async function getAllAttachmentUrls(transactionIds: string[]): Promise<Re
   data?.forEach(item => {
     const txId = item.transaction_id;
     const category = item.attachment_category as AttachmentCategory;
-    if (result[txId] && category in result[txId]) {
+    if (result[txId] && category in result[txId] && !result[txId][category]) {
       result[txId][category] = item.attachment_url;
     }
   });
@@ -107,7 +142,39 @@ export async function getAllAttachmentUrls(transactionIds: string[]): Promise<Re
   return result;
 }
 
-// Save or update attachment URL for a transaction with specific category
+// Get all attachments for multiple transactions with full multi-per-category support
+export async function getAllAttachmentUrlsMulti(transactionIds: string[]): Promise<Record<string, CategoryAttachmentsMulti>> {
+  if (transactionIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('transaction_attachments')
+    .select('id, transaction_id, attachment_url, attachment_category, created_at')
+    .in('transaction_id', transactionIds)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching attachments:', error);
+    return {};
+  }
+
+  const result: Record<string, CategoryAttachmentsMulti> = {};
+  
+  transactionIds.forEach(id => {
+    result[id] = { ncf: [], payment_receipt: [], quote: [] };
+  });
+
+  data?.forEach(item => {
+    const txId = item.transaction_id;
+    const category = item.attachment_category as AttachmentCategory;
+    if (result[txId] && category in result[txId]) {
+      result[txId][category].push(item as TransactionAttachment);
+    }
+  });
+
+  return result;
+}
+
+// Save attachment for a transaction (always inserts – multiple per category allowed)
 export async function saveAttachment(
   transactionId: string, 
   attachmentUrl: string,
@@ -115,19 +182,29 @@ export async function saveAttachment(
 ): Promise<boolean> {
   const { error } = await supabase
     .from('transaction_attachments')
-    .upsert(
-      { 
-        transaction_id: transactionId, 
-        attachment_url: attachmentUrl,
-        attachment_category: category
-      },
-      { 
-        onConflict: 'transaction_id,attachment_category' 
-      }
-    );
+    .insert({ 
+      transaction_id: transactionId, 
+      attachment_url: attachmentUrl,
+      attachment_category: category
+    });
 
   if (error) {
     console.error('Error saving attachment:', error);
+    return false;
+  }
+
+  return true;
+}
+
+// Delete a specific attachment by its row ID
+export async function deleteAttachmentById(attachmentId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('transaction_attachments')
+    .delete()
+    .eq('id', attachmentId);
+
+  if (error) {
+    console.error('Error deleting attachment:', error);
     return false;
   }
 
@@ -162,7 +239,6 @@ export async function deleteAttachment(
 export async function getSignedAttachmentUrl(attachmentUrl: string): Promise<string | null> {
   if (!attachmentUrl) return null;
 
-  // Extract the file path from the stored URL
   const match = attachmentUrl.match(/transaction-attachments\/(.+)$/);
   if (!match) {
     console.error('Could not extract file path from URL:', attachmentUrl);
@@ -172,7 +248,6 @@ export async function getSignedAttachmentUrl(attachmentUrl: string): Promise<str
   const filePath = match[1];
 
   try {
-    // Get the current session to include auth token
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.access_token) {
@@ -201,6 +276,7 @@ export async function hasPaymentReceipt(transactionId: string): Promise<boolean>
     .select('id')
     .eq('transaction_id', transactionId)
     .eq('attachment_category', 'payment_receipt')
+    .limit(1)
     .maybeSingle();
 
   if (error) {

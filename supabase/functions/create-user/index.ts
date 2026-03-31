@@ -136,10 +136,10 @@ serve(async (req) => {
     }
 
     // Add role to user_roles table
-    const { error: roleError } = await adminClient.from("user_roles").insert({
+    const { error: roleError } = await adminClient.from("user_roles").upsert({
       user_id: newUser.user.id,
       role: role,
-    });
+    }, { onConflict: "user_id,role", ignoreDuplicates: true });
 
     if (roleError) {
       // Rollback: delete the user if role assignment fails

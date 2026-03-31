@@ -127,7 +127,7 @@ CREATE TRIGGER sync_tractor_hours
   FOR EACH ROW
   EXECUTE FUNCTION public.update_tractor_hour_meter();
 
--- Fuel tank to inventory sync
+-- Fuel tank to inventory sync (uses system_key lookup)
 CREATE TRIGGER sync_fuel_to_inventory
   AFTER INSERT OR UPDATE OR DELETE ON fuel_tanks
   FOR EACH ROW

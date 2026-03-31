@@ -54,9 +54,9 @@ export type Database = {
           deleted_at: string | null
           end_date: string
           id: string
-          is_closed: boolean | null
           period_name: string
           start_date: string
+          status: string
           updated_at: string | null
         }
         Insert: {
@@ -65,9 +65,9 @@ export type Database = {
           deleted_at?: string | null
           end_date: string
           id?: string
-          is_closed?: boolean | null
           period_name: string
           start_date: string
+          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -76,9 +76,9 @@ export type Database = {
           deleted_at?: string | null
           end_date?: string
           id?: string
-          is_closed?: boolean | null
           period_name?: string
           start_date?: string
+          status?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -186,6 +186,13 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ap_ar_document_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ap_ar_documents: {
@@ -203,10 +210,12 @@ export type Database = {
           document_number: string | null
           document_type: string
           due_date: string | null
+          exchange_rate_used: number | null
           id: string
           notes: string | null
           status: string
           total_amount: number
+          total_amount_dop: number | null
           updated_at: string
         }
         Insert: {
@@ -223,10 +232,12 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string | null
+          exchange_rate_used?: number | null
           id?: string
           notes?: string | null
           status?: string
           total_amount?: number
+          total_amount_dop?: number | null
           updated_at?: string
         }
         Update: {
@@ -243,10 +254,12 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string | null
+          exchange_rate_used?: number | null
           id?: string
           notes?: string | null
           status?: string
           total_amount?: number
+          total_amount_dop?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -454,6 +467,13 @@ export type Database = {
             columns: ["matched_transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_matched_transaction_id_fkey"
+            columns: ["matched_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
             referencedColumns: ["id"]
           },
         ]
@@ -2219,6 +2239,13 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "journals_transaction_source_id_fkey"
+            columns: ["transaction_source_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
         ]
       }
       operation_followups: {
@@ -3012,6 +3039,13 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "service_contract_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
         ]
       }
       service_contracts: {
@@ -3142,6 +3176,13 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
             referencedColumns: ["id"]
           },
         ]
@@ -3322,6 +3363,13 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transaction_attachments_transaction_uuid_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transaction_audit_log: {
@@ -3363,6 +3411,13 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transaction_audit_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transaction_edits: {
@@ -3395,12 +3450,20 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transaction_edits_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transactions: {
         Row: {
           account_id: string | null
           amount: number
+          amount_base_currency: number | null
           cbs_code: string | null
           cbs_id: string | null
           comments: string | null
@@ -3416,6 +3479,7 @@ export type Database = {
           document: string | null
           due_date: string | null
           exchange_rate: number | null
+          exchange_rate_used: number | null
           id: string
           is_internal: boolean
           is_void: boolean
@@ -3440,6 +3504,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount?: number
+          amount_base_currency?: number | null
           cbs_code?: string | null
           cbs_id?: string | null
           comments?: string | null
@@ -3455,6 +3520,7 @@ export type Database = {
           document?: string | null
           due_date?: string | null
           exchange_rate?: number | null
+          exchange_rate_used?: number | null
           id?: string
           is_internal?: boolean
           is_void?: boolean
@@ -3479,6 +3545,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          amount_base_currency?: number | null
           cbs_code?: string | null
           cbs_id?: string | null
           comments?: string | null
@@ -3494,6 +3561,7 @@ export type Database = {
           document?: string | null
           due_date?: string | null
           exchange_rate?: number | null
+          exchange_rate_used?: number | null
           id?: string
           is_internal?: boolean
           is_void?: boolean
@@ -3756,6 +3824,45 @@ export type Database = {
         }
         Relationships: []
       }
+      v_transactions_with_dop: {
+        Row: {
+          amount: number | null
+          amount_base_currency: number | null
+          cost_center: string | null
+          currency: string | null
+          description: string | null
+          exchange_rate_used: number | null
+          id: string | null
+          is_void: boolean | null
+          master_acct_code: string | null
+          transaction_date: string | null
+        }
+        Insert: {
+          amount?: number | null
+          amount_base_currency?: number | null
+          cost_center?: string | null
+          currency?: string | null
+          description?: string | null
+          exchange_rate_used?: number | null
+          id?: string | null
+          is_void?: boolean | null
+          master_acct_code?: string | null
+          transaction_date?: string | null
+        }
+        Update: {
+          amount?: number | null
+          amount_base_currency?: number | null
+          cost_center?: string | null
+          currency?: string | null
+          description?: string | null
+          exchange_rate_used?: number | null
+          id?: string | null
+          is_void?: boolean | null
+          master_acct_code?: string | null
+          transaction_date?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       account_balances_from_journals:
@@ -3858,6 +3965,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_exchange_rate: {
+        Args: { p_currency: string; p_date: string; p_rate_type?: string }
+        Returns: number
+      }
       get_fields_with_boundaries: {
         Args: never
         Returns: {
@@ -3906,6 +4017,14 @@ export type Database = {
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined
+      }
+      revalue_open_ap_ar: {
+        Args: {
+          p_period_id: string
+          p_posted_by: string
+          p_revaluation_date: string
+        }
+        Returns: number
       }
       trial_balance: {
         Args: { p_end?: string; p_start?: string }

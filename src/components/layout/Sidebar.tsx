@@ -51,6 +51,7 @@ const sectionColors: Record<Section, string> = {
   transactions: "",
   invoices: "",
   reports: "",
+  analytics: "",
   hr: "bg-section-hr",
   inventory: "bg-section-inventory",
   fuel: "bg-section-fuel",

@@ -211,7 +211,12 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       const endDate = `${fiscalYear}-12-31`;
       let query = supabase
         .from("transactions")
-        .select("id, cbs_code, master_acct_code, amount, currency, transaction_date")
+        .select(`
+          id, amount, currency, transaction_date,
+          master_acct_code, cbs_code,
+          chart_of_accounts:account_id (account_code),
+          cbs_codes:cbs_id (code)
+        `)
         .gte("transaction_date", startDate)
         .lte("transaction_date", endDate)
         .eq("is_void", false);
@@ -243,8 +248,11 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       };
 
       const map: Record<string, number> = {};
-      txns.forEach(tx => {
-        const key = budgetType === "project" ? tx.cbs_code : tx.master_acct_code;
+      txns.forEach((tx: any) => {
+        // Prefer UUID-joined codes, fall back to legacy text columns
+        const acctCode = tx.chart_of_accounts?.account_code || tx.master_acct_code;
+        const cbsCode = tx.cbs_codes?.code || tx.cbs_code;
+        const key = budgetType === "project" ? cbsCode : acctCode;
         if (key) {
           const rate = (tx.currency && tx.currency !== 'DOP') ? findRate(tx.transaction_date) : 1;
           map[key] = (map[key] || 0) + ((tx.amount || 0) * rate);

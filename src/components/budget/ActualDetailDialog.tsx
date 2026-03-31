@@ -29,6 +29,34 @@ export function ActualDetailDialog({
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["budget-actual-detail", budgetType, projectCode, lineCode, fiscalYear],
     queryFn: async () => {
+      // Resolve lineCode to UUID for FK-based filtering
+      let accountFilter: { column: string; value: string } | null = null;
+
+      if (budgetType === "project") {
+        const { data: cbsRow } = await supabase
+          .from("cbs_codes")
+          .select("id")
+          .eq("code", lineCode)
+          .maybeSingle();
+        if (cbsRow) {
+          accountFilter = { column: "cbs_id", value: cbsRow.id };
+        } else {
+          accountFilter = { column: "cbs_code", value: lineCode };
+        }
+      } else {
+        const { data: acctRow } = await supabase
+          .from("chart_of_accounts")
+          .select("id")
+          .eq("account_code", lineCode)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (acctRow) {
+          accountFilter = { column: "account_id", value: acctRow.id };
+        } else {
+          accountFilter = { column: "master_acct_code", value: lineCode };
+        }
+      }
+
       let query = supabase
         .from("transactions")
         .select("id, legacy_id, transaction_date, name, amount, currency")
@@ -37,10 +65,10 @@ export function ActualDetailDialog({
         .eq("is_void", false);
 
       if (budgetType === "project") {
-        query = query.eq("project_code", projectCode!).eq("cbs_code", lineCode);
-      } else {
-        query = query.eq("master_acct_code", lineCode);
+        query = query.eq("project_code", projectCode!);
       }
+
+      query = query.eq(accountFilter.column, accountFilter.value);
 
       const { data, error } = await query.order("transaction_date", { ascending: true });
       if (error) throw error;

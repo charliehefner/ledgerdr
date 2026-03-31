@@ -19,10 +19,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { fetchRecentTransactions, fetchAccounts, Transaction } from '@/lib/api';
+import { fetchRecentTransactions, Transaction } from '@/lib/api';
 import { getAllAttachmentUrls, AttachmentCategory } from '@/lib/attachments';
 import { supabase } from '@/integrations/supabase/client';
-import { getDescription } from '@/lib/getDescription';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { MultiAttachmentCell } from './MultiAttachmentCell';
 import { EditTransactionDialog } from '@/components/invoices/EditTransactionDialog';

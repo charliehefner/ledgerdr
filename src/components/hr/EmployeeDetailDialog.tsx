@@ -43,12 +43,21 @@ import {
   Percent,
   Info,
 } from "lucide-react";
-import { format, differenceInDays, differenceInMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { PrestacionesCalculatorDialog } from "./PrestacionesCalculatorDialog";
+
+interface SalarySegment {
+  startDate: string;
+  endDate: string;
+  salary: number;
+  days: number;
+  months: number;
+}
 
 interface EmployeeDetailDialogProps {
   employeeId: string | null;
@@ -62,8 +71,9 @@ export function EmployeeDetailDialog({
   onOpenChange,
 }: EmployeeDetailDialogProps) {
   const queryClient = useQueryClient();
-  const { canModifySettings } = useAuth();
+  const { canModifySettings, canWriteSection, user } = useAuth();
   const [activeTab, setActiveTab] = useState("info");
+  const [prestacionesOpen, setPrestacionesOpen] = useState(false);
 
   // Vacation form state
   const [vacationStart, setVacationStart] = useState("");
@@ -201,6 +211,64 @@ export function EmployeeDetailDialog({
       avgHoursPerDay: workedDays > 0 ? totalHours / workedDays : 0,
     };
   }, [timesheets]);
+
+  const isHrWriter = canWriteSection("hr");
+
+  const laborSummary = useMemo(() => {
+    if (!employee) return null;
+
+    const hireDate = parseDateLocal(employee.date_of_hire);
+    const endDate = employee.date_of_termination ? parseDateLocal(employee.date_of_termination) : new Date();
+    const totalMonths = Math.max(0, differenceInMonths(endDate, hireDate));
+    const years = differenceInYears(endDate, hireDate);
+    const remainingMonths = Math.max(0, totalMonths - years * 12);
+    const lastAnniversary = new Date(hireDate);
+    lastAnniversary.setFullYear(lastAnniversary.getFullYear() + years);
+    lastAnniversary.setMonth(lastAnniversary.getMonth() + remainingMonths);
+    const days = Math.max(0, differenceInDays(endDate, lastAnniversary));
+
+    const historyAsc = [...(salaryHistory || [])]
+      .sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+
+    const seededHistory = historyAsc.length === 0
+      ? [{ effective_date: employee.date_of_hire, salary: Number(employee.salary), notes: null, id: "current" }]
+      : historyAsc[0].effective_date === employee.date_of_hire
+        ? historyAsc
+        : [{ effective_date: employee.date_of_hire, salary: Number(historyAsc[0].salary), notes: "Base inicial", id: "seed" }, ...historyAsc];
+
+    const segments: SalarySegment[] = seededHistory.map((record, index) => {
+      const startDate = index === 0 ? employee.date_of_hire : record.effective_date;
+      const nextRecord = seededHistory[index + 1];
+      const rawEnd = nextRecord
+        ? new Date(parseDateLocal(nextRecord.effective_date).getTime() - 24 * 60 * 60 * 1000)
+        : endDate;
+      const segmentEnd = rawEnd < parseDateLocal(startDate) ? parseDateLocal(startDate) : rawEnd;
+      const daysInSegment = Math.max(1, differenceInDays(segmentEnd, parseDateLocal(startDate)) + 1);
+
+      return {
+        startDate,
+        endDate: format(segmentEnd, "yyyy-MM-dd"),
+        salary: Number(record.salary),
+        days: daysInSegment,
+        months: Number((daysInSegment / 30).toFixed(2)),
+      };
+    });
+
+    const weightedTotal = segments.reduce((sum, segment) => sum + segment.salary * segment.days, 0);
+    const totalDays = segments.reduce((sum, segment) => sum + segment.days, 0);
+    const averageSalary = totalDays > 0 ? weightedTotal / totalDays : Number(employee.salary);
+
+    return {
+      hireDate,
+      endDate: employee.date_of_termination ? parseDateLocal(employee.date_of_termination) : null,
+      years,
+      months: remainingMonths,
+      days,
+      totalMonths,
+      averageSalary,
+      salarySegments: segments,
+    };
+  }, [employee, salaryHistory]);
 
   // Calculate vacation summary
   const vacationSummary = useMemo(() => {
@@ -384,9 +452,10 @@ export function EmployeeDetailDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="info">Info</TabsTrigger>
             <TabsTrigger value="history">Historial</TabsTrigger>
+              <TabsTrigger value="prestaciones">Prestaciones</TabsTrigger>
             <TabsTrigger value="salary">Salario</TabsTrigger>
             <TabsTrigger value="vacations">Vacaciones</TabsTrigger>
             <TabsTrigger value="incidents">Incidentes</TabsTrigger>
@@ -437,8 +506,14 @@ export function EmployeeDetailDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Antigüedad</span>
+                    <span>{laborSummary ? `${laborSummary.years} años, ${laborSummary.months} meses, ${laborSummary.days} días` : "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fecha de Salida</span>
                     <span>
-                      {differenceInMonths(new Date(), parseDateLocal(employee.date_of_hire))} meses
+                      {employee.date_of_termination
+                        ? format(parseDateLocal(employee.date_of_termination), "d MMM yyyy", { locale: es })
+                        : "—"}
                     </span>
                   </div>
                 </CardContent>
@@ -483,6 +558,86 @@ export function EmployeeDetailDialog({
                     <span className="text-muted-foreground">Botas</span>
                     <span>{employee.boot_size || "—"}</span>
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="prestaciones" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    Resumen laboral
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-lg border border-border p-4">
+                      <p className="text-xs text-muted-foreground">Ingreso</p>
+                      <p className="mt-1 font-semibold">{format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es })}</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-4">
+                      <p className="text-xs text-muted-foreground">Salida</p>
+                      <p className="mt-1 font-semibold">{employee.date_of_termination ? format(parseDateLocal(employee.date_of_termination), "d MMM yyyy", { locale: es }) : "Activa"}</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-4">
+                      <p className="text-xs text-muted-foreground">Antigüedad total</p>
+                      <p className="mt-1 font-semibold">{laborSummary ? `${laborSummary.years}a ${laborSummary.months}m ${laborSummary.days}d` : "—"}</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-4">
+                      <p className="text-xs text-muted-foreground">Salario promedio</p>
+                      <p className="mt-1 font-semibold">{formatCurrency(laborSummary?.averageSalary || 0)}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(laborSummary?.salarySegments || []).map((segment, index) => (
+                      <div key={`${segment.startDate}-${segment.endDate}-${index}`} className="flex flex-col gap-2 rounded-lg border border-border p-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="font-medium">
+                            {format(parseDateLocal(segment.startDate), "d MMM yyyy", { locale: es })} — {format(parseDateLocal(segment.endDate), "d MMM yyyy", { locale: es })}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{segment.days} días · {segment.months.toFixed(2)} meses al mismo salario</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{formatCurrency(segment.salary)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Cálculo de prestaciones
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <p className="text-muted-foreground">
+                    Usa salario promedio histórico y genera desglose imprimible para desahucio o dimisión.
+                  </p>
+                  <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Tramos salariales</span>
+                      <span className="font-medium">{laborSummary?.salarySegments.length || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Base salarial promedio</span>
+                      <span className="font-medium">{formatCurrency(laborSummary?.averageSalary || 0)}</span>
+                    </div>
+                  </div>
+                  <Button onClick={() => setPrestacionesOpen(true)} disabled={!isHrWriter}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Calcular Prestaciones
+                  </Button>
+                  {!isHrWriter && (
+                    <p className="text-xs text-muted-foreground">Necesitas permisos de escritura en RRHH para guardar casos.</p>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1021,6 +1176,23 @@ export function EmployeeDetailDialog({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {employee && laborSummary && (
+        <PrestacionesCalculatorDialog
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            position: employee.position,
+            date_of_hire: employee.date_of_hire,
+            date_of_termination: employee.date_of_termination,
+          }}
+          open={prestacionesOpen}
+          onOpenChange={setPrestacionesOpen}
+          salarySegments={laborSummary.salarySegments}
+          canSave={isHrWriter}
+          userId={user?.id}
+        />
+      )}
     </Dialog>
   );
 }

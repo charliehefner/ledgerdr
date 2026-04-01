@@ -195,7 +195,6 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         .from("ap_ar_documents")
         .update({
           amount_paid: Math.round(newPaid * 100) / 100,
-          balance_remaining: Math.max(0, Math.round(newBalance * 100) / 100),
           status: newStatus,
         })
         .eq("id", document.id);

@@ -333,7 +333,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("operations")
-        .select("id, operation_date, hectares_done, tractor_id, field_id, fields(name, hectares), operation_types(name, is_mechanical)")
+        .select("id, operation_date, hectares_done, tractor_id, field_id, fields:fields!operations_field_id_fkey(name, hectares), operation_types:operation_types!operations_operation_type_id_fkey(name, is_mechanical)")
         .gte("operation_date", thirtyDaysAgo)
         .order("operation_date", { ascending: false });
       if (error) throw error;

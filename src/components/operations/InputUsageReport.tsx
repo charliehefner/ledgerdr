@@ -220,7 +220,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
   const { data: operations, isLoading } = useQuery({
     queryKey: ["operations-with-inputs"],
     queryFn: async () => {
-      const { data, error } = await supabase
+        const { data, error } = await supabase
         .from("operations")
         .select(`
           id,
@@ -228,9 +228,9 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           hectares_done,
           driver,
           tractor_id,
-          fields(name, farms(name)),
-          fuel_equipment(name),
-          operation_inputs(id, quantity_used, inventory_items(id, commercial_name, use_unit, molecule_name, co2_equivalent))
+          fields:fields!operations_field_id_fkey(name, farms:farms!fields_farm_id_fkey(name)),
+          fuel_equipment:fuel_equipment!operations_tractor_id_fkey(name),
+          operation_inputs:operation_inputs!operation_inputs_operation_id_fkey(id, quantity_used, inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(id, commercial_name, use_unit, molecule_name, co2_equivalent))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;

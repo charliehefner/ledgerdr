@@ -126,8 +126,8 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     .select(`
       *,
       chart_of_accounts:chart_of_accounts!transactions_account_id_fkey (account_code, account_name, english_description, spanish_description),
-      projects:project_id (code, english_description, spanish_description),
-      cbs_codes:cbs_id (code, english_description, spanish_description)
+      projects:projects!transactions_project_id_fkey (code, english_description, spanish_description),
+      cbs_codes:cbs_codes!transactions_cbs_id_fkey (code, english_description, spanish_description)
     `)
     .eq('is_void', false)
     .order('created_at', { ascending: false })

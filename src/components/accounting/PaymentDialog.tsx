@@ -112,8 +112,6 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
       let journalId: string | null = null;
       let transactionId: string | null = null;
       let transactionLegacyId: number | null = null;
-      let paymentId: string | null = null;
-
       try {
         // 1. Create payment journal entry
         const { data: createdJournalId, error: jErr } = await supabase.rpc(
@@ -202,7 +200,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         if (linkJournalError) throw linkJournalError;
 
         // 3. Record payment in ap_ar_payments audit trail
-        const paymentInsertResponse = await supabase
+        const { error: pErr } = await supabase
           .from("ap_ar_payments" as any)
           .insert({
             document_id: document.id,
@@ -213,13 +211,8 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
             journal_id: journalId,
             created_by: user?.id || null,
             notes: transactionLegacyId ? `TX-${transactionLegacyId}` : null,
-          })
-          .select("id")
-          .single();
-        const insertedPayment = paymentInsertResponse.data as { id: string } | null;
-        const pErr = paymentInsertResponse.error;
+          });
         if (pErr) throw pErr;
-        paymentId = insertedPayment.id;
 
         // 4. Update ap_ar_documents summary
         const { error } = await supabase
@@ -233,8 +226,8 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
 
         return { reusedExistingPayment: false };
       } catch (error) {
-        if (paymentId) {
-          await supabase.from("ap_ar_payments").delete().eq("id", paymentId);
+        if (journalId) {
+          await supabase.from("ap_ar_payments").delete().eq("journal_id", journalId);
         }
         if (journalId) {
           await supabase.from("journal_lines").delete().eq("journal_id", journalId);

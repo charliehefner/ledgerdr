@@ -202,7 +202,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         if (linkJournalError) throw linkJournalError;
 
         // 3. Record payment in ap_ar_payments audit trail
-        const { data: insertedPayment, error: pErr } = await supabase
+        const paymentInsertResponse = await supabase
           .from("ap_ar_payments" as any)
           .insert({
             document_id: document.id,
@@ -216,6 +216,8 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
           })
           .select("id")
           .single();
+        const insertedPayment = paymentInsertResponse.data as { id: string } | null;
+        const pErr = paymentInsertResponse.error;
         if (pErr) throw pErr;
         paymentId = insertedPayment.id;
 

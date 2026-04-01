@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
@@ -18,8 +25,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
+import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, FileText, Receipt, DollarSign, ArrowLeftRight } from "lucide-react";
+import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog } from "./PaymentDialog";
 
@@ -80,6 +89,8 @@ export function ApArDocumentList({ direction }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paymentDoc, setPaymentDoc] = useState<ApArDocument | null>(null);
   const [allocDoc, setAllocDoc] = useState<ApArDocument | null>(null);
+  const [dueDateDoc, setDueDateDoc] = useState<ApArDocument | null>(null);
+  const [editedDueDate, setEditedDueDate] = useState<Date | undefined>(undefined);
   const [allocAmount, setAllocAmount] = useState("");
   const [selectedAdvanceId, setSelectedAdvanceId] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocTypeFilter>("all");
@@ -307,6 +318,36 @@ export function ApArDocumentList({ direction }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updateDueDateMutation = useMutation({
+    mutationFn: async () => {
+      if (!dueDateDoc) throw new Error("Documento no encontrado");
+      if (dueDateDoc.status === "paid" || dueDateDoc.status === "void") {
+        throw new Error("No se puede editar la fecha de vencimiento de este documento");
+      }
+
+      if (editedDueDate) {
+        const documentDate = parseDateLocal(dueDateDoc.document_date);
+        if (editedDueDate < documentDate) {
+          throw new Error("La fecha de vencimiento no puede ser anterior a la fecha del documento");
+        }
+      }
+
+      const { error } = await supabase
+        .from("ap_ar_documents")
+        .update({ due_date: editedDueDate ? formatDateLocal(editedDueDate) : null })
+        .eq("id", dueDateDoc.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      setDueDateDoc(null);
+      setEditedDueDate(undefined);
+      toast.success("Fecha de vencimiento actualizada");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const resetForm = () => {
     setForm({
       document_type: "invoice",
@@ -331,6 +372,11 @@ export function ApArDocumentList({ direction }: Props) {
       d.status !== "void" &&
       d.balance_remaining > 0
     );
+  };
+
+  const openDueDateDialog = (doc: ApArDocument) => {
+    setDueDateDoc(doc);
+    setEditedDueDate(doc.due_date ? parseDateLocal(doc.due_date) : undefined);
   };
 
   return (
@@ -519,6 +565,14 @@ export function ApArDocumentList({ direction }: Props) {
                             onClick={() => setPaymentDoc(doc)}
                           >
                             <DollarSign className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Editar vencimiento"
+                            onClick={() => openDueDateDialog(doc)}
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </>
                       )}
@@ -716,6 +770,93 @@ export function ApArDocumentList({ direction }: Props) {
             >
               {allocateMutation.isPending ? t("common.saving") : t("apar.applyAdvance")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!dueDateDoc} onOpenChange={open => {
+        if (!open) {
+          setDueDateDoc(null);
+          setEditedDueDate(undefined);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar fecha de vencimiento</DialogTitle>
+            <DialogDescription>
+              {dueDateDoc?.contact_name} {dueDateDoc?.document_number ? `— ${dueDateDoc.document_number}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {dueDateDoc && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg border p-3">
+                  <div className="text-muted-foreground">Fecha documento</div>
+                  <div className="font-medium">{formatDate(dueDateDoc.document_date)}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-muted-foreground">Vencimiento actual</div>
+                  <div className="font-medium">{dueDateDoc.due_date ? formatDate(dueDateDoc.due_date) : "Sin fecha"}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nueva fecha de vencimiento</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editedDueDate && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editedDueDate ? format(editedDueDate, "PPP") : <span>Seleccionar fecha</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editedDueDate}
+                      onSelect={setEditedDueDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  No puede ser anterior a {formatDate(dueDateDoc.document_date)}.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditedDueDate(undefined)}
+              disabled={updateDueDateMutation.isPending}
+            >
+              Quitar fecha
+            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDueDateDoc(null);
+                  setEditedDueDate(undefined);
+                }}
+                disabled={updateDueDateMutation.isPending}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={() => updateDueDateMutation.mutate()} disabled={updateDueDateMutation.isPending}>
+                {updateDueDateMutation.isPending ? t("common.saving") : t("common.save")}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

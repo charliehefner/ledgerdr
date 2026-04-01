@@ -28,9 +28,9 @@ interface ServiceEntryPaymentDialogEntry {
   id: string;
   description: string | null;
   currency: string;
-  committed_amount: number | null;
-  paid_amount: number | null;
-  remaining_amount: number | null;
+  committed_amount?: number | null;
+  paid_amount?: number | null;
+  remaining_amount?: number | null;
   pay_method: string | null;
   service_providers: {
     name: string;

@@ -3335,50 +3335,79 @@ export type Database = {
       service_entries: {
         Row: {
           amount: number | null
+          ap_document_id: string | null
           comments: string | null
+          committed_amount: number
           created_at: string
           currency: string
           description: string | null
           id: string
           is_closed: boolean
           master_acct_code: string | null
+          paid_amount: number
           pay_method: string | null
           provider_id: string
+          remaining_amount: number
           service_date: string
+          settlement_status: string
           transaction_id: string | null
           updated_at: string
         }
         Insert: {
           amount?: number | null
+          ap_document_id?: string | null
           comments?: string | null
+          committed_amount?: number
           created_at?: string
           currency?: string
           description?: string | null
           id?: string
           is_closed?: boolean
           master_acct_code?: string | null
+          paid_amount?: number
           pay_method?: string | null
           provider_id: string
+          remaining_amount?: number
           service_date?: string
+          settlement_status?: string
           transaction_id?: string | null
           updated_at?: string
         }
         Update: {
           amount?: number | null
+          ap_document_id?: string | null
           comments?: string | null
+          committed_amount?: number
           created_at?: string
           currency?: string
           description?: string | null
           id?: string
           is_closed?: boolean
           master_acct_code?: string | null
+          paid_amount?: number
           pay_method?: string | null
           provider_id?: string
+          remaining_amount?: number
           service_date?: string
+          settlement_status?: string
           transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_entries_ap_document_id_fkey"
+            columns: ["ap_document_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entries_ap_document_id_fkey"
+            columns: ["ap_document_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_entries_pay_method_fkey"
             columns: ["pay_method"]
@@ -3402,6 +3431,90 @@ export type Database = {
           },
           {
             foreignKeyName: "service_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_entry_payments: {
+        Row: {
+          amount: number
+          ap_payment_id: string | null
+          bank_account_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_final_payment: boolean
+          ncf: string | null
+          notes: string | null
+          payment_date: string
+          service_entry_id: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          ap_payment_id?: string | null
+          bank_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_final_payment?: boolean
+          ncf?: string | null
+          notes?: string | null
+          payment_date: string
+          service_entry_id: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          ap_payment_id?: string | null
+          bank_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_final_payment?: boolean
+          ncf?: string | null
+          notes?: string | null
+          payment_date?: string
+          service_entry_id?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_entry_payments_ap_payment_id_fkey"
+            columns: ["ap_payment_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entry_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entry_payments_service_entry_id_fkey"
+            columns: ["service_entry_id"]
+            isOneToOne: false
+            referencedRelation: "service_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entry_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entry_payments_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "v_transactions_with_dop"
@@ -4440,6 +4553,18 @@ export type Database = {
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined
+      }
+      register_service_partial_payment: {
+        Args: {
+          p_amount: number
+          p_bank_account_id: string
+          p_is_final_payment?: boolean
+          p_ncf?: string
+          p_notes?: string
+          p_payment_date: string
+          p_service_entry_id: string
+        }
+        Returns: Json
       }
       revalue_open_ap_ar: {
         Args: {

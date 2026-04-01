@@ -1,48 +1,71 @@
 
-What went wrong
-- The repeated payment is not just a display issue. The app created multiple real transaction rows:
-  - Keep: transaction 433
-  - Duplicates: 434, 435, 436, 437, 438, 439
-- I confirmed 433 is the correct one to preserve because it is the only one currently linked to:
-  - the payment audit row in `ap_ar_payments`
-  - journal `CDJ-000010`
-- Transaction 440 is a different valid payment (`Pago a Charles Hefner — 361`) and should stay as-is.
+Goal: allow editing the due date on existing A/P and A/R documents after creation, so a credit transaction like 442 can be extended later without changing the original transaction unless explicitly desired.
 
-Answer to your question
-- No, transaction 440 should not be renumbered.
-- In this system, `legacy_id` is treated as a visible accounting/document number, and the codebase already follows a voiding approach for corrections rather than renumbering old records.
-- Renumbering 440 to close the gap would be risky because other records, exports, audit references, or user notes may already point to `440`.
+What I found
+- Credit transactions already auto-create AP/AR docs with a due date:
+  - `TransactionForm.tsx` defaults credit-without-date to `+30 days`
+  - `EditTransactionDialog.tsx` also syncs due dates into linked AP/AR docs
+- The AP/AR list shows due dates but has no edit action for them:
+  - `src/components/accounting/ApArDocumentList.tsx`
+- Current row actions only allow:
+  - register payment
+  - apply advance
+- There is no dedicated AP/AR edit dialog right now.
+- Permissions already exist for write access to the AP/AR section, so this should stay limited to users who can write there.
 
-Plan
-1. Clean up the duplicates by removing only the bad records
-- Delete transactions 434-439
-- Delete their linked journals `CDJ-000011` through `CDJ-000016`
-- Keep transaction 433 and its linked journal/payment audit intact
+Implementation plan
+1. Add an “Edit due date” action in AP/AR
+- Add a small row action in `ApArDocumentList.tsx` for open/partial documents
+- Make it available for both payables and receivables
+- Hide/disable it for void/paid documents
 
-2. Do not resequence transaction numbers
-- Leave 440 as 440
-- Accept the numbering gap as part of the audit trail after cleanup
+2. Add a focused due-date edit dialog
+- Create a lightweight dialog in `ApArDocumentList.tsx` or a small dedicated component
+- Show:
+  - contact/document number
+  - document date
+  - current due date
+  - new due date input
+- Include clear option to remove the due date if needed
 
-3. Prevent this from happening again
-- Patch the payment flow in `src/components/accounting/PaymentDialog.tsx`
-- Add a submission guard so repeated clicks/retries cannot create the same payment multiple times
-- Make the mutation idempotent enough for UI retries:
-  - disable the submit action while saving
-  - stop creating a second transaction if the journal/payment was already created for that same action
-  - surface a clearer error/success state
+3. Update the AP/AR document directly
+- On save, update `ap_ar_documents.due_date`
+- Invalidate the AP/AR queries so:
+  - the table refreshes
+  - aging buckets refresh automatically
+- Keep this scoped to the AP/AR document only, since extensions are usually a sub-ledger/business change, not a rewrite of the original source transaction
 
-4. Verify the accounting links after cleanup
-- Confirm the document still has one payment audit row
-- Confirm only one journal remains for document 349
-- Confirm transaction 433 still appears and 434-439 no longer do
-- Confirm 440 remains untouched
+4. Add safe validation
+- Prevent editing paid or void docs
+- Validate that due date is not before document date unless you want to allow that; default recommendation is to block earlier dates
+- Show clear success/error toasts
+
+5. Keep transaction synchronization intentional
+- Do not automatically rewrite `transactions.due_date` for existing items in this first pass
+- Reason: the AP/AR due date is the operative collection/payment term after renegotiation, while the original transaction can remain historical
+- If needed later, we can add a separate “also sync back to source transaction” behavior
 
 Technical details
-- Relevant live data confirmed:
-  - `433` → linked to `ap_ar_payments.notes = TX-433`
-  - journal kept: `CDJ-000010`
-  - duplicate journals: `CDJ-000011` to `CDJ-000016`
-- This is a data cleanup plus prevention fix:
-  - data cleanup in backend records
-  - code hardening in `PaymentDialog.tsx`
-- I would not renumber `legacy_id` values because they behave like human-facing document references and the app already distinguishes valid vs invalid records through record state/cleanup, not resequencing.
+- Main file to update:
+  - `src/components/accounting/ApArDocumentList.tsx`
+- Existing data flow already supports due dates in:
+  - `transactions.due_date`
+  - `ap_ar_documents.due_date`
+- No schema change is needed; this is a UI + update-flow enhancement only.
+- Recommended UX:
+```text
+AP/AR row
+[Apply Advance] [Register Payment] [Edit Due Date]
+
+Edit Due Date dialog
+- Document: 442
+- Contact: ...
+- Document date: ...
+- Due date: [datepicker]
+- [Clear date]
+- [Cancel] [Save]
+```
+
+Expected result
+- For transaction 442’s payable, you’ll be able to open A/P, edit the due date, and save the extension directly.
+- Aging and balances will immediately reflect the new due date.

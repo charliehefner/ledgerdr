@@ -2307,6 +2307,108 @@ export type Database = {
           },
         ]
       }
+      liquidation_cases: {
+        Row: {
+          calculation_payload: Json
+          case_status: Database["public"]["Enums"]["liquidation_case_status"]
+          cesantia_amount: number
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          include_loans: boolean
+          loan_deductions: number
+          manual_adjustments: number
+          manual_deductions: number
+          notes: string | null
+          pending_vacation_days: number | null
+          preaviso_amount: number
+          regalía_amount: number
+          salary_basis_daily: number
+          salary_basis_monthly: number
+          scenario: Database["public"]["Enums"]["prestaciones_scenario"]
+          service_days: number
+          service_months: number
+          service_years: number
+          termination_date: string
+          total_amount: number
+          updated_at: string
+          vacation_amount: number
+          worked_notice: boolean
+        }
+        Insert: {
+          calculation_payload?: Json
+          case_status?: Database["public"]["Enums"]["liquidation_case_status"]
+          cesantia_amount?: number
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          include_loans?: boolean
+          loan_deductions?: number
+          manual_adjustments?: number
+          manual_deductions?: number
+          notes?: string | null
+          pending_vacation_days?: number | null
+          preaviso_amount?: number
+          regalía_amount?: number
+          salary_basis_daily?: number
+          salary_basis_monthly?: number
+          scenario: Database["public"]["Enums"]["prestaciones_scenario"]
+          service_days?: number
+          service_months?: number
+          service_years?: number
+          termination_date: string
+          total_amount?: number
+          updated_at?: string
+          vacation_amount?: number
+          worked_notice?: boolean
+        }
+        Update: {
+          calculation_payload?: Json
+          case_status?: Database["public"]["Enums"]["liquidation_case_status"]
+          cesantia_amount?: number
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          include_loans?: boolean
+          loan_deductions?: number
+          manual_adjustments?: number
+          manual_deductions?: number
+          notes?: string | null
+          pending_vacation_days?: number | null
+          preaviso_amount?: number
+          regalía_amount?: number
+          salary_basis_daily?: number
+          salary_basis_monthly?: number
+          scenario?: Database["public"]["Enums"]["prestaciones_scenario"]
+          service_days?: number
+          service_months?: number
+          service_years?: number
+          termination_date?: string
+          total_amount?: number
+          updated_at?: string
+          vacation_amount?: number
+          worked_notice?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "liquidation_cases_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liquidation_cases_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operation_followups: {
         Row: {
           created_at: string | null
@@ -2757,6 +2859,39 @@ export type Database = {
             referencedColumns: ["period_id"]
           },
         ]
+      }
+      prestaciones_parameters: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          numeric_value: number | null
+          parameter_key: string
+          scope: string
+          text_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          numeric_value?: number | null
+          parameter_key: string
+          scope?: string
+          text_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          numeric_value?: number | null
+          parameter_key?: string
+          scope?: string
+          text_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       projects: {
         Row: {
@@ -4131,6 +4266,19 @@ export type Database = {
               total_debit: number
             }[]
           }
+      calculate_prestaciones: {
+        Args: {
+          p_employee_id: string
+          p_include_loans?: boolean
+          p_manual_adjustments?: number
+          p_manual_deductions?: number
+          p_pending_vacation_days?: number
+          p_scenario: Database["public"]["Enums"]["prestaciones_scenario"]
+          p_termination_date: string
+          p_worked_notice?: boolean
+        }
+        Returns: Json
+      }
       close_day_labor_week: { Args: { p_week_ending: string }; Returns: string }
       count_unlinked_transactions: {
         Args: { p_end?: string; p_start?: string }
@@ -4337,6 +4485,8 @@ export type Database = {
         | "other"
         | "condicionador"
         | "adherente"
+      liquidation_case_status: "draft" | "final"
+      prestaciones_scenario: "desahucio" | "dimision"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4485,6 +4635,8 @@ export const Constants = {
         "condicionador",
         "adherente",
       ],
+      liquidation_case_status: ["draft", "final"],
+      prestaciones_scenario: ["desahucio", "dimision"],
     },
   },
 } as const

@@ -64,7 +64,6 @@ export function PeriodsView() {
         period_name: values.period_name,
         start_date: values.start_date,
         end_date: values.end_date,
-        is_closed: false,
         status: "open",
       } as any);
       if (error) throw error;

@@ -54,6 +54,7 @@ export type Database = {
           deleted_at: string | null
           end_date: string
           id: string
+          is_closed: boolean | null
           period_name: string
           start_date: string
           status: string
@@ -65,6 +66,7 @@ export type Database = {
           deleted_at?: string | null
           end_date: string
           id?: string
+          is_closed?: boolean | null
           period_name: string
           start_date: string
           status?: string
@@ -76,6 +78,7 @@ export type Database = {
           deleted_at?: string | null
           end_date?: string
           id?: string
+          is_closed?: boolean | null
           period_name?: string
           start_date?: string
           status?: string

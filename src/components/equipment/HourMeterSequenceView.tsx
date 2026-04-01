@@ -47,7 +47,7 @@ export function HourMeterSequenceView() {
       const { data, error } = await supabase
         .from("operations")
         .select(
-          "id, operation_date, start_hours, end_hours, fields(name), operation_types(name), driver"
+          "id, operation_date, start_hours, end_hours, fields:fields!operations_field_id_fkey(name), operation_types:operation_types!operations_operation_type_id_fkey(name), driver"
         )
         .eq("tractor_id", selectedTractorId)
         .not("start_hours", "is", null)

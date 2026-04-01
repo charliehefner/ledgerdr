@@ -48,10 +48,10 @@ serve(async (req) => {
       supabase.from("operation_types").select("id, name").eq("is_active", true),
       supabase.from("operations").select(`
         id, operation_date, hectares_done, driver, notes, workers_count,
-        field:fields(name, farm:farms(name)),
-        operation_type:operation_types(name),
-        tractor:fuel_equipment(name),
-        implement:implements(name)
+        field:fields!operations_field_id_fkey(name, farm:farms!fields_farm_id_fkey(name)),
+        operation_type:operation_types!operations_operation_type_id_fkey(name),
+        tractor:fuel_equipment!operations_tractor_id_fkey(name),
+        implement:implements!operations_implement_id_fkey(name)
       `).order("operation_date", { ascending: false }).limit(100),
       supabase.from("employees_safe").select("id, name, position, is_active"),
       supabase.from("rainfall_records").select("record_date, solar, caoba, palmarito, virgencita").order("record_date", { ascending: false }).limit(60),
@@ -59,12 +59,12 @@ serve(async (req) => {
       supabase.from("inventory_items").select("commercial_name, molecule_name, function, current_quantity, use_unit, price_per_purchase_unit, purchase_unit_type, purchase_unit_quantity, supplier, co2_equivalent").eq("is_active", true),
       supabase.from("inventory_purchases").select(`
         purchase_date, quantity, unit_price, total_price, supplier, packaging_unit, packaging_quantity,
-        inventory_items(commercial_name)
+        inventory_items:inventory_items!inventory_purchases_item_id_fkey(commercial_name)
       `).order("purchase_date", { ascending: false }).limit(200),
       supabase.from("operation_inputs").select(`
         quantity_used,
-        inventory_items(commercial_name, use_unit),
-        operations(operation_date, fields(name, farms(name)))
+        inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit),
+        operations:operations!operation_inputs_operation_id_fkey(operation_date, fields:fields!operations_field_id_fkey(name, farms:farms!fields_farm_id_fkey(name)))
       `).order("created_at", { ascending: false }).limit(200),
     ]);
 

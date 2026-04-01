@@ -237,11 +237,11 @@ export function OperationsLogView() {
         .from("operations")
         .select(`
           *,
-          fields(name, farm_id, farms(name)),
-          operation_types(name, is_mechanical),
-          fuel_equipment(name),
-          implements(name),
-          operation_inputs(id, inventory_item_id, quantity_used, inventory_items(commercial_name, use_unit))
+          fields:fields!operations_field_id_fkey(name, farm_id, farms:farms!fields_farm_id_fkey(name)),
+          operation_types:operation_types!operations_operation_type_id_fkey(name, is_mechanical),
+          fuel_equipment:fuel_equipment!operations_tractor_id_fkey(name),
+          implements:implements!operations_implement_id_fkey(name),
+          operation_inputs:operation_inputs!operation_inputs_operation_id_fkey(id, inventory_item_id, quantity_used, inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
       if (error) throw error;

@@ -93,7 +93,7 @@ export function JournalView() {
             approval_status, approved_by, approved_at, rejection_reason, is_reconciled, reference_description,
             journal_lines (
               id, debit, credit, account_id, cbs_code, project_code, description,
-              chart_of_accounts:account_id ( account_code, account_name )
+              chart_of_accounts:chart_of_accounts!journal_lines_account_id_fkey ( account_code, account_name )
             )
           `)
           .is("deleted_at", null)

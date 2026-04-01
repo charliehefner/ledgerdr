@@ -149,9 +149,9 @@ export function FieldProgressReport() {
             field_id,
             operation_type_id,
             hectares_done,
-            fields(id, name, hectares, farms(name)),
-            operation_types(name, is_mechanical),
-            operation_inputs(id, quantity_used, inventory_items(commercial_name, use_unit))
+            fields:fields!operations_field_id_fkey(id, name, hectares, farms:farms!fields_farm_id_fkey(name)),
+            operation_types:operation_types!operations_operation_type_id_fkey(name, is_mechanical),
+            operation_inputs:operation_inputs!operation_inputs_operation_id_fkey(id, quantity_used, inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit))
           `)
           .order("operation_date", { ascending: false })
           .range(from, from + pageSize - 1);

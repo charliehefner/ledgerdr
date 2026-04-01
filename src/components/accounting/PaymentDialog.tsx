@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [bankAccountId, setBankAccountId] = useState("");
+  const submitLockRef = useRef(false);
 
   // Fetch bank accounts for payment method selection
   const { data: bankAccounts = [] } = useQuery({
@@ -62,6 +63,29 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
       const selectedBank = bankAccounts.find(b => b.id === bankAccountId);
       if (!selectedBank?.chart_account_id) throw new Error("Seleccione una cuenta bancaria con cuenta contable asignada");
 
+      const now = Date.now();
+      const duplicateWindowMs = 5 * 60 * 1000;
+      const { data: existingPayment, error: existingPaymentError } = await supabase
+        .from("ap_ar_payments")
+        .select("id, notes, journal_id, created_at")
+        .eq("document_id", document.id)
+        .eq("payment_date", paymentDate)
+        .eq("amount", amount)
+        .eq("bank_account_id", bankAccountId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingPaymentError) throw existingPaymentError;
+
+      if (
+        existingPayment?.journal_id &&
+        existingPayment.notes?.startsWith("TX-") &&
+        now - new Date(existingPayment.created_at).getTime() <= duplicateWindowMs
+      ) {
+        return { reusedExistingPayment: true };
+      }
+
       const newPaid = document.amount_paid + amount;
       const newBalance = document.total_amount - newPaid;
       const newStatus = newBalance <= 0.005 ? "paid" : "partial";
@@ -85,63 +109,67 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         apArAccountId = fallbackAcct.id;
       }
 
-      // 1. Create payment journal entry
-      const { data: journalId, error: jErr } = await supabase.rpc(
-        "create_journal_from_transaction" as any,
-        {
-          p_transaction_id: null,
-          p_date: paymentDate,
-          p_description: `Pago ${isPayable ? "a" : "de"} ${document.contact_name} — ${document.document_number || "S/N"}`,
-          p_created_by: user?.id || null,
-          p_journal_type: journalType,
-        }
-      );
-      if (jErr) throw jErr;
-
-      // Journal lines: for payable, debit AP credit bank; for receivable, debit bank credit AR
-      const lines = isPayable
-        ? [
-            { journal_id: journalId, account_id: apArAccountId, debit: amount, credit: 0, description: `Pago a ${document.contact_name}` },
-            { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: 0, credit: amount, description: `Pago ${selectedBank.account_name}` },
-          ]
-        : [
-            { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: amount, credit: 0, description: `Cobro de ${document.contact_name}` },
-            { journal_id: journalId, account_id: apArAccountId, debit: 0, credit: amount, description: `Cobro a ${document.contact_name}` },
-          ];
-
-      const { error: lErr } = await supabase.from("journal_lines").insert(lines);
-      if (lErr) {
-        // Clean up orphaned journal
-        await supabase.from("journals").delete().eq("id", journalId);
-        throw lErr;
-      }
-
-      // Finding 7: Set currency and exchange_rate on the payment journal
-      if (document.currency !== "DOP") {
-        // Fetch latest exchange rate
-        const { data: rateData } = await supabase
-          .from("exchange_rates")
-          .select("sell_rate")
-          .eq("currency_pair", "USD_DOP")
-          .order("rate_date", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const rate = rateData?.sell_rate || 1;
-        await supabase.from("journals").update({
-          currency: document.currency,
-          exchange_rate: rate,
-        }).eq("id", journalId);
-      }
-
-      // 2. Create a transaction record for full traceability
+      let journalId: string | null = null;
+      let transactionId: string | null = null;
       let transactionLegacyId: number | null = null;
+      let paymentId: string | null = null;
+
       try {
-        // Look up AP/AR account code for master_acct_code
-        const { data: apArAcct } = await supabase
+        // 1. Create payment journal entry
+        const { data: createdJournalId, error: jErr } = await supabase.rpc(
+          "create_journal_from_transaction" as any,
+          {
+            p_transaction_id: null,
+            p_date: paymentDate,
+            p_description: `Pago ${isPayable ? "a" : "de"} ${document.contact_name} — ${document.document_number || "S/N"}`,
+            p_created_by: user?.id || null,
+            p_journal_type: journalType,
+          }
+        );
+        if (jErr) throw jErr;
+        journalId = createdJournalId;
+
+        // Journal lines: for payable, debit AP credit bank; for receivable, debit bank credit AR
+        const lines = isPayable
+          ? [
+              { journal_id: journalId, account_id: apArAccountId, debit: amount, credit: 0, description: `Pago a ${document.contact_name}` },
+              { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: 0, credit: amount, description: `Pago ${selectedBank.account_name}` },
+            ]
+          : [
+              { journal_id: journalId, account_id: selectedBank.chart_account_id, debit: amount, credit: 0, description: `Cobro de ${document.contact_name}` },
+              { journal_id: journalId, account_id: apArAccountId, debit: 0, credit: amount, description: `Cobro a ${document.contact_name}` },
+            ];
+
+        const { error: lErr } = await supabase.from("journal_lines").insert(lines);
+        if (lErr) throw lErr;
+
+        // Finding 7: Set currency and exchange_rate on the payment journal
+        if (document.currency !== "DOP") {
+          const { data: rateData } = await supabase
+            .from("exchange_rates")
+            .select("sell_rate")
+            .eq("currency_pair", "USD_DOP")
+            .order("rate_date", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const rate = rateData?.sell_rate || 1;
+          const { error: journalUpdateError } = await supabase
+            .from("journals")
+            .update({
+              currency: document.currency,
+              exchange_rate: rate,
+            })
+            .eq("id", journalId);
+          if (journalUpdateError) throw journalUpdateError;
+        }
+
+        // 2. Create a transaction record for full traceability
+        const { data: apArAcct, error: apArAcctError } = await supabase
           .from("chart_of_accounts")
           .select("account_code")
           .eq("id", apArAccountId)
           .maybeSingle();
+        if (apArAcctError) throw apArAcctError;
 
         const txDescription = `Pago ${isPayable ? "a" : "de"} ${document.contact_name} — ${document.document_number || "S/N"}`;
 
@@ -163,58 +191,87 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
           .select("id, legacy_id")
           .single();
 
-        if (txErr) {
-          console.error("Transaction insert error (non-fatal):", txErr);
-        } else if (newTx) {
-          transactionLegacyId = newTx.legacy_id;
-          // Link journal to this transaction
-          await supabase
-            .from("journals")
-            .update({ transaction_source_id: newTx.id })
-            .eq("id", journalId);
+        if (txErr) throw txErr;
+        transactionId = newTx.id;
+        transactionLegacyId = newTx.legacy_id;
+
+        const { error: linkJournalError } = await supabase
+          .from("journals")
+          .update({ transaction_source_id: newTx.id })
+          .eq("id", journalId);
+        if (linkJournalError) throw linkJournalError;
+
+        // 3. Record payment in ap_ar_payments audit trail
+        const { data: insertedPayment, error: pErr } = await supabase
+          .from("ap_ar_payments" as any)
+          .insert({
+            document_id: document.id,
+            payment_date: paymentDate,
+            amount: amount,
+            payment_method: selectedBank.account_name,
+            bank_account_id: bankAccountId,
+            journal_id: journalId,
+            created_by: user?.id || null,
+            notes: transactionLegacyId ? `TX-${transactionLegacyId}` : null,
+          })
+          .select("id")
+          .single();
+        if (pErr) throw pErr;
+        paymentId = insertedPayment.id;
+
+        // 4. Update ap_ar_documents summary
+        const { error } = await supabase
+          .from("ap_ar_documents")
+          .update({
+            amount_paid: Math.round(newPaid * 100) / 100,
+            status: newStatus,
+          })
+          .eq("id", document.id);
+        if (error) throw error;
+
+        return { reusedExistingPayment: false };
+      } catch (error) {
+        if (paymentId) {
+          await supabase.from("ap_ar_payments").delete().eq("id", paymentId);
         }
-      } catch (txError) {
-        console.error("Transaction creation failed (non-fatal):", txError);
+        if (journalId) {
+          await supabase.from("journal_lines").delete().eq("journal_id", journalId);
+          await supabase.from("journals").delete().eq("id", journalId);
+        }
+        if (transactionId) {
+          await supabase.from("transactions").delete().eq("id", transactionId);
+        }
+        throw error;
       }
-
-      // 3. Record payment in ap_ar_payments audit trail
-      const { error: pErr } = await supabase.from("ap_ar_payments" as any).insert({
-        document_id: document.id,
-        payment_date: paymentDate,
-        amount: amount,
-        payment_method: selectedBank.account_name,
-        bank_account_id: bankAccountId,
-        journal_id: journalId,
-        created_by: user?.id || null,
-        notes: transactionLegacyId ? `TX-${transactionLegacyId}` : null,
-      });
-      if (pErr) console.error("Payment audit insert error:", pErr);
-
-      // 4. Update ap_ar_documents summary
-      const { error } = await supabase
-        .from("ap_ar_documents")
-        .update({
-          amount_paid: Math.round(newPaid * 100) / 100,
-          status: newStatus,
-        })
-        .eq("id", document.id);
-      if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      toast.success("Pago registrado con asiento contable y transacción");
+      toast.success(
+        result?.reusedExistingPayment
+          ? "Este pago ya había sido registrado; no se duplicó la transacción"
+          : "Pago registrado con asiento contable y transacción"
+      );
       onOpenChange(false);
       setPaymentAmount("");
       setBankAccountId("");
     },
     onError: (e: Error) => toast.error(e.message),
+    onSettled: () => {
+      submitLockRef.current = false;
+    },
   });
 
   const handleOpen = (isOpen: boolean) => {
     if (!isOpen) { setPaymentAmount(""); setBankAccountId(""); }
     onOpenChange(isOpen);
+  };
+
+  const handleSubmit = () => {
+    if (submitLockRef.current || mutation.isPending) return;
+    submitLockRef.current = true;
+    mutation.mutate();
   };
 
   if (!document) return null;
@@ -289,7 +346,7 @@ export function PaymentDialog({ open, onOpenChange, document }: PaymentDialogPro
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpen(false)}>Cancelar</Button>
           <Button
-            onClick={() => mutation.mutate()}
+            onClick={handleSubmit}
             disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || !bankAccountId || mutation.isPending}
           >
             {mutation.isPending ? "Guardando..." : "Registrar Pago"}

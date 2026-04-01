@@ -125,7 +125,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     .from('transactions')
     .select(`
       *,
-      chart_of_accounts:account_id (account_code, account_name, english_description, spanish_description),
+      chart_of_accounts:chart_of_accounts!transactions_account_id_fkey (account_code, account_name, english_description, spanish_description),
       projects:project_id (code, english_description, spanish_description),
       cbs_codes:cbs_id (code, english_description, spanish_description)
     `)
@@ -144,22 +144,17 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
     is_internal: t.is_internal ?? false,
     cost_center: (t.cost_center || 'general') as 'general' | 'agricultural' | 'industrial',
     transaction_direction: (t.transaction_direction || 'purchase') as 'purchase' | 'sale' | 'payment' | 'investment',
-    // Flatten joined account data
     account_name: t.chart_of_accounts?.account_name || null,
     account_english_description: t.chart_of_accounts?.english_description || null,
     account_spanish_description: t.chart_of_accounts?.spanish_description || null,
-    // Backfill master_acct_code from join if missing
     master_acct_code: t.master_acct_code || t.chart_of_accounts?.account_code || '',
-    // Flatten joined project data
     project_name: t.projects?.english_description || null,
     project_english_description: t.projects?.english_description || null,
     project_spanish_description: t.projects?.spanish_description || null,
     project_code: t.project_code || t.projects?.code || null,
-    // Flatten joined CBS data
     cbs_english_description: t.cbs_codes?.english_description || null,
     cbs_spanish_description: t.cbs_codes?.spanish_description || null,
     cbs_code: t.cbs_code || t.cbs_codes?.code || null,
-    // Remove nested objects
     chart_of_accounts: undefined,
     projects: undefined,
     cbs_codes: undefined,

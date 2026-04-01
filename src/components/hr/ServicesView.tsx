@@ -8,20 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Pencil, Lock, AlertTriangle, Briefcase } from "lucide-react";
+import { Plus, Pencil, Receipt, AlertTriangle, Briefcase } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
-import { createTransaction } from "@/lib/api";
 import { formatDateLocal } from "@/lib/dateUtils";
 import { numberToSpanishWords } from "@/lib/numberToWords";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
+import { ServicePaymentDialog, ServicePaymentRecord } from "./ServicePaymentDialog";
 
 interface ServiceProvider {
   id: string;
@@ -40,6 +39,11 @@ interface ServiceEntry {
   comments: string | null;
   pay_method: string | null;
   is_closed: boolean;
+  committed_amount?: number | null;
+  paid_amount?: number | null;
+  remaining_amount?: number | null;
+  settlement_status?: string | null;
+  ap_document_id?: string | null;
   created_at: string;
   transaction_id: string | null;
   service_providers: { name: string; cedula: string };
@@ -69,7 +73,7 @@ export function ServicesView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ServiceEntry | null>(null);
   const [formData, setFormData] = useState(emptyForm);
-  const [closingEntry, setClosingEntry] = useState<ServiceEntry | null>(null);
+  const [paymentEntry, setPaymentEntry] = useState<ServiceEntry | null>(null);
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["bank-accounts-active"],
@@ -121,12 +125,16 @@ export function ServicesView() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof emptyForm & { id?: string }) => {
+      const parsedAmount = data.amount ? parseFloat(data.amount) : 0;
       const payload = {
         provider_id: data.provider_id,
         service_date: data.service_date,
         master_acct_code: data.master_acct_code || null,
         description: data.description || null,
-        amount: data.amount ? parseFloat(data.amount) : null,
+        amount: parsedAmount || null,
+        committed_amount: parsedAmount,
+        remaining_amount: Math.max(parsedAmount - Number(editingEntry?.paid_amount || 0), 0),
+        settlement_status: parsedAmount > 0 ? (Number(editingEntry?.paid_amount || 0) > 0 ? "partial" : "open") : "draft",
         currency: data.currency,
         comments: data.comments || null,
         pay_method: data.pay_method || null,
@@ -150,59 +158,14 @@ export function ServicesView() {
     onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
   });
 
-  // Map bank account UUID to transaction pay_method string
-  const mapPayMethod = (bankAccountId: string | null): string | undefined => {
-    if (!bankAccountId) return undefined;
-    const account = bankAccounts.find(ba => ba.id === bankAccountId);
-    if (!account) return undefined;
-    // Match by known bank accounts
-    if (account.account_type === "petty_cash") return "petty_cash";
-    if (account.bank_name === "Banco BDI" || account.bank_name?.includes("BDI")) return "transfer_bdi";
-    if (account.bank_name === "BHD León" || account.bank_name?.includes("BHD")) return "transfer_bhd";
-    return "cash";
-  };
-
-  const closeMutation = useMutation({
-    mutationFn: async (entry: ServiceEntry) => {
-      // Generate receipt PDF
-      generateReceipt(entry);
-
-      // Create transaction with pay_method mapped to string
-      const txn = await createTransaction({
-        transaction_date: entry.service_date,
-        master_acct_code: entry.master_acct_code || "",
-        description: `Servicio: ${entry.description} - ${entry.service_providers.name}`,
-        currency: entry.currency as "DOP" | "USD" | "EUR",
-        amount: Number(entry.amount),
-        pay_method: mapPayMethod(entry.pay_method),
-        name: entry.service_providers.name,
-        document: "Recibo",
-        rnc: entry.service_providers.cedula,
-        is_internal: false,
-      });
-
-      // Mark as closed and link the transaction
-      const { error } = await supabase.from("service_entries")
-        .update({ is_closed: true, transaction_id: txn.id } as any).eq("id", entry.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["service-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["service-provider-history"] });
-      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      setClosingEntry(null);
-      toast({ title: "Servicio cerrado", description: "Transacción creada y recibo descargado." });
-    },
-    onError: (error) => {
-      toast({ title: "Error al cerrar servicio", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const generateReceipt = (entry: ServiceEntry) => {
+  const generateReceipt = (entry: ServiceEntry, payments: ServicePaymentRecord[] = []) => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const amount = Number(entry.amount);
-    const dateStr = format(new Date(entry.service_date + "T12:00:00"), "dd/MM/yyyy");
+    const amount = Number(entry.committed_amount ?? entry.amount ?? 0);
+    const finalPayment = payments[payments.length - 1];
+    const receiptDate = finalPayment?.payment_date || entry.service_date;
+    const paidTotal = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    const dateStr = format(new Date(receiptDate + "T12:00:00"), "dd/MM/yyyy");
     const formatCurrency = (val: number) =>
       new Intl.NumberFormat("es-DO", { style: "currency", currency: entry.currency, minimumFractionDigits: 2 }).format(val);
 
@@ -253,6 +216,25 @@ export function ServicesView() {
       doc.text(descText, 55, y);
       doc.text(formatCurrency(amount), pageWidth - 20, y, { align: "right" });
       y += Math.max(descText.length * 4, 5);
+
+      if (payments.length > 0) {
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text("Pagos realizados", 20, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        payments.forEach((payment) => {
+          const paymentLine = `${format(new Date(payment.payment_date + "T12:00:00"), "dd/MM/yyyy")} · ${formatCurrency(payment.amount)}${payment.ncf ? ` · ${payment.ncf}` : ""}`;
+          doc.text(paymentLine, 24, y);
+          y += 4;
+        });
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total pagado: ${formatCurrency(paidTotal)}`, 24, y);
+        doc.setFont("helvetica", "normal");
+        y += 5;
+      }
 
       // Comments if present
       if (entry.comments) {
@@ -354,12 +336,19 @@ export function ServicesView() {
     saveMutation.mutate({ ...formData, id: editingEntry?.id });
   };
 
-  const handleCloseService = (entry: ServiceEntry) => {
+  const handleRegisterPayment = (entry: ServiceEntry) => {
     if (isIncomplete(entry)) {
-      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción, monto y método de pago antes de cerrar.", variant: "destructive" });
+      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción y monto antes de registrar cuotas.", variant: "destructive" });
       return;
     }
-    setClosingEntry(entry);
+    setPaymentEntry(entry);
+  };
+
+  const handlePaymentRegistered = ({ result, payments }: { result: { is_final_payment?: boolean }, payments: ServicePaymentRecord[] }) => {
+    if (result.is_final_payment && paymentEntry) {
+      generateReceipt(paymentEntry, payments);
+    }
+    setPaymentEntry(null);
   };
 
   const openCount = entries.filter((e) => !e.is_closed).length;
@@ -373,7 +362,7 @@ export function ServicesView() {
               <Briefcase className="h-6 w-6 text-primary" />
               <div>
                 <CardTitle className="text-lg">Servicios</CardTitle>
-                <p className="text-sm text-muted-foreground">{openCount} servicios abiertos</p>
+                 <p className="text-sm text-muted-foreground">{openCount} servicios pendientes</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -415,8 +404,10 @@ export function ServicesView() {
                   No hay servicios {showClosed ? "" : "abiertos"}
                 </TableCell></TableRow>
               ) : (
-                entries.map((entry) => {
+                 entries.map((entry) => {
                   const incomplete = !entry.is_closed && isIncomplete(entry);
+                   const committedAmount = Number(entry.committed_amount ?? entry.amount ?? 0);
+                   const remainingAmount = Number(entry.remaining_amount ?? Math.max(committedAmount - Number(entry.paid_amount || 0), 0));
                   return (
                     <TableRow key={entry.id} className={incomplete ? "bg-warning/10" : ""}>
                       <TableCell className="px-2">
@@ -427,13 +418,13 @@ export function ServicesView() {
                       <TableCell className="font-mono">{entry.master_acct_code || "—"}</TableCell>
                       <TableCell className="max-w-48 truncate">{entry.description || "—"}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {entry.amount != null
-                          ? `${entry.currency === "USD" ? "US$" : "RD$"} ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`
+                         {committedAmount > 0
+                           ? `${entry.currency === "USD" ? "US$" : "RD$"} ${committedAmount.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`
                           : "—"}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={entry.is_closed ? "default" : "secondary"}>
-                          {entry.is_closed ? "Cerrado" : "Abierto"}
+                         <Badge variant={entry.is_closed ? "default" : remainingAmount > 0 && Number(entry.paid_amount || 0) > 0 ? "outline" : "secondary"}>
+                           {entry.is_closed ? "Pagado" : remainingAmount > 0 && Number(entry.paid_amount || 0) > 0 ? `Parcial · ${entry.currency === "USD" ? "US$" : "RD$"} ${remainingAmount.toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : "Abierto"}
                         </Badge>
                       </TableCell>
                       {showClosed && (
@@ -444,13 +435,13 @@ export function ServicesView() {
                       {canWrite && (
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
-                            {!entry.is_closed && (
+                             {!entry.is_closed && (
                               <>
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(entry)} title={t("common.edit")}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleCloseService(entry)} title={t("common.close")}>
-                                  <Lock className="h-4 w-4" />
+                                 <Button variant="ghost" size="icon" onClick={() => handleRegisterPayment(entry)} title="Registrar pago">
+                                   <Receipt className="h-4 w-4" />
                                 </Button>
                               </>
                             )}
@@ -549,32 +540,13 @@ export function ServicesView() {
         </DialogContent>
       </Dialog>
 
-      {/* Close Confirmation Dialog */}
-      <AlertDialog open={!!closingEntry} onOpenChange={(open) => !open && setClosingEntry(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("services.closeServiceConfirm")}</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div>
-                <p>Esto hará lo siguiente:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Crear una transacción por {closingEntry?.currency === "USD" ? "US$" : "RD$"} {Number(closingEntry?.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}</li>
-                  <li>Descargar un recibo en PDF</li>
-                  <li>Bloquear la edición de este servicio</li>
-                </ul>
-                <p className="mt-3 font-medium">Esta acción no se puede deshacer.</p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => closingEntry && closeMutation.mutate(closingEntry)}
-              disabled={closeMutation.isPending}>
-              {closeMutation.isPending ? t("common.closing") : t("common.closeService")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ServicePaymentDialog
+        open={!!paymentEntry}
+        onOpenChange={(open) => !open && setPaymentEntry(null)}
+        entry={paymentEntry}
+        bankAccounts={bankAccounts}
+        onPaymentRegistered={handlePaymentRegistered}
+      />
     </div>
   );
 }

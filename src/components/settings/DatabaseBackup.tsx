@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import JSZip from "jszip";
 import { Progress } from "@/components/ui/progress";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { TABLES_TO_EXPORT } from "./backup/backupConstants";
+import { getOrderedTableList } from "./backup/backupConstants";
 import { SCHEMA_SQL } from "./backup/schemaSql";
 import { RLS_POLICIES_SQL } from "./backup/rlsPoliciesSql";
 import { TRIGGERS_SQL } from "./backup/triggersSql";
@@ -25,15 +25,20 @@ export function DatabaseBackup() {
   const [lastBackup, setLastBackup] = useState<string | null>(() => 
     localStorage.getItem("lastBackupTime")
   );
+  const [exportSummary, setExportSummary] = useState<{ tables: number; rows: number } | null>(null);
   const { t, language } = useLanguage();
 
   const handleExport = async () => {
     setIsExporting(true);
     setProgress(0);
+    setExportSummary(null);
     const zip = new JSZip();
     
     try {
-      const totalSteps = TABLES_TO_EXPORT.length + 3;
+      // Step 0: Discover all tables dynamically
+      setCurrentStep(language === 'es' ? 'Descubriendo tablas...' : 'Discovering tables...');
+      const tablesToExport = await getOrderedTableList();
+      const totalSteps = tablesToExport.length + 3;
       let completedSteps = 0;
 
       // Step 1: Add all schema files
@@ -49,12 +54,13 @@ export function DatabaseBackup() {
       let dataSQL = `-- =============================================
 -- DATA INSERTS
 -- Generated: ${new Date().toISOString()}
+-- Tables: ${tablesToExport.length} (dynamically discovered)
 -- =============================================
 
 `;
       const allData: Record<string, unknown[]> = {};
       
-      for (const tableName of TABLES_TO_EXPORT) {
+      for (const tableName of tablesToExport) {
         setCurrentStep(t("backup.exportingTable").replace("{table}", tableName));
         const data = await fetchTableData(tableName);
         allData[tableName] = data;
@@ -92,8 +98,9 @@ export function DatabaseBackup() {
       const metadata = {
         exportDate: new Date().toISOString(),
         application: "Ledger DR - Agricultural Farm Management",
-        version: "2.2",
+        version: "3.0",
         migrationPackage: "Complete IT Migration Package",
+        discoveryMethod: "Dynamic (get_all_public_tables RPC)",
         tables: Object.entries(allData).map(([name, data]) => ({
           name,
           rowCount: data.length,
@@ -103,25 +110,6 @@ export function DatabaseBackup() {
           transactions: ncfAttachments.length,
           employees: employeeDocuments.length,
         },
-        sqlFiles: [
-          "00_schema.sql - Tables, enums, and functions",
-          "01_data.sql - INSERT statements for all data",
-          "02_rls_policies.sql - Row Level Security policies",
-          "03_triggers.sql - Database triggers",
-          "04_storage.sql - Storage bucket configuration",
-        ],
-        restorationInstructions: [
-          "1. Create a new PostgreSQL database (v14+)",
-          "2. Run 00_schema.sql to create all tables and functions",
-          "3. Run 02_rls_policies.sql to enable security policies",
-          "4. Run 03_triggers.sql to set up triggers",
-          "5. Run 04_storage.sql to configure storage buckets (Supabase only)",
-          "6. Run 01_data.sql to insert all data",
-          "7. Upload files from attachments/ folder to your storage solution",
-          "8. Update attachment URLs if storage paths change",
-          "9. Configure user authentication (Supabase Auth or your SSO)",
-          "10. Create initial admin user in user_roles table",
-        ],
       };
       zip.file('metadata.json', JSON.stringify(metadata, null, 2));
       zip.file('README.md', generateReadme(metadata, ncfAttachments.length, employeeDocuments.length));
@@ -153,6 +141,7 @@ export function DatabaseBackup() {
       const backupTimeStr = `${dd}${mon}${yyyy} ${time}`;
       localStorage.setItem("lastBackupTime", backupTimeStr);
       setLastBackup(backupTimeStr);
+      setExportSummary({ tables: tablesToExport.length, rows: metadata.totalRows });
       const totalFiles = ncfAttachments.length + employeeDocuments.length;
       toast.success(
         t("backup.complete")
@@ -191,7 +180,7 @@ export function DatabaseBackup() {
               <p className="font-medium mb-1">{t("backup.includesAll")}</p>
               <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
                 <li>{t("backup.schemaComplete")}</li>
-                <li>{t("backup.allDataFrom").replace("{count}", TABLES_TO_EXPORT.length.toString())}</li>
+                <li>{language === 'es' ? 'Todas las tablas (descubrimiento dinámico)' : 'All tables (dynamic discovery)'}</li>
                 <li>{t("backup.attachments")}</li>
                 <li>{t("backup.instructions")}</li>
               </ul>
@@ -199,25 +188,18 @@ export function DatabaseBackup() {
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          {t("backup.zipContains")}
-        </p>
-        <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-          <li><strong>00_schema.sql</strong> - {t("backup.schemaFile")}</li>
-          <li><strong>01_data.sql</strong> - {t("backup.dataFile")}</li>
-          <li><strong>backup.json</strong> - {t("backup.jsonFile")}</li>
-          <li><strong>attachments/</strong> - {t("backup.attachmentsFolder")}</li>
-          <li><strong>README.md</strong> - {t("backup.readmeFile")}</li>
-        </ul>
-
-        <p className="text-xs text-muted-foreground italic">
-          {t("backup.estimatedSize")}
-        </p>
-        
         {isExporting && (
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <p className="text-sm text-muted-foreground">{currentStep}</p>
+          </div>
+        )}
+
+        {exportSummary && (
+          <div className="bg-muted/50 rounded-lg p-3 text-sm">
+            <p className="font-medium">
+              {language === 'es' ? 'Último respaldo:' : 'Last export:'} {exportSummary.tables} {language === 'es' ? 'tablas' : 'tables'}, {exportSummary.rows.toLocaleString()} {language === 'es' ? 'filas' : 'rows'}
+            </p>
           </div>
         )}
         
@@ -225,7 +207,7 @@ export function DatabaseBackup() {
           <Button 
             onClick={handleExport} 
             disabled={isExporting}
-            className="mt-4"
+            className="mt-2"
             size="lg"
           >
             {isExporting ? (
@@ -240,7 +222,7 @@ export function DatabaseBackup() {
               </>
             )}
           </Button>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             {language === 'es' ? 'Último respaldo' : 'Last backup'}: <span className="font-mono font-medium">{lastBackup ?? (language === 'es' ? 'Nunca' : 'Never')}</span>
           </p>
         </div>

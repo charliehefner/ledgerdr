@@ -162,9 +162,6 @@ export default function Settings() {
               {/* Scheduled Deletions - Admin Only */}
               {canModifySettings && <ScheduledDeletions />}
 
-              {/* Database Backup - Admin Only */}
-              {canModifySettings && <DatabaseBackup />}
-
               {/* Database Connection */}
               <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">

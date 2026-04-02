@@ -174,7 +174,7 @@ export function IR3ReportView() {
         } else {
           const empBenefits = benefits.filter((b) => b.employee_id === emp.id);
           const monthlyBenefits = empBenefits.reduce((sum, b) => sum + b.amount, 0) * 2;
-          isrQ2 = calculateMonthlyISR(emp.salary, monthlyBenefits) / 2;
+          isrQ2 = calculateMonthlyISR(emp.salary, tssRate, brackets, monthlyBenefits) / 2;
           q2Source = "estimated";
         }
       }

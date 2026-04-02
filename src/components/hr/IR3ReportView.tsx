@@ -44,7 +44,22 @@ interface Snapshot {
 
 export function IR3ReportView() {
   const now = new Date();
-  useEffect(() => { loadTssParameters(); }, []);
+  const { data: tssRate = 0.0591 } = useQuery({
+    queryKey: ["tss-employee-rate"],
+    queryFn: fetchTssEmployeeRate,
+    staleTime: 1000 * 60 * 30,
+  });
+  const { data: isrBrackets } = useQuery({
+    queryKey: ["isr-brackets", selectedYear],
+    queryFn: () => fetchIsrBrackets(Number(selectedYear)),
+    staleTime: 1000 * 60 * 30,
+  });
+  const brackets = isrBrackets ?? [
+    { min: 0, max: 416220, rate: 0, baseTax: 0 },
+    { min: 416220, max: 624329, rate: 0.15, baseTax: 0 },
+    { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
+    { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
+  ];
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const queryClient = useQueryClient();

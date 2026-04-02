@@ -1,119 +1,62 @@
 
-Goal: add a prestaciones-focused employment summary in Human Resources and implement an official-style Prestaciones Laborales calculator for the selected scenarios: Desahucio and Dimisión, using average salary history by default and producing a printable breakdown.
 
-What I found
-- The HR module already has most of the base data:
-  - `employees.date_of_hire`
-  - `employees.date_of_termination`
-  - `employee_salary_history`
-  - vacations, loans, payroll snapshots
-- The employee detail dialog already shows salary history, but not:
-  - months at each salary level
-  - a prestaciones summary
-  - a liquidation calculator
-- There is no prestaciones/liquidation logic in the codebase today.
+# Backup & Export Page — Implementation Plan
 
-Recommended product design
-- Keep the Employee Directory table compact.
-- Add a new “Resumen laboral / Prestaciones” section inside `EmployeeDetailDialog` opened from Employee Directory.
-- Add a dedicated “Calcular Prestaciones” action there, with printable output.
+## Problem
 
-Implementation plan
-1. Enhance the employee employment summary
-- Extend the employee detail view to show:
-  - hire date
-  - termination/end date
-  - total tenure
-  - salary history timeline
-  - months at each salary level
-- Compute each salary segment from `employee_salary_history.effective_date` until the next change or termination/current date.
+The backup system has a critical gap: `TABLES_TO_EXPORT` lists 46 tables but the database has **79 tables**. Missing tables include `journals`, `journal_lines`, `chart_of_accounts`, `bank_accounts`, `fixed_assets`, `contacts`, `tax_codes`, and 26 others. The hardcoded `schemaSql.ts` file (942 lines) also goes stale with every migration.
 
-2. Add a prestaciones calculator workflow
-- Add a new calculator panel/dialog from Employee Detail.
-- Inputs:
-  - termination date
-  - termination scenario (`desahucio`, `dimisión`)
-  - whether notice was worked/paid
-  - optional manual adjustments/deductions
-- Output:
-  - average salary basis
-  - preaviso (when applicable)
-  - cesantía (when applicable)
-  - vacaciones pendientes
-  - regalía pascual proporcional
-  - deductions / net total
-  - printable summary
+## Solution
 
-3. Move calculation rules to the backend
-- Implement the prestaciones formulas in a database function/RPC, not only in React.
-- Reason:
-  - auditability
-  - consistent results
-  - easier future legal updates
-- Make legal constants configurable in a small parameters table instead of hardcoding everything.
+1. **Create a database function** (`get_all_public_tables`) that returns every public table name, so the backup dynamically discovers tables instead of relying on a hardcoded list.
 
-4. Add persistence for liquidation cases
-- Create a table for saved prestaciones calculations/history, e.g.:
-  - employee
-  - scenario
-  - termination date
-  - salary basis used
-  - line-item results
-  - notes / overrides
-  - created_by / created_at
-- This allows printing, review, and later correction without recalculating blindly.
+2. **Replace the static table list** in the backup logic — fetch the live table list from the database, then export ALL tables. Keep a dependency-ordered priority list for INSERT ordering (FK safety), but append any newly discovered tables at the end.
 
-5. Add printable report
-- Generate an internal liquidation summary that mirrors the official-style breakdown:
-  - employee identity
-  - employment dates
-  - salary periods and months
-  - calculation basis
-  - each prestaciones concept
-  - total payable
-- Make it printable/exportable from the saved calculation.
+3. **Generate schema SQL dynamically** — instead of the static `schemaSql.ts`, query `pg_dump`-style metadata from `information_schema.columns` to generate CREATE TABLE statements at backup time, ensuring new columns and tables are always captured.
 
-Additional information needed for accurate prestaciones
-For a reliable “official-style” calculation, the app should capture or confirm these items:
-- termination cause/scenario: already scoped to Desahucio and Dimisión first
-- exact termination effective date
-- whether preaviso was worked or must be paid
-- whether unused vacation days should be system-calculated or manually adjusted
-- recurring variable pay that should affect the average salary basis:
-  - overtime
-  - commissions
-  - incentives/ordinary recurring benefits
-- active employee loans or other authorized deductions to subtract from the final settlement
-- months worked in the current year for regalía proporcional
-- any manual legal adjustment required for edge cases
+4. **Add a dedicated Backup tab** in Settings (admin-only) with:
+   - **7-day warning banner** if no backup has been downloaded recently
+   - **Data Backup section** — the existing download button with progress, plus table/row count summary after export
+   - **Schema Reference section** — read-only textarea showing all public tables from the RPC, with a visual indicator of which tables are covered vs missing from the backup
 
-Important design note
-- “Official-style” is achievable, but it should be implemented as:
-  - rule-based
-  - parameterized
-  - reviewable/printable
-- That is safer than burying formulas only in the UI, and it makes future legal changes easier.
+## Technical Details
 
-Technical details
-- Main UI files likely involved:
-  - `src/components/hr/EmployeeDetailDialog.tsx`
-  - `src/components/hr/EmployeeList.tsx`
-  - possibly a new `PrestacionesCalculatorDialog.tsx` or similar
-- Backend additions likely needed:
-  - parameters table for prestaciones rules
-  - liquidation cases table
-  - database function to calculate prestaciones
-  - RLS policies aligned with current HR access (`admin`, `management`, `accountant`)
-- Existing data already useful:
-  - `employee_salary_history`
-  - `employees.date_of_hire`
-  - `employees.date_of_termination`
-  - `employee_vacations`
-  - `employee_loans`
-  - `payroll_snapshots`
+### Migration: `get_all_public_tables()` RPC
 
-Expected first version
-- Employee Directory detail view shows a clean employment summary with salary-duration breakdown.
-- HR can calculate prestaciones for Desahucio and Dimisión.
-- The calculator uses average salary history by default.
-- The result is saved and printable with line-by-line concepts such as cesantía and related items where applicable.
+```sql
+CREATE OR REPLACE FUNCTION public.get_all_public_tables()
+RETURNS TABLE(table_name text, row_estimate bigint)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT 
+    t.table_name::text,
+    COALESCE(s.n_live_tup, 0)::bigint AS row_estimate
+  FROM information_schema.tables t
+  LEFT JOIN pg_stat_user_tables s 
+    ON s.relname = t.table_name AND s.schemaname = 'public'
+  WHERE t.table_schema = 'public' 
+    AND t.table_type = 'BASE TABLE'
+  ORDER BY t.table_name;
+$$;
+```
+
+### File Changes
+
+| File | Change |
+|------|--------|
+| Migration | Create `get_all_public_tables()` function |
+| `backupConstants.ts` | Convert `TABLES_TO_EXPORT` to a priority-ordered list; add logic to merge with live table list |
+| `backupUtils.ts` | Add `fetchAllTableNames()` using the new RPC; update `fetchTableData` to accept any string (not just the const type) |
+| `src/components/settings/BackupExportView.tsx` | **New file** — Backup tab component with warning banner, backup button, and schema reference textarea |
+| `src/pages/Settings.tsx` | Add "Backup" tab (admin-only), remove `DatabaseBackup` from General tab |
+| `src/components/settings/DatabaseBackup.tsx` | Refactor to use dynamic table list from RPC instead of static constant |
+| `src/i18n/en.ts` + `src/i18n/es.ts` | Add i18n keys for the new tab, warning banner, and schema reference section |
+
+### Key Design Decisions
+
+- **No edge function for ZIP generation** — stays client-side (JSZip) to avoid Deno memory limits
+- **Dynamic schema discovery** — the RPC returns row estimates too, so the admin sees table sizes at a glance
+- **FK-safe ordering** — the existing ordered list is kept as a priority hint; any table not in it gets appended alphabetically after the known ones
+- **Static `schemaSql.ts` stays** as a fallback/reference but the backup will also include a dynamically generated schema snapshot from `information_schema.columns`
+

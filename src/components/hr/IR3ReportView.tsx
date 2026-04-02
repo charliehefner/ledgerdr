@@ -10,7 +10,7 @@ import { FileSpreadsheet, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { calculateMonthlyISR, calculateAnnualISR, TSS_EMPLOYEE_RATE, loadTssParameters } from "@/lib/payrollCalculations";
+import { calculateMonthlyISR, calculateAnnualISR, fetchTssEmployeeRate, fetchIsrBrackets } from "@/lib/payrollCalculations";
 
 const MONTHS = [
   { value: "01", label: "Enero" },
@@ -44,10 +44,26 @@ interface Snapshot {
 
 export function IR3ReportView() {
   const now = new Date();
-  useEffect(() => { loadTssParameters(); }, []);
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const queryClient = useQueryClient();
+
+  const { data: tssRate = 0.0591 } = useQuery({
+    queryKey: ["tss-employee-rate"],
+    queryFn: fetchTssEmployeeRate,
+    staleTime: 1000 * 60 * 30,
+  });
+  const { data: isrBrackets } = useQuery({
+    queryKey: ["isr-brackets", selectedYear],
+    queryFn: () => fetchIsrBrackets(Number(selectedYear)),
+    staleTime: 1000 * 60 * 30,
+  });
+  const brackets = isrBrackets ?? [
+    { min: 0, max: 416220, rate: 0, baseTax: 0 },
+    { min: 416220, max: 624329, rate: 0.15, baseTax: 0 },
+    { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
+    { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
+  ];
 
   const years = Array.from({ length: 5 }, (_, i) => {
     const y = now.getFullYear() - 2 + i;
@@ -143,7 +159,7 @@ export function IR3ReportView() {
           // Fallback: calculate from current data
           const empBenefits = benefits.filter((b) => b.employee_id === emp.id);
           const monthlyBenefits = empBenefits.reduce((sum, b) => sum + b.amount, 0) * 2;
-          isrQ1 = calculateMonthlyISR(emp.salary, monthlyBenefits) / 2;
+          isrQ1 = calculateMonthlyISR(emp.salary, tssRate, brackets, monthlyBenefits) / 2;
           q1Source = "estimated";
         }
       }
@@ -159,7 +175,7 @@ export function IR3ReportView() {
         } else {
           const empBenefits = benefits.filter((b) => b.employee_id === emp.id);
           const monthlyBenefits = empBenefits.reduce((sum, b) => sum + b.amount, 0) * 2;
-          isrQ2 = calculateMonthlyISR(emp.salary, monthlyBenefits) / 2;
+          isrQ2 = calculateMonthlyISR(emp.salary, tssRate, brackets, monthlyBenefits) / 2;
           q2Source = "estimated";
         }
       }
@@ -177,7 +193,7 @@ export function IR3ReportView() {
         q2Source,
       };
     }).filter((r) => r.isrTotal > 0);
-  }, [employees, benefits, snapshots, q1Period, q2Period, periods]);
+  }, [employees, benefits, snapshots, q1Period, q2Period, periods, tssRate, brackets]);
 
   const totalISR = reportData.reduce((sum, r) => sum + r.isrTotal, 0);
 
@@ -195,13 +211,13 @@ export function IR3ReportView() {
           const totalBenefitsPerPeriod = empBenefits.reduce((sum, b) => sum + b.amount, 0);
           const monthlyBenefits = totalBenefitsPerPeriod * 2;
           const biweeklySalary = emp.salary / 2;
-          const monthlyTSS = emp.salary * TSS_EMPLOYEE_RATE;
+          const monthlyTSS = emp.salary * tssRate;
           const monthlyTaxable = emp.salary - monthlyTSS + monthlyBenefits;
           const annualTaxable = monthlyTaxable * 12;
           
-          const annualISR = calculateAnnualISR(annualTaxable);
+          const annualISR = calculateAnnualISR(annualTaxable, brackets);
           const isrAmount = annualISR / 24;
-          const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
+          const tss = biweeklySalary * tssRate;
 
           return {
             period_id: period.id,

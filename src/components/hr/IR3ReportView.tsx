@@ -10,7 +10,7 @@ import { FileSpreadsheet, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { calculateMonthlyISR, calculateAnnualISR, TSS_EMPLOYEE_RATE, loadTssParameters } from "@/lib/payrollCalculations";
+import { calculateMonthlyISR, calculateAnnualISR, fetchTssEmployeeRate, fetchIsrBrackets } from "@/lib/payrollCalculations";
 
 const MONTHS = [
   { value: "01", label: "Enero" },

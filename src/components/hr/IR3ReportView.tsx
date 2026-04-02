@@ -210,13 +210,13 @@ export function IR3ReportView() {
           const totalBenefitsPerPeriod = empBenefits.reduce((sum, b) => sum + b.amount, 0);
           const monthlyBenefits = totalBenefitsPerPeriod * 2;
           const biweeklySalary = emp.salary / 2;
-          const monthlyTSS = emp.salary * TSS_EMPLOYEE_RATE;
+          const monthlyTSS = emp.salary * tssRate;
           const monthlyTaxable = emp.salary - monthlyTSS + monthlyBenefits;
           const annualTaxable = monthlyTaxable * 12;
           
-          const annualISR = calculateAnnualISR(annualTaxable);
+          const annualISR = calculateAnnualISR(annualTaxable, brackets);
           const isrAmount = annualISR / 24;
-          const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
+          const tss = biweeklySalary * tssRate;
 
           return {
             period_id: period.id,

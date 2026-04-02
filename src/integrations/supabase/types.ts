@@ -234,6 +234,7 @@ export type Database = {
           document_number: string | null
           document_type: string
           due_date: string | null
+          entity_id: string | null
           exchange_rate_used: number | null
           id: string
           notes: string | null
@@ -256,6 +257,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string | null
+          entity_id?: string | null
           exchange_rate_used?: number | null
           id?: string
           notes?: string | null
@@ -278,6 +280,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string | null
+          entity_id?: string | null
           exchange_rate_used?: number | null
           id?: string
           notes?: string | null
@@ -292,6 +295,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_documents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -397,6 +407,7 @@ export type Database = {
           chart_account_id: string | null
           created_at: string | null
           currency: string | null
+          entity_id: string | null
           fixed_amount: number | null
           id: string
           is_active: boolean | null
@@ -410,6 +421,7 @@ export type Database = {
           chart_account_id?: string | null
           created_at?: string | null
           currency?: string | null
+          entity_id?: string | null
           fixed_amount?: number | null
           id?: string
           is_active?: boolean | null
@@ -423,6 +435,7 @@ export type Database = {
           chart_account_id?: string | null
           created_at?: string | null
           currency?: string | null
+          entity_id?: string | null
           fixed_amount?: number | null
           id?: string
           is_active?: boolean | null
@@ -434,6 +447,13 @@ export type Database = {
             columns: ["chart_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_accounts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -516,6 +536,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           current_forecast: number
+          entity_id: string | null
           fiscal_year: number
           id: string
           line_code: string
@@ -540,6 +561,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           current_forecast?: number
+          entity_id?: string | null
           fiscal_year: number
           id?: string
           line_code: string
@@ -564,6 +586,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           current_forecast?: number
+          entity_id?: string | null
           fiscal_year?: number
           id?: string
           line_code?: string
@@ -582,7 +605,15 @@ export type Database = {
           project_code?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cbs_codes: {
         Row: {
@@ -715,6 +746,7 @@ export type Database = {
           contact_type: string
           created_at: string
           email: string | null
+          entity_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -729,6 +761,7 @@ export type Database = {
           contact_type?: string
           created_at?: string
           email?: string | null
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -743,6 +776,7 @@ export type Database = {
           contact_type?: string
           created_at?: string
           email?: string | null
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -751,13 +785,22 @@ export type Database = {
           rnc?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cronograma_entries: {
         Row: {
           created_at: string
           created_by: string | null
           day_of_week: number
+          entity_id: string | null
           id: string
           is_holiday: boolean | null
           is_vacation: boolean | null
@@ -775,6 +818,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_of_week: number
+          entity_id?: string | null
           id?: string
           is_holiday?: boolean | null
           is_vacation?: boolean | null
@@ -792,6 +836,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_of_week?: number
+          entity_id?: string | null
           id?: string
           is_holiday?: boolean | null
           is_vacation?: boolean | null
@@ -806,6 +851,13 @@ export type Database = {
           worker_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cronograma_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cronograma_entries_source_operation_id_fkey"
             columns: ["source_operation_id"]
@@ -826,6 +878,7 @@ export type Database = {
         Row: {
           closed_at: string | null
           created_at: string
+          entity_id: string | null
           id: string
           is_closed: boolean | null
           updated_at: string
@@ -834,6 +887,7 @@ export type Database = {
         Insert: {
           closed_at?: string | null
           created_at?: string
+          entity_id?: string | null
           id?: string
           is_closed?: boolean | null
           updated_at?: string
@@ -842,12 +896,21 @@ export type Database = {
         Update: {
           closed_at?: string | null
           created_at?: string
+          entity_id?: string | null
           id?: string
           is_closed?: boolean | null
           updated_at?: string
           week_ending_date?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cronograma_weeks_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       day_labor_attachments: {
         Row: {
@@ -877,6 +940,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          entity_id: string | null
           field_name: string | null
           id: string
           is_closed: boolean
@@ -890,6 +954,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          entity_id?: string | null
           field_name?: string | null
           id?: string
           is_closed?: boolean
@@ -903,6 +968,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          entity_id?: string | null
           field_name?: string | null
           id?: string
           is_closed?: boolean
@@ -913,7 +979,15 @@ export type Database = {
           worker_name?: string
           workers_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "day_labor_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       depreciation_schedule: {
         Row: {
@@ -963,6 +1037,7 @@ export type Database = {
           benefit_type: string
           created_at: string
           employee_id: string
+          entity_id: string | null
           id: string
           is_recurring: boolean
           updated_at: string
@@ -972,6 +1047,7 @@ export type Database = {
           benefit_type: string
           created_at?: string
           employee_id: string
+          entity_id?: string | null
           id?: string
           is_recurring?: boolean
           updated_at?: string
@@ -981,6 +1057,7 @@ export type Database = {
           benefit_type?: string
           created_at?: string
           employee_id?: string
+          entity_id?: string | null
           id?: string
           is_recurring?: boolean
           updated_at?: string
@@ -1000,6 +1077,13 @@ export type Database = {
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_benefits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_documents: {
@@ -1008,6 +1092,7 @@ export type Database = {
           document_name: string
           document_type: string
           employee_id: string
+          entity_id: string | null
           id: string
           notes: string | null
           storage_path: string
@@ -1017,6 +1102,7 @@ export type Database = {
           document_name: string
           document_type: string
           employee_id: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           storage_path: string
@@ -1026,6 +1112,7 @@ export type Database = {
           document_name?: string
           document_type?: string
           employee_id?: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           storage_path?: string
@@ -1045,6 +1132,13 @@ export type Database = {
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_documents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_incidents: {
@@ -1052,6 +1146,7 @@ export type Database = {
           created_at: string
           description: string
           employee_id: string
+          entity_id: string | null
           id: string
           incident_date: string
           resolution: string | null
@@ -1061,6 +1156,7 @@ export type Database = {
           created_at?: string
           description: string
           employee_id: string
+          entity_id?: string | null
           id?: string
           incident_date: string
           resolution?: string | null
@@ -1070,6 +1166,7 @@ export type Database = {
           created_at?: string
           description?: string
           employee_id?: string
+          entity_id?: string | null
           id?: string
           incident_date?: string
           resolution?: string | null
@@ -1090,12 +1187,20 @@ export type Database = {
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_incidents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_loans: {
         Row: {
           created_at: string
           employee_id: string
+          entity_id: string | null
           id: string
           is_active: boolean
           loan_amount: number
@@ -1109,6 +1214,7 @@ export type Database = {
         Insert: {
           created_at?: string
           employee_id: string
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           loan_amount: number
@@ -1122,6 +1228,7 @@ export type Database = {
         Update: {
           created_at?: string
           employee_id?: string
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           loan_amount?: number
@@ -1147,6 +1254,13 @@ export type Database = {
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_loans_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_salary_history: {
@@ -1154,6 +1268,7 @@ export type Database = {
           created_at: string
           effective_date: string
           employee_id: string
+          entity_id: string | null
           id: string
           notes: string | null
           salary: number
@@ -1162,6 +1277,7 @@ export type Database = {
           created_at?: string
           effective_date: string
           employee_id: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           salary: number
@@ -1170,6 +1286,7 @@ export type Database = {
           created_at?: string
           effective_date?: string
           employee_id?: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           salary?: number
@@ -1189,6 +1306,13 @@ export type Database = {
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_salary_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_timesheets: {
@@ -1196,6 +1320,7 @@ export type Database = {
           created_at: string
           employee_id: string
           end_time: string | null
+          entity_id: string | null
           hours_worked: number | null
           id: string
           is_absent: boolean
@@ -1210,6 +1335,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           end_time?: string | null
+          entity_id?: string | null
           hours_worked?: number | null
           id?: string
           is_absent?: boolean
@@ -1224,6 +1350,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           end_time?: string | null
+          entity_id?: string | null
           hours_worked?: number | null
           id?: string
           is_absent?: boolean
@@ -1250,6 +1377,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_timesheets_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_timesheets_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
@@ -1270,6 +1404,7 @@ export type Database = {
           created_at: string
           employee_id: string
           end_date: string
+          entity_id: string | null
           id: string
           notes: string | null
           start_date: string
@@ -1278,6 +1413,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           end_date: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           start_date: string
@@ -1286,6 +1422,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           end_date?: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           start_date?: string
@@ -1305,6 +1442,13 @@ export type Database = {
             referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_vacations_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employees: {
@@ -1317,6 +1461,7 @@ export type Database = {
           date_of_birth: string | null
           date_of_hire: string
           date_of_termination: string | null
+          entity_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -1335,6 +1480,7 @@ export type Database = {
           date_of_birth?: string | null
           date_of_hire: string
           date_of_termination?: string | null
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -1353,6 +1499,7 @@ export type Database = {
           date_of_birth?: string | null
           date_of_hire?: string
           date_of_termination?: string | null
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -1360,6 +1507,50 @@ export type Database = {
           position?: string
           salary?: number
           shirt_size?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entities: {
+        Row: {
+          code: string
+          country_code: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          country_code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          country_code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -1397,6 +1588,7 @@ export type Database = {
       farms: {
         Row: {
           created_at: string
+          entity_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -1404,6 +1596,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -1411,12 +1604,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "farms_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fields: {
         Row: {
@@ -1529,6 +1731,7 @@ export type Database = {
           depreciation_method: string
           disposal_date: string | null
           disposal_value: number | null
+          entity_id: string | null
           equipment_id: string | null
           id: string
           implement_id: string | null
@@ -1556,6 +1759,7 @@ export type Database = {
           depreciation_method?: string
           disposal_date?: string | null
           disposal_value?: number | null
+          entity_id?: string | null
           equipment_id?: string | null
           id?: string
           implement_id?: string | null
@@ -1583,6 +1787,7 @@ export type Database = {
           depreciation_method?: string
           disposal_date?: string | null
           disposal_value?: number | null
+          entity_id?: string | null
           equipment_id?: string | null
           id?: string
           implement_id?: string | null
@@ -1597,6 +1802,13 @@ export type Database = {
           useful_life_years?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "fixed_assets_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fixed_assets_equipment_id_fkey"
             columns: ["equipment_id"]
@@ -1632,6 +1844,7 @@ export type Database = {
           brand: string | null
           created_at: string
           current_hour_meter: number
+          entity_id: string | null
           equipment_type: string
           front_tire_size: string | null
           gpsgate_user_id: number | null
@@ -1651,6 +1864,7 @@ export type Database = {
           brand?: string | null
           created_at?: string
           current_hour_meter?: number
+          entity_id?: string | null
           equipment_type: string
           front_tire_size?: string | null
           gpsgate_user_id?: number | null
@@ -1670,6 +1884,7 @@ export type Database = {
           brand?: string | null
           created_at?: string
           current_hour_meter?: number
+          entity_id?: string | null
           equipment_type?: string
           front_tire_size?: string | null
           gpsgate_user_id?: number | null
@@ -1685,13 +1900,22 @@ export type Database = {
           serial_number?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fuel_equipment_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fuel_tanks: {
         Row: {
           capacity_gallons: number
           created_at: string
           current_level_gallons: number
+          entity_id: string | null
           fuel_type: string
           id: string
           is_active: boolean
@@ -1704,6 +1928,7 @@ export type Database = {
           capacity_gallons: number
           created_at?: string
           current_level_gallons?: number
+          entity_id?: string | null
           fuel_type?: string
           id?: string
           is_active?: boolean
@@ -1716,6 +1941,7 @@ export type Database = {
           capacity_gallons?: number
           created_at?: string
           current_level_gallons?: number
+          entity_id?: string | null
           fuel_type?: string
           id?: string
           is_active?: boolean
@@ -1724,12 +1950,21 @@ export type Database = {
           updated_at?: string
           use_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fuel_tanks_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fuel_transactions: {
         Row: {
           created_at: string
           destination_tank_id: string | null
+          entity_id: string | null
           equipment_id: string | null
           gallons: number
           gallons_per_hour: number | null
@@ -1748,6 +1983,7 @@ export type Database = {
         Insert: {
           created_at?: string
           destination_tank_id?: string | null
+          entity_id?: string | null
           equipment_id?: string | null
           gallons: number
           gallons_per_hour?: number | null
@@ -1766,6 +2002,7 @@ export type Database = {
         Update: {
           created_at?: string
           destination_tank_id?: string | null
+          entity_id?: string | null
           equipment_id?: string | null
           gallons?: number
           gallons_per_hour?: number | null
@@ -1787,6 +2024,13 @@ export type Database = {
             columns: ["destination_tank_id"]
             isOneToOne: false
             referencedRelation: "fuel_tanks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_transactions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -1816,6 +2060,7 @@ export type Database = {
         Row: {
           brand: string | null
           created_at: string
+          entity_id: string | null
           id: string
           implement_type: string
           is_active: boolean
@@ -1830,6 +2075,7 @@ export type Database = {
         Insert: {
           brand?: string | null
           created_at?: string
+          entity_id?: string | null
           id?: string
           implement_type: string
           is_active?: boolean
@@ -1844,6 +2090,7 @@ export type Database = {
         Update: {
           brand?: string | null
           created_at?: string
+          entity_id?: string | null
           id?: string
           implement_type?: string
           is_active?: boolean
@@ -1855,7 +2102,15 @@ export type Database = {
           updated_at?: string
           working_width_m?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "implements_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       industrial_carretas: {
         Row: {
@@ -1984,6 +2239,7 @@ export type Database = {
           commercial_name: string
           created_at: string
           current_quantity: number
+          entity_id: string | null
           function: Database["public"]["Enums"]["inventory_function"]
           id: string
           is_active: boolean
@@ -2005,6 +2261,7 @@ export type Database = {
           commercial_name: string
           created_at?: string
           current_quantity?: number
+          entity_id?: string | null
           function?: Database["public"]["Enums"]["inventory_function"]
           id?: string
           is_active?: boolean
@@ -2026,6 +2283,7 @@ export type Database = {
           commercial_name?: string
           created_at?: string
           current_quantity?: number
+          entity_id?: string | null
           function?: Database["public"]["Enums"]["inventory_function"]
           id?: string
           is_active?: boolean
@@ -2041,12 +2299,21 @@ export type Database = {
           updated_at?: string
           use_unit?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory_purchases: {
         Row: {
           created_at: string
           document_number: string | null
+          entity_id: string | null
           id: string
           item_id: string
           notes: string | null
@@ -2061,6 +2328,7 @@ export type Database = {
         Insert: {
           created_at?: string
           document_number?: string | null
+          entity_id?: string | null
           id?: string
           item_id: string
           notes?: string | null
@@ -2075,6 +2343,7 @@ export type Database = {
         Update: {
           created_at?: string
           document_number?: string | null
+          entity_id?: string | null
           id?: string
           item_id?: string
           notes?: string | null
@@ -2087,6 +2356,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_purchases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_purchases_item_id_fkey"
             columns: ["item_id"]
@@ -2137,6 +2413,7 @@ export type Database = {
         Row: {
           cedula: string
           created_at: string
+          entity_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -2145,6 +2422,7 @@ export type Database = {
         Insert: {
           cedula: string
           created_at?: string
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -2153,12 +2431,21 @@ export type Database = {
         Update: {
           cedula?: string
           created_at?: string
+          entity_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jornaleros_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journal_lines: {
         Row: {
@@ -2240,6 +2527,7 @@ export type Database = {
           currency: string | null
           deleted_at: string | null
           description: string | null
+          entity_id: string | null
           exchange_rate: number | null
           id: string
           is_reconciled: boolean | null
@@ -2265,6 +2553,7 @@ export type Database = {
           currency?: string | null
           deleted_at?: string | null
           description?: string | null
+          entity_id?: string | null
           exchange_rate?: number | null
           id?: string
           is_reconciled?: boolean | null
@@ -2290,6 +2579,7 @@ export type Database = {
           currency?: string | null
           deleted_at?: string | null
           description?: string | null
+          entity_id?: string | null
           exchange_rate?: number | null
           id?: string
           is_reconciled?: boolean | null
@@ -2307,6 +2597,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "journals_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "journals_period_id_fkey"
             columns: ["period_id"]
@@ -2494,6 +2791,7 @@ export type Database = {
       operation_inputs: {
         Row: {
           created_at: string
+          entity_id: string | null
           id: string
           inventory_item_id: string
           operation_id: string
@@ -2501,6 +2799,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           inventory_item_id: string
           operation_id: string
@@ -2508,12 +2807,20 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           inventory_item_id?: string
           operation_id?: string
           quantity_used?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "operation_inputs_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "operation_inputs_inventory_item_id_fkey"
             columns: ["inventory_item_id"]
@@ -2566,6 +2873,7 @@ export type Database = {
           created_at: string
           driver: string | null
           end_hours: number | null
+          entity_id: string | null
           field_id: string
           hectares_done: number | null
           id: string
@@ -2582,6 +2890,7 @@ export type Database = {
           created_at?: string
           driver?: string | null
           end_hours?: number | null
+          entity_id?: string | null
           field_id: string
           hectares_done?: number | null
           id?: string
@@ -2598,6 +2907,7 @@ export type Database = {
           created_at?: string
           driver?: string | null
           end_hours?: number | null
+          entity_id?: string | null
           field_id?: string
           hectares_done?: number | null
           id?: string
@@ -2611,6 +2921,13 @@ export type Database = {
           workers_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "operations_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "operations_field_id_fkey"
             columns: ["field_id"]
@@ -2684,6 +3001,7 @@ export type Database = {
         Row: {
           created_at: string
           end_date: string
+          entity_id: string | null
           id: string
           is_current: boolean
           start_date: string
@@ -2693,6 +3011,7 @@ export type Database = {
         Insert: {
           created_at?: string
           end_date: string
+          entity_id?: string | null
           id?: string
           is_current?: boolean
           start_date: string
@@ -2702,13 +3021,22 @@ export type Database = {
         Update: {
           created_at?: string
           end_date?: string
+          entity_id?: string | null
           id?: string
           is_current?: boolean
           start_date?: string
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payroll_periods_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll_snapshots: {
         Row: {
@@ -2716,6 +3044,7 @@ export type Database = {
           base_pay: number
           created_at: string
           employee_id: string
+          entity_id: string | null
           gross_pay: number
           holiday_pay: number
           id: string
@@ -2734,6 +3063,7 @@ export type Database = {
           base_pay?: number
           created_at?: string
           employee_id: string
+          entity_id?: string | null
           gross_pay?: number
           holiday_pay?: number
           id?: string
@@ -2752,6 +3082,7 @@ export type Database = {
           base_pay?: number
           created_at?: string
           employee_id?: string
+          entity_id?: string | null
           gross_pay?: number
           holiday_pay?: number
           id?: string
@@ -2778,6 +3109,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_snapshots_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -2840,6 +3178,7 @@ export type Database = {
           benefit_type: string
           created_at: string
           employee_id: string
+          entity_id: string | null
           id: string
           period_id: string
         }
@@ -2848,6 +3187,7 @@ export type Database = {
           benefit_type: string
           created_at?: string
           employee_id: string
+          entity_id?: string | null
           id?: string
           period_id: string
         }
@@ -2856,6 +3196,7 @@ export type Database = {
           benefit_type?: string
           created_at?: string
           employee_id?: string
+          entity_id?: string | null
           id?: string
           period_id?: string
         }
@@ -2872,6 +3213,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_employee_benefits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -3174,6 +3522,7 @@ export type Database = {
           cost_override: number | null
           created_at: string
           description: string
+          entity_id: string | null
           entry_date: string
           id: string
           units_charged: number
@@ -3186,6 +3535,7 @@ export type Database = {
           cost_override?: number | null
           created_at?: string
           description: string
+          entity_id?: string | null
           entry_date?: string
           id?: string
           units_charged?: number
@@ -3198,6 +3548,7 @@ export type Database = {
           cost_override?: number | null
           created_at?: string
           description?: string
+          entity_id?: string | null
           entry_date?: string
           id?: string
           units_charged?: number
@@ -3209,6 +3560,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -3250,6 +3608,7 @@ export type Database = {
           amount: number
           contract_id: string
           created_at: string
+          entity_id: string | null
           id: string
           notes: string | null
           payment_date: string
@@ -3260,6 +3619,7 @@ export type Database = {
           amount?: number
           contract_id: string
           created_at?: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           payment_date?: string
@@ -3270,6 +3630,7 @@ export type Database = {
           amount?: number
           contract_id?: string
           created_at?: string
+          entity_id?: string | null
           id?: string
           notes?: string | null
           payment_date?: string
@@ -3282,6 +3643,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "service_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contract_payments_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -3307,6 +3675,7 @@ export type Database = {
           comments: string | null
           contract_name: string
           created_at: string
+          entity_id: string | null
           farm_id: string | null
           id: string
           is_active: boolean
@@ -3324,6 +3693,7 @@ export type Database = {
           comments?: string | null
           contract_name: string
           created_at?: string
+          entity_id?: string | null
           farm_id?: string | null
           id?: string
           is_active?: boolean
@@ -3341,6 +3711,7 @@ export type Database = {
           comments?: string | null
           contract_name?: string
           created_at?: string
+          entity_id?: string | null
           farm_id?: string | null
           id?: string
           is_active?: boolean
@@ -3353,6 +3724,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_contracts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_contracts_farm_id_fkey"
             columns: ["farm_id"]
@@ -3633,6 +4011,7 @@ export type Database = {
       tractor_maintenance: {
         Row: {
           created_at: string
+          entity_id: string | null
           hour_meter_reading: number
           id: string
           maintenance_date: string
@@ -3643,6 +4022,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entity_id?: string | null
           hour_meter_reading: number
           id?: string
           maintenance_date?: string
@@ -3653,6 +4033,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entity_id?: string | null
           hour_meter_reading?: number
           id?: string
           maintenance_date?: string
@@ -3662,6 +4043,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tractor_maintenance_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tractor_maintenance_tractor_id_fkey"
             columns: ["tractor_id"]
@@ -3850,6 +4238,7 @@ export type Database = {
           dgii_tipo_ingreso: string | null
           document: string | null
           due_date: string | null
+          entity_id: string | null
           exchange_rate: number | null
           exchange_rate_used: number | null
           id: string
@@ -3891,6 +4280,7 @@ export type Database = {
           dgii_tipo_ingreso?: string | null
           document?: string | null
           due_date?: string | null
+          entity_id?: string | null
           exchange_rate?: number | null
           exchange_rate_used?: number | null
           id?: string
@@ -3932,6 +4322,7 @@ export type Database = {
           dgii_tipo_ingreso?: string | null
           document?: string | null
           due_date?: string | null
+          entity_id?: string | null
           exchange_rate?: number | null
           exchange_rate_used?: number | null
           id?: string
@@ -3989,6 +4380,13 @@ export type Database = {
             columns: ["cbs_id"]
             isOneToOne: false
             referencedRelation: "cbs_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -4060,23 +4458,34 @@ export type Database = {
       user_roles: {
         Row: {
           created_at: string
+          entity_id: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendor_account_rules: {
         Row: {
@@ -4413,32 +4822,63 @@ export type Database = {
         Args: { p_annual_taxable: number; p_year?: number }
         Returns: number
       }
-      calculate_payroll_for_period: {
-        Args: { p_commit?: boolean; p_period_id: string }
-        Returns: {
-          absence_deduction: number
-          base_pay: number
-          committed: boolean
-          days_absent: number
-          days_holiday: number
-          days_worked: number
-          employee_id: string
-          employee_name: string
-          gross_pay: number
-          holiday_pay: number
-          isr: number
-          loan_deduction: number
-          net_pay: number
-          overtime_hours: number
-          overtime_pay: number
-          salary: number
-          sunday_pay: number
-          total_benefits: number
-          total_deductions: number
-          tss: number
-          vacation_deduction: number
-        }[]
-      }
+      calculate_payroll_for_period:
+        | {
+            Args: { p_commit?: boolean; p_period_id: string }
+            Returns: {
+              absence_deduction: number
+              base_pay: number
+              committed: boolean
+              days_absent: number
+              days_holiday: number
+              days_worked: number
+              employee_id: string
+              employee_name: string
+              gross_pay: number
+              holiday_pay: number
+              isr: number
+              loan_deduction: number
+              net_pay: number
+              overtime_hours: number
+              overtime_pay: number
+              salary: number
+              sunday_pay: number
+              total_benefits: number
+              total_deductions: number
+              tss: number
+              vacation_deduction: number
+            }[]
+          }
+        | {
+            Args: {
+              p_commit?: boolean
+              p_entity_id?: string
+              p_period_id: string
+            }
+            Returns: {
+              absence_deduction: number
+              base_pay: number
+              committed: boolean
+              days_absent: number
+              days_holiday: number
+              days_worked: number
+              employee_id: string
+              employee_name: string
+              gross_pay: number
+              holiday_pay: number
+              isr: number
+              loan_deduction: number
+              net_pay: number
+              overtime_hours: number
+              overtime_pay: number
+              salary: number
+              sunday_pay: number
+              total_benefits: number
+              total_deductions: number
+              tss: number
+              vacation_deduction: number
+            }[]
+          }
       calculate_prestaciones: {
         Args: {
           p_employee_id: string
@@ -4486,6 +4926,7 @@ export type Database = {
         }
         Returns: string
       }
+      current_user_entity_id: { Args: never; Returns: string }
       dgii_507_report: {
         Args: { p_end: string; p_start: string }
         Returns: {
@@ -4617,6 +5058,7 @@ export type Database = {
         }[]
       }
       is_accountant_only: { Args: never; Returns: boolean }
+      is_global_admin: { Args: never; Returns: boolean }
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined
@@ -4633,14 +5075,24 @@ export type Database = {
         }
         Returns: Json
       }
-      revalue_open_ap_ar: {
-        Args: {
-          p_period_id: string
-          p_posted_by: string
-          p_revaluation_date: string
-        }
-        Returns: number
-      }
+      revalue_open_ap_ar:
+        | {
+            Args: {
+              p_period_id: string
+              p_posted_by: string
+              p_revaluation_date: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_entity_id?: string
+              p_period_id: string
+              p_revaluation_date: string
+              p_user_id: string
+            }
+            Returns: number
+          }
       trial_balance: {
         Args: { p_end?: string; p_start?: string }
         Returns: {
@@ -4655,6 +5107,11 @@ export type Database = {
       upsert_field_boundary: {
         Args: { p_field_id: string; p_geojson: string }
         Returns: undefined
+      }
+      user_entity_ids: { Args: never; Returns: string[] }
+      user_has_entity_access: {
+        Args: { p_entity_id: string }
+        Returns: boolean
       }
     }
     Enums: {

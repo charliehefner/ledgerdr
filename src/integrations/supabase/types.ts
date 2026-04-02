@@ -4467,6 +4467,13 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_all_public_tables: {
+        Args: never
+        Returns: {
+          row_estimate: number
+          table_name: string
+        }[]
+      }
       get_balance_sheet: {
         Args: { p_as_of_date?: string }
         Returns: {

@@ -35,6 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserManagement } from "@/components/settings/UserManagement";
 import { DatabaseBackup } from "@/components/settings/DatabaseBackup";
+import { BackupExportView } from "@/components/settings/BackupExportView";
 import { ScheduledDeletions } from "@/components/settings/ScheduledDeletions";
 import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";
@@ -148,15 +149,18 @@ export default function Settings() {
                 {t("accounting.chartOfAccounts")}
               </TabsTrigger>
             )}
+            {canModifySettings && (
+              <TabsTrigger value="backup">
+                <Database className="h-4 w-4 mr-2" />
+                Backup
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="general" className="mt-6">
             <div className="max-w-3xl space-y-8 animate-fade-in">
               {/* Scheduled Deletions - Admin Only */}
               {canModifySettings && <ScheduledDeletions />}
-
-              {/* Database Backup - Admin Only */}
-              {canModifySettings && <DatabaseBackup />}
 
               {/* Database Connection */}
               <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
@@ -348,6 +352,12 @@ export default function Settings() {
               <div className="max-w-5xl">
                 <ChartOfAccountsView />
               </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="backup" className="mt-6">
+              <BackupExportView />
             </TabsContent>
           )}
         </Tabs>

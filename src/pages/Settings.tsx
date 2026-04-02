@@ -354,6 +354,12 @@ export default function Settings() {
               </div>
             </TabsContent>
           )}
+
+          {canModifySettings && (
+            <TabsContent value="backup" className="mt-6">
+              <BackupExportView />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </MainLayout>

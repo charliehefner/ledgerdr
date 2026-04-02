@@ -100,7 +100,7 @@ const LUNCH_THRESHOLD_HOURS = 5; // Deduct lunch if worked more than 5 clock hou
 const SATURDAY_NORMAL_END = 11 * 60 + 30; // 11:30 AM - end of normal Saturday hours
 const SATURDAY_NORMAL_HOURS = 4; // Normal Saturday: 7:30 AM to 11:30 AM
 const SATURDAY_LUNCH_THRESHOLD = 14 * 60; // 2:00 PM - if end time > this, deduct lunch
-import { TSS_EMPLOYEE_RATE, calculateAnnualISR, loadTssParameters } from "@/lib/payrollCalculations";
+import { TSS_EMPLOYEE_RATE, ISR_BRACKETS, calculateAnnualISR, loadTssParameters } from "@/lib/payrollCalculations";
 
 const OVERTIME_MULTIPLIER = 1.35;
 const HOLIDAY_MULTIPLIER = 2.0; // 100% bonus = 2x pay

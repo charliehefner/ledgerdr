@@ -192,7 +192,7 @@ export function IR3ReportView() {
         q2Source,
       };
     }).filter((r) => r.isrTotal > 0);
-  }, [employees, benefits, snapshots, q1Period, q2Period, periods]);
+  }, [employees, benefits, snapshots, q1Period, q2Period, periods, tssRate, brackets]);
 
   const totalISR = reportData.reduce((sum, r) => sum + r.isrTotal, 0);
 

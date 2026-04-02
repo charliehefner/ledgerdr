@@ -2103,6 +2103,36 @@ export type Database = {
           },
         ]
       }
+      isr_brackets: {
+        Row: {
+          annual_from: number
+          annual_to: number | null
+          bracket_order: number
+          created_at: string
+          effective_year: number
+          id: string
+          marginal_rate: number
+        }
+        Insert: {
+          annual_from: number
+          annual_to?: number | null
+          bracket_order: number
+          created_at?: string
+          effective_year: number
+          id?: string
+          marginal_rate: number
+        }
+        Update: {
+          annual_from?: number
+          annual_to?: number | null
+          bracket_order?: number
+          created_at?: string
+          effective_year?: number
+          id?: string
+          marginal_rate?: number
+        }
+        Relationships: []
+      }
       jornaleros: {
         Row: {
           cedula: string
@@ -4379,6 +4409,36 @@ export type Database = {
               total_debit: number
             }[]
           }
+      calculate_annual_isr: {
+        Args: { p_annual_taxable: number; p_year?: number }
+        Returns: number
+      }
+      calculate_payroll_for_period: {
+        Args: { p_commit?: boolean; p_period_id: string }
+        Returns: {
+          absence_deduction: number
+          base_pay: number
+          committed: boolean
+          days_absent: number
+          days_holiday: number
+          days_worked: number
+          employee_id: string
+          employee_name: string
+          gross_pay: number
+          holiday_pay: number
+          isr: number
+          loan_deduction: number
+          net_pay: number
+          overtime_hours: number
+          overtime_pay: number
+          salary: number
+          sunday_pay: number
+          total_benefits: number
+          total_deductions: number
+          tss: number
+          vacation_deduction: number
+        }[]
+      }
       calculate_prestaciones: {
         Args: {
           p_employee_id: string

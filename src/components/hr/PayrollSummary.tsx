@@ -380,7 +380,7 @@ export function PayrollSummary({
       const annualTaxableIncome = monthlyTaxable * 12;
       
       // Calculate annual ISR using progressive brackets
-      const annualISR = calculateAnnualISR(annualTaxableIncome);
+      const annualISR = calculateAnnualISR(annualTaxableIncome, ISR_BRACKETS);
       
       // Prorate for this period based on worked ratio
       const workedRatio = effectiveBasePay / biweeklySalary;

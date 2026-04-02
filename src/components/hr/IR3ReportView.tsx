@@ -64,7 +64,6 @@ export function IR3ReportView() {
     { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
     { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
   ];
-  const queryClient = useQueryClient();
 
   const years = Array.from({ length: 5 }, (_, i) => {
     const y = now.getFullYear() - 2 + i;

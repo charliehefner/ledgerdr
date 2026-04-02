@@ -35,6 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserManagement } from "@/components/settings/UserManagement";
 import { DatabaseBackup } from "@/components/settings/DatabaseBackup";
+import { BackupExportView } from "@/components/settings/BackupExportView";
 import { ScheduledDeletions } from "@/components/settings/ScheduledDeletions";
 import { FarmsFieldsView } from "@/components/operations/FarmsFieldsView";
 import { OperationTypesView } from "@/components/operations/OperationTypesView";

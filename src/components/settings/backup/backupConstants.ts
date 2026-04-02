@@ -91,8 +91,8 @@ export async function getOrderedTableList(): Promise<string[]> {
     return [...TABLE_PRIORITY_ORDER];
   }
   
-  const allTableNames = (data as { table_name: string }[]).map(r => r.table_name);
-  const prioritySet = new Set(TABLE_PRIORITY_ORDER);
+  const allTableNames = (data as any[]).map((r: any) => r.table_name as string);
+  const prioritySet = new Set<string>(TABLE_PRIORITY_ORDER);
   
   // Start with priority-ordered tables that actually exist
   const ordered: string[] = [];

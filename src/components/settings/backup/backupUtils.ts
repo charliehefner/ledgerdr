@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 export async function fetchTableData(tableName: string) {
   const { data, error } = await (supabase
     .from(tableName as any)
-    .select('*'));
+    .select('*') as any);
   
   if (error) {
     console.warn(`Error fetching ${tableName}:`, error.message);
     return [];
   }
-  return (data as Record<string, unknown>[]) || [];
+  return (data || []) as Record<string, unknown>[];
 }
 
 // Fetch only NCF attachments for transactions

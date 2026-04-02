@@ -149,6 +149,12 @@ export default function Settings() {
                 {t("accounting.chartOfAccounts")}
               </TabsTrigger>
             )}
+            {canModifySettings && (
+              <TabsTrigger value="backup">
+                <Database className="h-4 w-4 mr-2" />
+                Backup
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="general" className="mt-6">

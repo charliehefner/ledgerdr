@@ -44,10 +44,8 @@ export function ProfitLossTab({ entityId, isAllEntities }: Props) {
         }
         return results;
       } else {
-        const { data: d, error } = await supabase.rpc("get_profit_loss", {
-          ...params,
-          ...(entityId ? { p_entity_id: entityId } : {}),
-        });
+        const rpcParams = { ...params, ...(entityId ? { p_entity_id: entityId } : {}) };
+        const { data: d, error } = await supabase.rpc("get_profit_loss", rpcParams as any);
         if (error) throw error;
         return [{ entityName: "Current", entityId, data: d ?? [] }];
       }

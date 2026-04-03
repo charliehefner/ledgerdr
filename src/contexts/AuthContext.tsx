@@ -15,6 +15,8 @@ interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
   isLoading: boolean;
+  /** True if the user's role requires MFA and it's not yet verified this session */
+  mfaRequired: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   canModifySettings: boolean;

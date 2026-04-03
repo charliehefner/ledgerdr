@@ -35,6 +35,7 @@ import Industrial from "./pages/Industrial";
 import InstallApp from "./pages/InstallApp";
 import AnalyticsReports from "./pages/AnalyticsReports";
 import Approvals from "./pages/Approvals";
+import MfaVerify from "./pages/MfaVerify";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

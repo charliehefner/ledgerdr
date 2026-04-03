@@ -23,6 +23,7 @@ interface UnlinkedTransaction {
   destination_amount: number | null;
   currency: string | null;
   exchange_rate: number | null;
+  entity_id: string | null;
 }
 
 interface BankAccountLookup {

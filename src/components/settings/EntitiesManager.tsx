@@ -21,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Wand2 } from "lucide-react";
+import { EntitySetupWizard } from "./EntitySetupWizard";
 
 interface EntityRow {
   id: string;

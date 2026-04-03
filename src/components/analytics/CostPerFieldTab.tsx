@@ -23,7 +23,7 @@ export function CostPerFieldTab({ entityId, isAllEntities }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["rpc_get_cost_per_field", startDate, endDate, entityId, isAllEntities],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_cost_per_field", {
+      const { data, error } = await (supabase.rpc as any)("get_cost_per_field", {
         p_start_date: startDate,
         p_end_date: endDate,
         ...(entityId && !isAllEntities ? { p_entity_id: entityId } : {}),

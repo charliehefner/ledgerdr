@@ -31,22 +31,22 @@ export function BalanceSheetTab({ entityId, isAllEntities }: Props) {
     queryFn: async () => {
       if (isAllEntities) {
         const results: { entityName: string; entityId: string | null; data: any[] }[] = [];
-        const { data: consData, error: consErr } = await supabase.rpc("get_balance_sheet", { p_as_of_date: asOfDate, p_entity_id: null });
+        const { data: consData, error: consErr } = await (supabase.rpc as any)("get_balance_sheet", { p_as_of_date: asOfDate });
         if (consErr) throw consErr;
-        results.push({ entityName: "Consolidated", entityId: null, data: consData ?? [] });
+        results.push({ entityName: "Consolidated", entityId: null, data: (consData ?? []) as any[] });
         for (const ent of entities) {
-          const { data: entData, error: entErr } = await supabase.rpc("get_balance_sheet", { p_as_of_date: asOfDate, p_entity_id: ent.id });
+          const { data: entData, error: entErr } = await (supabase.rpc as any)("get_balance_sheet", { p_as_of_date: asOfDate, p_entity_id: ent.id });
           if (entErr) throw entErr;
-          results.push({ entityName: ent.name, entityId: ent.id, data: entData ?? [] });
+          results.push({ entityName: ent.name, entityId: ent.id, data: (entData ?? []) as any[] });
         }
         return results;
       } else {
-        const { data: d, error } = await supabase.rpc("get_balance_sheet", {
+        const { data: d, error } = await (supabase.rpc as any)("get_balance_sheet", {
           p_as_of_date: asOfDate,
           ...(entityId ? { p_entity_id: entityId } : {}),
         });
         if (error) throw error;
-        return [{ entityName: "Current", entityId, data: d ?? [] }];
+        return [{ entityName: "Current", entityId, data: (d ?? []) as any[] }];
       }
     },
   });

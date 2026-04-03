@@ -91,14 +91,19 @@ export function PayrollSummary({
   onPeriodClosed,
 }: PayrollSummaryProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { selectedEntityId } = useEntity();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showCommitConfirm, setShowCommitConfirm] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingReceipts, setIsGeneratingReceipts] = useState(false);
   const [rpcError, setRpcError] = useState<string | null>(null);
+  const [hasPreviewedOnce, setHasPreviewedOnce] = useState(false);
 
   const isClosed = periodStatus === "closed";
   const isOpen = periodStatus === "open";
+  const isAdmin = user?.role === "admin";
+  const canManagePayroll = user?.role === "admin" || user?.role === "gerencia" || user?.role === "accountant";
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({
@@ -114,22 +119,40 @@ export function PayrollSummary({
     },
   });
 
+  // Check if snapshots already exist for this period (status guard)
+  const { data: existingSnapshots = [], isLoading: snapshotsLoading } = useQuery({
+    queryKey: ["payroll-snapshots-check", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_snapshots")
+        .select("id")
+        .eq("period_id", periodId)
+        .limit(1);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!periodId,
+  });
+
+  const hasCommittedSnapshots = existingSnapshots.length > 0;
+
   // Preview payroll via RPC (commit: false)
   const { data: previewData, isLoading: isPreviewLoading, refetch: refetchPreview } = useQuery({
     queryKey: ["payroll-preview", periodId],
     queryFn: async () => {
       setRpcError(null);
       const { data, error } = await supabase.rpc(
-        "calculate_payroll_for_period" as any,
-        { p_period_id: periodId, p_commit: false }
+        "calculate_payroll_for_period",
+        { p_period_id: periodId, p_commit: false, p_entity_id: selectedEntityId || undefined }
       );
       if (error) {
         setRpcError(error.message);
         return [];
       }
+      setHasPreviewedOnce(true);
       return (data as any[]) as PayrollRpcRow[];
     },
-    enabled: !!periodId,
+    enabled: false, // Manual trigger only
   });
 
   // Fetch snapshots for closed periods (immutable data)

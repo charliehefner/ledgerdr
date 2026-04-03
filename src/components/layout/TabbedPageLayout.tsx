@@ -16,7 +16,7 @@ export interface TabGroup {
   align?: "left" | "right";
 }
 
-interface TabbedPageLayoutProps {
+export interface TabbedPageLayoutProps {
   title: string;
   subtitle?: string;
   activeTab: string;
@@ -27,6 +27,7 @@ interface TabbedPageLayoutProps {
   headerIcon?: ReactNode;
   headerAccent?: boolean;
   helpChapter?: string;
+  headerExtra?: ReactNode;
 }
 
 /**

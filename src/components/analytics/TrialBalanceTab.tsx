@@ -78,6 +78,38 @@ export function TrialBalanceTab({ entityId, isAllEntities }: Props) {
   const balanced = Math.abs(totalDebits - totalCredits) < 0.01;
 
   return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <ExportDropdown
+          config={{ filename: `TrialBalance_${format(new Date(), "yyyyMM")}`, title: "Trial Balance", subtitle: isAllEntities ? "Consolidated" : undefined, orientation: "landscape" }}
+          getData={() => ({
+            columns: [
+              { key: "account_code", header: "Account Code", width: 14 },
+              { key: "account_name", header: "Account Name", width: 30 },
+              { key: "type", header: "Type", width: 12 },
+              { key: "total_debits", header: "Total Debits", width: 16 },
+              { key: "total_credits", header: "Total Credits", width: 16 },
+              { key: "balance", header: "Balance", width: 16 },
+            ],
+            rows: rows.map((r) => ({
+              account_code: r.account_code,
+              account_name: r.account_name,
+              type: r.account_type,
+              total_debits: formatCurrency(r.total_debits, "DOP"),
+              total_credits: formatCurrency(r.total_credits, "DOP"),
+              balance: formatCurrency(r.balance, "DOP"),
+            })),
+            totalsRow: {
+              account_code: "TOTALS",
+              account_name: "",
+              type: "",
+              total_debits: formatCurrency(totalDebits, "DOP"),
+              total_credits: formatCurrency(totalCredits, "DOP"),
+              balance: balanced ? "✓ Balanced" : formatCurrency(totalDebits - totalCredits, "DOP"),
+            },
+          })}
+        />
+      </div>
     <Table>
       <TableHeader>
         <TableRow>

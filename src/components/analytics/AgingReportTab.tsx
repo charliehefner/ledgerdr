@@ -39,7 +39,7 @@ export function AgingReportTab({ entityId, isAllEntities }: Props) {
       bucket,
       total: filtered
         .filter((r) => r.direction === dir && r.aging_bucket === bucket)
-        .reduce((s, r) => s + (r.balance_remaining ?? 0), 0),
+        .reduce((s, r) => s + ((r as any).balance_remaining ?? (r.total_amount ?? 0) - ((r as any).amount_paid ?? 0)), 0),
     }));
 
   if (isLoading) return <LoadingSkeleton />;

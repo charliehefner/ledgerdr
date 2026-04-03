@@ -144,10 +144,25 @@ export async function scheduleFollowUp(
 
       for (const slot of ["morning", "afternoon"] as const) {
         if (!occupiedSlots.has(slot)) {
+          // Ensure week row exists and get its id
+          const { data: weekRow, error: weekUpsertErr } = await supabase
+            .from("cronograma_weeks")
+            .upsert(
+              { week_ending_date: weekEndingDate, is_closed: false },
+              { onConflict: "week_ending_date", ignoreDuplicates: true }
+            )
+            .select("id")
+            .single();
+          if (weekUpsertErr || !weekRow) {
+            results.push({ success: false, message: `Error creando semana: ${weekUpsertErr?.message}` });
+            return results;
+          }
+
           // Found an available slot — insert
           const { error: insertError } = await supabase
             .from("cronograma_entries")
             .insert({
+              cronograma_week_id: weekRow.id,
               week_ending_date: weekEndingDate,
               worker_type: "employee" as const,
               worker_id: workerId,

@@ -286,12 +286,14 @@ export function CronogramaGrid() {
       const currentUserId = user?.id || null;
 
       // Ensure week row exists before inserting entry (FK constraint)
-      const { error: weekError } = await supabase
+      const { data: weekRow, error: weekError } = await supabase
         .from("cronograma_weeks")
         .upsert(
           { week_ending_date: entry.week_ending_date, is_closed: false },
           { onConflict: "week_ending_date", ignoreDuplicates: true }
-        );
+        )
+        .select("id")
+        .single();
       if (weekError) throw weekError;
       
       // Find existing entry
@@ -311,7 +313,17 @@ export function CronogramaGrid() {
         const { error } = await supabase
           .from("cronograma_entries")
           .insert({
-            ...entry,
+            cronograma_week_id: weekRow.id,
+            week_ending_date: entry.week_ending_date,
+            worker_type: entry.worker_type,
+            worker_name: entry.worker_name,
+            day_of_week: entry.day_of_week,
+            time_slot: entry.time_slot,
+            task: (entry as any).task ?? null,
+            worker_id: (entry as any).worker_id ?? null,
+            is_vacation: (entry as any).is_vacation ?? false,
+            is_holiday: (entry as any).is_holiday ?? false,
+            source_operation_id: (entry as any).source_operation_id ?? null,
             created_by: currentUserId,
             updated_by: currentUserId,
           });

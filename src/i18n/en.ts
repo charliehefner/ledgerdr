@@ -13,6 +13,7 @@ export const en = {
   "nav.settings": "Settings",
   "nav.alerts": "Alerts",
   "nav.industrial": "Industrial",
+  "nav.approvals": "Approvals",
   
   // Sidebar sections
   "sidebar.menu": "Menu",

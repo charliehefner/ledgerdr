@@ -196,7 +196,7 @@ export function EntitiesManager() {
               <TableHead>País</TableHead>
               <TableHead>Moneda</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead className="w-[60px]" />
+              <TableHead className="w-[100px]" />
             </TableRow>
           </TableHeader>
           <TableBody>

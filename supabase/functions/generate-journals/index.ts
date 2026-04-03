@@ -188,10 +188,11 @@ Deno.serve(async (req) => {
           });
           if (jErr) { skipped.push(`${label}: ${jErr.message}`); continue; }
 
-          // Set exchange_rate and currency on journal
+          // Set exchange_rate, currency, and entity_id on journal
           await db.from("journals").update({
             currency: txn.currency || "DOP",
             exchange_rate: exchangeRate,
+            ...(txn.entity_id ? { entity_id: txn.entity_id } : {}),
           }).eq("id", journalId);
 
           // Finding 5 fix: Always use sourceAmount for both sides to keep journal balanced.

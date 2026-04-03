@@ -59,13 +59,11 @@ export function FxRevaluationButton() {
       if (error) throw error;
       return data as number;
     },
-    onSuccess: (result) => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
-      const row = Array.isArray(result) ? result[0] : result;
-      const docCount = row?.document_count ?? 0;
       toast.success(
-        `Revaluación completa — ${docCount} documento(s) ajustado(s), ${row?.journal_id ? 1 : 0} asiento(s) creado(s).`
+        `Revaluación completa — ${count} documento(s) ajustado(s).`
       );
       setError(null);
       setOpen(false);

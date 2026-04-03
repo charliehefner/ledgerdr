@@ -31,6 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  const MFA_ROLES: UserRole[] = ["admin", "accountant"];
 
   // Fetch user role using security definer function (bypasses RLS)
   // Returns null if fetch fails - caller must handle logout

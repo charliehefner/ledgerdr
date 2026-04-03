@@ -45,27 +45,33 @@ serve(async (req) => {
     // Use service role client to access auth.users
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user roles
+    // Get user roles with entity info
     const { data: roles, error: rolesError } = await adminClient
       .from("user_roles")
-      .select("*");
+      .select("*, entities:entity_id(name)");
 
     if (rolesError) throw rolesError;
 
     // Get user details for each role
     const usersWithRoles = await Promise.all(
-      roles.map(async (role) => {
+      roles.map(async (role: any) => {
         const {
           data: { user: authUser },
         } = await adminClient.auth.admin.getUserById(role.user_id);
 
+        const entityName = role.entity_id === null
+          ? "Global Admin"
+          : role.entities?.name || "Unknown Entity";
+
         // For non-admins, return limited info (just id and email for display)
-        // For admins, return full info including role
+        // For admins, return full info including role and entity
         if (isAdmin) {
           return {
             id: role.user_id,
             email: authUser?.email || "Unknown",
             role: role.role,
+            entity_id: role.entity_id,
+            entity_name: entityName,
             created_at: role.created_at,
           };
         } else {

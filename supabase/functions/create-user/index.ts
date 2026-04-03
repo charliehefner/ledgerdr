@@ -179,6 +179,7 @@ serve(async (req) => {
           email: actualEmail,
           username: isUsernameAccount ? username : undefined,
           role,
+          entity_id: entity_id || null,
         },
       }),
       {

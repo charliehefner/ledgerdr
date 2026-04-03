@@ -197,7 +197,9 @@ export function PayrollSummary({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["payroll-preview", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-snapshots-check", periodId] });
       queryClient.invalidateQueries({ queryKey: ["employee-loans-active"] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
       toast.success("Nómina guardada correctamente.");
     },
     onError: (error) => {

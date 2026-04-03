@@ -4,12 +4,14 @@ import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Download, Lock, Loader2, FileText, FileSpreadsheet, Calendar, Eye, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { Download, Lock, Loader2, FileText, FileSpreadsheet, Calendar, Eye, CheckCircle, AlertTriangle, X, RotateCcw } from "lucide-react";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createTransaction } from "@/lib/api";
 import { generatePayrollReceiptsZip } from "@/lib/payrollReceipts";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 import {
   Table,
   TableBody,

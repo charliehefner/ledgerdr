@@ -28,7 +28,8 @@ import {
   Store,
   Satellite,
   BookOpen,
-  Truck
+  Truck,
+  Building2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,7 @@ import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
 import { TransportationManager } from "@/components/settings/TransportationManager";
+import { EntitiesManager } from "@/components/settings/EntitiesManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -147,6 +149,12 @@ export default function Settings() {
               <TabsTrigger value="chart-of-accounts">
                 <BookOpen className="h-4 w-4 mr-2" />
                 {t("accounting.chartOfAccounts")}
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="entities">
+                <Building2 className="h-4 w-4 mr-2" />
+                Entidades
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -351,6 +359,14 @@ export default function Settings() {
             <TabsContent value="chart-of-accounts" className="mt-6">
               <div className="max-w-5xl">
                 <ChartOfAccountsView />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="entities" className="mt-6">
+              <div className="max-w-4xl">
+                <EntitiesManager />
               </div>
             </TabsContent>
           )}

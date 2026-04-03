@@ -88,12 +88,12 @@ export function FuelConsumptionTab({ entityId, isAllEntities }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {monthData.map((r) => (
-              <TableRow key={`${r.equipment_id}-${(r as any).entity_id ?? ""}`}>
-                {isAllEntities && <TableCell className="font-medium">{(r as any).entity_name ?? "-"}</TableCell>}
+            {monthData.map((r, idx) => (
+              <TableRow key={`${r.equipment_name}-${r.entity_name}-${idx}`}>
+                {isAllEntities && <TableCell className="font-medium">{r.entity_name ?? "-"}</TableCell>}
                 <TableCell>{r.equipment_name}</TableCell>
                 <TableCell className="capitalize">{r.equipment_type}</TableCell>
-                <TableCell className="text-right">{(r.total_gallons ?? 0).toFixed(2)}</TableCell>
+                <TableCell className="text-right">{(r.gallons_dispensed ?? 0).toFixed(2)}</TableCell>
                 <TableCell className="text-right">{(r.avg_gallons_per_hour ?? 0).toFixed(2)}</TableCell>
                 <TableCell className="text-right">{r.dispense_count ?? 0}</TableCell>
               </TableRow>

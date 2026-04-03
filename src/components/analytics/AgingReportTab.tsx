@@ -79,35 +79,29 @@ export function AgingReportTab({ entityId, isAllEntities }: Props) {
           <TableRow>
             {isAllEntities && <TableHead>Entity</TableHead>}
             <TableHead>Direction</TableHead>
-            <TableHead>Contact</TableHead>
             <TableHead>Doc #</TableHead>
-            <TableHead>Type</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Due</TableHead>
             <TableHead className="text-right">Total</TableHead>
-            <TableHead className="text-right">Paid</TableHead>
-            <TableHead className="text-right">Balance</TableHead>
             <TableHead>Currency</TableHead>
             <TableHead>Bucket</TableHead>
             <TableHead className="text-right">Days</TableHead>
+            <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filtered.map((r) => (
             <TableRow key={r.id}>
-              {isAllEntities && <TableCell className="font-medium">{(r as any).entity_name ?? "-"}</TableCell>}
+              {isAllEntities && <TableCell className="font-medium">{r.entity_name ?? "-"}</TableCell>}
               <TableCell className="capitalize">{r.direction}</TableCell>
-              <TableCell>{r.contact_name}</TableCell>
               <TableCell>{r.document_number ?? "-"}</TableCell>
-              <TableCell className="capitalize">{r.document_type}</TableCell>
               <TableCell>{r.document_date}</TableCell>
               <TableCell>{r.due_date ?? "-"}</TableCell>
               <TableCell className="text-right">{formatCurrency(r.total_amount ?? 0, r.currency ?? "DOP")}</TableCell>
-              <TableCell className="text-right">{formatCurrency(r.amount_paid ?? 0, r.currency ?? "DOP")}</TableCell>
-              <TableCell className="text-right font-medium">{formatCurrency(r.balance_remaining ?? 0, r.currency ?? "DOP")}</TableCell>
               <TableCell>{r.currency}</TableCell>
               <TableCell>{r.aging_bucket}</TableCell>
               <TableCell className="text-right">{r.days_overdue ?? 0}</TableCell>
+              <TableCell className="capitalize">{r.status}</TableCell>
             </TableRow>
           ))}
         </TableBody>

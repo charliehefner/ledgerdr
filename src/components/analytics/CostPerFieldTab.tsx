@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { formatCurrency } from "@/lib/formatters";
 import { MapPin, ChevronDown } from "lucide-react";
 import { format, startOfYear } from "date-fns";
+import { ExportDropdown } from "./ExportDropdown";
 
 interface Props {
   entityId: string | null;

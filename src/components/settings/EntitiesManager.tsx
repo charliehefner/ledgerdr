@@ -65,6 +65,8 @@ export function EntitiesManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [wizardEntity, setWizardEntity] = useState<EntityRow | null>(null);
+  const [entityDataCounts, setEntityDataCounts] = useState<Record<string, number>>({});
 
   const fetchEntities = async () => {
     setLoading(true);

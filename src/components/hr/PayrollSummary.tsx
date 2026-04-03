@@ -847,9 +847,10 @@ export function PayrollSummary({
       <AlertDialog open={showCommitConfirm} onOpenChange={setShowCommitConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Commit Payroll?</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar esta nómina?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will finalize payroll snapshots and decrement loan balances. This action cannot be undone.
+              Se guardarán {payrollData.length} registros en payroll_snapshots.
+              Esta acción no se puede deshacer.
               <p className="mt-2 font-medium">Empleados a procesar: {payrollData.length}</p>
               <p>Pago neto total: {formatCurrency(totals.net_pay)}</p>
             </AlertDialogDescription>
@@ -860,7 +861,7 @@ export function PayrollSummary({
               onClick={() => commitPayroll.mutate()}
               disabled={commitPayroll.isPending}
             >
-              {commitPayroll.isPending ? "Procesando..." : "Confirmar Commit"}
+              {commitPayroll.isPending ? "Procesando..." : "Confirmar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

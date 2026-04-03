@@ -247,6 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, 
       session, 
       isLoading, 
+      mfaRequired,
       login, 
       logout, 
       canModifySettings: canModifySettingsValue,

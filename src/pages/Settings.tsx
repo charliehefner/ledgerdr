@@ -160,6 +160,12 @@ export default function Settings() {
               </TabsTrigger>
             )}
             {canModifySettings && (
+              <TabsTrigger value="approvals">
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Aprobaciones
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
               <TabsTrigger value="backup">
                 <Database className="h-4 w-4 mr-2" />
                 Backup

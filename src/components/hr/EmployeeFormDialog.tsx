@@ -86,6 +86,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       name: "",
       cedula: "",
       position: "Servicios Generales",
+      sex: "",
       bank: "",
       bank_account_number: "",
       date_of_birth: "",

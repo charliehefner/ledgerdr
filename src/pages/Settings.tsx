@@ -46,6 +46,7 @@ import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
 import { TransportationManager } from "@/components/settings/TransportationManager";
+import { EntitiesManager } from "@/components/settings/EntitiesManager";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();

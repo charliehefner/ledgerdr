@@ -37,7 +37,14 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, username, password, role } = body;
+    const { email, username, password, role, entity_id } = body;
+
+    // Validate entity_id format if provided
+    if (entity_id !== undefined && entity_id !== null) {
+      if (typeof entity_id !== "string" || !UUID_REGEX.test(entity_id)) {
+        throw new Error("Invalid entity_id format");
+      }
+    }
 
     // Validate: either email or username required
     if (!email && !username) {

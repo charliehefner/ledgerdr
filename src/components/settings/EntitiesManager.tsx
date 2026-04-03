@@ -226,9 +226,21 @@ export function EntitiesManager() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {(entityDataCounts[e.id] || 0) === 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setWizardEntity(e)}
+                          title="Asistente de configuración"
+                        >
+                          <Wand2 className="h-4 w-4 text-primary" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

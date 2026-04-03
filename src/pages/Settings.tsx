@@ -273,6 +273,9 @@ export default function Settings() {
                 </div>
               </div>
 
+              {/* MFA Settings */}
+              <MfaSettings />
+
               {/* Security Note */}
               <div className="bg-muted/50 rounded-xl border border-border p-6">
                 <div className="flex items-start gap-3">

@@ -46,6 +46,7 @@ export function MainLayout({ children, title, subtitle, actions, headerExtra }: 
           <div className="flex items-center gap-3">
             {/* Mobile menu button */}
             <MobileSidebar />
+            <EntitySwitcher />
             
             {title && (
               <div>

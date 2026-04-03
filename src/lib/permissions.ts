@@ -36,7 +36,8 @@ export type Section =
   | "treasury"
   | "contacts"
   | "industrial"
-  | "driver-portal";
+  | "driver-portal"
+  | "approvals";
 
 // HR sub-tabs for granular access control
 export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-employee" | "servicios" | "prestadores" | "tss";
@@ -113,6 +114,7 @@ export const routeToSection: Record<string, Section> = {
   "/industrial": "industrial",
   "/driver-portal": "driver-portal",
   "/analytics": "analytics",
+  "/approvals": "approvals",
 };
 
 // Permission matrix: which roles can access which sections
@@ -139,6 +141,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   contacts: ["admin", "management", "accountant", "viewer"],
   industrial: ["admin", "supervisor"],
   "driver-portal": ["driver"],
+  approvals: ["admin", "management"],
 };
 
 // Roles that have write access (can modify data) for each section
@@ -167,6 +170,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   contacts: ["admin", "management", "accountant"],
   industrial: ["admin", "supervisor"],
   "driver-portal": ["driver"],
+  approvals: ["admin", "management"],
 };
 
 /**

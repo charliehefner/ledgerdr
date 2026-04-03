@@ -25,6 +25,7 @@ export const TRANSACTION_COLUMNS: ColumnConfig[] = [
   { key: "exchangeRate", label: "Exchange Rate / Tasa Cambio", defaultVisible: false },
   { key: "costCenter", label: "Cost Center / Centro Costo", defaultVisible: false },
   { key: "attach", label: "Attachment / Adjunto", defaultVisible: true },
+  { key: "approvalStatus", label: "Approval / Aprobación", defaultVisible: false },
 ];
 
 /**

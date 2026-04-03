@@ -24,6 +24,7 @@ import {
   Landmark,
   Building2,
   Factory,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";
@@ -36,7 +37,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
 
 type NavItem = {
   nameKey: string;
@@ -69,6 +72,7 @@ const sectionColors: Record<Section, string> = {
   contacts: "",
   industrial: "bg-section-fuel",
   "driver-portal": "",
+  approvals: "",
 };
 
 const navigation: NavItem[] = [
@@ -91,6 +95,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
   { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
   { nameKey: "nav.industrial", href: "/industrial", icon: Factory, section: "industrial" },
+  { nameKey: "nav.approvals", href: "/approvals", icon: ClipboardCheck, section: "approvals" },
 ];
 
 const secondaryNav: NavItem[] = [
@@ -109,7 +114,7 @@ function SidebarContent({
   const { collapsed, toggleCollapsed } = useSidebar();
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
-
+  const pendingApprovalCount = usePendingApprovalCount();
   const handleLogout = async () => {
     await logout();
     navigate("/login");
@@ -143,6 +148,11 @@ function SidebarContent({
           <item.icon className="h-5 w-5 shrink-0" />
           {sectionColor && (
             <span className={cn("absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full", sectionColor)} />
+          )}
+          {item.section === "approvals" && pendingApprovalCount > 0 && (
+            <span className="absolute -top-1.5 -right-2.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+              {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+            </span>
           )}
         </div>
         {(!showCollapsed || isMobile) && <span>{itemName}</span>}

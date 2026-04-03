@@ -51,6 +51,7 @@ import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsM
 import { TransportationManager } from "@/components/settings/TransportationManager";
 import { EntitiesManager } from "@/components/settings/EntitiesManager";
 import { ApprovalThresholdsManager } from "@/components/settings/ApprovalThresholdsManager";
+import { MfaSettings } from "@/components/settings/MfaSettings";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();

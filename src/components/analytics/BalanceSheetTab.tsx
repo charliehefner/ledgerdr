@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { useEntity } from "@/contexts/EntityContext";
+import { ExportDropdown } from "./ExportDropdown";
 
 const SECTIONS = [
   { type: "ASSET", label: "Assets", sign: 1 },

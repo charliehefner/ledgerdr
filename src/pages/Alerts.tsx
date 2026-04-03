@@ -15,12 +15,16 @@ import {
   useInventoryAlerts,
   useOperationsAlerts,
   useOperationsGpsAlerts,
+  useApArOverdueAlerts,
+  usePayrollApproachingAlerts,
 } from "@/components/alerts/useAlertData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 export default function Alerts() {
   const [configOpen, setConfigOpen] = useState(false);
   const { user } = useAuth();
+  const { selectedEntityId } = useEntity();
   const { data: configs, isLoading: configsLoading } = useAlertConfigurations();
 
   const hr = useHrAlerts(configs);
@@ -29,11 +33,13 @@ export default function Alerts() {
   const inventory = useInventoryAlerts(configs);
   const operations = useOperationsAlerts(configs);
   const gpsOps = useOperationsGpsAlerts(configs);
+  const apAr = useApArOverdueAlerts(configs, selectedEntityId);
+  const payroll = usePayrollApproachingAlerts(configs);
 
-  const isLoading = configsLoading || hr.isLoading || fuel.isLoading || equipment.isLoading || inventory.isLoading || operations.isLoading || gpsOps.isLoading;
+  const isLoading = configsLoading || hr.isLoading || fuel.isLoading || equipment.isLoading || inventory.isLoading || operations.isLoading || gpsOps.isLoading || apAr.isLoading || payroll.isLoading;
 
   const allOpsAlerts = [...operations.alerts, ...gpsOps.alerts];
-  const totalAlerts = hr.alerts.length + fuel.alerts.length + equipment.alerts.length + inventory.alerts.length + allOpsAlerts.length;
+  const totalAlerts = hr.alerts.length + fuel.alerts.length + equipment.alerts.length + inventory.alerts.length + allOpsAlerts.length + apAr.alerts.length + payroll.alerts.length;
 
   const isAdmin = user?.role === "admin";
 
@@ -99,6 +105,18 @@ export default function Alerts() {
 
             <AlertSector title="Operaciones" alertCount={allOpsAlerts.length}>
               {allOpsAlerts.map((a, i) => (
+                <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
+              ))}
+            </AlertSector>
+
+            <AlertSector title="Cuentas por Cobrar / Pagar" alertCount={apAr.alerts.length}>
+              {apAr.alerts.map((a, i) => (
+                <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
+              ))}
+            </AlertSector>
+
+            <AlertSector title="Nómina" alertCount={payroll.alerts.length}>
+              {payroll.alerts.map((a, i) => (
                 <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
               ))}
             </AlertSector>

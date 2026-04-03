@@ -29,7 +29,8 @@ import {
   Satellite,
   BookOpen,
   Truck,
-  Building2
+  Building2,
+  ClipboardCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";

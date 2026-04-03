@@ -121,6 +121,7 @@ export function EntitiesManager() {
             description: form.description.trim() || null,
             is_active: form.is_active,
             rnc: form.rnc.trim() || null,
+            tss_nomina_code: form.tss_nomina_code.trim() || "001",
           })
           .eq("id", editingId);
         if (error) throw error;

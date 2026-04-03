@@ -188,8 +188,8 @@ export function PayrollSummary({
     mutationFn: async () => {
       setRpcError(null);
       const { data, error } = await supabase.rpc(
-        "calculate_payroll_for_period" as any,
-        { p_period_id: periodId, p_commit: true }
+        "calculate_payroll_for_period",
+        { p_period_id: periodId, p_commit: true, p_entity_id: selectedEntityId || undefined }
       );
       if (error) throw error;
       return (data as any[]) as PayrollRpcRow[];

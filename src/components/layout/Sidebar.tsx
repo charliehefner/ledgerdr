@@ -24,6 +24,7 @@ import {
   Landmark,
   Building2,
   Factory,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";
@@ -36,7 +37,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
 
 type NavItem = {
   nameKey: string;

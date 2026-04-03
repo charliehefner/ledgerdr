@@ -11,13 +11,22 @@ import { BarChart3 } from "lucide-react";
 
 const BUCKETS = ["Current", "1-30", "31-60", "61-90", "90+"] as const;
 
-export function AgingReportTab() {
+interface Props {
+  entityId: string | null;
+  isAllEntities: boolean;
+}
+
+export function AgingReportTab({ entityId, isAllEntities }: Props) {
   const [direction, setDirection] = useState<string>("all");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["v_ap_ar_aging"],
+    queryKey: ["v_ap_ar_aging", entityId, isAllEntities],
     queryFn: async () => {
-      const { data, error } = await supabase.from("v_ap_ar_aging").select("*");
+      let query = supabase.from("v_ap_ar_aging").select("*");
+      if (!isAllEntities && entityId) {
+        query = query.eq("entity_id", entityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -49,7 +58,6 @@ export function AgingReportTab() {
         </Select>
       </div>
 
-      {/* Summary cards */}
       {(direction === "all" ? ["payable", "receivable"] : [direction]).map((dir) => (
         <Card key={dir}>
           <CardContent className="pt-4">
@@ -66,10 +74,10 @@ export function AgingReportTab() {
         </Card>
       ))}
 
-      {/* Detail table */}
       <Table>
         <TableHeader>
           <TableRow>
+            {isAllEntities && <TableHead>Entity</TableHead>}
             <TableHead>Direction</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Doc #</TableHead>
@@ -87,6 +95,7 @@ export function AgingReportTab() {
         <TableBody>
           {filtered.map((r) => (
             <TableRow key={r.id}>
+              {isAllEntities && <TableCell className="font-medium">{(r as any).entity_name ?? "-"}</TableCell>}
               <TableCell className="capitalize">{r.direction}</TableCell>
               <TableCell>{r.contact_name}</TableCell>
               <TableCell>{r.document_number ?? "-"}</TableCell>

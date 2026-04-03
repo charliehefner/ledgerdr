@@ -10,7 +10,12 @@ import { Fuel } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subMonths } from "date-fns";
 
-export function FuelConsumptionTab() {
+interface Props {
+  entityId: string | null;
+  isAllEntities: boolean;
+}
+
+export function FuelConsumptionTab({ entityId, isAllEntities }: Props) {
   const months = useMemo(() => {
     const list: string[] = [];
     for (let i = 0; i < 12; i++) {
@@ -22,9 +27,13 @@ export function FuelConsumptionTab() {
   const [selectedMonth, setSelectedMonth] = useState(months[0]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["v_fuel_consumption"],
+    queryKey: ["v_fuel_consumption", entityId, isAllEntities],
     queryFn: async () => {
-      const { data, error } = await supabase.from("v_fuel_consumption").select("*");
+      let query = supabase.from("v_fuel_consumption").select("*");
+      if (!isAllEntities && entityId) {
+        query = query.eq("entity_id", entityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -32,7 +41,6 @@ export function FuelConsumptionTab() {
 
   const monthData = data?.filter((r) => r.month === selectedMonth) ?? [];
 
-  // Chart: aggregate by month across all equipment
   const chartData = useMemo(() => {
     if (!data) return [];
     const byMonth: Record<string, number> = {};
@@ -65,13 +73,13 @@ export function FuelConsumptionTab() {
         </div>
       </div>
 
-      {/* Detail table for selected month */}
       {monthData.length === 0 ? (
         <EmptyState icon={Fuel} title="No data for this month" description="Select a different month." />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
+              {isAllEntities && <TableHead>Entity</TableHead>}
               <TableHead>Equipment</TableHead>
               <TableHead>Type</TableHead>
               <TableHead className="text-right">Total Gallons</TableHead>
@@ -81,7 +89,8 @@ export function FuelConsumptionTab() {
           </TableHeader>
           <TableBody>
             {monthData.map((r) => (
-              <TableRow key={r.equipment_id}>
+              <TableRow key={`${r.equipment_id}-${(r as any).entity_id ?? ""}`}>
+                {isAllEntities && <TableCell className="font-medium">{(r as any).entity_name ?? "-"}</TableCell>}
                 <TableCell>{r.equipment_name}</TableCell>
                 <TableCell className="capitalize">{r.equipment_type}</TableCell>
                 <TableCell className="text-right">{(r.total_gallons ?? 0).toFixed(2)}</TableCell>
@@ -93,7 +102,6 @@ export function FuelConsumptionTab() {
         </Table>
       )}
 
-      {/* Bar chart */}
       {chartData.length > 0 && (
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">

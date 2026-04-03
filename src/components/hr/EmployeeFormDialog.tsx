@@ -38,6 +38,7 @@ const employeeSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").max(200),
   cedula: z.string().min(1, "La cédula es requerida").max(20),
   position: z.enum(POSITIONS).default("Servicios Generales"),
+  sex: z.string().optional(),
   bank: z.string().optional(),
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),

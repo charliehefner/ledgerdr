@@ -493,6 +493,17 @@ export function UserManagement() {
                         <Badge variant="outline">{roleDisplayNames[user.role as UserRole] || user.role}</Badge>
                       </TableCell>
                       <TableCell>
+                        {user.mfa_enrolled ? (
+                          <span className="flex items-center gap-1 text-xs text-primary">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Activo
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <ShieldOff className="h-3.5 w-3.5" /> —
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         {user.entity_id ? (
                           <span className="flex items-center gap-1 text-sm">
                             <Building2 className="h-3 w-3" /> {user.entity_name}

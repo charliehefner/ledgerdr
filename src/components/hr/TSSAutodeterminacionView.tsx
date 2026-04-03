@@ -237,33 +237,55 @@ export function TSSAutodeterminacionView() {
       return;
     }
     const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
-    const fileName = `AM_${EMPLOYER_RNC}_${selectedMonth}${selectedYear}.txt`;
-    if ("showSaveFilePicker" in window) {
-      window
-        .showSaveFilePicker!({
-          suggestedName: fileName,
-          types: [{ description: "Text file", accept: { "text/plain": [".txt"] } }],
-        })
-        .then(async (handle) => {
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          toast.success("Archivo TSS generado exitosamente");
-        })
-        .catch(() => fallbackDownload(blob, fileName));
-    } else {
-      fallbackDownload(blob, fileName);
+    const suffix = retroactiva ? "EAR" : "AM";
+    const fileName = `TSS_${suffix}_${selectedYear}${selectedMonth}.txt`;
+    triggerDownload(blob, fileName);
+  };
+
+  const handleDownloadRpc = async () => {
+    if (!selectedEntityId) {
+      toast.error("Seleccione una entidad específica para generar el archivo SDSS");
+      return;
+    }
+    setDownloadingTxt(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("generate_tss_autodeterminacion", {
+        p_year: parseInt(selectedYear),
+        p_month: parseInt(selectedMonth),
+        p_entity_id: selectedEntityId,
+        p_retroactiva: retroactiva,
+        p_own_rnc: entityRnc || "",
+        p_nomina_code: entityNominaCode,
+      });
+      if (error) throw error;
+      if (!data) {
+        toast.error("No se generó contenido. Verifique que hay empleados activos.");
+        return;
+      }
+      const blob = new Blob([data], { type: "text/plain;charset=utf-8" });
+      const suffix = retroactiva ? "EAR" : "AM";
+      const fileName = `TSS_${suffix}_${selectedYear}${selectedMonth}.txt`;
+      triggerDownload(blob, fileName);
+      toast.success("Archivo TSS para SDSS generado exitosamente");
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.toLowerCase().includes("rnc")) {
+        toast.error("RNC no configurado. Configure el RNC de la entidad en Configuración → Entidades.");
+      } else {
+        toast.error("Error al generar archivo: " + msg);
+      }
+    } finally {
+      setDownloadingTxt(false);
     }
   };
 
-  const fallbackDownload = (blob: Blob, fileName: string) => {
+  const triggerDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Archivo TSS generado exitosamente");
   };
 
   const isLoading = loadingEmp || loadingSnap;

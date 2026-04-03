@@ -198,7 +198,7 @@ export function PayrollSummary({
       queryClient.invalidateQueries({ queryKey: ["payroll-preview", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots", periodId] });
       queryClient.invalidateQueries({ queryKey: ["employee-loans-active"] });
-      toast.success(`Nómina comprometida: ${data.length} empleados procesados`);
+      toast.success("Nómina guardada correctamente.");
     },
     onError: (error) => {
       setRpcError(error.message);

@@ -57,6 +57,7 @@ interface UserWithRole {
   entity_id: string | null;
   entity_name: string;
   created_at: string;
+  mfa_enrolled?: boolean;
 }
 
 const isUsernameAccount = (email: string) => email.endsWith("@internal.jord.local");

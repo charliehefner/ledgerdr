@@ -31,6 +31,7 @@ interface EntityRow {
   country_code: string;
   currency: string;
   is_active: boolean;
+  rnc: string | null;
 }
 
 interface FormState {
@@ -40,6 +41,7 @@ interface FormState {
   country_code: string;
   currency: string;
   is_active: boolean;
+  rnc: string;
 }
 
 const emptyForm: FormState = {
@@ -49,6 +51,7 @@ const emptyForm: FormState = {
   country_code: "DO",
   currency: "DOP",
   is_active: true,
+  rnc: "",
 };
 
 export function EntitiesManager() {
@@ -63,7 +66,7 @@ export function EntitiesManager() {
     setLoading(true);
     const { data, error } = await supabase
       .from("entities")
-      .select("id, name, code, description, country_code, currency, is_active")
+      .select("id, name, code, description, country_code, currency, is_active, rnc")
       .order("code");
     if (error) {
       toast.error("Error loading entities");
@@ -93,6 +96,7 @@ export function EntitiesManager() {
       country_code: e.country_code,
       currency: e.currency,
       is_active: e.is_active,
+      rnc: e.rnc || "",
     });
     setDialogOpen(true);
   };
@@ -112,6 +116,7 @@ export function EntitiesManager() {
             name: form.name.trim(),
             description: form.description.trim() || null,
             is_active: form.is_active,
+            rnc: form.rnc.trim() || null,
           })
           .eq("id", editingId);
         if (error) throw error;
@@ -123,6 +128,7 @@ export function EntitiesManager() {
           description: form.description.trim() || null,
           country_code: form.country_code.trim() || "DO",
           currency: form.currency.trim() || "DOP",
+          rnc: form.rnc.trim() || null,
         });
         if (error) {
           if (error.code === "23505") {
@@ -160,6 +166,7 @@ export function EntitiesManager() {
             <TableRow>
               <TableHead>Código</TableHead>
               <TableHead>Nombre</TableHead>
+              <TableHead>RNC</TableHead>
               <TableHead>País</TableHead>
               <TableHead>Moneda</TableHead>
               <TableHead>Estado</TableHead>
@@ -169,13 +176,13 @@ export function EntitiesManager() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : entities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No hay entidades
                 </TableCell>
               </TableRow>
@@ -184,6 +191,7 @@ export function EntitiesManager() {
                 <TableRow key={e.id}>
                   <TableCell className="font-mono font-medium">{e.code}</TableCell>
                   <TableCell>{e.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{e.rnc || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>{e.country_code}</TableCell>
                   <TableCell>{e.currency}</TableCell>
                   <TableCell>
@@ -229,6 +237,17 @@ export function EntitiesManager() {
               {!editingId && (
                 <p className="text-xs text-muted-foreground">Identificador único corto. No se puede cambiar después.</p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label>RNC</Label>
+              <Input
+                value={form.rnc}
+                onChange={(e) => setForm((f) => ({ ...f, rnc: e.target.value.replace(/[^0-9]/g, "") }))}
+                placeholder="9 dígitos"
+                maxLength={11}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">Requerido para reportes DGII (606, 607, 608)</p>
             </div>
             <div className="space-y-2">
               <Label>Descripción</Label>

@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { DGII606Table } from "./DGII606Table";
 import { DGII607Table } from "./DGII607Table";
@@ -11,8 +12,9 @@ import { DGII608Table } from "./DGII608Table";
 import { IT1ReportView } from "./IT1ReportView";
 import { IR3ReportView } from "@/components/hr/IR3ReportView";
 import { IR17ReportView } from "@/components/hr/IR17ReportView";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useEntity } from "@/contexts/EntityContext";
 import type { BankAccountForDGII } from "./dgiiConstants";
 
 const MONTHS = [
@@ -29,6 +31,26 @@ export function DGIIReportsView() {
   const [sales, setSales] = useState<any[]>([]);
   const [voided, setVoided] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const { selectedEntityId } = useEntity();
+
+  // Check if the selected entity has RNC configured
+  const { data: entityRnc } = useQuery({
+    queryKey: ["entity-rnc", selectedEntityId],
+    queryFn: async () => {
+      if (!selectedEntityId) return null;
+      const { data, error } = await supabase
+        .from("entities")
+        .select("rnc")
+        .eq("id", selectedEntityId)
+        .single();
+      if (error) return null;
+      return data?.rnc || null;
+    },
+    enabled: !!selectedEntityId,
+  });
+
+  const hasNoRnc = !!selectedEntityId && !entityRnc;
 
   // Fetch bank accounts for DGII payment method resolution
   const { data: bankAccounts = [] } = useQuery<BankAccountForDGII[]>({
@@ -108,6 +130,15 @@ export function DGIIReportsView() {
           <CardTitle>Reportes DGII</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {hasNoRnc && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                RNC no configurado para esta entidad. Configúrelo en <strong>Configuración → Entidades</strong> para generar archivos .TXT de DGII.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex gap-4 items-end">
             <div className="space-y-1">
               <Label>Mes</Label>
@@ -156,13 +187,13 @@ export function DGIIReportsView() {
                 <TabsTrigger value="ir17" className="gap-1">IR-17 - Retenciones</TabsTrigger>
               </TabsList>
               <TabsContent value="606">
-                <DGII606Table transactions={purchases} month={month} year={year} bankAccounts={bankAccounts} />
+                <DGII606Table transactions={purchases} month={month} year={year} bankAccounts={bankAccounts} entityId={selectedEntityId} />
               </TabsContent>
               <TabsContent value="607">
-                <DGII607Table transactions={sales} month={month} year={year} />
+                <DGII607Table transactions={sales} month={month} year={year} entityId={selectedEntityId} />
               </TabsContent>
               <TabsContent value="608">
-                <DGII608Table transactions={voided} month={month} year={year} />
+                <DGII608Table transactions={voided} month={month} year={year} entityId={selectedEntityId} />
               </TabsContent>
               <TabsContent value="it1">
                 <IT1ReportView purchases={purchases} sales={sales} month={month} year={year} />

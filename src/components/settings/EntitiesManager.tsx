@@ -32,6 +32,7 @@ interface EntityRow {
   currency: string;
   is_active: boolean;
   rnc: string | null;
+  tss_nomina_code: string | null;
 }
 
 interface FormState {

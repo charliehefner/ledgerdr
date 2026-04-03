@@ -144,14 +144,14 @@ export function EntitiesManager() {
         if (error) throw error;
         toast.success("Entidad actualizada");
       } else {
-        const { error } = await supabase.from("entities").insert({
+        const { data: inserted, error } = await supabase.from("entities").insert({
           name: form.name.trim(),
           code: form.code.trim().toUpperCase(),
           description: form.description.trim() || null,
           country_code: form.country_code.trim() || "DO",
           currency: form.currency.trim() || "DOP",
           rnc: form.rnc.trim() || null,
-        });
+        }).select().single();
         if (error) {
           if (error.code === "23505") {
             toast.error("El código ya existe. Use un código único.");
@@ -162,9 +162,13 @@ export function EntitiesManager() {
           return;
         }
         toast.success("Entidad creada");
-      }
-      setDialogOpen(false);
-      fetchEntities();
+        setDialogOpen(false);
+        await fetchEntities();
+        // Auto-open wizard for new entity
+        if (inserted) {
+          setWizardEntity(inserted as EntityRow);
+        }
+        return;
     } catch (err: any) {
       toast.error(err.message || "Error al guardar");
     } finally {

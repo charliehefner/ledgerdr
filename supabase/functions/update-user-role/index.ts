@@ -16,6 +16,7 @@ function sanitizeError(error: Error): string {
   if (msg.includes("unauthorized") || msg.includes("no authorization")) return "Unauthorized";
   if (msg.includes("admin access")) return "Admin access required";
   if (msg.includes("own role")) return "Cannot change your own role";
+  if (msg.includes("global")) return error.message;
   return "Operation failed. Please try again.";
 }
 
@@ -30,7 +31,8 @@ serve(async (req) => {
       throw new Error("No authorization header");
     }
 
-    const { userId, role } = await req.json();
+    const body = await req.json();
+    const { userId, role, entity_id } = body;
 
     // Validate UUID
     if (!userId || typeof userId !== "string" || !UUID_REGEX.test(userId)) {
@@ -40,6 +42,13 @@ serve(async (req) => {
     // Validate role
     if (!role || typeof role !== "string" || !VALID_ROLES.includes(role)) {
       throw new Error("Invalid role");
+    }
+
+    // Validate entity_id if provided
+    if (entity_id !== undefined && entity_id !== null) {
+      if (typeof entity_id !== "string" || !UUID_REGEX.test(entity_id)) {
+        throw new Error("Invalid entity_id format");
+      }
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -73,12 +82,34 @@ serve(async (req) => {
       throw new Error("Cannot change your own role");
     }
 
-    // Use service role to update user role
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    // If assigning global admin (entity_id = null), verify caller is global admin
+    const newEntityId = entity_id === undefined ? undefined : (entity_id || null);
+
+    if (newEntityId === null) {
+      const { data: callerGlobalRole } = await adminClient
+        .from("user_roles")
+        .select("entity_id")
+        .eq("user_id", user.id)
+        .is("entity_id", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (!callerGlobalRole) {
+        throw new Error("Only global admins can assign global admin access");
+      }
+    }
+
+    // Build update payload
+    const updatePayload: Record<string, unknown> = { role };
+    if (newEntityId !== undefined) {
+      updatePayload.entity_id = newEntityId;
+    }
 
     const { error: updateError } = await adminClient
       .from("user_roles")
-      .update({ role })
+      .update(updatePayload)
       .eq("user_id", userId);
 
     if (updateError) {
@@ -86,14 +117,8 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        userId,
-        role,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: true, userId, role, entity_id: newEntityId }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     return new Response(JSON.stringify({ error: sanitizeError(error) }), {

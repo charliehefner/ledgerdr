@@ -374,6 +374,109 @@ export type Database = {
           },
         ]
       }
+      approval_policies: {
+        Row: {
+          amount_threshold: number
+          applies_to: string
+          approver_role: Database["public"]["Enums"]["app_role"]
+          created_at: string
+          entity_id: string | null
+          id: string
+          is_active: boolean
+          role_submitter: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          amount_threshold?: number
+          applies_to: string
+          approver_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          role_submitter: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          amount_threshold?: number
+          applies_to?: string
+          approver_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          role_submitter?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_policies_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_requests: {
+        Row: {
+          amount: number
+          applies_to: string
+          created_at: string
+          currency: string
+          description: string | null
+          entity_id: string | null
+          id: string
+          record_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string
+        }
+        Insert: {
+          amount: number
+          applies_to: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          entity_id?: string | null
+          id?: string
+          record_id: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by: string
+        }
+        Update: {
+          amount?: number
+          applies_to?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          entity_id?: string | null
+          id?: string
+          record_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_depreciation_rules: {
         Row: {
           accumulated_depreciation_account: string | null
@@ -2050,6 +2153,53 @@ export type Database = {
             columns: ["tank_id"]
             isOneToOne: false
             referencedRelation: "fuel_tanks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          changed_fields: string[] | null
+          entity_id: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          changed_fields?: string[] | null
+          entity_id?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          changed_fields?: string[] | null
+          entity_id?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_audit_log_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -4208,6 +4358,7 @@ export type Database = {
           account_id: string | null
           amount: number
           amount_base_currency: number | null
+          approval_status: string
           cbs_code: string | null
           cbs_id: string | null
           comments: string | null
@@ -4250,6 +4401,7 @@ export type Database = {
           account_id?: string | null
           amount?: number
           amount_base_currency?: number | null
+          approval_status?: string
           cbs_code?: string | null
           cbs_id?: string | null
           comments?: string | null
@@ -4292,6 +4444,7 @@ export type Database = {
           account_id?: string | null
           amount?: number
           amount_base_currency?: number | null
+          approval_status?: string
           cbs_code?: string | null
           cbs_id?: string | null
           comments?: string | null
@@ -4848,6 +5001,10 @@ export type Database = {
               total_debit: number
             }[]
           }
+      approve_request: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: boolean
+      }
       calculate_annual_isr: {
         Args: { p_annual_taxable: number; p_year?: number }
         Returns: number
@@ -5085,6 +5242,21 @@ export type Database = {
         Args: { p_tractor_id: string }
         Returns: number
       }
+      get_pending_approvals: {
+        Args: { p_entity_id?: string }
+        Returns: {
+          amount: number
+          applies_to: string
+          currency: string
+          description: string
+          entity_id: string
+          entity_name: string
+          record_id: string
+          request_id: string
+          submitted_at: string
+          submitted_by: string
+        }[]
+      }
       get_profit_loss: {
         Args: {
           p_cost_center?: string
@@ -5154,6 +5326,10 @@ export type Database = {
           p_service_entry_id: string
         }
         Returns: Json
+      }
+      reject_request: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: boolean
       }
       revalue_open_ap_ar:
         | {

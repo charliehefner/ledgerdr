@@ -37,7 +37,14 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, username, password, role } = body;
+    const { email, username, password, role, entity_id } = body;
+
+    // Validate entity_id format if provided
+    if (entity_id !== undefined && entity_id !== null) {
+      if (typeof entity_id !== "string" || !UUID_REGEX.test(entity_id)) {
+        throw new Error("Invalid entity_id format");
+      }
+    }
 
     // Validate: either email or username required
     if (!email && !username) {
@@ -112,6 +119,22 @@ serve(async (req) => {
       throw new Error("Admin access required");
     }
 
+    // Only global admins can create other global admins (entity_id = null)
+    if (!entity_id) {
+      const { data: callerIsGlobal } = await adminClient.rpc("is_global_admin");
+      // Use service role to check caller's entity_id in user_roles
+      const { data: callerRole } = await adminClient
+        .from("user_roles")
+        .select("entity_id")
+        .eq("user_id", user.id)
+        .is("entity_id", null)
+        .limit(1)
+        .maybeSingle();
+      if (!callerRole) {
+        throw new Error("Only global admins can create users without an entity assignment");
+      }
+    }
+
     // Use service role to create new user
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -135,11 +158,12 @@ serve(async (req) => {
       throw new Error("Failed to create user");
     }
 
-    // Add role to user_roles table
-    const { error: roleError } = await adminClient.from("user_roles").upsert({
+    // Add role to user_roles table with entity_id
+    const { error: roleError } = await adminClient.from("user_roles").insert({
       user_id: newUser.user.id,
       role: role,
-    }, { onConflict: "user_id,role", ignoreDuplicates: true });
+      entity_id: entity_id || null,
+    });
 
     if (roleError) {
       // Rollback: delete the user if role assignment fails
@@ -155,6 +179,7 @@ serve(async (req) => {
           email: actualEmail,
           username: isUsernameAccount ? username : undefined,
           role,
+          entity_id: entity_id || null,
         },
       }),
       {

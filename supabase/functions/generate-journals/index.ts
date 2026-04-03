@@ -23,6 +23,7 @@ interface UnlinkedTransaction {
   destination_amount: number | null;
   currency: string | null;
   exchange_rate: number | null;
+  entity_id: string | null;
 }
 
 interface BankAccountLookup {
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
       db.from("bank_accounts").select("id, chart_account_id, currency"),
       db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null).limit(10000),
       db.from("transactions")
-        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate")
+        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate, entity_id")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true })
         .limit(10000),
@@ -187,10 +188,11 @@ Deno.serve(async (req) => {
           });
           if (jErr) { skipped.push(`${label}: ${jErr.message}`); continue; }
 
-          // Set exchange_rate and currency on journal
+          // Set exchange_rate, currency, and entity_id on journal
           await db.from("journals").update({
             currency: txn.currency || "DOP",
             exchange_rate: exchangeRate,
+            ...(txn.entity_id ? { entity_id: txn.entity_id } : {}),
           }).eq("id", journalId);
 
           // Finding 5 fix: Always use sourceAmount for both sides to keep journal balanced.
@@ -229,10 +231,11 @@ Deno.serve(async (req) => {
         });
         if (jErr) { skipped.push(`${label}: ${jErr.message}`); continue; }
 
-        // Set exchange_rate and currency on journal
+        // Set exchange_rate, currency, and entity_id on journal
         await db.from("journals").update({
           currency: txn.currency || "DOP",
           exchange_rate: exchangeRate,
+          ...(txn.entity_id ? { entity_id: txn.entity_id } : {}),
         }).eq("id", journalId);
 
         const itbisAmount = txn.itbis || 0;

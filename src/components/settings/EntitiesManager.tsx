@@ -69,7 +69,7 @@ export function EntitiesManager() {
     setLoading(true);
     const { data, error } = await supabase
       .from("entities")
-      .select("id, name, code, description, country_code, currency, is_active, rnc")
+      .select("id, name, code, description, country_code, currency, is_active, rnc, tss_nomina_code")
       .order("code");
     if (error) {
       toast.error("Error loading entities");

@@ -149,6 +149,11 @@ function SidebarContent({
           {sectionColor && (
             <span className={cn("absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full", sectionColor)} />
           )}
+          {item.section === "approvals" && pendingApprovalCount > 0 && (
+            <span className="absolute -top-1.5 -right-2.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+              {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+            </span>
+          )}
         </div>
         {(!showCollapsed || isMobile) && <span>{itemName}</span>}
       </Link>

@@ -4,12 +4,14 @@ import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Download, Lock, Loader2, FileText, FileSpreadsheet, Calendar, Eye, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { Download, Lock, Loader2, FileText, FileSpreadsheet, Calendar, Eye, CheckCircle, AlertTriangle, X, RotateCcw } from "lucide-react";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createTransaction } from "@/lib/api";
 import { generatePayrollReceiptsZip } from "@/lib/payrollReceipts";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 import {
   Table,
   TableBody,
@@ -89,14 +91,19 @@ export function PayrollSummary({
   onPeriodClosed,
 }: PayrollSummaryProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { selectedEntityId } = useEntity();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showCommitConfirm, setShowCommitConfirm] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingReceipts, setIsGeneratingReceipts] = useState(false);
   const [rpcError, setRpcError] = useState<string | null>(null);
+  const [hasPreviewedOnce, setHasPreviewedOnce] = useState(false);
 
   const isClosed = periodStatus === "closed";
   const isOpen = periodStatus === "open";
+  const isAdmin = user?.role === "admin";
+  const canManagePayroll = user?.role === "admin" || user?.role === "management" || user?.role === "accountant";
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({
@@ -112,22 +119,40 @@ export function PayrollSummary({
     },
   });
 
+  // Check if snapshots already exist for this period (status guard)
+  const { data: existingSnapshots = [], isLoading: snapshotsLoading } = useQuery({
+    queryKey: ["payroll-snapshots-check", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_snapshots")
+        .select("id")
+        .eq("period_id", periodId)
+        .limit(1);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!periodId,
+  });
+
+  const hasCommittedSnapshots = existingSnapshots.length > 0;
+
   // Preview payroll via RPC (commit: false)
   const { data: previewData, isLoading: isPreviewLoading, refetch: refetchPreview } = useQuery({
     queryKey: ["payroll-preview", periodId],
     queryFn: async () => {
       setRpcError(null);
       const { data, error } = await supabase.rpc(
-        "calculate_payroll_for_period" as any,
-        { p_period_id: periodId, p_commit: false }
+        "calculate_payroll_for_period",
+        { p_period_id: periodId, p_commit: false, p_entity_id: selectedEntityId || undefined }
       );
       if (error) {
         setRpcError(error.message);
         return [];
       }
+      setHasPreviewedOnce(true);
       return (data as any[]) as PayrollRpcRow[];
     },
-    enabled: !!periodId,
+    enabled: false, // Manual trigger only
   });
 
   // Fetch snapshots for closed periods (immutable data)
@@ -163,8 +188,8 @@ export function PayrollSummary({
     mutationFn: async () => {
       setRpcError(null);
       const { data, error } = await supabase.rpc(
-        "calculate_payroll_for_period" as any,
-        { p_period_id: periodId, p_commit: true }
+        "calculate_payroll_for_period",
+        { p_period_id: periodId, p_commit: true, p_entity_id: selectedEntityId || undefined }
       );
       if (error) throw error;
       return (data as any[]) as PayrollRpcRow[];
@@ -172,8 +197,10 @@ export function PayrollSummary({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["payroll-preview", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-snapshots-check", periodId] });
       queryClient.invalidateQueries({ queryKey: ["employee-loans-active"] });
-      toast.success(`Nómina comprometida: ${data.length} empleados procesados`);
+      queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
+      toast.success("Nómina guardada correctamente.");
     },
     onError: (error) => {
       setRpcError(error.message);
@@ -635,8 +662,8 @@ export function PayrollSummary({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold">Resumen de Nómina</h3>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Preview button */}
-          {isOpen && (
+          {/* Preview button — only when no committed snapshots, or admin re-run */}
+          {canManagePayroll && isOpen && !hasCommittedSnapshots && (
             <Button
               variant="outline"
               onClick={() => refetchPreview()}
@@ -647,12 +674,28 @@ export function PayrollSummary({
               ) : (
                 <Eye className="h-4 w-4 mr-2" />
               )}
-              Preview Payroll
+              Vista Previa Nómina
             </Button>
           )}
 
-          {/* Commit button */}
-          {isOpen && (
+          {/* Re-run button for admin when snapshots already exist */}
+          {isAdmin && isOpen && hasCommittedSnapshots && (
+            <Button
+              variant="outline"
+              onClick={() => refetchPreview()}
+              disabled={isPreviewLoading}
+            >
+              {isPreviewLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Re-ejecutar Vista Previa
+            </Button>
+          )}
+
+          {/* Commit button — only after preview, and when no committed snapshots (unless admin re-run) */}
+          {canManagePayroll && isOpen && hasPreviewedOnce && (
             <Button
               variant="default"
               onClick={() => setShowCommitConfirm(true)}
@@ -663,7 +706,7 @@ export function PayrollSummary({
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Commit Payroll
+              Confirmar y Guardar Nómina
             </Button>
           )}
 
@@ -695,38 +738,61 @@ export function PayrollSummary({
         </div>
       </div>
 
-      {isPreviewLoading ? (
+      {/* Status guard: committed snapshots notice */}
+      {hasCommittedSnapshots && isOpen && !hasPreviewedOnce && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Esta nómina ya fue comprometida. Los datos mostrados son de solo lectura.
+            {isAdmin && " Como administrador, puede re-ejecutar la vista previa si necesita recalcular."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Preview note */}
+      {hasPreviewedOnce && !hasCommittedSnapshots && isOpen && payrollData.length > 0 && (
+        <Alert>
+          <Eye className="h-4 w-4" />
+          <AlertDescription>
+            Vista previa — ningún dato ha sido guardado aún.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isPreviewLoading || snapshotsLoading ? (
         <div className="text-center py-8 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
           Calculando nómina...
         </div>
       ) : payrollData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No hay datos de nómina. Verifique que existan hojas de tiempo para este período.
+          {hasCommittedSnapshots
+            ? "Cargando datos de nómina comprometida..."
+            : "No hay datos de nómina. Haga clic en \"Vista Previa Nómina\" para calcular."}
         </div>
       ) : (
         <div className="overflow-auto border rounded-lg max-h-[70vh] relative">
           <table className="w-full caption-bottom text-sm table-auto">
-            <TableHeader className="sticky top-0 z-20 bg-background">
+             <TableHeader className="sticky top-0 z-20 bg-background">
               <TableRow>
-                <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Nombre</TableHead>
+                <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Empleado</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Salario</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Base Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Overtime</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Holiday Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Sunday Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Benefits</TableHead>
-                <TableHead className="text-right whitespace-nowrap font-bold">Gross Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-destructive">TSS</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Salario Base</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Horas Extra</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Pago Feriado</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Pago Domingo</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Beneficios</TableHead>
+                <TableHead className="text-right whitespace-nowrap font-bold">Bruto</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-destructive">TSS Emp.</TableHead>
                 <TableHead className="text-right whitespace-nowrap text-destructive">ISR</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-destructive">Loan Ded.</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-destructive">Absence Ded.</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-destructive">Préstamo</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-destructive">Ausencias</TableHead>
                 <TableHead className="text-right whitespace-nowrap text-destructive">Total Ded.</TableHead>
-                <TableHead className="text-right whitespace-nowrap font-bold text-primary">Net Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Days Worked</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Days Absent</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Days Holiday</TableHead>
-                <TableHead className="text-right whitespace-nowrap">OT Hours</TableHead>
+                <TableHead className="text-right whitespace-nowrap font-bold text-primary">Pago Neto</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Días Trab.</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Días Aus.</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Días Fer.</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Hrs Extra</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -783,9 +849,10 @@ export function PayrollSummary({
       <AlertDialog open={showCommitConfirm} onOpenChange={setShowCommitConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Commit Payroll?</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar esta nómina?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will finalize payroll snapshots and decrement loan balances. This action cannot be undone.
+              Se guardarán {payrollData.length} registros en payroll_snapshots.
+              Esta acción no se puede deshacer.
               <p className="mt-2 font-medium">Empleados a procesar: {payrollData.length}</p>
               <p>Pago neto total: {formatCurrency(totals.net_pay)}</p>
             </AlertDialogDescription>
@@ -796,7 +863,7 @@ export function PayrollSummary({
               onClick={() => commitPayroll.mutate()}
               disabled={commitPayroll.isPending}
             >
-              {commitPayroll.isPending ? "Procesando..." : "Confirmar Commit"}
+              {commitPayroll.isPending ? "Procesando..." : "Confirmar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

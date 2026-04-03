@@ -160,6 +160,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         name: data.name,
         cedula: data.cedula,
         position: data.position,
+        sex: data.sex || null,
         bank: data.bank || null,
         bank_account_number: data.bank_account_number || null,
         date_of_birth: data.date_of_birth || null,

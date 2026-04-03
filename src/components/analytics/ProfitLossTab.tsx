@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { TrendingUp } from "lucide-react";
 import { format, startOfYear } from "date-fns";
 import { useEntity } from "@/contexts/EntityContext";
+import { ExportDropdown } from "./ExportDropdown";
 
 interface Props {
   entityId: string | null;

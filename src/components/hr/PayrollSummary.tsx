@@ -771,26 +771,26 @@ export function PayrollSummary({
       ) : (
         <div className="overflow-auto border rounded-lg max-h-[70vh] relative">
           <table className="w-full caption-bottom text-sm table-auto">
-            <TableHeader className="sticky top-0 z-20 bg-background">
+             <TableHeader className="sticky top-0 z-20 bg-background">
               <TableRow>
-                <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Nombre</TableHead>
+                <TableHead className="whitespace-nowrap sticky left-0 z-30 bg-background">Empleado</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Salario</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Base Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Overtime</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Holiday Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Sunday Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Benefits</TableHead>
-                <TableHead className="text-right whitespace-nowrap font-bold">Gross Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-destructive">TSS</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Salario Base</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Horas Extra</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Pago Feriado</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Pago Domingo</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Beneficios</TableHead>
+                <TableHead className="text-right whitespace-nowrap font-bold">Bruto</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-destructive">TSS Emp.</TableHead>
                 <TableHead className="text-right whitespace-nowrap text-destructive">ISR</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-destructive">Loan Ded.</TableHead>
-                <TableHead className="text-right whitespace-nowrap text-destructive">Absence Ded.</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-destructive">Préstamo</TableHead>
+                <TableHead className="text-right whitespace-nowrap text-destructive">Ausencias</TableHead>
                 <TableHead className="text-right whitespace-nowrap text-destructive">Total Ded.</TableHead>
-                <TableHead className="text-right whitespace-nowrap font-bold text-primary">Net Pay</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Days Worked</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Days Absent</TableHead>
-                <TableHead className="text-right whitespace-nowrap">Days Holiday</TableHead>
-                <TableHead className="text-right whitespace-nowrap">OT Hours</TableHead>
+                <TableHead className="text-right whitespace-nowrap font-bold text-primary">Pago Neto</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Días Trab.</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Días Aus.</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Días Fer.</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Hrs Extra</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

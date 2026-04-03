@@ -34,9 +34,9 @@ export function ProfitLossTab({ entityId, isAllEntities }: Props) {
 
       if (isAllEntities) {
         const results: { entityName: string; entityId: string | null; data: any[] }[] = [];
-        const { data: consData, error: consErr } = await supabase.rpc("get_profit_loss" as any, { ...params });
+        const { data: consData, error: consErr } = await (supabase.rpc as any)("get_profit_loss", { ...params });
         if (consErr) throw consErr;
-        results.push({ entityName: "Consolidated", entityId: null, data: (consData as any[]) ?? [] });
+        results.push({ entityName: "Consolidated", entityId: null, data: (consData ?? []) as any[] });
         for (const ent of entities) {
           const { data: entData, error: entErr } = await supabase.rpc("get_profit_loss" as any, { ...params, p_entity_id: ent.id });
           if (entErr) throw entErr;

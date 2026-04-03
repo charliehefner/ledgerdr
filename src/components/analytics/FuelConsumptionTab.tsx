@@ -46,7 +46,7 @@ export function FuelConsumptionTab({ entityId, isAllEntities }: Props) {
     const byMonth: Record<string, number> = {};
     data.forEach((r) => {
       const m = r.month ?? "unknown";
-      byMonth[m] = (byMonth[m] ?? 0) + (r.total_gallons ?? 0);
+      byMonth[m] = (byMonth[m] ?? 0) + (r.gallons_dispensed ?? 0);
     });
     return Object.entries(byMonth)
       .sort(([a], [b]) => a.localeCompare(b))

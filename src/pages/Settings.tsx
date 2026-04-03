@@ -380,6 +380,14 @@ export default function Settings() {
           )}
 
           {canModifySettings && (
+            <TabsContent value="approvals" className="mt-6">
+              <div className="max-w-4xl">
+                <ApprovalThresholdsManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
             <TabsContent value="backup" className="mt-6">
               <BackupExportView />
             </TabsContent>

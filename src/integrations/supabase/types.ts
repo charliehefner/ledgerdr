@@ -5440,6 +5440,7 @@ export type Database = {
       }
       is_accountant_only: { Args: never; Returns: boolean }
       is_global_admin: { Args: never; Returns: boolean }
+      is_mfa_verified: { Args: never; Returns: boolean }
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined

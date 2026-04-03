@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff, Globe, Building2, Filter } from "lucide-react";
+import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff, Globe, Building2, Filter, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntity } from "@/contexts/EntityContext";
@@ -57,6 +57,7 @@ interface UserWithRole {
   entity_id: string | null;
   entity_name: string;
   created_at: string;
+  mfa_enrolled?: boolean;
 }
 
 const isUsernameAccount = (email: string) => email.endsWith("@internal.jord.local");
@@ -469,6 +470,7 @@ export function UserManagement() {
                   <TableRow>
                     <TableHead>Usuario/Correo</TableHead>
                     <TableHead>Rol</TableHead>
+                    <TableHead>MFA</TableHead>
                     <TableHead>Entidad</TableHead>
                     <TableHead>Creado</TableHead>
                     <TableHead className="w-[120px]">Acciones</TableHead>
@@ -489,6 +491,17 @@ export function UserManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{roleDisplayNames[user.role as UserRole] || user.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.mfa_enrolled ? (
+                          <span className="flex items-center gap-1 text-xs text-primary">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Activo
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <ShieldOff className="h-3.5 w-3.5" /> —
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {user.entity_id ? (

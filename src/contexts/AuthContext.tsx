@@ -15,6 +15,8 @@ interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
   isLoading: boolean;
+  /** True if the user's role requires MFA and it's not yet verified this session */
+  mfaRequired: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   canModifySettings: boolean;
@@ -29,6 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  const MFA_ROLES: UserRole[] = ["admin", "accountant"];
 
   // Fetch user role using security definer function (bypasses RLS)
   // Returns null if fetch fails - caller must handle logout
@@ -97,6 +102,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: authUser.email || '',
             role,
           });
+
+          // Check MFA requirement for admin/accountant
+          if (MFA_ROLES.includes(role)) {
+            try {
+              const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+              if (aalData && aalData.currentLevel !== 'aal2') {
+                setMfaRequired(true);
+              } else {
+                setMfaRequired(false);
+              }
+            } catch {
+              setMfaRequired(false);
+            }
+          } else {
+            setMfaRequired(false);
+          }
         }
         return true;
       } catch (err) {
@@ -226,6 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, 
       session, 
       isLoading, 
+      mfaRequired,
       login, 
       logout, 
       canModifySettings: canModifySettingsValue,

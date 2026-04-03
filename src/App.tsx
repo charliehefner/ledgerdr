@@ -35,6 +35,7 @@ import Industrial from "./pages/Industrial";
 import InstallApp from "./pages/InstallApp";
 import AnalyticsReports from "./pages/AnalyticsReports";
 import Approvals from "./pages/Approvals";
+import MfaVerify from "./pages/MfaVerify";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/install" element={<InstallApp />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/mfa-verify" element={<MfaVerify />} />
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />

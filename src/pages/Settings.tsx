@@ -50,6 +50,7 @@ import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsM
 import { TransportationManager } from "@/components/settings/TransportationManager";
 import { EntitiesManager } from "@/components/settings/EntitiesManager";
 import { ApprovalThresholdsManager } from "@/components/settings/ApprovalThresholdsManager";
+import { MfaSettings } from "@/components/settings/MfaSettings";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -271,6 +272,9 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
+
+              {/* MFA Settings */}
+              <MfaSettings />
 
               {/* Security Note */}
               <div className="bg-muted/50 rounded-xl border border-border p-6">

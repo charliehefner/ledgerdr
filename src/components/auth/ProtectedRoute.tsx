@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, mfaRequired } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -27,9 +27,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect to MFA verification if required and not already on that page
+  if (mfaRequired && location.pathname !== "/mfa-verify") {
+    return <Navigate to="/mfa-verify" state={{ from: location.pathname }} replace />;
+  }
+
   // Check if user has access to this route
   if (!canAccessRoute(user.role, location.pathname)) {
-    // Redirect to their default allowed route
     const defaultRoute = getDefaultRouteForRole(user.role);
     return <Navigate to={defaultRoute} replace />;
   }

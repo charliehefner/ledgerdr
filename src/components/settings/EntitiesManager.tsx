@@ -43,6 +43,7 @@ interface FormState {
   currency: string;
   is_active: boolean;
   rnc: string;
+  tss_nomina_code: string;
 }
 
 const emptyForm: FormState = {

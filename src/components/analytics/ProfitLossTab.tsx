@@ -81,6 +81,28 @@ export function ProfitLossTab({ entityId, isAllEntities }: Props) {
           <div><Label className="text-xs">Start Date</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" /></div>
           <div><Label className="text-xs">End Date</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" /></div>
           <div><Label className="text-xs">Cost Center</Label><Input placeholder="All" value={costCenter} onChange={(e) => setCostCenter(e.target.value)} className="w-40" /></div>
+          <ExportDropdown
+            config={{ filename: `PL_${format(new Date(), "yyyyMM")}`, title: "Profit & Loss", subtitle: `${startDate} to ${endDate}`, orientation: "landscape" }}
+            getData={() => {
+              const allRows: Record<string, string | number>[] = [];
+              const accountMap = new Map<string, { account_code: string; account_name: string; category: string }>();
+              data!.forEach((d) => d.data.forEach((r: any) => { if (!accountMap.has(r.account_code)) accountMap.set(r.account_code, r); }));
+              Array.from(accountMap.values()).sort((a, b) => a.account_code.localeCompare(b.account_code)).forEach((a) => {
+                const row: Record<string, string | number> = { account_code: a.account_code, account_name: a.account_name, category: a.category };
+                data!.forEach((d) => { row[d.entityName] = formatCurrency((d.data.find((r: any) => r.account_code === a.account_code)?.total_amount_dop ?? 0), "DOP"); });
+                allRows.push(row);
+              });
+              return {
+                columns: [
+                  { key: "account_code", header: "Account Code", width: 14 },
+                  { key: "account_name", header: "Account Name", width: 30 },
+                  { key: "category", header: "Category", width: 12 },
+                  ...data!.map((d) => ({ key: d.entityName, header: d.entityName, width: 18 })),
+                ],
+                rows: allRows,
+              };
+            }}
+          />
         </div>
         <div className="overflow-x-auto">
           <Table>

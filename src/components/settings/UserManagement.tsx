@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff, Globe, Building2, Filter } from "lucide-react";
+import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff, Globe, Building2, Filter, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntity } from "@/contexts/EntityContext";

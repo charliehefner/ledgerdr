@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { useEntity } from "@/contexts/EntityContext";
+import { RefreshCw, Loader2, CalendarIcon } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -15,7 +15,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -23,9 +22,9 @@ export function FxRevaluationButton() {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
   const [periodId, setPeriodId] = useState<string>("");
-  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { selectedEntityId, requireEntity } = useEntity();
   const queryClient = useQueryClient();
 
   // Only admin and accountant
@@ -38,7 +37,7 @@ export function FxRevaluationButton() {
         .from("accounting_periods")
         .select("id, period_name, start_date, end_date, status")
         .is("deleted_at", null)
-        .in("status", ["open", "closed"])
+        .eq("status", "open")
         .order("start_date", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -48,52 +47,65 @@ export function FxRevaluationButton() {
 
   const revalMutation = useMutation({
     mutationFn: async () => {
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Seleccione una entidad específica antes de ejecutar la revaluación.");
+
       const { data, error } = await supabase.rpc("revalue_open_ap_ar", {
-        p_revaluation_date: format(date, "yyyy-MM-dd"),
+        p_as_of_date: format(date, "yyyy-MM-dd"),
         p_period_id: periodId,
-        p_posted_by: user?.id,
+        p_user_id: user?.id,
+        p_entity_id: entityId,
       });
       if (error) throw error;
-      return data as number;
+      return data;
     },
-    onSuccess: (count) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
-      toast({
-        title: t("accounting.reval.generated"),
-        description: `${count} revaluation journal entries created.`,
-      });
+      const row = Array.isArray(result) ? result[0] : result;
+      const docCount = row?.document_count ?? 0;
+      toast.success(
+        `Revaluación completa — ${docCount} documento(s) ajustado(s), ${row?.journal_id ? 1 : 0} asiento(s) creado(s).`
+      );
+      setError(null);
       setOpen(false);
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      setError(e.message);
     },
   });
 
+  const handleOpen = () => {
+    setError(null);
+    setPeriodId("");
+    setDate(new Date());
+    setOpen(true);
+  };
+
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="sm" onClick={handleOpen}>
         <RefreshCw className="h-4 w-4 mr-1" />
-        {t("accounting.reval.button")}
+        Revaluación FX al Cierre
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { if (!revalMutation.isPending) setOpen(v); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Period-End FX Revaluation</DialogTitle>
+            <DialogTitle>Revaluación FX al Cierre de Período</DialogTitle>
             <DialogDescription>
-              Revalue open AP/AR documents in foreign currencies using the latest exchange rate.
+              Revalúa documentos abiertos de CxP/CxC en moneda extranjera usando la tasa de cambio vigente.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Revaluation Date</Label>
+              <Label>Fecha de Corte (As-of Date)</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Pick a date"}
+                    {date ? format(date, "PPP") : "Seleccionar fecha"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -109,32 +121,38 @@ export function FxRevaluationButton() {
             </div>
 
             <div className="space-y-2">
-              <Label>Accounting Period</Label>
+              <Label>Período Contable</Label>
               <Select value={periodId} onValueChange={setPeriodId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select period" />
+                  <SelectValue placeholder="Seleccionar período" />
                 </SelectTrigger>
                 <SelectContent>
                   {periods.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.period_name} ({p.status})
+                      {p.period_name} ({p.start_date} – {p.end_date})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              {t("common.cancel")}
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={revalMutation.isPending}>
+              Cancelar
             </Button>
             <Button
-              onClick={() => revalMutation.mutate()}
+              onClick={() => { setError(null); revalMutation.mutate(); }}
               disabled={!periodId || revalMutation.isPending}
             >
               {revalMutation.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              Run Revaluation
+              Ejecutar Revaluación
             </Button>
           </DialogFooter>
         </DialogContent>

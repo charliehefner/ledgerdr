@@ -1,62 +1,53 @@
 
 
-# Backup & Export Page — Implementation Plan
+## Plan: DGII .TXT Download Buttons + RNC Field in Entities
 
-## Problem
+### What We're Building
+1. A "Descargar .TXT" button on each DGII tab (606, 607, 608) that calls the new database RPCs and triggers a file download
+2. An RNC field in the Entities settings modal
+3. A warning banner on the DGII Reports page when the selected entity has no RNC
 
-The backup system has a critical gap: `TABLES_TO_EXPORT` lists 46 tables but the database has **79 tables**. Missing tables include `journals`, `journal_lines`, `chart_of_accounts`, `bank_accounts`, `fixed_assets`, `contacts`, `tax_codes`, and 26 others. The hardcoded `schemaSql.ts` file (942 lines) also goes stale with every migration.
+### Changes
 
-## Solution
+**1. EntitiesManager.tsx — Add RNC field**
+- Add `rnc` to `EntityRow` interface and `FormState`
+- Include `rnc` in the `select()` query and in both insert/update operations
+- Add an "RNC" column to the table display
+- Add an "RNC" text input in the dialog (both create and edit modes), with placeholder "9 dígitos" and `maxLength={11}` (to allow formatted input)
+- Show helper text: "Requerido para reportes DGII"
 
-1. **Create a database function** (`get_all_public_tables`) that returns every public table name, so the backup dynamically discovers tables instead of relying on a hardcoded list.
+**2. DGIIReportsView.tsx — Add RNC warning + pass entity context**
+- Import `useEntity` from EntityContext
+- Query the selected entity's `rnc` from the `entities` table
+- If `selectedEntityId` is set but `rnc` is empty/null, show an `Alert` warning banner: "RNC no configurado para esta entidad. Configúrelo en Configuración → Entidades para generar archivos .TXT de DGII."
+- Pass `selectedEntityId` to each DGII table component as a new prop
 
-2. **Replace the static table list** in the backup logic — fetch the live table list from the database, then export ALL tables. Keep a dependency-ordered priority list for INSERT ordering (FK safety), but append any newly discovered tables at the end.
+**3. DGII606Table.tsx — Add .TXT download button**
+- Add prop `entityId: string | null`
+- Add a `FileText` icon button "Descargar .TXT" in the button row, styled with `variant="outline"` and distinct coloring
+- On click: set loading state, call `supabase.rpc('generate_dgii_606', { p_year: year, p_month: month, p_entity_id: entityId })` (cast via `as any` for untyped RPC)
+- On success: create `Blob` with `text/plain;charset=utf-8`, trigger download as `606_YYYYMM.txt`
+- On error: if message contains "RNC", show toast "RNC no configurado. Configure el RNC de la entidad en Configuración → Entidades." Otherwise show generic error toast
+- Disable button when `entityId` is null (consolidated mode — can't generate a single-entity submission file)
 
-3. **Generate schema SQL dynamically** — instead of the static `schemaSql.ts`, query `pg_dump`-style metadata from `information_schema.columns` to generate CREATE TABLE statements at backup time, ensuring new columns and tables are always captured.
+**4. DGII607Table.tsx — Same pattern as 606**
+- Add `entityId` prop, "Descargar .TXT" button, call `generate_dgii_607` RPC, download as `607_YYYYMM.txt`
 
-4. **Add a dedicated Backup tab** in Settings (admin-only) with:
-   - **7-day warning banner** if no backup has been downloaded recently
-   - **Data Backup section** — the existing download button with progress, plus table/row count summary after export
-   - **Schema Reference section** — read-only textarea showing all public tables from the RPC, with a visual indicator of which tables are covered vs missing from the backup
+**5. DGII608Table.tsx — Same pattern as 606**
+- Add `entityId` prop, "Descargar .TXT" button, call `generate_dgii_608` RPC, download as `608_YYYYMM.txt`
 
-## Technical Details
-
-### Migration: `get_all_public_tables()` RPC
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_all_public_tables()
-RETURNS TABLE(table_name text, row_estimate bigint)
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT 
-    t.table_name::text,
-    COALESCE(s.n_live_tup, 0)::bigint AS row_estimate
-  FROM information_schema.tables t
-  LEFT JOIN pg_stat_user_tables s 
-    ON s.relname = t.table_name AND s.schemaname = 'public'
-  WHERE t.table_schema = 'public' 
-    AND t.table_type = 'BASE TABLE'
-  ORDER BY t.table_name;
-$$;
-```
-
-### File Changes
-
+### Files Modified
 | File | Change |
 |------|--------|
-| Migration | Create `get_all_public_tables()` function |
-| `backupConstants.ts` | Convert `TABLES_TO_EXPORT` to a priority-ordered list; add logic to merge with live table list |
-| `backupUtils.ts` | Add `fetchAllTableNames()` using the new RPC; update `fetchTableData` to accept any string (not just the const type) |
-| `src/components/settings/BackupExportView.tsx` | **New file** — Backup tab component with warning banner, backup button, and schema reference textarea |
-| `src/pages/Settings.tsx` | Add "Backup" tab (admin-only), remove `DatabaseBackup` from General tab |
-| `src/components/settings/DatabaseBackup.tsx` | Refactor to use dynamic table list from RPC instead of static constant |
-| `src/i18n/en.ts` + `src/i18n/es.ts` | Add i18n keys for the new tab, warning banner, and schema reference section |
+| `src/components/settings/EntitiesManager.tsx` | Add RNC field to interface, query, table, and dialog |
+| `src/components/accounting/DGIIReportsView.tsx` | Add entity context, RNC warning, pass entityId to tabs |
+| `src/components/accounting/DGII606Table.tsx` | Add .TXT download button with RPC call |
+| `src/components/accounting/DGII607Table.tsx` | Add .TXT download button with RPC call |
+| `src/components/accounting/DGII608Table.tsx` | Add .TXT download button with RPC call |
 
-### Key Design Decisions
-
-- **No edge function for ZIP generation** — stays client-side (JSZip) to avoid Deno memory limits
-- **Dynamic schema discovery** — the RPC returns row estimates too, so the admin sees table sizes at a glance
-- **FK-safe ordering** — the existing ordered list is kept as a priority hint; any table not in it gets appended alphabetically after the known ones
-- **Static `schemaSql.ts` stays** as a fallback/reference but the backup will also include a dynamically generated schema snapshot from `information_schema.columns`
+### Technical Notes
+- The three RPCs are already created in the database; we only need to call them from the frontend
+- RPC calls use `(supabase.rpc as any)(...)` since the generated types may not include these new functions yet
+- The .TXT button is disabled in "All Entities" consolidated mode since DGII submissions are per-entity
+- Download uses standard Blob + anchor click pattern already used by the Excel export
 

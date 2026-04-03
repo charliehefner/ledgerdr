@@ -54,6 +54,7 @@ const emptyForm: FormState = {
   currency: "DOP",
   is_active: true,
   rnc: "",
+  tss_nomina_code: "001",
 };
 
 export function EntitiesManager() {

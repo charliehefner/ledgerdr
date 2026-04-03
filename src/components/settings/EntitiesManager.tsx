@@ -143,6 +143,8 @@ export function EntitiesManager() {
           .eq("id", editingId);
         if (error) throw error;
         toast.success("Entidad actualizada");
+        setDialogOpen(false);
+        fetchEntities();
       } else {
         const { data: inserted, error } = await supabase.from("entities").insert({
           name: form.name.trim(),
@@ -158,17 +160,15 @@ export function EntitiesManager() {
           } else {
             throw error;
           }
-          setSaving(false);
           return;
         }
         toast.success("Entidad creada");
         setDialogOpen(false);
         await fetchEntities();
-        // Auto-open wizard for new entity
         if (inserted) {
           setWizardEntity(inserted as EntityRow);
         }
-        return;
+      }
     } catch (err: any) {
       toast.error(err.message || "Error al guardar");
     } finally {

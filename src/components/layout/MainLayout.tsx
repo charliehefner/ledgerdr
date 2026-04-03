@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { AISearchBar } from "./AISearchBar";
+import { EntitySwitcher } from "./EntitySwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,

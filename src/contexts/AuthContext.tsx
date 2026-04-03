@@ -103,21 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role,
           });
 
-          // Check MFA requirement for admin/accountant
-          if (MFA_ROLES.includes(role)) {
-            try {
-              const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-              if (aalData && aalData.currentLevel !== 'aal2') {
-                setMfaRequired(true);
-              } else {
-                setMfaRequired(false);
-              }
-            } catch {
-              setMfaRequired(false);
-            }
-          } else {
-            setMfaRequired(false);
-          }
+          // MFA enforcement disabled — no TOTP required for any role
+          setMfaRequired(false);
         }
         return true;
       } catch (err) {
@@ -153,17 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   role,
                 });
 
-                // Re-check MFA status on every auth state change
-                if (MFA_ROLES.includes(role)) {
-                  try {
-                    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-                    setMfaRequired(aalData?.currentLevel !== 'aal2');
-                  } catch {
-                    setMfaRequired(false);
-                  }
-                } else {
-                  setMfaRequired(false);
-                }
+                // MFA enforcement disabled
+                setMfaRequired(false);
               }
             } catch (err) {
               console.error('[Auth] onAuthStateChange role fetch error (non-fatal):', err);

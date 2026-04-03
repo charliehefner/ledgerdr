@@ -44,6 +44,7 @@ export function TabbedPageLayout({
   headerIcon,
   headerAccent,
   helpChapter,
+  headerExtra,
 }: TabbedPageLayoutProps) {
   const hasMultipleGroups = tabGroups.length > 1;
 

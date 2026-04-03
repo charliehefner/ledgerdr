@@ -153,5 +153,6 @@ export function TrialBalanceTab({ entityId, isAllEntities }: Props) {
         </TableRow>
       </TableFooter>
     </Table>
+    </div>
   );
 }

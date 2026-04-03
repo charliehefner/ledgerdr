@@ -58,6 +58,35 @@ export function AgingReportTab({ entityId, isAllEntities }: Props) {
             <SelectItem value="receivable">Receivable</SelectItem>
           </SelectContent>
         </Select>
+        <ExportDropdown
+          config={{ filename: `APARAging_${format(new Date(), "yyyyMM")}`, title: "AP/AR Aging Report", subtitle: `Direction: ${direction}`, orientation: "landscape" }}
+          getData={() => ({
+            columns: [
+              ...(isAllEntities ? [{ key: "entity", header: "Entity", width: 18 }] : []),
+              { key: "direction", header: "Direction", width: 12 },
+              { key: "doc_number", header: "Doc #", width: 14 },
+              { key: "date", header: "Date", width: 12 },
+              { key: "due", header: "Due", width: 12 },
+              { key: "total", header: "Total", width: 16 },
+              { key: "currency", header: "Currency", width: 10 },
+              { key: "bucket", header: "Bucket", width: 10 },
+              { key: "days", header: "Days", width: 8 },
+              { key: "status", header: "Status", width: 12 },
+            ],
+            rows: filtered.map((r) => ({
+              ...(isAllEntities ? { entity: r.entity_name ?? "-" } : {}),
+              direction: r.direction ?? "",
+              doc_number: r.document_number ?? "-",
+              date: r.document_date ?? "",
+              due: r.due_date ?? "-",
+              total: formatCurrency(r.total_amount ?? 0, r.currency ?? "DOP"),
+              currency: r.currency ?? "",
+              bucket: r.aging_bucket ?? "",
+              days: r.days_overdue ?? 0,
+              status: r.status ?? "",
+            })),
+          })}
+        />
       </div>
 
       {(direction === "all" ? ["payable", "receivable"] : [direction]).map((dir) => (

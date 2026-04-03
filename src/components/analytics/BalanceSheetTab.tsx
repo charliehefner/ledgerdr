@@ -162,6 +162,20 @@ export function BalanceSheetTab({ entityId, isAllEntities }: Props) {
     <div className="space-y-4">
       <div className="flex items-end gap-4">
         <div><Label className="text-xs">As of Date</Label><Input type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} className="w-44" /></div>
+        <ExportDropdown
+          config={{ filename: `BalanceSheet_${format(new Date(), "yyyyMM")}`, title: "Balance Sheet", subtitle: `As of ${asOfDate}`, orientation: "portrait" }}
+          getData={() => ({
+            columns: [
+              { key: "account_code", header: "Account Code", width: 14 },
+              { key: "account_name", header: "Account Name", width: 30 },
+              { key: "balance", header: "Balance (DOP)", width: 18 },
+            ],
+            rows: singleData.map((r: any) => {
+              const section = SECTIONS.find((s) => s.type === r.account_type);
+              return { account_code: r.account_code, account_name: r.account_name, balance: formatCurrency(r.balance * (section?.sign ?? 1), "DOP") };
+            }),
+          })}
+        />
       </div>
       {!singleData.length ? (
         <EmptyState icon={Building2} title="No balance sheet data" description="No posted journal entries found." />

@@ -180,6 +180,29 @@ export function ProfitLossTab({ entityId, isAllEntities }: Props) {
         <div><Label className="text-xs">Start Date</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" /></div>
         <div><Label className="text-xs">End Date</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" /></div>
         <div><Label className="text-xs">Cost Center</Label><Input placeholder="All" value={costCenter} onChange={(e) => setCostCenter(e.target.value)} className="w-40" /></div>
+        <ExportDropdown
+          config={{ filename: `PL_${format(new Date(), "yyyyMM")}`, title: "Profit & Loss", subtitle: `${startDate} to ${endDate}`, orientation: "landscape" }}
+          getData={() => ({
+            columns: [
+              { key: "account_code", header: "Account Code", width: 14 },
+              { key: "account_name", header: "Account Name", width: 30 },
+              { key: "amount", header: "Amount (DOP)", width: 18 },
+              { key: "transactions", header: "Transactions", width: 14 },
+            ],
+            rows: [...income, ...expense].map((r: any) => ({
+              account_code: r.account_code,
+              account_name: r.account_name,
+              amount: formatCurrency(r.total_amount_dop, "DOP"),
+              transactions: r.transaction_count,
+            })),
+            totalsRow: {
+              account_code: "NET PROFIT/LOSS",
+              account_name: "",
+              amount: formatCurrency(net, "DOP"),
+              transactions: "",
+            },
+          })}
+        />
       </div>
       <Table>
         <TableHeader>

@@ -1532,6 +1532,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          rnc: string | null
           updated_at: string
         }
         Insert: {
@@ -1543,6 +1544,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          rnc?: string | null
           updated_at?: string
         }
         Update: {
@@ -1554,6 +1556,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          rnc?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -4966,6 +4969,9 @@ export type Database = {
           transaction_id: string
         }[]
       }
+      dgii_fmt_amount: { Args: { p_amount: number }; Returns: string }
+      dgii_id_type: { Args: { p_rnc: string }; Returns: string }
+      dgii_pay_method: { Args: { p_method: string }; Returns: string }
       foreign_currency_balances: {
         Args: { p_end: string; p_start: string }
         Returns: {
@@ -4982,6 +4988,33 @@ export type Database = {
           p_period_id: string
           p_start_date: string
           p_user_id: string
+        }
+        Returns: string
+      }
+      generate_dgii_606: {
+        Args: {
+          p_entity_id?: string
+          p_month: number
+          p_own_rnc?: string
+          p_year: number
+        }
+        Returns: string
+      }
+      generate_dgii_607: {
+        Args: {
+          p_entity_id?: string
+          p_month: number
+          p_own_rnc?: string
+          p_year: number
+        }
+        Returns: string
+      }
+      generate_dgii_608: {
+        Args: {
+          p_entity_id?: string
+          p_month: number
+          p_own_rnc?: string
+          p_year: number
         }
         Returns: string
       }

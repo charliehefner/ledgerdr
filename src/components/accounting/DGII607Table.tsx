@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getTipoId, formatDateDGII, TIPO_INGRESO } from "./dgiiConstants";
 import ExcelJS from "exceljs";
 import { formatMoney } from "@/lib/formatters";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Transaction {
   id: string;
@@ -23,9 +25,12 @@ interface Props {
   transactions: Transaction[];
   month: number;
   year: number;
+  entityId: string | null;
 }
 
-export function DGII607Table({ transactions, month, year }: Props) {
+export function DGII607Table({ transactions, month, year, entityId }: Props) {
+  const [downloading, setDownloading] = useState(false);
+
   const rows = transactions.map((tx) => ({
     rnc: tx.rnc?.replace(/[-\s]/g, "") || "",
     tipoId: getTipoId(tx.rnc),
@@ -75,9 +80,43 @@ export function DGII607Table({ transactions, month, year }: Props) {
     toast.success("Excel 607 exportado");
   };
 
+  const handleDownloadTxt = async () => {
+    if (!entityId) return;
+    setDownloading(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("generate_dgii_607", {
+        p_year: year,
+        p_month: month,
+        p_entity_id: entityId,
+      });
+      if (error) throw error;
+      const blob = new Blob([data as string], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `607_${year}${String(month).padStart(2, "0")}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Archivo 607 .TXT descargado");
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.toLowerCase().includes("rnc")) {
+        toast.error("RNC no configurado. Configure el RNC de la entidad en Configuración → Entidades.");
+      } else {
+        toast.error(msg || "Error al generar archivo .TXT");
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={handleDownloadTxt} disabled={!entityId || downloading}>
+          {downloading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+          Descargar .TXT
+        </Button>
         <Button variant="outline" size="sm" onClick={handleCopy}>
           <Copy className="h-4 w-4 mr-1" /> Copiar
         </Button>

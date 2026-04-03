@@ -51,13 +51,13 @@ export function FxRevaluationButton() {
       if (!entityId) throw new Error("Seleccione una entidad específica antes de ejecutar la revaluación.");
 
       const { data, error } = await supabase.rpc("revalue_open_ap_ar", {
-        p_as_of_date: format(date, "yyyy-MM-dd"),
+        p_revaluation_date: format(date, "yyyy-MM-dd"),
         p_period_id: periodId,
-        p_user_id: user?.id,
+        p_user_id: user?.id!,
         p_entity_id: entityId,
       });
       if (error) throw error;
-      return data;
+      return data as number;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });

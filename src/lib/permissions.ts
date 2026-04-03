@@ -170,6 +170,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   contacts: ["admin", "management", "accountant"],
   industrial: ["admin", "supervisor"],
   "driver-portal": ["driver"],
+  approvals: ["admin", "management"],
 };
 
 /**

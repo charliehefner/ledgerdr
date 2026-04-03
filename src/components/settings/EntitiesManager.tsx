@@ -255,6 +255,17 @@ export function EntitiesManager() {
               <p className="text-xs text-muted-foreground">Requerido para reportes DGII (606, 607, 608)</p>
             </div>
             <div className="space-y-2">
+              <Label>Código Nómina TSS</Label>
+              <Input
+                value={form.tss_nomina_code}
+                onChange={(e) => setForm((f) => ({ ...f, tss_nomina_code: e.target.value.replace(/[^0-9]/g, "") }))}
+                placeholder="001"
+                maxLength={3}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">Código de 3 dígitos asignado por la TSS al empleador</p>
+            </div>
+            <div className="space-y-2">
               <Label>Descripción</Label>
               <Input
                 value={form.description}

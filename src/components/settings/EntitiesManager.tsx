@@ -21,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Wand2 } from "lucide-react";
+import { EntitySetupWizard } from "./EntitySetupWizard";
 
 interface EntityRow {
   id: string;
@@ -64,6 +65,8 @@ export function EntitiesManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [wizardEntity, setWizardEntity] = useState<EntityRow | null>(null);
+  const [entityDataCounts, setEntityDataCounts] = useState<Record<string, number>>({});
 
   const fetchEntities = async () => {
     setLoading(true);
@@ -76,6 +79,20 @@ export function EntitiesManager() {
       console.error(error);
     } else {
       setEntities(data || []);
+      // Check data counts for each entity to determine if wizard button should show
+      const counts: Record<string, number> = {};
+      for (const ent of data || []) {
+        const { count: txCount } = await supabase
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("entity_id", ent.id);
+        const { count: empCount } = await supabase
+          .from("employees")
+          .select("id", { count: "exact", head: true })
+          .eq("entity_id", ent.id);
+        counts[ent.id] = (txCount || 0) + (empCount || 0);
+      }
+      setEntityDataCounts(counts);
     }
     setLoading(false);
   };
@@ -126,28 +143,32 @@ export function EntitiesManager() {
           .eq("id", editingId);
         if (error) throw error;
         toast.success("Entidad actualizada");
+        setDialogOpen(false);
+        fetchEntities();
       } else {
-        const { error } = await supabase.from("entities").insert({
+        const { data: inserted, error } = await supabase.from("entities").insert({
           name: form.name.trim(),
           code: form.code.trim().toUpperCase(),
           description: form.description.trim() || null,
           country_code: form.country_code.trim() || "DO",
           currency: form.currency.trim() || "DOP",
           rnc: form.rnc.trim() || null,
-        });
+        }).select().single();
         if (error) {
           if (error.code === "23505") {
             toast.error("El código ya existe. Use un código único.");
           } else {
             throw error;
           }
-          setSaving(false);
           return;
         }
         toast.success("Entidad creada");
+        setDialogOpen(false);
+        await fetchEntities();
+        if (inserted) {
+          setWizardEntity(inserted as EntityRow);
+        }
       }
-      setDialogOpen(false);
-      fetchEntities();
     } catch (err: any) {
       toast.error(err.message || "Error al guardar");
     } finally {
@@ -175,7 +196,7 @@ export function EntitiesManager() {
               <TableHead>País</TableHead>
               <TableHead>Moneda</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead className="w-[60px]" />
+              <TableHead className="w-[100px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -205,9 +226,21 @@ export function EntitiesManager() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {(entityDataCounts[e.id] || 0) === 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setWizardEntity(e)}
+                          title="Asistente de configuración"
+                        >
+                          <Wand2 className="h-4 w-4 text-primary" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -313,6 +346,17 @@ export function EntitiesManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {wizardEntity && (
+        <EntitySetupWizard
+          open={!!wizardEntity}
+          onOpenChange={(open) => { if (!open) setWizardEntity(null); }}
+          entityId={wizardEntity.id}
+          entityName={wizardEntity.name}
+          entityCode={wizardEntity.code}
+          onComplete={() => { setWizardEntity(null); fetchEntities(); }}
+        />
+      )}
     </div>
   );
 }

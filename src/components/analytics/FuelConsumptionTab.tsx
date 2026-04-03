@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Fuel } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subMonths } from "date-fns";
+import { ExportDropdown } from "./ExportDropdown";
 
 interface Props {
   entityId: string | null;

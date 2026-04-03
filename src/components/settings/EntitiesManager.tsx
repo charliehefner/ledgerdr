@@ -346,6 +346,17 @@ export function EntitiesManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {wizardEntity && (
+        <EntitySetupWizard
+          open={!!wizardEntity}
+          onOpenChange={(open) => { if (!open) setWizardEntity(null); }}
+          entityId={wizardEntity.id}
+          entityName={wizardEntity.name}
+          entityCode={wizardEntity.code}
+          onComplete={() => { setWizardEntity(null); fetchEntities(); }}
+        />
+      )}
     </div>
   );
 }

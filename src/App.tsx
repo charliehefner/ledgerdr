@@ -34,6 +34,7 @@ import Contacts from "./pages/Contacts";
 import Industrial from "./pages/Industrial";
 import InstallApp from "./pages/InstallApp";
 import AnalyticsReports from "./pages/AnalyticsReports";
+import Approvals from "./pages/Approvals";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

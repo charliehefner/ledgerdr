@@ -364,6 +364,14 @@ export default function Settings() {
           )}
 
           {canModifySettings && (
+            <TabsContent value="entities" className="mt-6">
+              <div className="max-w-4xl">
+                <EntitiesManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
             <TabsContent value="backup" className="mt-6">
               <BackupExportView />
             </TabsContent>

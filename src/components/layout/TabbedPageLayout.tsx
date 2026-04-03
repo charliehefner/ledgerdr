@@ -16,7 +16,7 @@ export interface TabGroup {
   align?: "left" | "right";
 }
 
-interface TabbedPageLayoutProps {
+export interface TabbedPageLayoutProps {
   title: string;
   subtitle?: string;
   activeTab: string;
@@ -27,6 +27,7 @@ interface TabbedPageLayoutProps {
   headerIcon?: ReactNode;
   headerAccent?: boolean;
   helpChapter?: string;
+  headerExtra?: ReactNode;
 }
 
 /**
@@ -43,6 +44,7 @@ export function TabbedPageLayout({
   headerIcon,
   headerAccent,
   helpChapter,
+  headerExtra,
 }: TabbedPageLayoutProps) {
   const hasMultipleGroups = tabGroups.length > 1;
 
@@ -68,6 +70,7 @@ export function TabbedPageLayout({
             </div>
             {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
           </div>
+          {headerExtra && <div className="ml-auto">{headerExtra}</div>}
         </header>
 
         <Tabs value={activeTab} onValueChange={onTabChange}>

@@ -6,11 +6,20 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency } from "@/lib/formatters";
 import { Scale } from "lucide-react";
 
-export function TrialBalanceTab() {
+interface Props {
+  entityId: string | null;
+  isAllEntities: boolean;
+}
+
+export function TrialBalanceTab({ entityId, isAllEntities }: Props) {
   const { data, isLoading } = useQuery({
-    queryKey: ["v_trial_balance"],
+    queryKey: ["v_trial_balance", entityId, isAllEntities],
     queryFn: async () => {
-      const { data, error } = await supabase.from("v_trial_balance").select("*").order("account_code");
+      let query = supabase.from("v_trial_balance").select("*").order("account_code");
+      if (!isAllEntities && entityId) {
+        query = query.eq("entity_id", entityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -19,16 +28,51 @@ export function TrialBalanceTab() {
   if (isLoading) return <Skeleton className="h-96 w-full" />;
   if (!data?.length) return <EmptyState icon={Scale} title="No trial balance data" description="No posted journal entries found." />;
 
-  // Group by account_type
-  const grouped: Record<string, typeof data> = {};
-  data.forEach((r) => {
-    const type = r.account_type ?? "OTHER";
+  // In consolidated mode, sum across entities by account_code
+  type Row = { account_code: string; account_name: string; account_type: string; total_debits: number; total_credits: number; balance: number; entity_name?: string };
+  let rows: Row[];
+
+  if (isAllEntities) {
+    const map = new Map<string, Row>();
+    data.forEach((r) => {
+      const key = r.account_code ?? "";
+      const existing = map.get(key);
+      if (existing) {
+        existing.total_debits += r.total_debits ?? 0;
+        existing.total_credits += r.total_credits ?? 0;
+        existing.balance += r.balance ?? 0;
+      } else {
+        map.set(key, {
+          account_code: r.account_code ?? "",
+          account_name: r.account_name ?? "",
+          account_type: r.account_type ?? "OTHER",
+          total_debits: r.total_debits ?? 0,
+          total_credits: r.total_credits ?? 0,
+          balance: r.balance ?? 0,
+        });
+      }
+    });
+    rows = Array.from(map.values());
+  } else {
+    rows = data.map((r) => ({
+      account_code: r.account_code ?? "",
+      account_name: r.account_name ?? "",
+      account_type: r.account_type ?? "OTHER",
+      total_debits: r.total_debits ?? 0,
+      total_credits: r.total_credits ?? 0,
+      balance: r.balance ?? 0,
+    }));
+  }
+
+  const grouped: Record<string, Row[]> = {};
+  rows.forEach((r) => {
+    const type = r.account_type;
     if (!grouped[type]) grouped[type] = [];
     grouped[type].push(r);
   });
 
-  const totalDebits = data.reduce((s, r) => s + (r.total_debits ?? 0), 0);
-  const totalCredits = data.reduce((s, r) => s + (r.total_credits ?? 0), 0);
+  const totalDebits = rows.reduce((s, r) => s + r.total_debits, 0);
+  const totalCredits = rows.reduce((s, r) => s + r.total_credits, 0);
   const balanced = Math.abs(totalDebits - totalCredits) < 0.01;
 
   return (
@@ -44,21 +88,21 @@ export function TrialBalanceTab() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {Object.entries(grouped).map(([type, rows]) => (
+        {Object.entries(grouped).map(([type, typeRows]) => (
           <>
             <TableRow key={`header-${type}`} className="bg-muted/30">
               <TableCell colSpan={6} className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                {type}
+                {type}{isAllEntities ? " (Consolidated)" : ""}
               </TableCell>
             </TableRow>
-            {rows.map((r) => (
+            {typeRows.map((r) => (
               <TableRow key={r.account_code}>
                 <TableCell className="font-mono text-sm">{r.account_code}</TableCell>
                 <TableCell>{r.account_name}</TableCell>
                 <TableCell>{r.account_type}</TableCell>
-                <TableCell className="text-right">{formatCurrency(r.total_debits ?? 0, "DOP")}</TableCell>
-                <TableCell className="text-right">{formatCurrency(r.total_credits ?? 0, "DOP")}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(r.balance ?? 0, "DOP")}</TableCell>
+                <TableCell className="text-right">{formatCurrency(r.total_debits, "DOP")}</TableCell>
+                <TableCell className="text-right">{formatCurrency(r.total_credits, "DOP")}</TableCell>
+                <TableCell className="text-right font-medium">{formatCurrency(r.balance, "DOP")}</TableCell>
               </TableRow>
             ))}
           </>

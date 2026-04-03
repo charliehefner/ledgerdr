@@ -1817,13 +1817,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fixed_assets_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "v_fuel_consumption"
-            referencedColumns: ["equipment_id"]
-          },
-          {
             foreignKeyName: "fixed_assets_implement_id_fkey"
             columns: ["implement_id"]
             isOneToOne: false
@@ -2039,13 +2032,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fuel_transactions_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "v_fuel_consumption"
-            referencedColumns: ["equipment_id"]
           },
           {
             foreignKeyName: "fuel_transactions_tank_id_fkey"
@@ -2955,13 +2941,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "operations_tractor_id_fkey"
-            columns: ["tractor_id"]
-            isOneToOne: false
-            referencedRelation: "v_fuel_consumption"
-            referencedColumns: ["equipment_id"]
           },
         ]
       }
@@ -4057,13 +4036,6 @@ export type Database = {
             referencedRelation: "fuel_equipment"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tractor_maintenance_tractor_id_fkey"
-            columns: ["tractor_id"]
-            isOneToOne: false
-            referencedRelation: "v_fuel_consumption"
-            referencedColumns: ["equipment_id"]
-          },
         ]
       }
       tractor_operators: {
@@ -4608,177 +4580,213 @@ export type Database = {
       v_ap_ar_aging: {
         Row: {
           aging_bucket: string | null
-          amount_paid: number | null
-          balance_remaining: number | null
-          contact_name: string | null
-          contact_rnc: string | null
           currency: string | null
           days_overdue: number | null
           direction: string | null
           document_date: string | null
           document_number: string | null
-          document_type: string | null
           due_date: string | null
+          entity_id: string | null
+          entity_name: string | null
           id: string | null
+          status: string | null
           total_amount: number | null
           total_amount_dop: number | null
         }
-        Insert: {
-          aging_bucket?: never
-          amount_paid?: number | null
-          balance_remaining?: number | null
-          contact_name?: string | null
-          contact_rnc?: string | null
-          currency?: string | null
-          days_overdue?: never
-          direction?: string | null
-          document_date?: string | null
-          document_number?: string | null
-          document_type?: string | null
-          due_date?: string | null
-          id?: string | null
-          total_amount?: number | null
-          total_amount_dop?: number | null
-        }
-        Update: {
-          aging_bucket?: never
-          amount_paid?: number | null
-          balance_remaining?: number | null
-          contact_name?: string | null
-          contact_rnc?: string | null
-          currency?: string | null
-          days_overdue?: never
-          direction?: string | null
-          document_date?: string | null
-          document_number?: string | null
-          document_type?: string | null
-          due_date?: string | null
-          id?: string | null
-          total_amount?: number | null
-          total_amount_dop?: number | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_documents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_fuel_consumption: {
         Row: {
           avg_gallons_per_hour: number | null
           dispense_count: number | null
-          equipment_id: string | null
+          entity_id: string | null
+          entity_name: string | null
           equipment_name: string | null
           equipment_type: string | null
+          gallons_dispensed: number | null
           month: string | null
-          total_gallons: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fuel_equipment_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_inventory_low_stock: {
         Row: {
           commercial_name: string | null
           current_quantity: number | null
+          entity_id: string | null
+          entity_name: string | null
           function: Database["public"]["Enums"]["inventory_function"] | null
           id: string | null
           minimum_stock: number | null
-          molecule_name: string | null
-          price_per_purchase_unit: number | null
           shortage: number | null
-          supplier: string | null
           use_unit: string | null
         }
-        Insert: {
-          commercial_name?: string | null
-          current_quantity?: number | null
-          function?: Database["public"]["Enums"]["inventory_function"] | null
-          id?: string | null
-          minimum_stock?: number | null
-          molecule_name?: string | null
-          price_per_purchase_unit?: number | null
-          shortage?: never
-          supplier?: string | null
-          use_unit?: string | null
-        }
-        Update: {
-          commercial_name?: string | null
-          current_quantity?: number | null
-          function?: Database["public"]["Enums"]["inventory_function"] | null
-          id?: string | null
-          minimum_stock?: number | null
-          molecule_name?: string | null
-          price_per_purchase_unit?: number | null
-          shortage?: never
-          supplier?: string | null
-          use_unit?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_payroll_summary: {
         Row: {
           employee_count: number | null
           end_date: string | null
+          entity_id: string | null
+          entity_name: string | null
           period_id: string | null
           start_date: string | null
           status: string | null
-          total_base_pay: number | null
           total_benefits: number | null
-          total_gross_pay: number | null
-          total_holiday_pay: number | null
+          total_gross: number | null
           total_isr: number | null
-          total_loan_deductions: number | null
-          total_net_pay: number | null
-          total_overtime: number | null
+          total_net: number | null
           total_tss: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payroll_periods_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_transactions_by_cost_center: {
         Row: {
           cost_center: string | null
           currency: string | null
+          entity_id: string | null
+          entity_name: string | null
           month: string | null
           total_amount: number | null
-          total_amount_dop: number | null
-          total_itbis: number | null
           transaction_count: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_transactions_with_dop: {
         Row: {
+          account_id: string | null
           amount: number | null
           amount_base_currency: number | null
+          amount_dop: number | null
+          cbs_code: string | null
+          cbs_id: string | null
+          comments: string | null
           cost_center: string | null
+          created_at: string | null
           currency: string | null
           description: string | null
+          destination_acct_code: string | null
+          destination_amount: number | null
+          dgii_tipo_anulacion: string | null
+          dgii_tipo_bienes_servicios: string | null
+          dgii_tipo_ingreso: string | null
+          document: string | null
+          due_date: string | null
+          entity_id: string | null
+          entity_name: string | null
+          exchange_rate: number | null
           exchange_rate_used: number | null
           id: string | null
+          is_internal: boolean | null
           is_void: boolean | null
+          isr_retenido: number | null
+          itbis: number | null
+          itbis_override_reason: string | null
+          itbis_retenido: number | null
+          legacy_id: number | null
           master_acct_code: string | null
+          name: string | null
+          pay_method: string | null
+          project_code: string | null
+          project_id: string | null
+          purchase_date: string | null
+          rnc: string | null
           transaction_date: string | null
+          transaction_direction: string | null
+          updated_at: string | null
+          void_reason: string | null
+          voided_at: string | null
         }
-        Insert: {
-          amount?: number | null
-          amount_base_currency?: number | null
-          cost_center?: string | null
-          currency?: string | null
-          description?: string | null
-          exchange_rate_used?: number | null
-          id?: string | null
-          is_void?: boolean | null
-          master_acct_code?: string | null
-          transaction_date?: string | null
-        }
-        Update: {
-          amount?: number | null
-          amount_base_currency?: number | null
-          cost_center?: string | null
-          currency?: string | null
-          description?: string | null
-          exchange_rate_used?: number | null
-          id?: string | null
-          is_void?: boolean | null
-          master_acct_code?: string | null
-          transaction_date?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_transactions_account"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_cbs"
+            columns: ["cbs_id"]
+            isOneToOne: false
+            referencedRelation: "cbs_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_cbs_id_fkey"
+            columns: ["cbs_id"]
+            isOneToOne: false
+            referencedRelation: "cbs_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_trial_balance: {
         Row: {
@@ -4786,10 +4794,20 @@ export type Database = {
           account_name: string | null
           account_type: string | null
           balance: number | null
+          entity_id: string | null
+          entity_name: string | null
           total_credits: number | null
           total_debits: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "journals_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -4976,7 +4994,7 @@ export type Database = {
         }[]
       }
       get_balance_sheet: {
-        Args: { p_as_of_date?: string }
+        Args: { p_as_of_date?: string; p_entity_id?: string }
         Returns: {
           account_code: string
           account_name: string
@@ -4985,14 +5003,14 @@ export type Database = {
         }[]
       }
       get_cost_per_field: {
-        Args: { p_end_date: string; p_start_date: string }
+        Args: { p_end_date: string; p_entity_id?: string; p_start_date: string }
         Returns: {
           farm_name: string
           field_id: string
           field_name: string
-          hectares_worked: number
-          input_cost_dop: number
+          input_cost: number
           operation_count: number
+          total_hectares: number
         }[]
       }
       get_exchange_rate: {
@@ -5018,14 +5036,15 @@ export type Database = {
         Args: {
           p_cost_center?: string
           p_end_date: string
+          p_entity_id?: string
           p_start_date: string
         }
         Returns: {
           account_code: string
           account_name: string
-          category: string
-          total_amount_dop: number
-          transaction_count: number
+          account_type: string
+          currency: string
+          total_amount: number
         }[]
       }
       get_user_role: {

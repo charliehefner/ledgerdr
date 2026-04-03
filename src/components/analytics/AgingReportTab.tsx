@@ -11,13 +11,22 @@ import { BarChart3 } from "lucide-react";
 
 const BUCKETS = ["Current", "1-30", "31-60", "61-90", "90+"] as const;
 
-export function AgingReportTab() {
+interface Props {
+  entityId: string | null;
+  isAllEntities: boolean;
+}
+
+export function AgingReportTab({ entityId, isAllEntities }: Props) {
   const [direction, setDirection] = useState<string>("all");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["v_ap_ar_aging"],
+    queryKey: ["v_ap_ar_aging", entityId, isAllEntities],
     queryFn: async () => {
-      const { data, error } = await supabase.from("v_ap_ar_aging").select("*");
+      let query = supabase.from("v_ap_ar_aging").select("*");
+      if (!isAllEntities && entityId) {
+        query = query.eq("entity_id", entityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -30,7 +39,7 @@ export function AgingReportTab() {
       bucket,
       total: filtered
         .filter((r) => r.direction === dir && r.aging_bucket === bucket)
-        .reduce((s, r) => s + (r.balance_remaining ?? 0), 0),
+        .reduce((s, r) => s + ((r as any).balance_remaining ?? (r.total_amount ?? 0) - ((r as any).amount_paid ?? 0)), 0),
     }));
 
   if (isLoading) return <LoadingSkeleton />;
@@ -49,7 +58,6 @@ export function AgingReportTab() {
         </Select>
       </div>
 
-      {/* Summary cards */}
       {(direction === "all" ? ["payable", "receivable"] : [direction]).map((dir) => (
         <Card key={dir}>
           <CardContent className="pt-4">
@@ -66,39 +74,34 @@ export function AgingReportTab() {
         </Card>
       ))}
 
-      {/* Detail table */}
       <Table>
         <TableHeader>
           <TableRow>
+            {isAllEntities && <TableHead>Entity</TableHead>}
             <TableHead>Direction</TableHead>
-            <TableHead>Contact</TableHead>
             <TableHead>Doc #</TableHead>
-            <TableHead>Type</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Due</TableHead>
             <TableHead className="text-right">Total</TableHead>
-            <TableHead className="text-right">Paid</TableHead>
-            <TableHead className="text-right">Balance</TableHead>
             <TableHead>Currency</TableHead>
             <TableHead>Bucket</TableHead>
             <TableHead className="text-right">Days</TableHead>
+            <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filtered.map((r) => (
             <TableRow key={r.id}>
+              {isAllEntities && <TableCell className="font-medium">{r.entity_name ?? "-"}</TableCell>}
               <TableCell className="capitalize">{r.direction}</TableCell>
-              <TableCell>{r.contact_name}</TableCell>
               <TableCell>{r.document_number ?? "-"}</TableCell>
-              <TableCell className="capitalize">{r.document_type}</TableCell>
               <TableCell>{r.document_date}</TableCell>
               <TableCell>{r.due_date ?? "-"}</TableCell>
               <TableCell className="text-right">{formatCurrency(r.total_amount ?? 0, r.currency ?? "DOP")}</TableCell>
-              <TableCell className="text-right">{formatCurrency(r.amount_paid ?? 0, r.currency ?? "DOP")}</TableCell>
-              <TableCell className="text-right font-medium">{formatCurrency(r.balance_remaining ?? 0, r.currency ?? "DOP")}</TableCell>
               <TableCell>{r.currency}</TableCell>
               <TableCell>{r.aging_bucket}</TableCell>
               <TableCell className="text-right">{r.days_overdue ?? 0}</TableCell>
+              <TableCell className="capitalize">{r.status}</TableCell>
             </TableRow>
           ))}
         </TableBody>

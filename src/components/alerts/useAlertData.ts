@@ -610,6 +610,140 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
   return { alerts, isLoading };
 }
 
+// ─── AP/AR OVERDUE ALERTS ─────────────────────────────────
+export function useApArOverdueAlerts(configs: AlertConfig[] | undefined, entityId: string | null) {
+  const agingQuery = useQuery({
+    queryKey: ["alert-ap-ar-aging", entityId],
+    queryFn: async () => {
+      let query = supabase.from("v_ap_ar_aging").select("*");
+      if (entityId) query = query.eq("entity_id", entityId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!configs,
+  });
+
+  const isLoading = agingQuery.isLoading;
+  const alerts: AlertItem[] = [];
+  if (!configs || !agingQuery.data) return { alerts, isLoading };
+
+  const overdueConfig = getConfig(configs, "ap_ar_overdue");
+  if (!overdueConfig?.is_active) return { alerts, isLoading };
+
+  const thresholdDays = overdueConfig.threshold_value ?? 0;
+  const overdue = agingQuery.data.filter((r) => (r.days_overdue ?? 0) > thresholdDays);
+  if (!overdue.length) return { alerts, isLoading };
+
+  // Group by aging bucket
+  const buckets: Record<string, { count: number; total: number }> = {};
+  for (const r of overdue) {
+    const bucket = r.aging_bucket ?? "Unknown";
+    if (!buckets[bucket]) buckets[bucket] = { count: 0, total: 0 };
+    buckets[bucket].count++;
+    buckets[bucket].total += (r as any).balance_remaining ?? ((r.total_amount ?? 0) - ((r as any).amount_paid ?? 0));
+  }
+
+  // 1-30
+  const b130 = buckets["1-30"];
+  if (b130) {
+    alerts.push({
+      severity: "warning",
+      title: `${b130.count} cuentas por cobrar/pagar 1–30 días vencidas`,
+      detail: `Total: RD$${b130.total.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
+    });
+  }
+
+  // 31-60
+  const b3160 = buckets["31-60"];
+  if (b3160) {
+    alerts.push({
+      severity: "warning",
+      title: `${b3160.count} cuentas por cobrar/pagar 31–60 días vencidas`,
+      detail: `Total: RD$${b3160.total.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
+    });
+  }
+
+  // 61-90 and 90+
+  const over60Count = (buckets["61-90"]?.count ?? 0) + (buckets["90+"]?.count ?? 0);
+  const over60Total = (buckets["61-90"]?.total ?? 0) + (buckets["90+"]?.total ?? 0);
+  if (over60Count > 0) {
+    alerts.push({
+      severity: "urgent",
+      title: `${over60Count} cuentas por cobrar/pagar 60+ días vencidas`,
+      detail: `Total: RD$${over60Total.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
+    });
+  }
+
+  alerts.sort((a, b) => (a.severity === "urgent" ? -1 : 1));
+  return { alerts, isLoading };
+}
+
+// ─── PAYROLL PERIOD APPROACHING ALERTS ────────────────────
+export function usePayrollApproachingAlerts(configs: AlertConfig[] | undefined) {
+  const today = new Date();
+  const todayStr = format(today, "yyyy-MM-dd");
+
+  const periodsQuery = useQuery({
+    queryKey: ["alert-payroll-periods-approaching"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_periods")
+        .select("id, period_name, end_date, status")
+        .eq("status", "open");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!configs,
+  });
+
+  const snapshotsQuery = useQuery({
+    queryKey: ["alert-payroll-snapshots-count"],
+    queryFn: async () => {
+      if (!periodsQuery.data?.length) return {};
+      const counts: Record<string, number> = {};
+      for (const p of periodsQuery.data) {
+        const { count, error } = await supabase
+          .from("payroll_snapshots")
+          .select("id", { count: "exact", head: true })
+          .eq("period_id", p.id);
+        if (!error) counts[p.id] = count ?? 0;
+      }
+      return counts;
+    },
+    enabled: !!configs && !!periodsQuery.data?.length,
+  });
+
+  const isLoading = periodsQuery.isLoading || snapshotsQuery.isLoading;
+  const alerts: AlertItem[] = [];
+  if (!configs || !periodsQuery.data || !snapshotsQuery.data) return { alerts, isLoading };
+
+  const payrollConfig = getConfig(configs, "payroll_period_approaching");
+  if (!payrollConfig?.is_active) return { alerts, isLoading };
+
+  const thresholdDays = payrollConfig.threshold_value ?? 3;
+
+  for (const period of periodsQuery.data) {
+    const endDate = parseDateLocal(period.end_date);
+    const daysUntil = differenceInDays(endDate, today);
+
+    if (daysUntil <= thresholdDays && daysUntil >= -7) {
+      const snapCount = snapshotsQuery.data[period.id] ?? 0;
+      if (snapCount === 0) {
+        alerts.push({
+          severity: daysUntil < 0 ? "urgent" : "warning",
+          title: daysUntil < 0
+            ? `Período de nómina "${period.period_name}" venció hace ${Math.abs(daysUntil)} día(s) — sin procesar`
+            : `Período de nómina "${period.period_name}" vence el ${format(endDate, "dd/MM/yyyy")} — sin procesar`,
+          detail: "Ir a Nómina para revisar y procesar",
+        });
+      }
+    }
+  }
+
+  return { alerts, isLoading };
+}
+
 /**
  * Haversine distance between two points in meters
  */

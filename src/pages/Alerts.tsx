@@ -108,6 +108,18 @@ export default function Alerts() {
                 <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
               ))}
             </AlertSector>
+
+            <AlertSector title="Cuentas por Cobrar / Pagar" alertCount={apAr.alerts.length}>
+              {apAr.alerts.map((a, i) => (
+                <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
+              ))}
+            </AlertSector>
+
+            <AlertSector title="Nómina" alertCount={payroll.alerts.length}>
+              {payroll.alerts.map((a, i) => (
+                <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
+              ))}
+            </AlertSector>
           </div>
         )}
       </div>

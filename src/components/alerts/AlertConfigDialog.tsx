@@ -19,6 +19,8 @@ const ALERT_LABELS: Record<string, { name: string; unit: string | null }> = {
   gps_unrecorded_activity: { name: "Actividad GPS sin operación", unit: null },
   gps_no_movement: { name: "Operación sin movimiento GPS", unit: null },
   gps_hectares_mismatch: { name: "Hectáreas vs estimación GPS", unit: "%" },
+  ap_ar_overdue: { name: "Cuentas por cobrar/pagar vencidas", unit: "días" },
+  payroll_period_approaching: { name: "Período de nómina próximo a vencer", unit: "días" },
 };
 
 interface AlertConfigDialogProps {

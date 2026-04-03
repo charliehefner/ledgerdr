@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Fuel } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subMonths } from "date-fns";
+import { ExportDropdown } from "./ExportDropdown";
 
 interface Props {
   entityId: string | null;
@@ -71,6 +72,27 @@ export function FuelConsumptionTab({ entityId, isAllEntities }: Props) {
             </SelectContent>
           </Select>
         </div>
+        <ExportDropdown
+          config={{ filename: `FuelConsumption_${selectedMonth.replace("-", "")}`, title: "Fuel Consumption", subtitle: `Month: ${selectedMonth}`, orientation: "landscape" }}
+          getData={() => ({
+            columns: [
+              ...(isAllEntities ? [{ key: "entity", header: "Entity", width: 18 }] : []),
+              { key: "equipment", header: "Equipment", width: 20 },
+              { key: "type", header: "Type", width: 12 },
+              { key: "gallons", header: "Total Gallons", width: 14 },
+              { key: "avg_gal_hr", header: "Avg Gal/Hr", width: 14 },
+              { key: "dispenses", header: "Dispenses", width: 12 },
+            ],
+            rows: monthData.map((r) => ({
+              ...(isAllEntities ? { entity: r.entity_name ?? "-" } : {}),
+              equipment: r.equipment_name ?? "",
+              type: r.equipment_type ?? "",
+              gallons: (r.gallons_dispensed ?? 0).toFixed(2),
+              avg_gal_hr: (r.avg_gallons_per_hour ?? 0).toFixed(2),
+              dispenses: r.dispense_count ?? 0,
+            })),
+          })}
+        />
       </div>
 
       {monthData.length === 0 ? (

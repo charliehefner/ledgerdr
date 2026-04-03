@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { useEntity } from "@/contexts/EntityContext";
+import { ExportDropdown } from "./ExportDropdown";
 
 const SECTIONS = [
   { type: "ASSET", label: "Assets", sign: 1 },
@@ -73,6 +74,28 @@ export function BalanceSheetTab({ entityId, isAllEntities }: Props) {
       <div className="space-y-4">
         <div className="flex items-end gap-4">
           <div><Label className="text-xs">As of Date</Label><Input type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} className="w-44" /></div>
+          <ExportDropdown
+            config={{ filename: `BalanceSheet_${format(new Date(), "yyyyMM")}`, title: "Balance Sheet", subtitle: `As of ${asOfDate} (Consolidated)`, orientation: "landscape" }}
+            getData={() => {
+              const allRows: Record<string, string | number>[] = [];
+              accounts.forEach((a) => {
+                const section = SECTIONS.find((s) => s.type === a.account_type);
+                const sign = section?.sign ?? 1;
+                const row: Record<string, string | number> = { account_code: a.account_code, account_name: a.account_name, type: a.account_type };
+                data!.forEach((d) => { row[d.entityName] = formatCurrency((d.data.find((r: any) => r.account_code === a.account_code)?.balance ?? 0) * sign, "DOP"); });
+                allRows.push(row);
+              });
+              return {
+                columns: [
+                  { key: "account_code", header: "Account Code", width: 14 },
+                  { key: "account_name", header: "Account Name", width: 30 },
+                  { key: "type", header: "Type", width: 12 },
+                  ...data!.map((d) => ({ key: d.entityName, header: d.entityName, width: 18 })),
+                ],
+                rows: allRows,
+              };
+            }}
+          />
         </div>
         <div className="overflow-x-auto">
           <Table>
@@ -139,6 +162,20 @@ export function BalanceSheetTab({ entityId, isAllEntities }: Props) {
     <div className="space-y-4">
       <div className="flex items-end gap-4">
         <div><Label className="text-xs">As of Date</Label><Input type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} className="w-44" /></div>
+        <ExportDropdown
+          config={{ filename: `BalanceSheet_${format(new Date(), "yyyyMM")}`, title: "Balance Sheet", subtitle: `As of ${asOfDate}`, orientation: "portrait" }}
+          getData={() => ({
+            columns: [
+              { key: "account_code", header: "Account Code", width: 14 },
+              { key: "account_name", header: "Account Name", width: 30 },
+              { key: "balance", header: "Balance (DOP)", width: 18 },
+            ],
+            rows: singleData.map((r: any) => {
+              const section = SECTIONS.find((s) => s.type === r.account_type);
+              return { account_code: r.account_code, account_name: r.account_name, balance: formatCurrency(r.balance * (section?.sign ?? 1), "DOP") };
+            }),
+          })}
+        />
       </div>
       {!singleData.length ? (
         <EmptyState icon={Building2} title="No balance sheet data" description="No posted journal entries found." />

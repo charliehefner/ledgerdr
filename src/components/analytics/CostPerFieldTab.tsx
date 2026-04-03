@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { formatCurrency } from "@/lib/formatters";
 import { MapPin, ChevronDown } from "lucide-react";
 import { format, startOfYear } from "date-fns";
+import { ExportDropdown } from "./ExportDropdown";
 
 interface Props {
   entityId: string | null;
@@ -59,6 +60,27 @@ export function CostPerFieldTab({ entityId, isAllEntities }: Props) {
         <div className="flex flex-wrap gap-4 items-end">
           <div><Label className="text-xs">Start Date</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" /></div>
           <div><Label className="text-xs">End Date</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" /></div>
+          <ExportDropdown
+            config={{ filename: `CostPerField_${format(new Date(), "yyyyMM")}`, title: "Cost per Field", subtitle: `${startDate} to ${endDate}`, orientation: "landscape" }}
+            getData={() => ({
+              columns: [
+                { key: "entity", header: "Entity", width: 18 },
+                { key: "farm", header: "Farm", width: 18 },
+                { key: "field", header: "Field", width: 18 },
+                { key: "operations", header: "Operations", width: 12 },
+                { key: "hectares", header: "Hectares", width: 12 },
+                { key: "cost", header: "Input Cost (DOP)", width: 18 },
+              ],
+              rows: data.map((r: any) => ({
+                entity: r.entity_name ?? "-",
+                farm: r.farm_name,
+                field: r.field_name,
+                operations: r.operation_count,
+                hectares: r.hectares_worked.toFixed(2),
+                cost: formatCurrency(r.input_cost_dop, "DOP"),
+              })),
+            })}
+          />
         </div>
         {Object.entries(byEntity).map(([entityName, rows]) => {
           const totalOps = rows!.reduce((s, r: any) => s + r.operation_count, 0);
@@ -130,6 +152,25 @@ export function CostPerFieldTab({ entityId, isAllEntities }: Props) {
       <div className="flex flex-wrap gap-4 items-end">
         <div><Label className="text-xs">Start Date</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" /></div>
         <div><Label className="text-xs">End Date</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" /></div>
+        <ExportDropdown
+          config={{ filename: `CostPerField_${format(new Date(), "yyyyMM")}`, title: "Cost per Field", subtitle: `${startDate} to ${endDate}`, orientation: "landscape" }}
+          getData={() => ({
+            columns: [
+              { key: "farm", header: "Farm", width: 18 },
+              { key: "field", header: "Field", width: 18 },
+              { key: "operations", header: "Operations", width: 12 },
+              { key: "hectares", header: "Hectares", width: 12 },
+              { key: "cost", header: "Input Cost (DOP)", width: 18 },
+            ],
+            rows: data.map((r: any) => ({
+              farm: r.farm_name,
+              field: r.field_name,
+              operations: r.operation_count,
+              hectares: r.hectares_worked.toFixed(2),
+              cost: formatCurrency(r.input_cost_dop, "DOP"),
+            })),
+          })}
+        />
       </div>
       <Table>
         <TableHeader>

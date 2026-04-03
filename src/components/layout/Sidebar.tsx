@@ -114,7 +114,7 @@ function SidebarContent({
   const { collapsed, toggleCollapsed } = useSidebar();
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
-
+  const pendingApprovalCount = usePendingApprovalCount();
   const handleLogout = async () => {
     await logout();
     navigate("/login");

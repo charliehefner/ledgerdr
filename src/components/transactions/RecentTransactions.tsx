@@ -148,6 +148,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                 {columnVisibility.isVisible("name") && <TableHead>{t("common.name")}</TableHead>}
                 {columnVisibility.isVisible("costCenter") && <TableHead>Centro Costo</TableHead>}
                 {columnVisibility.isVisible("attach") && <TableHead className="text-center">{t("col.attachment")}</TableHead>}
+                {columnVisibility.isVisible("approvalStatus") && <TableHead>Aprobación</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>

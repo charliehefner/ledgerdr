@@ -38,6 +38,7 @@ const employeeSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").max(200),
   cedula: z.string().min(1, "La cédula es requerida").max(20),
   position: z.enum(POSITIONS).default("Servicios Generales"),
+  sex: z.string().optional(),
   bank: z.string().optional(),
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
@@ -85,6 +86,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       name: "",
       cedula: "",
       position: "Servicios Generales",
+      sex: "",
       bank: "",
       bank_account_number: "",
       date_of_birth: "",
@@ -120,6 +122,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         name: employee.name,
         cedula: employee.cedula,
         position: (POSITIONS.includes(employee.position as typeof POSITIONS[number]) ? employee.position : "Servicios Generales") as typeof POSITIONS[number],
+        sex: (employee as any).sex || "",
         bank: employee.bank || "",
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
@@ -136,6 +139,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         name: "",
         cedula: "",
         position: "Servicios Generales",
+        sex: "",
         bank: "",
         bank_account_number: "",
         date_of_birth: "",
@@ -156,6 +160,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         name: data.name,
         cedula: data.cedula,
         position: data.position,
+        sex: data.sex || null,
         bank: data.bank || null,
         bank_account_number: data.bank_account_number || null,
         date_of_birth: data.date_of_birth || null,
@@ -284,6 +289,28 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sex"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sexo</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Masculino</SelectItem>
+                          <SelectItem value="F">Femenino</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

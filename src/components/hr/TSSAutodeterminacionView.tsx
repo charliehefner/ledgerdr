@@ -2,13 +2,17 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, Eye, FileText } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Download, Eye, FileText, Loader2, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
+import { useEntity } from "@/contexts/EntityContext";
 
 // DR TSS contribution rates
 const TSS_RATES = {
@@ -112,12 +116,34 @@ const MONTHS = [
 ];
 
 export function TSSAutodeterminacionView() {
+  const { selectedEntityId } = useEntity();
   const now = new Date();
   const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
   const currentYear = String(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showPreview, setShowPreview] = useState(false);
+  const [retroactiva, setRetroactiva] = useState(false);
+  const [downloadingTxt, setDownloadingTxt] = useState(false);
+
+  // Fetch entity RNC and TSS nómina code
+  const { data: entityInfo } = useQuery({
+    queryKey: ["entity-tss-info", selectedEntityId],
+    queryFn: async () => {
+      if (!selectedEntityId) return null;
+      const { data, error } = await supabase
+        .from("entities")
+        .select("rnc, tss_nomina_code")
+        .eq("id", selectedEntityId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { rnc: string | null; tss_nomina_code: string | null } | null;
+    },
+    enabled: !!selectedEntityId,
+  });
+
+  const entityRnc = entityInfo?.rnc || null;
+  const entityNominaCode = entityInfo?.tss_nomina_code || "001";
 
   const periodo = `${selectedMonth}${selectedYear}`;
   const monthInt = parseInt(selectedMonth);
@@ -211,33 +237,55 @@ export function TSSAutodeterminacionView() {
       return;
     }
     const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
-    const fileName = `AM_${EMPLOYER_RNC}_${selectedMonth}${selectedYear}.txt`;
-    if ("showSaveFilePicker" in window) {
-      window
-        .showSaveFilePicker!({
-          suggestedName: fileName,
-          types: [{ description: "Text file", accept: { "text/plain": [".txt"] } }],
-        })
-        .then(async (handle) => {
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          toast.success("Archivo TSS generado exitosamente");
-        })
-        .catch(() => fallbackDownload(blob, fileName));
-    } else {
-      fallbackDownload(blob, fileName);
+    const suffix = retroactiva ? "EAR" : "AM";
+    const fileName = `TSS_${suffix}_${selectedYear}${selectedMonth}.txt`;
+    triggerDownload(blob, fileName);
+  };
+
+  const handleDownloadRpc = async () => {
+    if (!selectedEntityId) {
+      toast.error("Seleccione una entidad específica para generar el archivo SDSS");
+      return;
+    }
+    setDownloadingTxt(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("generate_tss_autodeterminacion", {
+        p_year: parseInt(selectedYear),
+        p_month: parseInt(selectedMonth),
+        p_entity_id: selectedEntityId,
+        p_retroactiva: retroactiva,
+        p_own_rnc: entityRnc || "",
+        p_nomina_code: entityNominaCode,
+      });
+      if (error) throw error;
+      if (!data) {
+        toast.error("No se generó contenido. Verifique que hay empleados activos.");
+        return;
+      }
+      const blob = new Blob([data], { type: "text/plain;charset=utf-8" });
+      const suffix = retroactiva ? "EAR" : "AM";
+      const fileName = `TSS_${suffix}_${selectedYear}${selectedMonth}.txt`;
+      triggerDownload(blob, fileName);
+      toast.success("Archivo TSS para SDSS generado exitosamente");
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.toLowerCase().includes("rnc")) {
+        toast.error("RNC no configurado. Configure el RNC de la entidad en Configuración → Entidades.");
+      } else {
+        toast.error("Error al generar archivo: " + msg);
+      }
+    } finally {
+      setDownloadingTxt(false);
     }
   };
 
-  const fallbackDownload = (blob: Blob, fileName: string) => {
+  const triggerDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Archivo TSS generado exitosamente");
   };
 
   const isLoading = loadingEmp || loadingSnap;
@@ -260,6 +308,16 @@ export function TSSAutodeterminacionView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* RNC warning */}
+          {selectedEntityId && !entityRnc && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                RNC no configurado para esta entidad. Configúrelo en Configuración → Entidades para generar archivos .TXT de TSS.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Period selector */}
           <div className="flex items-end gap-4 flex-wrap">
             <div className="space-y-1">
@@ -287,6 +345,15 @@ export function TSSAutodeterminacionView() {
               <Badge variant="secondary" className="h-7">Estimado (salario base)</Badge>
             )}
 
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="retroactiva"
+                checked={retroactiva}
+                onCheckedChange={(checked) => setRetroactiva(checked === true)}
+              />
+              <Label htmlFor="retroactiva" className="text-sm font-normal">Retroactiva</Label>
+            </div>
+
             <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
               <Eye className="h-4 w-4 mr-2" />
               {showPreview ? "Ocultar Vista Previa" : "Vista Previa"}
@@ -294,7 +361,17 @@ export function TSSAutodeterminacionView() {
 
             <Button onClick={handleDownload} disabled={tssRows.length === 0 || isLoading}>
               <Download className="h-4 w-4 mr-2" />
-              Descargar AM_{EMPLOYER_RNC}_{periodo}.txt
+              Descargar Vista Previa
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleDownloadRpc}
+              disabled={!selectedEntityId || downloadingTxt || isLoading}
+              className="border-primary/50 text-primary hover:bg-primary/10"
+            >
+              {downloadingTxt ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+              Descargar .TXT para SDSS
             </Button>
           </div>
 

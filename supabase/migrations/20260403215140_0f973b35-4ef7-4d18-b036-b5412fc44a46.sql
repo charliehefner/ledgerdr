@@ -1,0 +1,1 @@
+ALTER TABLE public.entities ADD COLUMN IF NOT EXISTS tss_nomina_code TEXT DEFAULT '001';

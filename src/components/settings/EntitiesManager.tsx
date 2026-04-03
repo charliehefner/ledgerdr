@@ -79,6 +79,20 @@ export function EntitiesManager() {
       console.error(error);
     } else {
       setEntities(data || []);
+      // Check data counts for each entity to determine if wizard button should show
+      const counts: Record<string, number> = {};
+      for (const ent of data || []) {
+        const { count: txCount } = await supabase
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("entity_id", ent.id);
+        const { count: empCount } = await supabase
+          .from("employees")
+          .select("id", { count: "exact", head: true })
+          .eq("entity_id", ent.id);
+        counts[ent.id] = (txCount || 0) + (empCount || 0);
+      }
+      setEntityDataCounts(counts);
     }
     setLoading(false);
   };

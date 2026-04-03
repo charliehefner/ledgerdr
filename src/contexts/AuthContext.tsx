@@ -102,6 +102,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: authUser.email || '',
             role,
           });
+
+          // Check MFA requirement for admin/accountant
+          if (MFA_ROLES.includes(role)) {
+            try {
+              const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+              if (aalData && aalData.currentLevel !== 'aal2') {
+                setMfaRequired(true);
+              } else {
+                setMfaRequired(false);
+              }
+            } catch {
+              setMfaRequired(false);
+            }
+          } else {
+            setMfaRequired(false);
+          }
         }
         return true;
       } catch (err) {

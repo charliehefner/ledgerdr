@@ -158,11 +158,12 @@ serve(async (req) => {
       throw new Error("Failed to create user");
     }
 
-    // Add role to user_roles table
-    const { error: roleError } = await adminClient.from("user_roles").upsert({
+    // Add role to user_roles table with entity_id
+    const { error: roleError } = await adminClient.from("user_roles").insert({
       user_id: newUser.user.id,
       role: role,
-    }, { onConflict: "user_id,role", ignoreDuplicates: true });
+      entity_id: entity_id || null,
+    });
 
     if (roleError) {
       // Rollback: delete the user if role assignment fails

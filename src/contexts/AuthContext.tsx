@@ -152,6 +152,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   email: currentSession.user.email || '',
                   role,
                 });
+
+                // Re-check MFA status on every auth state change
+                if (MFA_ROLES.includes(role)) {
+                  try {
+                    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                    setMfaRequired(aalData?.currentLevel !== 'aal2');
+                  } catch {
+                    setMfaRequired(false);
+                  }
+                } else {
+                  setMfaRequired(false);
+                }
               }
             } catch (err) {
               console.error('[Auth] onAuthStateChange role fetch error (non-fatal):', err);

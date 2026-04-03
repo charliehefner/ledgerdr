@@ -308,6 +308,16 @@ export function TSSAutodeterminacionView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* RNC warning */}
+          {selectedEntityId && !entityRnc && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                RNC no configurado para esta entidad. Configúrelo en Configuración → Entidades para generar archivos .TXT de TSS.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Period selector */}
           <div className="flex items-end gap-4 flex-wrap">
             <div className="space-y-1">
@@ -335,6 +345,15 @@ export function TSSAutodeterminacionView() {
               <Badge variant="secondary" className="h-7">Estimado (salario base)</Badge>
             )}
 
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="retroactiva"
+                checked={retroactiva}
+                onCheckedChange={(checked) => setRetroactiva(checked === true)}
+              />
+              <Label htmlFor="retroactiva" className="text-sm font-normal">Retroactiva</Label>
+            </div>
+
             <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
               <Eye className="h-4 w-4 mr-2" />
               {showPreview ? "Ocultar Vista Previa" : "Vista Previa"}
@@ -342,7 +361,17 @@ export function TSSAutodeterminacionView() {
 
             <Button onClick={handleDownload} disabled={tssRows.length === 0 || isLoading}>
               <Download className="h-4 w-4 mr-2" />
-              Descargar AM_{EMPLOYER_RNC}_{periodo}.txt
+              Descargar Vista Previa
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleDownloadRpc}
+              disabled={!selectedEntityId || downloadingTxt || isLoading}
+              className="border-primary/50 text-primary hover:bg-primary/10"
+            >
+              {downloadingTxt ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+              Descargar .TXT para SDSS
             </Button>
           </div>
 

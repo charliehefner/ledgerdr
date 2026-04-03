@@ -660,8 +660,8 @@ export function PayrollSummary({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold">Resumen de Nómina</h3>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Preview button */}
-          {isOpen && (
+          {/* Preview button — only when no committed snapshots, or admin re-run */}
+          {canManagePayroll && isOpen && !hasCommittedSnapshots && (
             <Button
               variant="outline"
               onClick={() => refetchPreview()}
@@ -672,12 +672,28 @@ export function PayrollSummary({
               ) : (
                 <Eye className="h-4 w-4 mr-2" />
               )}
-              Preview Payroll
+              Vista Previa Nómina
             </Button>
           )}
 
-          {/* Commit button */}
-          {isOpen && (
+          {/* Re-run button for admin when snapshots already exist */}
+          {isAdmin && isOpen && hasCommittedSnapshots && (
+            <Button
+              variant="outline"
+              onClick={() => refetchPreview()}
+              disabled={isPreviewLoading}
+            >
+              {isPreviewLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Re-ejecutar Vista Previa
+            </Button>
+          )}
+
+          {/* Commit button — only after preview, and when no committed snapshots (unless admin re-run) */}
+          {canManagePayroll && isOpen && hasPreviewedOnce && (
             <Button
               variant="default"
               onClick={() => setShowCommitConfirm(true)}
@@ -688,7 +704,7 @@ export function PayrollSummary({
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Commit Payroll
+              Confirmar y Guardar Nómina
             </Button>
           )}
 
@@ -720,14 +736,37 @@ export function PayrollSummary({
         </div>
       </div>
 
-      {isPreviewLoading ? (
+      {/* Status guard: committed snapshots notice */}
+      {hasCommittedSnapshots && isOpen && !hasPreviewedOnce && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Esta nómina ya fue comprometida. Los datos mostrados son de solo lectura.
+            {isAdmin && " Como administrador, puede re-ejecutar la vista previa si necesita recalcular."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Preview note */}
+      {hasPreviewedOnce && !hasCommittedSnapshots && isOpen && payrollData.length > 0 && (
+        <Alert>
+          <Eye className="h-4 w-4" />
+          <AlertDescription>
+            Vista previa — ningún dato ha sido guardado aún.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isPreviewLoading || snapshotsLoading ? (
         <div className="text-center py-8 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
           Calculando nómina...
         </div>
       ) : payrollData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No hay datos de nómina. Verifique que existan hojas de tiempo para este período.
+          {hasCommittedSnapshots
+            ? "Cargando datos de nómina comprometida..."
+            : "No hay datos de nómina. Haga clic en \"Vista Previa Nómina\" para calcular."}
         </div>
       ) : (
         <div className="overflow-auto border rounded-lg max-h-[70vh] relative">

@@ -240,6 +240,18 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
                         )}
                       </TableCell>
                     )}
+                    {columnVisibility.isVisible("approvalStatus") && (
+                      <TableCell>
+                        {(() => {
+                          const status = (tx as any).approval_status;
+                          if (!status || status === "auto_approved") return null;
+                          if (status === "pending") return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">Pendiente</Badge>;
+                          if (status === "approved") return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">Aprobada</Badge>;
+                          if (status === "rejected") return <Badge variant="destructive">Rechazada</Badge>;
+                          return null;
+                        })()}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               ) : (

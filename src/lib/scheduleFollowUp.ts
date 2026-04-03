@@ -155,7 +155,8 @@ export async function scheduleFollowUp(
             .single();
           if (weekUpsertErr || !weekRow) {
             results.push({ success: false, message: `Error creando semana: ${weekUpsertErr?.message}` });
-            return results;
+            placed = true;
+            break;
           }
 
           // Found an available slot — insert

@@ -95,6 +95,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.rainfall", href: "/rainfall", icon: CloudRain, section: "rainfall" },
   { nameKey: "nav.cronograma", href: "/cronograma", icon: CalendarClock, section: "cronograma" },
   { nameKey: "nav.industrial", href: "/industrial", icon: Factory, section: "industrial" },
+  { nameKey: "nav.approvals", href: "/approvals", icon: ClipboardCheck, section: "approvals" },
 ];
 
 const secondaryNav: NavItem[] = [

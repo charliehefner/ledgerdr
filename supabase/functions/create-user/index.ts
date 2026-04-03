@@ -119,6 +119,22 @@ serve(async (req) => {
       throw new Error("Admin access required");
     }
 
+    // Only global admins can create other global admins (entity_id = null)
+    if (!entity_id) {
+      const { data: callerIsGlobal } = await adminClient.rpc("is_global_admin");
+      // Use service role to check caller's entity_id in user_roles
+      const { data: callerRole } = await adminClient
+        .from("user_roles")
+        .select("entity_id")
+        .eq("user_id", user.id)
+        .is("entity_id", null)
+        .limit(1)
+        .maybeSingle();
+      if (!callerRole) {
+        throw new Error("Only global admins can create users without an entity assignment");
+      }
+    }
+
     // Use service role to create new user
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 

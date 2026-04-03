@@ -152,6 +152,12 @@ export default function Settings() {
               </TabsTrigger>
             )}
             {canModifySettings && (
+              <TabsTrigger value="entities">
+                <Building2 className="h-4 w-4 mr-2" />
+                Entidades
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
               <TabsTrigger value="backup">
                 <Database className="h-4 w-4 mr-2" />
                 Backup

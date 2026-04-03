@@ -63,8 +63,13 @@ serve(async (req) => {
           ? "Global Admin"
           : role.entities?.name || "Unknown Entity";
 
-        // For non-admins, return limited info (just id and email for display)
-        // For admins, return full info including role and entity
+        // Check MFA enrollment via user factors
+        let mfaEnrolled = false;
+        if (isAdmin && authUser) {
+          const factors = authUser.factors || [];
+          mfaEnrolled = factors.some((f: any) => f.factor_type === "totp" && f.status === "verified");
+        }
+
         if (isAdmin) {
           return {
             id: role.user_id,
@@ -73,6 +78,7 @@ serve(async (req) => {
             entity_id: role.entity_id,
             entity_name: entityName,
             created_at: role.created_at,
+            mfa_enrolled: mfaEnrolled,
           };
         } else {
           return {

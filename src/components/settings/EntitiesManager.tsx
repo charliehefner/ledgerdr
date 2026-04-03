@@ -100,6 +100,7 @@ export function EntitiesManager() {
       currency: e.currency,
       is_active: e.is_active,
       rnc: e.rnc || "",
+      tss_nomina_code: e.tss_nomina_code || "001",
     });
     setDialogOpen(true);
   };

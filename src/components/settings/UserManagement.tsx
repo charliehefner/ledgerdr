@@ -470,6 +470,7 @@ export function UserManagement() {
                   <TableRow>
                     <TableHead>Usuario/Correo</TableHead>
                     <TableHead>Rol</TableHead>
+                    <TableHead>MFA</TableHead>
                     <TableHead>Entidad</TableHead>
                     <TableHead>Creado</TableHead>
                     <TableHead className="w-[120px]">Acciones</TableHead>

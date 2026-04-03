@@ -116,12 +116,34 @@ const MONTHS = [
 ];
 
 export function TSSAutodeterminacionView() {
+  const { selectedEntityId } = useEntity();
   const now = new Date();
   const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
   const currentYear = String(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showPreview, setShowPreview] = useState(false);
+  const [retroactiva, setRetroactiva] = useState(false);
+  const [downloadingTxt, setDownloadingTxt] = useState(false);
+
+  // Fetch entity RNC and TSS nómina code
+  const { data: entityInfo } = useQuery({
+    queryKey: ["entity-tss-info", selectedEntityId],
+    queryFn: async () => {
+      if (!selectedEntityId) return null;
+      const { data, error } = await supabase
+        .from("entities")
+        .select("rnc, tss_nomina_code")
+        .eq("id", selectedEntityId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { rnc: string | null; tss_nomina_code: string | null } | null;
+    },
+    enabled: !!selectedEntityId,
+  });
+
+  const entityRnc = entityInfo?.rnc || null;
+  const entityNominaCode = entityInfo?.tss_nomina_code || "001";
 
   const periodo = `${selectedMonth}${selectedYear}`;
   const monthInt = parseInt(selectedMonth);

@@ -58,6 +58,7 @@ export interface Transaction {
   account_id?: string;
   project_id?: string;
   cbs_id?: string;
+  entity_id?: string;
   // Joined descriptions (populated by fetchRecentTransactions FK joins)
   account_name?: string;
   account_english_description?: string;
@@ -120,8 +121,8 @@ export async function fetchCbsCodes(): Promise<CbsCode[]> {
   return data || [];
 }
 
-export async function fetchRecentTransactions(limit: number = 500): Promise<Transaction[]> {
-  const { data, error } = await supabase
+export async function fetchRecentTransactions(limit: number = 500, entityId?: string | null): Promise<Transaction[]> {
+  let query = supabase
     .from('transactions')
     .select(`
       *,
@@ -129,7 +130,14 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
       projects:projects!transactions_project_id_fkey (code, english_description, spanish_description),
       cbs_codes:cbs_codes!transactions_cbs_id_fkey (code, english_description, spanish_description)
     `)
-    .eq('is_void', false)
+    .eq('is_void', false);
+
+  // Filter by entity when not in "All Entities" mode
+  if (entityId) {
+    query = query.eq('entity_id', entityId);
+  }
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(limit);
   
@@ -161,7 +169,7 @@ export async function fetchRecentTransactions(limit: number = 500): Promise<Tran
   }));
 }
 
-export async function createTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
+export async function createTransaction(transaction: Omit<Transaction, 'id'>, entityId?: string | null): Promise<Transaction> {
   // Resolve FK IDs from text codes
   const fkFields: Record<string, unknown> = {};
   if (transaction.master_acct_code) {
@@ -218,6 +226,7 @@ export async function createTransaction(transaction: Omit<Transaction, 'id'>): P
       due_date: transaction.due_date || null,
       destination_amount: transaction.destination_amount || null,
       itbis_override_reason: transaction.itbis_override_reason || null,
+      ...(entityId ? { entity_id: entityId } : {}),
       ...fkFields,
     })
     .select()

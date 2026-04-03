@@ -234,7 +234,7 @@ export type Database = {
           document_number: string | null
           document_type: string
           due_date: string | null
-          entity_id: string | null
+          entity_id: string
           exchange_rate_used: number | null
           id: string
           notes: string | null
@@ -257,7 +257,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string | null
-          entity_id?: string | null
+          entity_id?: string
           exchange_rate_used?: number | null
           id?: string
           notes?: string | null
@@ -280,7 +280,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string | null
-          entity_id?: string | null
+          entity_id?: string
           exchange_rate_used?: number | null
           id?: string
           notes?: string | null
@@ -800,7 +800,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           day_of_week: number
-          entity_id: string | null
+          entity_id: string
           id: string
           is_holiday: boolean | null
           is_vacation: boolean | null
@@ -818,7 +818,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_of_week: number
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_holiday?: boolean | null
           is_vacation?: boolean | null
@@ -836,7 +836,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_of_week?: number
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_holiday?: boolean | null
           is_vacation?: boolean | null
@@ -878,7 +878,7 @@ export type Database = {
         Row: {
           closed_at: string | null
           created_at: string
-          entity_id: string | null
+          entity_id: string
           id: string
           is_closed: boolean | null
           updated_at: string
@@ -887,7 +887,7 @@ export type Database = {
         Insert: {
           closed_at?: string | null
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_closed?: boolean | null
           updated_at?: string
@@ -896,7 +896,7 @@ export type Database = {
         Update: {
           closed_at?: string | null
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_closed?: boolean | null
           updated_at?: string
@@ -940,7 +940,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
-          entity_id: string | null
+          entity_id: string
           field_name: string | null
           id: string
           is_closed: boolean
@@ -954,7 +954,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           field_name?: string | null
           id?: string
           is_closed?: boolean
@@ -968,7 +968,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           field_name?: string | null
           id?: string
           is_closed?: boolean
@@ -1037,7 +1037,7 @@ export type Database = {
           benefit_type: string
           created_at: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           id: string
           is_recurring: boolean
           updated_at: string
@@ -1047,7 +1047,7 @@ export type Database = {
           benefit_type: string
           created_at?: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_recurring?: boolean
           updated_at?: string
@@ -1057,7 +1057,7 @@ export type Database = {
           benefit_type?: string
           created_at?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_recurring?: boolean
           updated_at?: string
@@ -1092,7 +1092,7 @@ export type Database = {
           document_name: string
           document_type: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           id: string
           notes: string | null
           storage_path: string
@@ -1102,7 +1102,7 @@ export type Database = {
           document_name: string
           document_type: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           storage_path: string
@@ -1112,7 +1112,7 @@ export type Database = {
           document_name?: string
           document_type?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           storage_path?: string
@@ -1146,7 +1146,7 @@ export type Database = {
           created_at: string
           description: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           id: string
           incident_date: string
           resolution: string | null
@@ -1156,7 +1156,7 @@ export type Database = {
           created_at?: string
           description: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           incident_date: string
           resolution?: string | null
@@ -1166,7 +1166,7 @@ export type Database = {
           created_at?: string
           description?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           incident_date?: string
           resolution?: string | null
@@ -1200,7 +1200,7 @@ export type Database = {
         Row: {
           created_at: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           id: string
           is_active: boolean
           loan_amount: number
@@ -1214,7 +1214,7 @@ export type Database = {
         Insert: {
           created_at?: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           loan_amount: number
@@ -1228,7 +1228,7 @@ export type Database = {
         Update: {
           created_at?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           loan_amount?: number
@@ -1268,7 +1268,7 @@ export type Database = {
           created_at: string
           effective_date: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           id: string
           notes: string | null
           salary: number
@@ -1277,7 +1277,7 @@ export type Database = {
           created_at?: string
           effective_date: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           salary: number
@@ -1286,7 +1286,7 @@ export type Database = {
           created_at?: string
           effective_date?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           salary?: number
@@ -1320,7 +1320,7 @@ export type Database = {
           created_at: string
           employee_id: string
           end_time: string | null
-          entity_id: string | null
+          entity_id: string
           hours_worked: number | null
           id: string
           is_absent: boolean
@@ -1335,7 +1335,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           end_time?: string | null
-          entity_id?: string | null
+          entity_id?: string
           hours_worked?: number | null
           id?: string
           is_absent?: boolean
@@ -1350,7 +1350,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           end_time?: string | null
-          entity_id?: string | null
+          entity_id?: string
           hours_worked?: number | null
           id?: string
           is_absent?: boolean
@@ -1404,7 +1404,7 @@ export type Database = {
           created_at: string
           employee_id: string
           end_date: string
-          entity_id: string | null
+          entity_id: string
           id: string
           notes: string | null
           start_date: string
@@ -1413,7 +1413,7 @@ export type Database = {
           created_at?: string
           employee_id: string
           end_date: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           start_date: string
@@ -1422,7 +1422,7 @@ export type Database = {
           created_at?: string
           employee_id?: string
           end_date?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           start_date?: string
@@ -1461,7 +1461,7 @@ export type Database = {
           date_of_birth: string | null
           date_of_hire: string
           date_of_termination: string | null
-          entity_id: string | null
+          entity_id: string
           id: string
           is_active: boolean
           name: string
@@ -1480,7 +1480,7 @@ export type Database = {
           date_of_birth?: string | null
           date_of_hire: string
           date_of_termination?: string | null
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name: string
@@ -1499,7 +1499,7 @@ export type Database = {
           date_of_birth?: string | null
           date_of_hire?: string
           date_of_termination?: string | null
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name?: string
@@ -1588,7 +1588,7 @@ export type Database = {
       farms: {
         Row: {
           created_at: string
-          entity_id: string | null
+          entity_id: string
           id: string
           is_active: boolean
           name: string
@@ -1596,7 +1596,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name: string
@@ -1604,7 +1604,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name?: string
@@ -1844,7 +1844,7 @@ export type Database = {
           brand: string | null
           created_at: string
           current_hour_meter: number
-          entity_id: string | null
+          entity_id: string
           equipment_type: string
           front_tire_size: string | null
           gpsgate_user_id: number | null
@@ -1864,7 +1864,7 @@ export type Database = {
           brand?: string | null
           created_at?: string
           current_hour_meter?: number
-          entity_id?: string | null
+          entity_id?: string
           equipment_type: string
           front_tire_size?: string | null
           gpsgate_user_id?: number | null
@@ -1884,7 +1884,7 @@ export type Database = {
           brand?: string | null
           created_at?: string
           current_hour_meter?: number
-          entity_id?: string | null
+          entity_id?: string
           equipment_type?: string
           front_tire_size?: string | null
           gpsgate_user_id?: number | null
@@ -1915,7 +1915,7 @@ export type Database = {
           capacity_gallons: number
           created_at: string
           current_level_gallons: number
-          entity_id: string | null
+          entity_id: string
           fuel_type: string
           id: string
           is_active: boolean
@@ -1928,7 +1928,7 @@ export type Database = {
           capacity_gallons: number
           created_at?: string
           current_level_gallons?: number
-          entity_id?: string | null
+          entity_id?: string
           fuel_type?: string
           id?: string
           is_active?: boolean
@@ -1941,7 +1941,7 @@ export type Database = {
           capacity_gallons?: number
           created_at?: string
           current_level_gallons?: number
-          entity_id?: string | null
+          entity_id?: string
           fuel_type?: string
           id?: string
           is_active?: boolean
@@ -1964,7 +1964,7 @@ export type Database = {
         Row: {
           created_at: string
           destination_tank_id: string | null
-          entity_id: string | null
+          entity_id: string
           equipment_id: string | null
           gallons: number
           gallons_per_hour: number | null
@@ -1983,7 +1983,7 @@ export type Database = {
         Insert: {
           created_at?: string
           destination_tank_id?: string | null
-          entity_id?: string | null
+          entity_id?: string
           equipment_id?: string | null
           gallons: number
           gallons_per_hour?: number | null
@@ -2002,7 +2002,7 @@ export type Database = {
         Update: {
           created_at?: string
           destination_tank_id?: string | null
-          entity_id?: string | null
+          entity_id?: string
           equipment_id?: string | null
           gallons?: number
           gallons_per_hour?: number | null
@@ -2060,7 +2060,7 @@ export type Database = {
         Row: {
           brand: string | null
           created_at: string
-          entity_id: string | null
+          entity_id: string
           id: string
           implement_type: string
           is_active: boolean
@@ -2075,7 +2075,7 @@ export type Database = {
         Insert: {
           brand?: string | null
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           implement_type: string
           is_active?: boolean
@@ -2090,7 +2090,7 @@ export type Database = {
         Update: {
           brand?: string | null
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           implement_type?: string
           is_active?: boolean
@@ -2239,7 +2239,7 @@ export type Database = {
           commercial_name: string
           created_at: string
           current_quantity: number
-          entity_id: string | null
+          entity_id: string
           function: Database["public"]["Enums"]["inventory_function"]
           id: string
           is_active: boolean
@@ -2261,7 +2261,7 @@ export type Database = {
           commercial_name: string
           created_at?: string
           current_quantity?: number
-          entity_id?: string | null
+          entity_id?: string
           function?: Database["public"]["Enums"]["inventory_function"]
           id?: string
           is_active?: boolean
@@ -2283,7 +2283,7 @@ export type Database = {
           commercial_name?: string
           created_at?: string
           current_quantity?: number
-          entity_id?: string | null
+          entity_id?: string
           function?: Database["public"]["Enums"]["inventory_function"]
           id?: string
           is_active?: boolean
@@ -2313,7 +2313,7 @@ export type Database = {
         Row: {
           created_at: string
           document_number: string | null
-          entity_id: string | null
+          entity_id: string
           id: string
           item_id: string
           notes: string | null
@@ -2328,7 +2328,7 @@ export type Database = {
         Insert: {
           created_at?: string
           document_number?: string | null
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           item_id: string
           notes?: string | null
@@ -2343,7 +2343,7 @@ export type Database = {
         Update: {
           created_at?: string
           document_number?: string | null
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           item_id?: string
           notes?: string | null
@@ -2413,7 +2413,7 @@ export type Database = {
         Row: {
           cedula: string
           created_at: string
-          entity_id: string | null
+          entity_id: string
           id: string
           is_active: boolean
           name: string
@@ -2422,7 +2422,7 @@ export type Database = {
         Insert: {
           cedula: string
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name: string
@@ -2431,7 +2431,7 @@ export type Database = {
         Update: {
           cedula?: string
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name?: string
@@ -2791,7 +2791,7 @@ export type Database = {
       operation_inputs: {
         Row: {
           created_at: string
-          entity_id: string | null
+          entity_id: string
           id: string
           inventory_item_id: string
           operation_id: string
@@ -2799,7 +2799,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           inventory_item_id: string
           operation_id: string
@@ -2807,7 +2807,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           inventory_item_id?: string
           operation_id?: string
@@ -2873,7 +2873,7 @@ export type Database = {
           created_at: string
           driver: string | null
           end_hours: number | null
-          entity_id: string | null
+          entity_id: string
           field_id: string
           hectares_done: number | null
           id: string
@@ -2890,7 +2890,7 @@ export type Database = {
           created_at?: string
           driver?: string | null
           end_hours?: number | null
-          entity_id?: string | null
+          entity_id?: string
           field_id: string
           hectares_done?: number | null
           id?: string
@@ -2907,7 +2907,7 @@ export type Database = {
           created_at?: string
           driver?: string | null
           end_hours?: number | null
-          entity_id?: string | null
+          entity_id?: string
           field_id?: string
           hectares_done?: number | null
           id?: string
@@ -3001,7 +3001,7 @@ export type Database = {
         Row: {
           created_at: string
           end_date: string
-          entity_id: string | null
+          entity_id: string
           id: string
           is_current: boolean
           start_date: string
@@ -3011,7 +3011,7 @@ export type Database = {
         Insert: {
           created_at?: string
           end_date: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_current?: boolean
           start_date: string
@@ -3021,7 +3021,7 @@ export type Database = {
         Update: {
           created_at?: string
           end_date?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           is_current?: boolean
           start_date?: string
@@ -3044,7 +3044,7 @@ export type Database = {
           base_pay: number
           created_at: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           gross_pay: number
           holiday_pay: number
           id: string
@@ -3063,7 +3063,7 @@ export type Database = {
           base_pay?: number
           created_at?: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           gross_pay?: number
           holiday_pay?: number
           id?: string
@@ -3082,7 +3082,7 @@ export type Database = {
           base_pay?: number
           created_at?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           gross_pay?: number
           holiday_pay?: number
           id?: string
@@ -3178,7 +3178,7 @@ export type Database = {
           benefit_type: string
           created_at: string
           employee_id: string
-          entity_id: string | null
+          entity_id: string
           id: string
           period_id: string
         }
@@ -3187,7 +3187,7 @@ export type Database = {
           benefit_type: string
           created_at?: string
           employee_id: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           period_id: string
         }
@@ -3196,7 +3196,7 @@ export type Database = {
           benefit_type?: string
           created_at?: string
           employee_id?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           period_id?: string
         }
@@ -3522,7 +3522,7 @@ export type Database = {
           cost_override: number | null
           created_at: string
           description: string
-          entity_id: string | null
+          entity_id: string
           entry_date: string
           id: string
           units_charged: number
@@ -3535,7 +3535,7 @@ export type Database = {
           cost_override?: number | null
           created_at?: string
           description: string
-          entity_id?: string | null
+          entity_id?: string
           entry_date?: string
           id?: string
           units_charged?: number
@@ -3548,7 +3548,7 @@ export type Database = {
           cost_override?: number | null
           created_at?: string
           description?: string
-          entity_id?: string | null
+          entity_id?: string
           entry_date?: string
           id?: string
           units_charged?: number
@@ -3608,7 +3608,7 @@ export type Database = {
           amount: number
           contract_id: string
           created_at: string
-          entity_id: string | null
+          entity_id: string
           id: string
           notes: string | null
           payment_date: string
@@ -3619,7 +3619,7 @@ export type Database = {
           amount?: number
           contract_id: string
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           payment_date?: string
@@ -3630,7 +3630,7 @@ export type Database = {
           amount?: number
           contract_id?: string
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           id?: string
           notes?: string | null
           payment_date?: string
@@ -3675,7 +3675,7 @@ export type Database = {
           comments: string | null
           contract_name: string
           created_at: string
-          entity_id: string | null
+          entity_id: string
           farm_id: string | null
           id: string
           is_active: boolean
@@ -3693,7 +3693,7 @@ export type Database = {
           comments?: string | null
           contract_name: string
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           farm_id?: string | null
           id?: string
           is_active?: boolean
@@ -3711,7 +3711,7 @@ export type Database = {
           comments?: string | null
           contract_name?: string
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           farm_id?: string | null
           id?: string
           is_active?: boolean
@@ -4011,7 +4011,7 @@ export type Database = {
       tractor_maintenance: {
         Row: {
           created_at: string
-          entity_id: string | null
+          entity_id: string
           hour_meter_reading: number
           id: string
           maintenance_date: string
@@ -4022,7 +4022,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           hour_meter_reading: number
           id?: string
           maintenance_date?: string
@@ -4033,7 +4033,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          entity_id?: string | null
+          entity_id?: string
           hour_meter_reading?: number
           id?: string
           maintenance_date?: string
@@ -4238,7 +4238,7 @@ export type Database = {
           dgii_tipo_ingreso: string | null
           document: string | null
           due_date: string | null
-          entity_id: string | null
+          entity_id: string
           exchange_rate: number | null
           exchange_rate_used: number | null
           id: string
@@ -4280,7 +4280,7 @@ export type Database = {
           dgii_tipo_ingreso?: string | null
           document?: string | null
           due_date?: string | null
-          entity_id?: string | null
+          entity_id?: string
           exchange_rate?: number | null
           exchange_rate_used?: number | null
           id?: string
@@ -4322,7 +4322,7 @@ export type Database = {
           dgii_tipo_ingreso?: string | null
           document?: string | null
           due_date?: string | null
-          entity_id?: string | null
+          entity_id?: string
           exchange_rate?: number | null
           exchange_rate_used?: number | null
           id?: string
@@ -5036,6 +5036,14 @@ export type Database = {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      has_role_for_entity: {
+        Args: {
+          p_entity_id: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
         }
         Returns: boolean
       }

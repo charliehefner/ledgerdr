@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { AISearchBar } from "./AISearchBar";
+import { EntitySwitcher } from "./EntitySwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ export function MainLayout({ children, title, subtitle, actions, headerExtra }: 
           <div className="flex items-center gap-3">
             {/* Mobile menu button */}
             <MobileSidebar />
+            <EntitySwitcher />
             
             {title && (
               <div>

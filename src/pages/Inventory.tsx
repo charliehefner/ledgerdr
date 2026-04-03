@@ -5,8 +5,10 @@ import { InventoryItemDialog } from "@/components/inventory/InventoryItemDialog"
 import { PurchaseDialog } from "@/components/inventory/PurchaseDialog";
 import { InventoryMovementReport } from "@/components/inventory/InventoryMovementReport";
 import { PurchaseTotalsByAccount } from "@/components/inventory/PurchaseTotalsByAccount";
+import { PhysicalCountView } from "@/components/inventory/PhysicalCountView";
 import { Button } from "@/components/ui/button";
-import { Plus, ShoppingCart, Leaf } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, ShoppingCart, Leaf, Package, ClipboardCheck } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Inventory() {
@@ -14,6 +16,7 @@ export default function Inventory() {
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isMovementReportOpen, setIsMovementReportOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("inventory");
   const { t } = useLanguage();
 
   const handleEditItem = (itemId: string) => {
@@ -36,31 +39,51 @@ export default function Inventory() {
               {t("page.inventory.subtitle")}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsMovementReportOpen(true)}
-            >
-              <Leaf className="mr-2 h-4 w-4" />
-              CO₂ Report
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => setIsPurchaseDialogOpen(true)}
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              {t("inventory.recordPurchase")}
-            </Button>
-            <Button onClick={() => setIsItemDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("inventory.addItem")}
-            </Button>
-          </div>
+          {activeTab === "inventory" && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsMovementReportOpen(true)}
+              >
+                <Leaf className="mr-2 h-4 w-4" />
+                CO₂ Report
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setIsPurchaseDialogOpen(true)}
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {t("inventory.recordPurchase")}
+              </Button>
+              <Button onClick={() => setIsItemDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("inventory.addItem")}
+              </Button>
+            </div>
+          )}
         </div>
 
-        <PurchaseTotalsByAccount />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="inventory">
+              <Package className="h-4 w-4 mr-1" />
+              Inventario
+            </TabsTrigger>
+            <TabsTrigger value="physical-count">
+              <ClipboardCheck className="h-4 w-4 mr-1" />
+              Conteo Físico
+            </TabsTrigger>
+          </TabsList>
 
-        <InventoryList onEditItem={handleEditItem} />
+          <TabsContent value="inventory" className="space-y-6">
+            <PurchaseTotalsByAccount />
+            <InventoryList onEditItem={handleEditItem} />
+          </TabsContent>
+
+          <TabsContent value="physical-count">
+            <PhysicalCountView />
+          </TabsContent>
+        </Tabs>
 
         <InventoryItemDialog
           open={isItemDialogOpen}

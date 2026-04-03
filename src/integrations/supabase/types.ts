@@ -799,6 +799,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          cronograma_week_id: string
           day_of_week: number
           entity_id: string
           id: string
@@ -817,6 +818,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          cronograma_week_id: string
           day_of_week: number
           entity_id?: string
           id?: string
@@ -835,6 +837,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          cronograma_week_id?: string
           day_of_week?: number
           entity_id?: string
           id?: string
@@ -852,6 +855,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cronograma_entries_cronograma_week_id_fkey"
+            columns: ["cronograma_week_id"]
+            isOneToOne: false
+            referencedRelation: "cronograma_weeks"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cronograma_entries_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
@@ -864,13 +874,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_cronograma_entries_week"
-            columns: ["week_ending_date"]
-            isOneToOne: false
-            referencedRelation: "cronograma_weeks"
-            referencedColumns: ["week_ending_date"]
           },
         ]
       }

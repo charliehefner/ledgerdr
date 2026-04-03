@@ -689,7 +689,7 @@ export function usePayrollApproachingAlerts(configs: AlertConfig[] | undefined) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payroll_periods")
-        .select("id, period_name, end_date, status")
+        .select("id, end_date, start_date, status")
         .eq("status", "open");
       if (error) throw error;
       return data;
@@ -726,6 +726,7 @@ export function usePayrollApproachingAlerts(configs: AlertConfig[] | undefined) 
   for (const period of periodsQuery.data) {
     const endDate = parseDateLocal(period.end_date);
     const daysUntil = differenceInDays(endDate, today);
+    const periodLabel = `${format(parseDateLocal(period.start_date), "dd/MM")}–${format(endDate, "dd/MM/yyyy")}`;
 
     if (daysUntil <= thresholdDays && daysUntil >= -7) {
       const snapCount = snapshotsQuery.data[period.id] ?? 0;
@@ -733,8 +734,8 @@ export function usePayrollApproachingAlerts(configs: AlertConfig[] | undefined) 
         alerts.push({
           severity: daysUntil < 0 ? "urgent" : "warning",
           title: daysUntil < 0
-            ? `Período de nómina "${period.period_name}" venció hace ${Math.abs(daysUntil)} día(s) — sin procesar`
-            : `Período de nómina "${period.period_name}" vence el ${format(endDate, "dd/MM/yyyy")} — sin procesar`,
+            ? `Período de nómina ${periodLabel} venció hace ${Math.abs(daysUntil)} día(s) — sin procesar`
+            : `Período de nómina ${periodLabel} vence el ${format(endDate, "dd/MM/yyyy")} — sin procesar`,
           detail: "Ir a Nómina para revisar y procesar",
         });
       }

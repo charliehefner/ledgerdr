@@ -70,6 +70,7 @@ export function TabbedPageLayout({
             </div>
             {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
           </div>
+          {headerExtra && <div className="ml-auto">{headerExtra}</div>}
         </header>
 
         <Tabs value={activeTab} onValueChange={onTabChange}>

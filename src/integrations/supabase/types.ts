@@ -1471,6 +1471,7 @@ export type Database = {
           pant_size: string | null
           position: string
           salary: number
+          sex: string | null
           shirt_size: string | null
           updated_at: string
         }
@@ -1490,6 +1491,7 @@ export type Database = {
           pant_size?: string | null
           position?: string
           salary?: number
+          sex?: string | null
           shirt_size?: string | null
           updated_at?: string
         }
@@ -1509,6 +1511,7 @@ export type Database = {
           pant_size?: string | null
           position?: string
           salary?: number
+          sex?: string | null
           shirt_size?: string | null
           updated_at?: string
         }
@@ -5022,6 +5025,17 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      generate_tss_autodeterminacion: {
+        Args: {
+          p_entity_id?: string
+          p_month: number
+          p_nomina_code?: string
+          p_own_rnc?: string
+          p_retroactiva?: boolean
+          p_year: number
+        }
+        Returns: string
+      }
       get_all_public_tables: {
         Args: never
         Returns: {
@@ -5166,6 +5180,11 @@ export type Database = {
           total_credit_base: number
           total_debit_base: number
         }[]
+      }
+      tss_ascii: { Args: { p_len: number; p_text: string }; Returns: string }
+      tss_fmt_amount: {
+        Args: { p_amount: number; p_int_len?: number }
+        Returns: string
       }
       upsert_field_boundary: {
         Args: { p_field_id: string; p_geojson: string }

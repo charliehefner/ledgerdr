@@ -4110,6 +4110,130 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_count_lines: {
+        Row: {
+          counted_at: string | null
+          counted_by: string | null
+          counted_quantity: number | null
+          created_at: string
+          entity_id: string
+          id: string
+          inventory_item_id: string
+          notes: string | null
+          session_id: string
+          system_quantity: number
+          unit: string
+          updated_at: string
+          variance: number | null
+        }
+        Insert: {
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          created_at?: string
+          entity_id: string
+          id?: string
+          inventory_item_id: string
+          notes?: string | null
+          session_id: string
+          system_quantity: number
+          unit: string
+          updated_at?: string
+          variance?: number | null
+        }
+        Update: {
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          created_at?: string
+          entity_id?: string
+          id?: string
+          inventory_item_id?: string
+          notes?: string | null
+          session_id?: string
+          system_quantity?: number
+          unit?: string
+          updated_at?: string
+          variance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_lines_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_lines_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_lines_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_low_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_lines_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stock_count_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_count_sessions: {
+        Row: {
+          created_at: string
+          entity_id: string
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          reconciled_at: string | null
+          reconciled_by: string | null
+          session_name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          session_name: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          session_name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_sessions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_codes: {
         Row: {
           affects_isr: boolean | null
@@ -5005,6 +5129,10 @@ export type Database = {
         Args: { p_note?: string; p_request_id: string }
         Returns: boolean
       }
+      begin_stock_count: {
+        Args: { p_entity_id: string; p_session_name?: string }
+        Returns: string
+      }
       calculate_annual_isr: {
         Args: { p_annual_taxable: number; p_year?: number }
         Returns: number
@@ -5079,6 +5207,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cancel_stock_count: { Args: { p_session_id: string }; Returns: boolean }
       close_day_labor_week: { Args: { p_week_ending: string }; Returns: string }
       count_unlinked_transactions: {
         Args: { p_end?: string; p_start?: string }
@@ -5314,6 +5443,17 @@ export type Database = {
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined
+      }
+      reconcile_stock_count: {
+        Args: { p_notes?: string; p_session_id: string }
+        Returns: {
+          adjusted: boolean
+          counted_qty: number
+          item_name: string
+          system_qty: number
+          unit: string
+          variance: number
+        }[]
       }
       register_service_partial_payment: {
         Args: {

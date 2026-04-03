@@ -103,7 +103,7 @@ export function PayrollSummary({
   const isClosed = periodStatus === "closed";
   const isOpen = periodStatus === "open";
   const isAdmin = user?.role === "admin";
-  const canManagePayroll = user?.role === "admin" || user?.role === "gerencia" || user?.role === "accountant";
+  const canManagePayroll = user?.role === "admin" || user?.role === "management" || user?.role === "accountant";
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({

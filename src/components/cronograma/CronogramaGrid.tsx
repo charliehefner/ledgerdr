@@ -222,12 +222,16 @@ export function CronogramaGrid() {
 
   // Fetch cronograma entries for the week
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["cronograma-entries", weekEndingDate],
+    queryKey: ["cronograma-entries", weekEndingDate, selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("cronograma_entries")
         .select("*")
         .eq("week_ending_date", weekEndingDate);
+      if (selectedEntityId) {
+        query = query.eq("entity_id", selectedEntityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as CronogramaEntry[];
     },

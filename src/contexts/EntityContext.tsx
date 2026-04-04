@@ -69,12 +69,17 @@ export function EntityProvider({ children }: { children: ReactNode }) {
           } else {
             setEntities(ents || []);
 
-            // Restore persisted selection
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored && ents?.some((e) => e.id === stored)) {
-              setSelectedEntityIdState(stored);
-            } else if (ents && ents.length > 0) {
+            // Auto-select if only one entity; otherwise restore persisted selection
+            if (ents && ents.length === 1) {
               setSelectedEntityIdState(ents[0].id);
+              localStorage.setItem(STORAGE_KEY, ents[0].id);
+            } else {
+              const stored = localStorage.getItem(STORAGE_KEY);
+              if (stored && ents?.some((e) => e.id === stored)) {
+                setSelectedEntityIdState(stored);
+              } else if (ents && ents.length > 0) {
+                setSelectedEntityIdState(ents[0].id);
+              }
             }
           }
         } else {

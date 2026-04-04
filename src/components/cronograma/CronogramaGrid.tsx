@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, ClipboardPaste, Do
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -144,6 +145,7 @@ async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> 
 export function CronogramaGrid() {
   const { language, t } = useLanguage();
   const { user } = useAuth();
+  const { selectedEntityId, requireEntity } = useEntity();
   const queryClient = useQueryClient();
   const locale = language === "es" ? es : enUS;
   
@@ -220,12 +222,16 @@ export function CronogramaGrid() {
 
   // Fetch cronograma entries for the week
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["cronograma-entries", weekEndingDate],
+    queryKey: ["cronograma-entries", weekEndingDate, selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("cronograma_entries")
         .select("*")
         .eq("week_ending_date", weekEndingDate);
+      if (selectedEntityId) {
+        query = query.eq("entity_id", selectedEntityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as CronogramaEntry[];
     },
@@ -243,13 +249,16 @@ export function CronogramaGrid() {
 
   // Fetch week status
   const { data: weekStatus } = useQuery({
-    queryKey: ["cronograma-week", weekEndingDate],
+    queryKey: ["cronograma-week", weekEndingDate, selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("cronograma_weeks")
         .select("*")
-        .eq("week_ending_date", weekEndingDate)
-        .maybeSingle();
+        .eq("week_ending_date", weekEndingDate);
+      if (selectedEntityId) {
+        query = query.eq("entity_id", selectedEntityId);
+      }
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -284,13 +293,15 @@ export function CronogramaGrid() {
       time_slot: "morning" | "afternoon";
     }) => {
       const currentUserId = user?.id || null;
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Seleccione una entidad antes de guardar.");
 
       // Ensure week row exists before inserting entry (FK constraint)
       const { data: weekRow, error: weekError } = await supabase
         .from("cronograma_weeks")
         .upsert(
-          { week_ending_date: entry.week_ending_date, is_closed: false },
-          { onConflict: "week_ending_date", ignoreDuplicates: true }
+          { week_ending_date: entry.week_ending_date, is_closed: false, entity_id: entityId },
+          { onConflict: "week_ending_date,entity_id", ignoreDuplicates: true }
         )
         .select("id")
         .single();
@@ -326,6 +337,7 @@ export function CronogramaGrid() {
             source_operation_id: (entry as any).source_operation_id ?? null,
             created_by: currentUserId,
             updated_by: currentUserId,
+            entity_id: entityId,
           });
         if (error) throw error;
       }
@@ -338,10 +350,14 @@ export function CronogramaGrid() {
   // Close week mutation
   const closeWeekMutation = useMutation({
     mutationFn: async () => {
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Seleccione una entidad.");
+
       const { data: existing } = await supabase
         .from("cronograma_weeks")
         .select("id")
         .eq("week_ending_date", weekEndingDate)
+        .eq("entity_id", entityId)
         .maybeSingle();
 
       if (existing) {
@@ -353,7 +369,7 @@ export function CronogramaGrid() {
       } else {
         const { error } = await supabase
           .from("cronograma_weeks")
-          .insert({ week_ending_date: weekEndingDate, is_closed: true, closed_at: new Date().toISOString() });
+          .insert({ week_ending_date: weekEndingDate, is_closed: true, closed_at: new Date().toISOString(), entity_id: entityId });
         if (error) throw error;
       }
     },

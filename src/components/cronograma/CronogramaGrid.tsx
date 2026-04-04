@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, ClipboardPaste, Do
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";

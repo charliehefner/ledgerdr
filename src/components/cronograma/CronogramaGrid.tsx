@@ -249,13 +249,16 @@ export function CronogramaGrid() {
 
   // Fetch week status
   const { data: weekStatus } = useQuery({
-    queryKey: ["cronograma-week", weekEndingDate],
+    queryKey: ["cronograma-week", weekEndingDate, selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("cronograma_weeks")
         .select("*")
-        .eq("week_ending_date", weekEndingDate)
-        .maybeSingle();
+        .eq("week_ending_date", weekEndingDate);
+      if (selectedEntityId) {
+        query = query.eq("entity_id", selectedEntityId);
+      }
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },

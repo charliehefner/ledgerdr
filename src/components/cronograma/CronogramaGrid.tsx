@@ -290,13 +290,15 @@ export function CronogramaGrid() {
       time_slot: "morning" | "afternoon";
     }) => {
       const currentUserId = user?.id || null;
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Seleccione una entidad antes de guardar.");
 
       // Ensure week row exists before inserting entry (FK constraint)
       const { data: weekRow, error: weekError } = await supabase
         .from("cronograma_weeks")
         .upsert(
-          { week_ending_date: entry.week_ending_date, is_closed: false },
-          { onConflict: "week_ending_date", ignoreDuplicates: true }
+          { week_ending_date: entry.week_ending_date, is_closed: false, entity_id: entityId },
+          { onConflict: "week_ending_date,entity_id", ignoreDuplicates: true }
         )
         .select("id")
         .single();

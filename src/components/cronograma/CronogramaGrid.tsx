@@ -347,10 +347,14 @@ export function CronogramaGrid() {
   // Close week mutation
   const closeWeekMutation = useMutation({
     mutationFn: async () => {
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Seleccione una entidad.");
+
       const { data: existing } = await supabase
         .from("cronograma_weeks")
         .select("id")
         .eq("week_ending_date", weekEndingDate)
+        .eq("entity_id", entityId)
         .maybeSingle();
 
       if (existing) {
@@ -362,7 +366,7 @@ export function CronogramaGrid() {
       } else {
         const { error } = await supabase
           .from("cronograma_weeks")
-          .insert({ week_ending_date: weekEndingDate, is_closed: true, closed_at: new Date().toISOString() });
+          .insert({ week_ending_date: weekEndingDate, is_closed: true, closed_at: new Date().toISOString(), entity_id: entityId });
         if (error) throw error;
       }
     },

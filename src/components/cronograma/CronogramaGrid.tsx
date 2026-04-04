@@ -145,6 +145,7 @@ async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> 
 export function CronogramaGrid() {
   const { language, t } = useLanguage();
   const { user } = useAuth();
+  const { selectedEntityId, requireEntity } = useEntity();
   const queryClient = useQueryClient();
   const locale = language === "es" ? es : enUS;
   

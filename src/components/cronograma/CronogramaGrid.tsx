@@ -334,6 +334,7 @@ export function CronogramaGrid() {
             source_operation_id: (entry as any).source_operation_id ?? null,
             created_by: currentUserId,
             updated_by: currentUserId,
+            entity_id: entityId,
           });
         if (error) throw error;
       }

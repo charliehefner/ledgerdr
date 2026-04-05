@@ -34,6 +34,7 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TractorMaintenanceDialog } from "./TractorMaintenanceDialog";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface TractorEquipment {
   id: string;

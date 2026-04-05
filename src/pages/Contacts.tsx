@@ -29,6 +29,7 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger
 } from '@/components/ui/collapsible';
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type Contact = {
   id: string;
@@ -65,6 +66,7 @@ const emptyBank: BankAccount = {
 export default function Contacts() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showInactive, setShowInactive] = useState(false);
@@ -119,12 +121,16 @@ export default function Contacts() {
   };
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts'],
+    queryKey: ['contacts', selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('contacts')
         .select('*')
         .order('name');
+      if (!isAllEntities && selectedEntityId) {
+        query = query.eq('entity_id', selectedEntityId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Contact[];
     },

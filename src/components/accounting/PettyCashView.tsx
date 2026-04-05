@@ -20,6 +20,7 @@ import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type PettyCashAccount = {
   id: string;
@@ -52,6 +53,7 @@ const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "
 export function PettyCashView() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -59,13 +61,15 @@ export function PettyCashView() {
   const [selectedFundId, setSelectedFundId] = useState<string>("all");
 
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ["treasury-petty-cash"],
+    queryKey: ["treasury-petty-cash", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("bank_accounts" as any)
         .select("*")
         .eq("account_type", "petty_cash")
         .order("account_name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as PettyCashAccount[];
     },

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, CreditCard, List } from "lucide-react";
 import { CreditCardTransactionsDialog } from "./CreditCardTransactionsDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type CreditCardAccount = {
   id: string;
@@ -38,6 +39,7 @@ const emptyForm = { account_name: "", bank_name: "", account_number: "", currenc
 export function CreditCardsList() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -45,13 +47,15 @@ export function CreditCardsList() {
   const [txCardName, setTxCardName] = useState("");
 
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ["treasury-credit-cards"],
+    queryKey: ["treasury-credit-cards", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("bank_accounts" as any)
         .select("*")
         .eq("account_type", "credit_card")
         .order("account_name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as CreditCardAccount[];
     },

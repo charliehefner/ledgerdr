@@ -176,8 +176,11 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
   const sortedAndFilteredEmployees = useMemo(() => {
     if (!employees) return [];
 
-    // Filter
-    let filtered = employees.filter(
+    // Filter by active/inactive
+    let filtered = employees.filter((emp) => emp.is_active === showActive);
+
+    // Filter by search term
+    filtered = filtered.filter(
       (emp) =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.cedula.includes(searchTerm) ||

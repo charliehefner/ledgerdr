@@ -76,6 +76,7 @@ import {
 } from "./utils";
 import { useOperationsExport } from "./useOperationsExport";
 import { scheduleFollowUp } from "@/lib/scheduleFollowUp";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

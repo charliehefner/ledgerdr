@@ -120,17 +120,17 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   // Fetch current entity's group to detect sibling shared accounts
   const { data: currentEntityGroup } = useQuery({
-    queryKey: ['entity-group-for-tx'],
+    queryKey: ['entity-group-for-tx', selectedEntityId],
     queryFn: async () => {
-      const { data: userRole } = await supabase.rpc('get_current_entity_id');
-      if (!userRole) return null;
+      if (!selectedEntityId) return null;
       const { data: ent } = await supabase
         .from('entities')
         .select('id, entity_group_id, code')
-        .eq('id', userRole)
+        .eq('id', selectedEntityId)
         .maybeSingle();
       return ent;
     },
+    enabled: !!selectedEntityId,
   });
 
   // Fetch sibling entities in same group for labeling

@@ -64,9 +64,14 @@ export function FixedAssetsView() {
         query = query.eq("is_active", false);
       }
 
-      query = applyEntityFilter(query);
+      if (selectedEntityId) {
+        query = query.eq("entity_id", selectedEntityId);
+      }
       const { data, error } = await query;
       if (error) throw error;
+      return data;
+    },
+  });
       return data;
     },
   });

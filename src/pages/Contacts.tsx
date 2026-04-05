@@ -127,9 +127,14 @@ export default function Contacts() {
         .from('contacts')
         .select('*')
         .order('name');
-      query = applyEntityFilter(query);
+      if (!isAllEntities && selectedEntityId) {
+        query = query.eq('entity_id', selectedEntityId);
+      }
       const { data, error } = await query;
       if (error) throw error;
+      return data as Contact[];
+    },
+  });
       return data as Contact[];
     },
   });

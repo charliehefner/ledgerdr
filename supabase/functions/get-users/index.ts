@@ -59,9 +59,11 @@ serve(async (req) => {
           data: { user: authUser },
         } = await adminClient.auth.admin.getUserById(role.user_id);
 
-        const entityName = role.entity_id === null
-          ? "Global Admin"
-          : role.entities?.name || "Unknown Entity";
+        const entityName = role.entity_group_id
+          ? `Grupo: ${role.entity_groups?.code || "?"}`
+          : role.entity_id === null
+            ? "Global Admin"
+            : role.entities?.name || "Unknown Entity";
 
         // Check MFA enrollment via user factors
         let mfaEnrolled = false;

@@ -452,28 +452,20 @@ export function OperationsLogView() {
       
       if (opError) throw opError;
 
-      // Send Telegram notification (fire-and-forget)
+      // Send Telegram notification via category routing (fire-and-forget)
       try {
-        const { data: tgSetting } = await supabase
-          .from("notification_settings")
-          .select("value")
-          .eq("key", "telegram_chat_id")
-          .maybeSingle();
+        const fieldName = fields?.find(f => f.id === data.field_id)?.name || "—";
+        const tractorName = tractors?.find(t => t.id === data.tractor_id)?.name || "—";
+        const opTypeName = operationTypes?.find(o => o.id === data.operation_type_id)?.name || "—";
+        const driverName = data.driver || "—";
 
-        if (tgSetting?.value) {
-          const fieldName = fields?.find(f => f.id === data.field_id)?.name || "—";
-          const tractorName = tractors?.find(t => t.id === data.tractor_id)?.name || "—";
-          const opTypeName = operationTypes?.find(o => o.id === data.operation_type_id)?.name || "—";
-          const driverName = data.driver || "—";
+        const msg = `🚜 <b>New Operation</b>\n📍 Field: ${fieldName}\n🔧 Operation: ${opTypeName}\n🚗 Tractor: ${tractorName}\n👤 Driver: ${driverName}`;
 
-          const msg = `🚜 <b>New Operation</b>\n📍 Field: ${fieldName}\n🔧 Operation: ${opTypeName}\n🚗 Tractor: ${tractorName}\n👤 Driver: ${driverName}`;
-
-          supabase.functions.invoke("send-telegram", {
-            body: { chat_id: tgSetting.value, message: msg },
-          }).catch(e => console.warn("Telegram notification failed:", e));
-        }
+        supabase.functions.invoke("send-telegram", {
+          body: { category: "operations", message: msg },
+        }).catch(e => console.warn("Telegram notification failed:", e));
       } catch (e) {
-        console.warn("Telegram notification lookup failed:", e);
+        console.warn("Telegram notification failed:", e);
       }
 
       // Schedule follow-up if matching rule exists

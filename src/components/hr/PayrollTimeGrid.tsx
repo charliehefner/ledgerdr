@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { toast } from "sonner";
 import { Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";

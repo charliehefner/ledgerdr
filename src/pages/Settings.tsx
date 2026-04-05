@@ -404,6 +404,12 @@ export default function Settings() {
               <BackupExportView />
             </TabsContent>
           )}
+
+          {canModifySettings && (
+            <TabsContent value="telegram" className="mt-6">
+              <TelegramSettings />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </MainLayout>

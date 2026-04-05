@@ -33,6 +33,7 @@ export function EntityProvider({ children }: { children: ReactNode }) {
   const { user, session } = useAuth();
   const [selectedEntityId, setSelectedEntityIdState] = useState<string | null>(null);
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [isGroupUser, setIsGroupUser] = useState(false);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);

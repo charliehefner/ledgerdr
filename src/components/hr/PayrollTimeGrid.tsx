@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { toast } from "sonner";
 import { Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -162,18 +163,20 @@ export function PayrollTimeGrid({
   onEmployeeClick,
 }: PayrollTimeGridProps) {
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
   // Fetch active employees
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees", "active"],
+    queryKey: ["employees", "active", selectedEntityId],
     queryFn: async () => {
-      // Use employees_safe view for consistency (no sensitive fields in this query)
-      const { data, error } = await supabase
+      let query: any = supabase
         .from("employees_safe")
         .select("id, name, salary, position")
         .eq("is_active", true)
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Employee[];
     },

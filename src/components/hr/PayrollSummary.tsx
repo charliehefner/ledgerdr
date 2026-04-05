@@ -12,6 +12,7 @@ import { createTransaction } from "@/lib/api";
 import { generatePayrollReceiptsZip } from "@/lib/payrollReceipts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntity } from "@/contexts/EntityContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import {
   Table,
   TableBody,
@@ -93,6 +94,7 @@ export function PayrollSummary({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { selectedEntityId } = useEntity();
+  const { applyEntityFilter } = useEntityFilter();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showCommitConfirm, setShowCommitConfirm] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -107,13 +109,15 @@ export function PayrollSummary({
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees-with-bank"],
+    queryKey: ["employees-with-bank", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query: any = supabase
         .from("employees_safe")
         .select("id, name, salary, position, bank, bank_account_number")
         .eq("is_active", true)
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Employee[];
     },

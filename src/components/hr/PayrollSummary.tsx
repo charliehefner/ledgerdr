@@ -107,13 +107,15 @@ export function PayrollSummary({
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees-with-bank"],
+    queryKey: ["employees-with-bank", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query: any = supabase
         .from("employees_safe")
         .select("id, name, salary, position, bank, bank_account_number")
         .eq("is_active", true)
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Employee[];
     },

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { MessageCircle, Search, Send, Plus, Trash2 } from "lucide-react";
+import { MessageCircle, Search, Send, Plus, Trash2, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,6 +35,11 @@ export function TelegramSettings() {
   const [newLabel, setNewLabel] = useState("");
   const [newCategories, setNewCategories] = useState<string[]>(["all"]);
   const [adding, setAdding] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editCategories, setEditCategories] = useState<string[]>([]);
 
   const loadRecipients = useCallback(async () => {
     const { data, error } = await supabase
@@ -141,8 +146,8 @@ export function TelegramSettings() {
     }
   };
 
-  const toggleCategory = (cat: string) => {
-    setNewCategories(prev => {
+  const toggleCategoryIn = (cat: string, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setter(prev => {
       if (cat === "all") return ["all"];
       const without = prev.filter(c => c !== "all");
       if (without.includes(cat)) {
@@ -151,6 +156,33 @@ export function TelegramSettings() {
       }
       return [...without, cat];
     });
+  };
+
+  const toggleCategory = (cat: string) => toggleCategoryIn(cat, setNewCategories);
+
+  const startEditing = (r: Recipient) => {
+    setEditingId(r.id);
+    setEditLabel(r.label);
+    setEditCategories([...r.categories]);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    const { error } = await supabase
+      .from("telegram_recipients" as any)
+      .update({ label: editLabel, categories: editCategories } as any)
+      .eq("id", editingId);
+    if (error) {
+      toast.error("Error actualizando destinatario");
+      return;
+    }
+    setRecipients(prev => prev.map(r => r.id === editingId ? { ...r, label: editLabel, categories: editCategories } : r));
+    toast.success("Destinatario actualizado");
+    setEditingId(null);
   };
 
   return (
@@ -181,42 +213,91 @@ export function TelegramSettings() {
                 key={r.id}
                 className={`rounded-lg border p-4 transition-colors ${r.is_active ? "bg-card" : "bg-muted/50 opacity-60"}`}
               >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+                {editingId === r.id ? (
+                  /* Edit mode */
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{r.label}</span>
+                      <Input
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className="max-w-xs"
+                        placeholder="Nombre"
+                      />
                       <span className="text-xs text-muted-foreground font-mono">{r.chat_id}</span>
                     </div>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {r.categories.map(cat => (
-                        <span key={cat} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                          {ALERT_CATEGORIES.find(c => c.value === cat)?.label ?? cat}
-                        </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {ALERT_CATEGORIES.map(cat => (
+                        <label
+                          key={cat.value}
+                          className="flex items-start gap-2 cursor-pointer rounded-md border p-2 hover:bg-accent/50 transition-colors"
+                        >
+                          <Checkbox
+                            checked={editCategories.includes(cat.value)}
+                            onCheckedChange={() => toggleCategoryIn(cat.value, setEditCategories)}
+                            className="mt-0.5"
+                          />
+                          <div>
+                            <span className="text-sm font-medium">{cat.label}</span>
+                            <p className="text-xs text-muted-foreground">{cat.description}</p>
+                          </div>
+                        </label>
                       ))}
                     </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveEdit}>
+                        <Check className="mr-1 h-4 w-4" /> Guardar
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                        <X className="mr-1 h-4 w-4" /> Cancelar
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleTestMessage(r.chat_id, r.label)}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Switch
-                      checked={r.is_active}
-                      onCheckedChange={() => handleToggleActive(r.id, r.is_active)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(r.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                ) : (
+                  /* View mode */
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{r.label}</span>
+                        <span className="text-xs text-muted-foreground font-mono">{r.chat_id}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {r.categories.map(cat => (
+                          <span key={cat} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                            {ALERT_CATEGORIES.find(c => c.value === cat)?.label ?? cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startEditing(r)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTestMessage(r.chat_id, r.label)}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                      <Switch
+                        checked={r.is_active}
+                        onCheckedChange={() => handleToggleActive(r.id, r.is_active)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(r.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>

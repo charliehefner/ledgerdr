@@ -174,6 +174,12 @@ export default function Settings() {
                 Backup
               </TabsTrigger>
             )}
+            {canModifySettings && (
+              <TabsTrigger value="telegram">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Telegram
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="general" className="mt-6">

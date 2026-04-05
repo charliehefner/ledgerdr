@@ -455,31 +455,58 @@ export function UserManagement() {
                   </Select>
                 </div>
 
-                {/* Entity assignment */}
+                {/* Scope assignment */}
                 <div className="space-y-2">
-                  <Label>Asignación de Entidad</Label>
-                  <Select value={newUserEntityId} onValueChange={setNewUserEntityId}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isGlobalAdmin && (
-                        <SelectItem value="__global__">
-                          <span className="flex items-center gap-2">
-                            <Globe className="h-3 w-3" /> Global Admin — Todas las Entidades
-                          </span>
-                        </SelectItem>
-                      )}
-                      {entities.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          <span className="flex items-center gap-2">
-                            <Building2 className="h-3 w-3" /> {e.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Asignación de Acceso</Label>
+                  <div className="flex gap-2">
+                    {isGlobalAdmin && (
+                      <Button type="button" size="sm" variant={newUserScopeType === "global" ? "default" : "outline"} onClick={() => setNewUserScopeType("global")}>
+                        <Globe className="h-3 w-3 mr-1" /> Global
+                      </Button>
+                    )}
+                    <Button type="button" size="sm" variant={newUserScopeType === "entity" ? "default" : "outline"} onClick={() => setNewUserScopeType("entity")}>
+                      <Building2 className="h-3 w-3 mr-1" /> Entidad
+                    </Button>
+                    {entityGroups.length > 0 && (
+                      <Button type="button" size="sm" variant={newUserScopeType === "group" ? "default" : "outline"} onClick={() => setNewUserScopeType("group")}>
+                        <Network className="h-3 w-3 mr-1" /> Grupo
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {newUserScopeType === "entity" && (
+                  <div className="space-y-2">
+                    <Label>Entidad</Label>
+                    <Select value={newUserEntityId} onValueChange={setNewUserEntityId}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar entidad..." /></SelectTrigger>
+                      <SelectContent>
+                        {entities.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            <span className="flex items-center gap-2"><Building2 className="h-3 w-3" /> {e.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {newUserScopeType === "group" && (
+                  <div className="space-y-2">
+                    <Label>Grupo</Label>
+                    <Select value={newUserGroupId} onValueChange={setNewUserGroupId}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar grupo..." /></SelectTrigger>
+                      <SelectContent>
+                        {entityGroups.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            <span className="flex items-center gap-2"><Network className="h-3 w-3" /> {g.code} — {g.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">El usuario tendrá acceso a todas las entidades del grupo.</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isCreating}>

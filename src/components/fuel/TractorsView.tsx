@@ -79,6 +79,7 @@ export function TractorsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const tractorColumns: ColumnConfig[] = useMemo(() => [
     { key: "name", label: t("equipment.col.name"), defaultVisible: true },
@@ -111,7 +112,7 @@ export function TractorsView() {
         .select("*")
         .eq("equipment_type", "tractor")
         .order("name");
-      query = applyEntityFilter(query);
+      query = applyEntityFilter(query as any);
       const { data, error } = await query;
       if (error) throw error;
       return data as TractorEquipment[];

@@ -130,7 +130,7 @@ export function OperationsLogView() {
     queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
       let q = supabase.from("fields").select("*, farms(name)").eq("is_active", true).order("name");
-      q = applyEntityFilter(q);
+      q = applyEntityFilter(q as any);
       const { data, error } = await q;
       if (error) throw error;
       return data as Field[];
@@ -244,7 +244,7 @@ export function OperationsLogView() {
           operation_inputs:operation_inputs!operation_inputs_operation_id_fkey(id, inventory_item_id, quantity_used, inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
-      q = applyEntityFilter(q);
+      q = applyEntityFilter(q as any);
       const { data, error } = await q;
       if (error) throw error;
       return data as Operation[];

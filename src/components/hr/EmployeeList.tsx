@@ -80,6 +80,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
   } | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "name", direction: "asc" });
   const { canModifySettings } = useAuth();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const {
     visibility,
@@ -96,7 +97,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
         .from("employees_safe")
         .select("*")
         .order("name");
-      query = applyEntityFilter(query);
+      query = applyEntityFilter(query as any);
       const { data, error } = await query;
       if (error) throw error;
       return data as Employee[];

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format, startOfMonth, setDate, endOfMonth, differenceInMonths } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,6 +62,7 @@ function getCurrentPeriod(): { startDate: Date; endDate: Date } {
 
 export function PayrollView() {
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -83,7 +85,7 @@ export function PayrollView() {
         .select("*")
         .eq("start_date", startStr)
         .eq("end_date", endStr);
-      query = applyEntityFilter(query);
+      query = applyEntityFilter(query as any);
       const { data, error } = await query.maybeSingle();
 
       if (error) throw error;

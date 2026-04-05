@@ -74,6 +74,7 @@ function getSaturdayOfWeek(date: Date): Date {
 
 export function DayLaborView() {
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const [selectedFriday, setSelectedFriday] = useState(() => getFridayOfWeek(new Date()));
   const [editingEntry, setEditingEntry] = useState<DayLaborEntry | null>(null);
   const [newEntry, setNewEntry] = useState({
@@ -121,7 +122,7 @@ export function DayLaborView() {
         .eq("week_ending_date", formatDateLocal(selectedFriday))
         .order("work_date", { ascending: true })
         .order("created_at", { ascending: true });
-      query = applyEntityFilter(query);
+      query = applyEntityFilter(query as any);
       const { data, error } = await query;
       if (error) throw error;
       return data as DayLaborEntry[];

@@ -248,6 +248,15 @@ export function EntitiesManager() {
                 <TableRow key={e.id}>
                   <TableCell className="font-mono font-medium">{e.code}</TableCell>
                   <TableCell>{e.name}</TableCell>
+                  <TableCell>
+                    {e.entity_group_id ? (
+                      <Badge variant="outline" className="text-xs">
+                        {groups.find(g => g.id === e.entity_group_id)?.code || "—"}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Independiente</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{e.rnc || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>{e.country_code}</TableCell>
                   <TableCell>{e.currency}</TableCell>

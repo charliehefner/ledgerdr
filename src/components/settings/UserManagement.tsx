@@ -172,7 +172,17 @@ export function UserManagement() {
       return;
     }
 
-    const entityId = newUserEntityId === "__global__" ? null : newUserEntityId;
+    const entityId = newUserScopeType === "entity" ? newUserEntityId : null;
+    const entityGroupId = newUserScopeType === "group" ? newUserGroupId : null;
+
+    if (newUserScopeType === "entity" && !entityId) {
+      toast.error("Seleccione una entidad");
+      return;
+    }
+    if (newUserScopeType === "group" && !entityGroupId) {
+      toast.error("Seleccione un grupo");
+      return;
+    }
 
     setIsCreating(true);
     try {
@@ -180,6 +190,7 @@ export function UserManagement() {
         password: newUserPassword,
         role: newUserRole,
         entity_id: entityId,
+        entity_group_id: entityGroupId,
       };
       if (useUsername) {
         body.username = newUserIdentifier;
@@ -195,7 +206,9 @@ export function UserManagement() {
       setNewUserIdentifier("");
       setNewUserPassword("");
       setNewUserRole("accountant");
-      setNewUserEntityId("__global__");
+      setNewUserScopeType("entity");
+      setNewUserEntityId("");
+      setNewUserGroupId("");
       setUseUsername(false);
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });

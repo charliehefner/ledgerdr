@@ -222,6 +222,7 @@ export function EntitiesManager() {
             <TableRow>
               <TableHead>Código</TableHead>
               <TableHead>Nombre</TableHead>
+              <TableHead>Grupo</TableHead>
               <TableHead>RNC</TableHead>
               <TableHead>País</TableHead>
               <TableHead>Moneda</TableHead>

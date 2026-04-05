@@ -146,6 +146,14 @@ Deno.serve(async (req) => {
     );
     const linkedIds = new Set((linkedRes.data || []).map((j: any) => j.transaction_source_id));
 
+    // Intercompany config maps
+    const icConfigByGroup = new Map<string, IntercompanyConfig>(
+      (icConfigRes.data || []).map((c: any) => [c.group_id, c as IntercompanyConfig])
+    );
+    const entityGroupMap = new Map<string, string>(
+      (entitiesRes.data || []).filter((e: any) => e.entity_group_id).map((e: any) => [e.id, e.entity_group_id])
+    );
+
     // Tax account IDs
     const itbisPagadoId = acctByCode.get("1650");     // ITBIS Pagado (purchase input tax)
     const itbisPorPagarId = acctByCode.get("2110");   // ITBIS por Pagar (sales output tax)

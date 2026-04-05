@@ -18,6 +18,7 @@ import {
   CbsCode,
 } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
+import { useEntity } from '@/contexts/EntityContext';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { NameAutocomplete } from './NameAutocomplete';
@@ -95,6 +96,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const [showCrmPrompt, setShowCrmPrompt] = useState(false);
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
   const { t } = useLanguage();
+  const { selectedEntityId } = useEntity();
 
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
@@ -108,13 +110,57 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bank_accounts')
-        .select('id, account_name, account_type, bank_name, chart_account_id, currency')
+        .select('id, account_name, account_type, bank_name, chart_account_id, currency, is_shared, entity_id')
         .eq('is_active', true)
         .order('account_type, account_name');
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Fetch current entity's group to detect sibling shared accounts
+  const { data: currentEntityGroup } = useQuery({
+    queryKey: ['entity-group-for-tx', selectedEntityId],
+    queryFn: async () => {
+      if (!selectedEntityId) return null;
+      const { data: ent } = await supabase
+        .from('entities')
+        .select('id, entity_group_id, code')
+        .eq('id', selectedEntityId)
+        .maybeSingle();
+      return ent;
+    },
+    enabled: !!selectedEntityId,
+  });
+
+  // Fetch sibling entities in same group for labeling
+  const { data: siblingEntities = [] } = useQuery({
+    queryKey: ['sibling-entities', currentEntityGroup?.entity_group_id],
+    queryFn: async () => {
+      if (!currentEntityGroup?.entity_group_id) return [];
+      const { data } = await supabase
+        .from('entities')
+        .select('id, code, name')
+        .eq('entity_group_id', currentEntityGroup.entity_group_id)
+        .eq('is_active', true)
+        .neq('id', currentEntityGroup.id);
+      return data || [];
+    },
+    enabled: !!currentEntityGroup?.entity_group_id,
+  });
+
+  // Filter sibling shared bank accounts
+  const siblingSharedAccounts = bankAccounts.filter(a =>
+    a.is_shared &&
+    a.entity_id &&
+    currentEntityGroup?.id &&
+    a.entity_id !== currentEntityGroup.id &&
+    siblingEntities.some(s => s.id === a.entity_id)
+  );
+
+  const isIntercompanyPayment = (payMethodId: string) => {
+    return siblingSharedAccounts.some(a => a.id === payMethodId);
+  };
 
   // Fetch JORD AB head office account for transfer destination
   const { data: headOfficeAccounts = [] } = useQuery({
@@ -1017,7 +1063,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   {(() => {
-                    const banks = bankAccounts.filter(a => a.account_type === 'bank');
+                    const banks = bankAccounts.filter(a => a.account_type === 'bank' && !siblingSharedAccounts.some(s => s.id === a.id));
                     const cards = bankAccounts.filter(a => a.account_type === 'credit_card');
                     const petty = bankAccounts.filter(a => a.account_type === 'petty_cash');
                     return (
@@ -1029,6 +1075,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                               <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency})</SelectItem>
                             ))}
                           </SelectGroup>
+                        )}
+                        {siblingSharedAccounts.length > 0 && (
+                          <>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel>Bancos Compartidos (Grupo)</SelectLabel>
+                              {siblingSharedAccounts.map(a => {
+                                const ownerEntity = siblingEntities.find(e => e.id === a.entity_id);
+                                const label = ownerEntity ? `${a.account_name} — ${ownerEntity.code}` : a.account_name;
+                                return (
+                                  <SelectItem key={a.id} value={a.id}>{label} ({a.currency})</SelectItem>
+                                );
+                              })}
+                            </SelectGroup>
+                          </>
                         )}
                         {cards.length > 0 && (
                           <SelectGroup>
@@ -1053,6 +1114,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   })()}
                 </SelectContent>
               </Select>
+              {form.pay_method && isIntercompanyPayment(form.pay_method) && (
+                <Alert className="mt-2 border-primary/30 bg-primary/5">
+                  <AlertDescription className="text-xs text-primary">
+                    {t('intercompany.banner')}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             <div className="space-y-2">

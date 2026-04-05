@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -16,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, Pencil, Landmark } from "lucide-react";
+import { Plus, Pencil, Landmark, Share2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+import { useEntity } from "@/contexts/EntityContext";
 
 type BankAccount = {
   id: string;
@@ -29,6 +31,7 @@ type BankAccount = {
   is_active: boolean | null;
   chart_account_id: string | null;
   account_type: string;
+  is_shared: boolean;
 };
 
 type ChartAccount = {
@@ -43,15 +46,34 @@ const emptyForm = {
   account_number: "",
   currency: "DOP",
   chart_account_id: "",
+  is_shared: false,
 };
 
 export function BankAccountsList() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
+  const { entities } = useEntity();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+
+  // Check if the current entity belongs to a group
+  const { data: entityGroup } = useQuery({
+    queryKey: ["entity-group-for-bank", selectedEntityId],
+    queryFn: async () => {
+      if (!selectedEntityId) return null;
+      const { data } = await supabase
+        .from("entities")
+        .select("entity_group_id")
+        .eq("id", selectedEntityId)
+        .maybeSingle();
+      return data?.entity_group_id || null;
+    },
+    enabled: !!selectedEntityId,
+  });
+
+  const hasGroup = !!entityGroup;
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["treasury-bank-accounts", selectedEntityId],
@@ -100,6 +122,7 @@ export function BankAccountsList() {
         currency: form.currency,
         chart_account_id: form.chart_account_id || null,
         account_type: "bank",
+        is_shared: hasGroup ? form.is_shared : false,
       };
       if (editingId) {
         const { error } = await supabase.from("bank_accounts").update(payload).eq("id", editingId);
@@ -141,6 +164,7 @@ export function BankAccountsList() {
       account_number: acct.account_number || "",
       currency: acct.currency || "DOP",
       chart_account_id: acct.chart_account_id || "",
+      is_shared: acct.is_shared || false,
     });
     setDialogOpen(true);
   };
@@ -167,6 +191,7 @@ export function BankAccountsList() {
                 <TableHead>{t("treasury.bank.col.currency")}</TableHead>
                 <TableHead>{t("treasury.bank.col.glAccount")}</TableHead>
                 <TableHead className="text-right">{t("treasury.bank.col.glBalance")}</TableHead>
+                {hasGroup && <TableHead className="text-center"><Share2 className="h-3.5 w-3.5 mx-auto" /></TableHead>}
                 <TableHead>{t("treasury.bank.col.status")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
@@ -188,6 +213,11 @@ export function BankAccountsList() {
                   <TableCell className="text-right font-mono text-sm">
                     {glBalance !== null ? glBalance.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                   </TableCell>
+                  {hasGroup && (
+                    <TableCell className="text-center">
+                      {acct.is_shared && <Share2 className="h-3.5 w-3.5 text-primary mx-auto" />}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge
                       variant={acct.is_active ? "default" : "outline"}
@@ -242,6 +272,20 @@ export function BankAccountsList() {
                 </SelectContent>
               </Select>
             </div>
+            {hasGroup && (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label className="text-sm font-medium">{t("intercompany.sharedLabel")}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("intercompany.banner").substring(0, 80)}…
+                  </p>
+                </div>
+                <Switch
+                  checked={form.is_shared}
+                  onCheckedChange={v => setForm(f => ({ ...f, is_shared: v }))}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("treasury.bank.cancel")}</Button>

@@ -48,7 +48,7 @@ serve(async (req) => {
     // Get user roles with entity info
     const { data: roles, error: rolesError } = await adminClient
       .from("user_roles")
-      .select("*, entities:entity_id(name)");
+      .select("*, entities:entity_id(name), entity_groups:entity_group_id(name, code)");
 
     if (rolesError) throw rolesError;
 

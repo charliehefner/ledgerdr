@@ -346,6 +346,30 @@ export function EntitiesManager() {
                 placeholder="Opcional"
               />
             </div>
+            {groups.length > 0 && (
+              <div className="space-y-2">
+                <Label>Grupo Intercompañía</Label>
+                <Select
+                  value={form.entity_group_id}
+                  onValueChange={(v) => setForm((f) => ({ ...f, entity_group_id: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin grupo (independiente)</SelectItem>
+                    {groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.code} — {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Asignar a un grupo permite compartir cuentas bancarias y generar asientos intercompañía.
+                </p>
+              </div>
+            )}
             {!editingId && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

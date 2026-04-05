@@ -221,7 +221,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     }
 
     return filtered;
-  }, [employees, searchTerm, sortConfig]);
+  }, [employees, searchTerm, sortConfig, showActive]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-DO", {

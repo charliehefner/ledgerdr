@@ -94,6 +94,7 @@ export function PayrollSummary({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { selectedEntityId } = useEntity();
+  const { applyEntityFilter } = useEntityFilter();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showCommitConfirm, setShowCommitConfirm] = useState(false);
   const [isExporting, setIsExporting] = useState(false);

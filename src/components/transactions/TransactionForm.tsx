@@ -435,6 +435,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               linked_transaction_ids: [result.id],
               notes: form.description,
               account_id: defaultAcct?.id || null,
+              ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
             } as any);
             queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
           } catch (apArErr) {

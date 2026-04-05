@@ -285,6 +285,7 @@ export function ApArDocumentList({ direction }: Props) {
         status: 'open',
         amount_paid: 0,
         balance_remaining: totalAmount,
+        ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
       } as any);
       if (error) throw error;
     },

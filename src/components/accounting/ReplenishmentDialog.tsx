@@ -120,6 +120,7 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
         destination_acct_code: fund.id,
         account_code: "0000",
         name: fund.account_name,
+        ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
       } as any);
       if (error) throw error;
     },

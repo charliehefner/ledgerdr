@@ -326,6 +326,7 @@ export function EditTransactionDialog({
               account_id: defaultAcct?.id || null,
               document_type: direction === 'receivable' ? 'invoice' : 'bill',
               document_number: transaction.legacy_id?.toString() || null,
+              ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
             });
           } else {
             // Sync updated fields to existing AP/AR document

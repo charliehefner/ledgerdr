@@ -21,8 +21,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil, Wand2 } from "lucide-react";
 import { EntitySetupWizard } from "./EntitySetupWizard";
+import { EntityGroupsManager } from "./EntityGroupsManager";
+
+interface EntityGroup {
+  id: string;
+  name: string;
+  code: string;
+}
 
 interface EntityRow {
   id: string;

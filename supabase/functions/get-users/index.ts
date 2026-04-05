@@ -78,6 +78,7 @@ serve(async (req) => {
             email: authUser?.email || "Unknown",
             role: role.role,
             entity_id: role.entity_id,
+            entity_group_id: role.entity_group_id,
             entity_name: entityName,
             created_at: role.created_at,
             mfa_enrolled: mfaEnrolled,

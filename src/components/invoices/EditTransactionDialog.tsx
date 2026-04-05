@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { Ban, Loader2, Lock, Save } from "lucide-react";
 import { getDescription } from "@/lib/getDescription";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { TIPO_BIENES_SERVICIOS, TIPO_ANULACION } from "@/components/accounting/dgiiConstants";
 
 interface EditTransactionDialogProps {

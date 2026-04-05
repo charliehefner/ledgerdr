@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 type PettyCashAccount = {
   id: string;

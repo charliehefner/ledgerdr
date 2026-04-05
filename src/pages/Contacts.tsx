@@ -66,6 +66,7 @@ const emptyBank: BankAccount = {
 export default function Contacts() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showInactive, setShowInactive] = useState(false);
@@ -120,12 +121,14 @@ export default function Contacts() {
   };
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts'],
+    queryKey: ['contacts', selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('contacts')
         .select('*')
         .order('name');
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Contact[];
     },

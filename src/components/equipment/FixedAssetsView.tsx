@@ -44,9 +44,10 @@ export function FixedAssetsView() {
 
   const queryClient = useQueryClient();
   const { generate, generating, progress, total } = useDepreciationGeneration();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const { data: assets = [], isLoading, refetch } = useQuery({
-    queryKey: ["fixed-assets", categoryFilter, statusFilter],
+    queryKey: ["fixed-assets", categoryFilter, statusFilter, selectedEntityId],
     queryFn: async () => {
       let query = supabase
         .from("fixed_assets")
@@ -63,6 +64,7 @@ export function FixedAssetsView() {
         query = query.eq("is_active", false);
       }
 
+      query = applyEntityFilter(query);
       const { data, error } = await query;
       if (error) throw error;
       return data;

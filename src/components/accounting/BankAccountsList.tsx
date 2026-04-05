@@ -48,18 +48,21 @@ const emptyForm = {
 export function BankAccountsList() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ["treasury-bank-accounts"],
+    queryKey: ["treasury-bank-accounts", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("bank_accounts" as any)
         .select("*")
         .eq("account_type", "bank")
         .order("account_name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as BankAccount[];
     },

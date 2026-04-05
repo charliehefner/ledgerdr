@@ -161,11 +161,12 @@ serve(async (req) => {
       throw new Error("Failed to create user");
     }
 
-    // Add role to user_roles table with entity_id
+    // Add role to user_roles table with entity_id or entity_group_id
     const { error: roleError } = await adminClient.from("user_roles").insert({
       user_id: newUser.user.id,
       role: role,
       entity_id: entity_id || null,
+      entity_group_id: entity_group_id || null,
     });
 
     if (roleError) {

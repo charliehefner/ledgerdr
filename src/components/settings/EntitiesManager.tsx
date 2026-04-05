@@ -154,6 +154,7 @@ export function EntitiesManager() {
     setSaving(true);
     try {
       if (editingId) {
+        const groupId = form.entity_group_id === "__none__" ? null : form.entity_group_id;
         const { error } = await supabase
           .from("entities")
           .update({
@@ -162,6 +163,7 @@ export function EntitiesManager() {
             is_active: form.is_active,
             rnc: form.rnc.trim() || null,
             tss_nomina_code: form.tss_nomina_code.trim() || "001",
+            entity_group_id: groupId,
           })
           .eq("id", editingId);
         if (error) throw error;

@@ -60,6 +60,7 @@ interface FormState {
   is_active: boolean;
   rnc: string;
   tss_nomina_code: string;
+  entity_group_id: string;
 }
 
 const emptyForm: FormState = {

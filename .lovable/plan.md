@@ -1,99 +1,112 @@
 
 
-# Full System Audit: Access, Flows, and Bug Report
+# Security Scanner & Database Linter Results
 
-## Summary of Users Tested (14 users, 6 roles)
-
-| Role | Users | Default Route | Entity |
-|---|---|---|---|
-| Admin (2) | charliehefner, irabassoi | / (Dashboard) | E1 |
-| Accountant (4) | kiarajdl, impuestos, jorgejdl, mauriciojdl | / (Dashboard) | E1 |
-| Supervisor (4) | cedenojord, joseluisjord, edwin.viscaino, ronnycocajord | /operations | E1 |
-| Viewer (1) | diegojord | / (Dashboard) | E1 |
-| Driver (3) | chichojord, dionijord, maikoljord | /driver-portal | E1 |
-
-All 14 users are correctly assigned to E1 entity. No NULL entity_ids remain. Role assignments and default routes are correct per `permissions.ts`.
+## Scanners Run
+- **Database Linter** — 11 warnings
+- **Security Scanner** — 17 findings (5 errors, 12 warnings)
+- **Manual DB queries** — cross-referenced all findings
 
 ---
 
-## BUGS FOUND — Actionable Fixes
+## ERRORS (5 — must fix)
 
-### BUG 1 (CRITICAL): `ap_ar_document_transactions` table has RLS DISABLED
-- This junction table linking AP/AR documents to transactions has **no RLS at all**.
-- Any authenticated user (including drivers and viewers) can read, insert, update, or delete rows.
-- **Fix**: Enable RLS and add entity-scoped policies matching `ap_ar_documents`.
+### 1. SECURITY DEFINER Views Still Active
+**10 views** bypass RLS by running with the creator's privileges. The previous migration to fix these did not take effect.
 
-### BUG 2 (HIGH): 9 database views use SECURITY DEFINER instead of SECURITY INVOKER
-Views: `general_ledger`, `trial_balance_all`, `v_ap_ar_aging`, `v_fuel_consumption`, `v_inventory_low_stock`, `v_payroll_summary`, `v_transactions_by_cost_center`, `v_transactions_with_dop`, `v_trial_balance`
+| View | Sensitive Data Exposed |
+|---|---|
+| `v_payroll_summary` | Salaries, employee compensation |
+| `general_ledger` | All journal entries and financial data |
+| `trial_balance_all` | Full trial balance across entities |
+| `v_trial_balance` | Trial balance data |
+| `v_ap_ar_aging` | Accounts payable/receivable aging |
+| `v_fuel_consumption` | Fuel usage data |
+| `v_inventory_low_stock` | Inventory levels |
+| `v_transactions_by_cost_center` | Transaction breakdowns |
+| `v_transactions_with_dop` | Transaction details with DOP amounts |
+| `employees_safe` | Employee names, positions |
 
-- These views execute with the **creator's privileges**, completely bypassing RLS.
-- A driver could query `v_payroll_summary` and see all salary data.
-- **Fix**: Recreate each view with `WITH (security_invoker = on)`.
+**Fix:** Recreate all 10 views with `WITH (security_invoker = on)`.
 
-### BUG 3 (HIGH): 257 legacy `has_role()` RLS policies still active across 69 tables
-- The previous migration was supposed to clean these up but only addressed 6 tables.
-- On tables that have BOTH old `has_role()` and new `has_role_for_entity()` policies, PostgreSQL ORs them — the old policies effectively **bypass entity isolation**.
-- This is harmless in single-entity mode but is a ticking time bomb for multi-entity.
-- **Fix**: On the ~43 tables that already have `has_role_for_entity()` policies, drop the old `has_role()` duplicates. For the remaining ~26 tables without entity_id, the old policies are correct and should stay.
+### 2. `fixed_asset_depreciation_entries` — Open to All Authenticated Users
+Any authenticated user (including drivers) can SELECT all depreciation entries and INSERT new ones. No role or entity check.
 
-### BUG 4 (MEDIUM): Industrial module (Carretas, Trucks, Plant Hours) has no entity scoping
-- Tables `industrial_carretas`, `industrial_plant_hours`, `industrial_trucks` lack `entity_id` column entirely.
-- Frontend components don't use `useEntityFilter`.
-- Currently harmless (single entity), but will cause data leaks with multiple entities.
-- **Fix**: Add `entity_id` column with default to these 3 tables; add entity-scoped RLS; add `useEntityFilter` to frontend components.
+**Fix:** Replace open policies with `has_role_for_entity()` checks restricted to admin/management/accountant.
 
-### BUG 5 (MEDIUM): Fuel, Operations, HR modules missing frontend entity filtering
-- `FuelTanksView`, `TractorsView`, `FuelEquipmentView`, `OperationsLogView`, `FarmsFieldsView`, `DayLaborView`, `EmployeeList`, `PayrollView` — none use `useEntityFilter`.
-- RLS handles access at the DB level, but if a global admin is in "All Entities" mode, switching entities won't filter the UI.
-- **Fix**: Add `useEntityFilter` to these components' query hooks.
+### 3. Storage Buckets — All Authenticated Users Can Read All Files
+- `employee-documents` bucket: any authenticated user can read all employee documents (IDs, contracts)
+- `transaction-attachments` bucket: any authenticated user can read all financial attachments
 
-### BUG 6 (LOW): `requireEntity()` guard missing from most write mutations
-- Only Cronograma and FxRevaluation use `requireEntity()` before writes.
-- Other modules (Transactions, Inventory, Operations, HR) rely solely on the DB default `current_user_entity_id()` — which works, but a global admin in "All Entities" mode could accidentally create records tagged to the wrong entity.
-- **Fix**: Add `requireEntity()` guard to mutation handlers in TransactionForm, InventoryItemDialog, OperationsLogView, etc.
+**Fix:** Add entity/ownership checks to storage SELECT policies.
 
-### BUG 7 (LOW): `tractor_operators`, `transportation_units` have fully open RLS (USING true / WITH CHECK true)
-- Any authenticated user can CRUD these configuration tables.
-- **Fix**: Restrict write access to admin/management roles.
+### 4. `has_role()` Cross-Entity INSERT Access
+~40 tables still use old `has_role()` in policies. An accountant for Entity A could insert records into Entity B by supplying a different `entity_id`.
 
----
+**Fix:** Drop the 143 legacy `has_role()` policies on tables that already have entity-scoped equivalents (this was supposed to happen in the last migration but didn't apply).
 
-## Implementation Plan (Prioritized)
+### 5. `service_providers` — Banking Data Readable by All
+The `service_providers` table exposes `cedula` (national ID), `bank`, `bank_account_number` to any authenticated user via `USING (true)` SELECT policy.
 
-### Step 1 — Critical DB fixes (migration)
-1. Enable RLS on `ap_ar_document_transactions` with proper policies
-2. Recreate 9 views with `security_invoker = on`
-3. Drop duplicate `has_role()` policies on tables that already have `has_role_for_entity()`
-
-### Step 2 — Industrial module entity scoping (migration + frontend)
-1. Add `entity_id` column to `industrial_carretas`, `industrial_plant_hours`, `industrial_trucks`
-2. Add entity-scoped RLS policies
-3. Add `useEntityFilter` to `CarretasView`, `TrucksView`, `PlantHoursView`
-
-### Step 3 — Frontend entity filtering
-Add `useEntityFilter` to:
-- `FuelTanksView`, `TractorsView`, `FuelEquipmentView`
-- `OperationsLogView`, `FarmsFieldsView`
-- `DayLaborView`, `EmployeeList`
-- `RainfallView`, `HerbicideCalculation`
-
-### Step 4 — Write guards
-Add `requireEntity()` to mutation handlers in:
-- `TransactionForm`, `InventoryItemDialog`, `OperationsLogView`
-- `DayLaborView`, `EmployeeFormDialog`
-
-### Step 5 — Tighten open RLS
-Restrict `tractor_operators` and `transportation_units` write access to admin/management/supervisor roles.
+**Fix:** Restrict SELECT to admin/management/accountant/supervisor roles.
 
 ---
 
-## What's Working Correctly
-- All user role assignments and entity scoping in `user_roles` ✓
-- Login/redirect flow per role (supervisor→operations, driver→driver-portal) ✓
-- Cronograma entity scoping and save flow (fixed last session) ✓
-- Bank Accounts, Credit Cards, Petty Cash, Fixed Assets, Contacts entity filtering ✓
-- DB defaults (`current_user_entity_id()`) on 40+ tables ✓
-- `get_user_role` RPC with retry logic ✓
-- MFA flow (currently disabled but wired) ✓
-- Protected routes with role-based access control ✓
+## WARNINGS (12 — should fix)
+
+### 6. 2 Functions Missing `search_path`
+Two database functions don't set `search_path`, making them vulnerable to schema poisoning.
+
+### 7. Extension in Public Schema
+An extension is installed in the `public` schema (platform default, low risk).
+
+### 8. 7 Tables with `USING (true)` / `WITH CHECK (true)` Policies
+| Table | Open Operations |
+|---|---|
+| `tractor_operators` | SELECT, INSERT, UPDATE, DELETE (fully open) |
+| `transportation_units` | SELECT, INSERT, UPDATE, DELETE (fully open) |
+| `fixed_asset_depreciation_entries` | SELECT, INSERT |
+| `service_providers` | SELECT |
+| `service_entries` / `service_entry_payments` | SELECT |
+| `alert_configurations` / `exchange_rates` / `rainfall_records` | SELECT |
+| `tss_parameters` / `vendor_account_rules` / `payment_method_accounts` | SELECT |
+
+**Fix:** Restrict write access on `tractor_operators` and `transportation_units` to admin/management/supervisor. The SELECT-only `USING (true)` tables are acceptable for read-only reference data.
+
+### 9. Leaked Password Protection Disabled
+A platform-level setting. Cannot be changed programmatically. Already marked as ignored.
+
+### 10. AI Search Edge Function — No Auth Check
+The `ai-search` function doesn't validate JWT tokens. Anyone with the URL can query operational data.
+
+**Fix:** Add JWT validation to the edge function.
+
+### 11. Client-Side Role Checks
+UI-only permission checks (low risk since RLS enforces server-side).
+
+### 12. No UPDATE Policy on Storage Buckets
+Missing explicit UPDATE deny policies on storage buckets (updates blocked by default, but should be explicit).
+
+---
+
+## Implementation Plan
+
+### Step 1 — Database Migration
+1. Recreate 10 views with `security_invoker = on` (re-attempt previous failed migration)
+2. Drop ~143 legacy `has_role()` policies on tables with entity-scoped equivalents
+3. Replace open policies on `fixed_asset_depreciation_entries` with role-based ones
+4. Restrict `tractor_operators` and `transportation_units` write to admin/management/supervisor
+5. Restrict `service_providers` SELECT to authorized roles
+6. Fix 2 functions missing `search_path`
+
+### Step 2 — Storage Policies
+1. Tighten `employee-documents` SELECT to check entity/role
+2. Tighten `transaction-attachments` SELECT to check entity/role
+3. Add explicit UPDATE deny policies
+
+### Step 3 — Edge Function Auth
+1. Add JWT validation to `ai-search` function
+
+### Step 4 — Verify
+1. Re-run security scanner and linter to confirm all errors resolved
 

@@ -88,10 +88,14 @@ export function EntitiesManager() {
 
   const fetchEntities = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("entities")
-      .select("id, name, code, description, country_code, currency, is_active, rnc, tss_nomina_code")
-      .order("code");
+    const [{ data, error }, { data: groupsData }] = await Promise.all([
+      supabase
+        .from("entities")
+        .select("id, name, code, description, country_code, currency, is_active, rnc, tss_nomina_code, entity_group_id")
+        .order("code"),
+      supabase.from("entity_groups").select("id, name, code").order("code"),
+    ]);
+    if (groupsData) setGroups(groupsData);
     if (error) {
       toast.error("Error loading entities");
       console.error(error);

@@ -107,12 +107,12 @@ export function TractorsView() {
   const { data: tractors, isLoading } = useQuery({
     queryKey: ["tractors", selectedEntityId],
     queryFn: async () => {
-      let query = supabase
+      let query: any = supabase
         .from("fuel_equipment")
         .select("*")
         .eq("equipment_type", "tractor")
         .order("name");
-      query = applyEntityFilter(query as any);
+      query = applyEntityFilter(query);
       const { data, error } = await query;
       if (error) throw error;
       return data as TractorEquipment[];

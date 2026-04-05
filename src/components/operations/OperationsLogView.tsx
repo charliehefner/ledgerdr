@@ -127,13 +127,15 @@ export function OperationsLogView() {
 
   // Fetch fields with farm names
   const { data: fields } = useQuery({
-    queryKey: ["fields"],
+    queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("fields")
         .select("*, farms(name)")
         .eq("is_active", true)
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Field[];
     },

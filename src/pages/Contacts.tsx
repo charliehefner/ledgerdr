@@ -29,6 +29,7 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger
 } from '@/components/ui/collapsible';
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type Contact = {
   id: string;

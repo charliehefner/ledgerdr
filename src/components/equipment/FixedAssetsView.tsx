@@ -11,6 +11,7 @@ import { Plus, Pencil, Calculator } from "lucide-react";
 import { FixedAssetDialog } from "./FixedAssetDialog";
 import { useDepreciationGeneration } from "./useDepreciationGeneration";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { toast } from "@/hooks/use-toast";
 
 const CATEGORIES = [

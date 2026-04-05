@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, CreditCard, List } from "lucide-react";
 import { CreditCardTransactionsDialog } from "./CreditCardTransactionsDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type CreditCardAccount = {
   id: string;

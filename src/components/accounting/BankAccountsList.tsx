@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { Plus, Pencil, Landmark } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type BankAccount = {
   id: string;

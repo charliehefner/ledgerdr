@@ -20,6 +20,7 @@ import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 type PettyCashAccount = {
   id: string;

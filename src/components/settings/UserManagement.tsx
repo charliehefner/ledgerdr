@@ -222,17 +222,39 @@ export function UserManagement() {
   const handleOpenEdit = (user: UserWithRole) => {
     setEditUser(user);
     setEditRole(user.role);
-    setEditEntityId(user.entity_id || "__global__");
+    if (user.entity_group_id) {
+      setEditScopeType("group");
+      setEditGroupId(user.entity_group_id);
+      setEditEntityId("");
+    } else if (user.entity_id) {
+      setEditScopeType("entity");
+      setEditEntityId(user.entity_id);
+      setEditGroupId("");
+    } else {
+      setEditScopeType("global");
+      setEditEntityId("");
+      setEditGroupId("");
+    }
   };
 
   const handleUpdateUser = async () => {
     if (!editUser) return;
-    const entityId = editEntityId === "__global__" ? null : editEntityId;
+    const entityId = editScopeType === "entity" ? editEntityId : null;
+    const entityGroupId = editScopeType === "group" ? editGroupId : null;
+
+    if (editScopeType === "entity" && !entityId) {
+      toast.error("Seleccione una entidad");
+      return;
+    }
+    if (editScopeType === "group" && !entityGroupId) {
+      toast.error("Seleccione un grupo");
+      return;
+    }
 
     setIsUpdating(true);
     try {
       const { error } = await supabase.functions.invoke("update-user-role", {
-        body: { userId: editUser.id, role: editRole, entity_id: entityId },
+        body: { userId: editUser.id, role: editRole, entity_id: entityId, entity_group_id: entityGroupId },
       });
       if (error) throw error;
 

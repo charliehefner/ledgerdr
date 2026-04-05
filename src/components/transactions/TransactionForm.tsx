@@ -18,6 +18,7 @@ import {
   CbsCode,
 } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
+import { useEntity } from '@/contexts/EntityContext';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { NameAutocomplete } from './NameAutocomplete';

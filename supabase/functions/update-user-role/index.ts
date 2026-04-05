@@ -90,13 +90,15 @@ serve(async (req) => {
 
     // If assigning global admin (entity_id = null), verify caller is global admin
     const newEntityId = entity_id === undefined ? undefined : (entity_id || null);
+    const newEntityGroupId = entity_group_id === undefined ? undefined : (entity_group_id || null);
 
-    if (newEntityId === null) {
+    if (newEntityId === null && !newEntityGroupId) {
       const { data: callerGlobalRole } = await adminClient
         .from("user_roles")
         .select("entity_id")
         .eq("user_id", user.id)
         .is("entity_id", null)
+        .is("entity_group_id", null)
         .limit(1)
         .maybeSingle();
 
@@ -110,6 +112,16 @@ serve(async (req) => {
     if (newEntityId !== undefined) {
       updatePayload.entity_id = newEntityId;
     }
+    if (newEntityGroupId !== undefined) {
+      updatePayload.entity_group_id = newEntityGroupId;
+    }
+    // Enforce constraint: group means no entity_id, entity means no group
+    if (newEntityGroupId) {
+      updatePayload.entity_id = null;
+    }
+    if (newEntityId) {
+      updatePayload.entity_group_id = null;
+    }
 
     const { error: updateError } = await adminClient
       .from("user_roles")
@@ -121,7 +133,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, userId, role, entity_id: newEntityId }),
+      JSON.stringify({ success: true, userId, role, entity_id: newEntityId, entity_group_id: newEntityGroupId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {

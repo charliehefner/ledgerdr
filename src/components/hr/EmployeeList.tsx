@@ -327,6 +327,24 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
               )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant={showActive ? "default" : "secondary"}
+                size="sm"
+                onClick={() => setShowActive(!showActive)}
+                className="gap-1.5 shrink-0"
+              >
+                {showActive ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Activos
+                  </>
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4" />
+                    Inactivos
+                  </>
+                )}
+              </Button>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

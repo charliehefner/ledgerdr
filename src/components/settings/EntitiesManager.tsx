@@ -140,6 +140,7 @@ export function EntitiesManager() {
       is_active: e.is_active,
       rnc: e.rnc || "",
       tss_nomina_code: e.tss_nomina_code || "001",
+      entity_group_id: e.entity_group_id || "__none__",
     });
     setDialogOpen(true);
   };

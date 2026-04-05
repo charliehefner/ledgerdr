@@ -1,112 +1,133 @@
 
 
-# Security Scanner & Database Linter Results
+# Intercompany Entity Groups — Implementation Plan
 
-## Scanners Run
-- **Database Linter** — 11 warnings
-- **Security Scanner** — 17 findings (5 errors, 12 warnings)
-- **Manual DB queries** — cross-referenced all findings
+## Core Design Insight
 
----
+The system already channels all entity access checks through **2 database functions**: `user_has_entity_access()` and `has_role_for_entity()`. By updating only these 2 functions to understand group membership, all ~50 entity-scoped RLS policies automatically gain group-aware access with **zero policy rewrites**.
 
-## ERRORS (5 — must fix)
+```text
+Current access logic:
+  user_has_entity_access(entity_id) =
+    is_global_admin() OR user_roles.entity_id = entity_id
 
-### 1. SECURITY DEFINER Views Still Active
-**10 views** bypass RLS by running with the creator's privileges. The previous migration to fix these did not take effect.
+New access logic:
+  user_has_entity_access(entity_id) =
+    is_global_admin()
+    OR user_roles.entity_id = entity_id                    ← individual (unchanged)
+    OR user_roles.entity_group_id = entity.entity_group_id ← NEW: group access
+```
 
-| View | Sensitive Data Exposed |
-|---|---|
-| `v_payroll_summary` | Salaries, employee compensation |
-| `general_ledger` | All journal entries and financial data |
-| `trial_balance_all` | Full trial balance across entities |
-| `v_trial_balance` | Trial balance data |
-| `v_ap_ar_aging` | Accounts payable/receivable aging |
-| `v_fuel_consumption` | Fuel usage data |
-| `v_inventory_low_stock` | Inventory levels |
-| `v_transactions_by_cost_center` | Transaction breakdowns |
-| `v_transactions_with_dop` | Transaction details with DOP amounts |
-| `employees_safe` | Employee names, positions |
-
-**Fix:** Recreate all 10 views with `WITH (security_invoker = on)`.
-
-### 2. `fixed_asset_depreciation_entries` — Open to All Authenticated Users
-Any authenticated user (including drivers) can SELECT all depreciation entries and INSERT new ones. No role or entity check.
-
-**Fix:** Replace open policies with `has_role_for_entity()` checks restricted to admin/management/accountant.
-
-### 3. Storage Buckets — All Authenticated Users Can Read All Files
-- `employee-documents` bucket: any authenticated user can read all employee documents (IDs, contracts)
-- `transaction-attachments` bucket: any authenticated user can read all financial attachments
-
-**Fix:** Add entity/ownership checks to storage SELECT policies.
-
-### 4. `has_role()` Cross-Entity INSERT Access
-~40 tables still use old `has_role()` in policies. An accountant for Entity A could insert records into Entity B by supplying a different `entity_id`.
-
-**Fix:** Drop the 143 legacy `has_role()` policies on tables that already have entity-scoped equivalents (this was supposed to happen in the last migration but didn't apply).
-
-### 5. `service_providers` — Banking Data Readable by All
-The `service_providers` table exposes `cedula` (national ID), `bank`, `bank_account_number` to any authenticated user via `USING (true)` SELECT policy.
-
-**Fix:** Restrict SELECT to admin/management/accountant/supervisor roles.
-
----
-
-## WARNINGS (12 — should fix)
-
-### 6. 2 Functions Missing `search_path`
-Two database functions don't set `search_path`, making them vulnerable to schema poisoning.
-
-### 7. Extension in Public Schema
-An extension is installed in the `public` schema (platform default, low risk).
-
-### 8. 7 Tables with `USING (true)` / `WITH CHECK (true)` Policies
-| Table | Open Operations |
-|---|---|
-| `tractor_operators` | SELECT, INSERT, UPDATE, DELETE (fully open) |
-| `transportation_units` | SELECT, INSERT, UPDATE, DELETE (fully open) |
-| `fixed_asset_depreciation_entries` | SELECT, INSERT |
-| `service_providers` | SELECT |
-| `service_entries` / `service_entry_payments` | SELECT |
-| `alert_configurations` / `exchange_rates` / `rainfall_records` | SELECT |
-| `tss_parameters` / `vendor_account_rules` / `payment_method_accounts` | SELECT |
-
-**Fix:** Restrict write access on `tractor_operators` and `transportation_units` to admin/management/supervisor. The SELECT-only `USING (true)` tables are acceptable for read-only reference data.
-
-### 9. Leaked Password Protection Disabled
-A platform-level setting. Cannot be changed programmatically. Already marked as ignored.
-
-### 10. AI Search Edge Function — No Auth Check
-The `ai-search` function doesn't validate JWT tokens. Anyone with the URL can query operational data.
-
-**Fix:** Add JWT validation to the edge function.
-
-### 11. Client-Side Role Checks
-UI-only permission checks (low risk since RLS enforces server-side).
-
-### 12. No UPDATE Policy on Storage Buckets
-Missing explicit UPDATE deny policies on storage buckets (updates blocked by default, but should be explicit).
-
----
-
-## Implementation Plan
+## What Changes
 
 ### Step 1 — Database Migration
-1. Recreate 10 views with `security_invoker = on` (re-attempt previous failed migration)
-2. Drop ~143 legacy `has_role()` policies on tables with entity-scoped equivalents
-3. Replace open policies on `fixed_asset_depreciation_entries` with role-based ones
-4. Restrict `tractor_operators` and `transportation_units` write to admin/management/supervisor
-5. Restrict `service_providers` SELECT to authorized roles
-6. Fix 2 functions missing `search_path`
 
-### Step 2 — Storage Policies
-1. Tighten `employee-documents` SELECT to check entity/role
-2. Tighten `transaction-attachments` SELECT to check entity/role
-3. Add explicit UPDATE deny policies
+**New tables:**
+- `entity_groups` — group definition (name, code)
+- `intercompany_transactions` — links paired journals between entities
+- `intercompany_account_config` — maps GL accounts (1570/2470) per group
 
-### Step 3 — Edge Function Auth
-1. Add JWT validation to `ai-search` function
+**Altered tables:**
+- `entities` — add `entity_group_id UUID REFERENCES entity_groups(id) DEFAULT NULL`
+- `bank_accounts` — add `is_shared BOOLEAN DEFAULT false`
+- `user_roles` — add `entity_group_id UUID REFERENCES entity_groups(id) DEFAULT NULL`
 
-### Step 4 — Verify
-1. Re-run security scanner and linter to confirm all errors resolved
+**Updated functions (the key change):**
+- `user_has_entity_access(p_entity_id)` — add group membership check
+- `has_role_for_entity(p_user_id, p_role, p_entity_id)` — add group membership check
+- `user_entity_ids()` — return all entity IDs in user's group (for dropdown/filters)
+- `current_user_entity_id()` — unchanged (still returns first entity for defaults)
+
+**New constraint on `user_roles`:**
+```
+CHECK (
+  -- Global admin: both NULL
+  (entity_id IS NULL AND entity_group_id IS NULL)
+  -- Entity-scoped: entity_id set, group NULL
+  OR (entity_id IS NOT NULL AND entity_group_id IS NULL)
+  -- Group-scoped: group set, entity NULL
+  OR (entity_id IS NULL AND entity_group_id IS NOT NULL)
+)
+```
+
+**RLS on new tables:** Admin/Management full access; Accountant access scoped to group.
+
+### Step 2 — Settings UI: Entity Groups Manager
+
+New sub-section under Settings → Entidades:
+- CRUD for entity groups (name, code)
+- Entity edit dialog gains an optional "Group" dropdown
+- Shows which entities belong to each group
+
+### Step 3 — User Management: Group Assignment
+
+Update the user creation/edit dialog:
+- New assignment type selector: **Individual Entity** | **Entity Group** | **Global**
+- When "Entity Group" is selected, show group dropdown instead of entity dropdown
+- Writes `entity_group_id` to `user_roles` (with `entity_id = NULL`)
+- User list shows "Group: JORD" badge for group-assigned users
+
+### Step 4 — Bank Accounts: Shared Toggle
+
+- Bank account form: "Shared across group" switch (visible only when entity belongs to a group)
+- Transaction form payment method dropdown: when entity is in a group, include shared accounts from sibling entities (labeled with entity code)
+- When a shared account from another entity is selected, show intercompany banner
+
+### Step 5 — Intercompany Journal Generation
+
+Update `generate-journals` edge function:
+- Detect when a transaction's `pay_method` resolves to a bank account owned by a different entity in the same group
+- Auto-generate paired journals:
+  - **Payer entity:** DR Intercompany Receivable (1570) / CR Bank
+  - **Beneficiary entity:** DR Expense / CR Intercompany Payable (2470)
+- Record in `intercompany_transactions` table
+
+### Step 6 — Intercompany Dashboard
+
+New tab under Accounting:
+- Net intercompany balances per entity pair within a group
+- Drill-down to individual intercompany transactions
+- "Settle" action to zero out balances with a settlement journal
+
+### Step 7 — Consolidated Reports: Elimination Toggle
+
+Update P&L, Balance Sheet, and Trial Balance consolidated views:
+- Add "Eliminate Intercompany" toggle
+- When on, subtract intercompany receivable/payable balances and any intercompany revenue/expense accounts
+
+## What Does NOT Change
+
+- Independent entities (no group) work exactly as today
+- Chart of accounts remains global
+- All existing RLS policies remain unchanged — they already call the 2 functions being updated
+- Existing single-entity accountant assignments continue working
+- Driver, Supervisor, Viewer roles unaffected
+
+## Technical Detail
+
+The entire group-awareness upgrade hinges on updating 2 SQL functions. Here's the core change to `user_has_entity_access`:
+
+```sql
+CREATE OR REPLACE FUNCTION public.user_has_entity_access(p_entity_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO public AS $$
+  SELECT (
+    public.is_global_admin()
+    OR EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+        AND entity_id = p_entity_id
+    )
+    OR EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN entities e ON e.entity_group_id = ur.entity_group_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.entity_group_id IS NOT NULL
+        AND e.id = p_entity_id
+    )
+  );
+$$;
+```
+
+This single change propagates group access to all 50+ tables automatically.
 

@@ -96,6 +96,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const [showCrmPrompt, setShowCrmPrompt] = useState(false);
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
   const { t } = useLanguage();
+  const { selectedEntityId } = useEntity();
 
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],

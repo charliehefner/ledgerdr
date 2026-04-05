@@ -45,6 +45,11 @@ serve(async (req) => {
         throw new Error("Invalid entity_id format");
       }
     }
+    if (entity_group_id !== undefined && entity_group_id !== null) {
+      if (typeof entity_group_id !== "string" || !UUID_REGEX.test(entity_group_id)) {
+        throw new Error("Invalid entity_group_id format");
+      }
+    }
 
     // Validate: either email or username required
     if (!email && !username) {

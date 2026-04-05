@@ -396,7 +396,8 @@ export function EntitiesManager() {
           entityCode={wizardEntity.code}
           onComplete={() => { setWizardEntity(null); fetchEntities(); }}
         />
-      )}
+       )}
+      </div>
     </div>
   );
 }

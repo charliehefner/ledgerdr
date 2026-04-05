@@ -204,7 +204,10 @@ export function EntitiesManager() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      <EntityGroupsManager />
+
+      <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Entidades</h3>
         <Button onClick={openNew} size="sm">

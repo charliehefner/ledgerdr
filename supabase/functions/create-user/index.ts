@@ -37,7 +37,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, username, password, role, entity_id } = body;
+    const { email, username, password, role, entity_id, entity_group_id } = body;
 
     // Validate entity_id format if provided
     if (entity_id !== undefined && entity_id !== null) {

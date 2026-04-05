@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle, Ban } from "lucide-react";
+import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle, Ban, ToggleLeft, ToggleRight } from "lucide-react";
 import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";

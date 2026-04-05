@@ -72,6 +72,7 @@ const EMPLOYEE_COLUMNS: ColumnConfig[] = [
 
 export function EmployeeList({ onEdit }: EmployeeListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showActive, setShowActive] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [vacationDialogEmployee, setVacationDialogEmployee] = useState<{
     id: string;

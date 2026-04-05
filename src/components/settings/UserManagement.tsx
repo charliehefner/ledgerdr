@@ -94,6 +94,15 @@ export function UserManagement() {
   const [editGroupId, setEditGroupId] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Entity groups
+  const { data: entityGroups = [] } = useQuery({
+    queryKey: ["entity-groups"],
+    queryFn: async () => {
+      const { data } = await supabase.from("entity_groups").select("id, name, code").order("code");
+      return (data as EntityGroup[]) || [];
+    },
+  });
+
   // Reset password
   const [resetPasswordUser, setResetPasswordUser] = useState<UserWithRole | null>(null);
   const [resetPassword, setResetPassword] = useState("");

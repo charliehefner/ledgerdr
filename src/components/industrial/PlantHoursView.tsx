@@ -17,6 +17,7 @@ import { Plus, Download, FileSpreadsheet, FileText, ChevronDown, Trash2 } from "
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -27,14 +28,17 @@ export function PlantHoursView() {
   const { toast } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["industrial-plant-hours"],
+    queryKey: ["industrial-plant-hours", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("industrial_plant_hours")
         .select("*")
         .order("date", { ascending: false });
+      query = applyEntityFilter(query as any);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

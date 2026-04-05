@@ -76,6 +76,7 @@ import {
 } from "./utils";
 import { useOperationsExport } from "./useOperationsExport";
 import { scheduleFollowUp } from "@/lib/scheduleFollowUp";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 export function OperationsLogView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -114,6 +115,7 @@ export function OperationsLogView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const {
     visibility,
@@ -125,13 +127,11 @@ export function OperationsLogView() {
 
   // Fetch fields with farm names
   const { data: fields } = useQuery({
-    queryKey: ["fields"],
+    queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fields")
-        .select("*, farms(name)")
-        .eq("is_active", true)
-        .order("name");
+      let q = supabase.from("fields").select("*, farms(name)").eq("is_active", true).order("name");
+      q = applyEntityFilter(q as any);
+      const { data, error } = await q;
       if (error) throw error;
       return data as Field[];
     },
@@ -231,9 +231,9 @@ export function OperationsLogView() {
 
   // Fetch operations with inputs
   const { data: operations, isLoading } = useQuery({
-    queryKey: ["operations"],
+    queryKey: ["operations", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("operations")
         .select(`
           *,
@@ -244,6 +244,8 @@ export function OperationsLogView() {
           operation_inputs:operation_inputs!operation_inputs_operation_id_fkey(id, inventory_item_id, quantity_used, inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
+      q = applyEntityFilter(q as any);
+      const { data, error } = await q;
       if (error) throw error;
       return data as Operation[];
     },

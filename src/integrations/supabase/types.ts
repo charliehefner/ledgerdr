@@ -2266,6 +2266,7 @@ export type Database = {
           created_by: string | null
           datetime_in: string | null
           datetime_out: string | null
+          entity_id: string | null
           id: string
           identifier: string | null
           notes: string | null
@@ -2279,6 +2280,7 @@ export type Database = {
           created_by?: string | null
           datetime_in?: string | null
           datetime_out?: string | null
+          entity_id?: string | null
           id?: string
           identifier?: string | null
           notes?: string | null
@@ -2292,6 +2294,7 @@ export type Database = {
           created_by?: string | null
           datetime_in?: string | null
           datetime_out?: string | null
+          entity_id?: string | null
           id?: string
           identifier?: string | null
           notes?: string | null
@@ -2300,13 +2303,22 @@ export type Database = {
           updated_at?: string
           weigh_ticket_number?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "industrial_carretas_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       industrial_plant_hours: {
         Row: {
           created_at: string
           created_by: string | null
           date: string | null
+          entity_id: string | null
           finish_hour_meter: number | null
           id: string
           notes: string | null
@@ -2317,6 +2329,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
+          entity_id?: string | null
           finish_hour_meter?: number | null
           id?: string
           notes?: string | null
@@ -2327,13 +2340,22 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
+          entity_id?: string | null
           finish_hour_meter?: number | null
           id?: string
           notes?: string | null
           start_hour_meter?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "industrial_plant_hours_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       industrial_trucks: {
         Row: {
@@ -2342,6 +2364,7 @@ export type Database = {
           datetime_in: string | null
           datetime_out: string | null
           destination_payload: string | null
+          entity_id: string | null
           id: string
           identifier: string | null
           notes: string | null
@@ -2356,6 +2379,7 @@ export type Database = {
           datetime_in?: string | null
           datetime_out?: string | null
           destination_payload?: string | null
+          entity_id?: string | null
           id?: string
           identifier?: string | null
           notes?: string | null
@@ -2370,6 +2394,7 @@ export type Database = {
           datetime_in?: string | null
           datetime_out?: string | null
           destination_payload?: string | null
+          entity_id?: string | null
           id?: string
           identifier?: string | null
           notes?: string | null
@@ -2378,7 +2403,15 @@ export type Database = {
           updated_at?: string
           weigh_ticket_number?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "industrial_trucks_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory_items: {
         Row: {

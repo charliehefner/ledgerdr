@@ -25,6 +25,7 @@ import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
 import { DayLaborAttachment } from "./DayLaborAttachment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { generateDayLaborReceiptsZip } from "@/lib/dayLaborReceipts";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface Jornalero {
   id: string;
@@ -73,6 +74,7 @@ function getSaturdayOfWeek(date: Date): Date {
 
 export function DayLaborView() {
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const [selectedFriday, setSelectedFriday] = useState(() => getFridayOfWeek(new Date()));
   const [editingEntry, setEditingEntry] = useState<DayLaborEntry | null>(null);
   const [newEntry, setNewEntry] = useState({
@@ -112,15 +114,16 @@ export function DayLaborView() {
 
   // Fetch entries for the selected week
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["day-labor", formatDateLocal(selectedFriday)],
+    queryKey: ["day-labor", formatDateLocal(selectedFriday), selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("day_labor_entries")
         .select("*")
         .eq("week_ending_date", formatDateLocal(selectedFriday))
         .order("work_date", { ascending: true })
         .order("created_at", { ascending: true });
-
+      query = applyEntityFilter(query as any);
+      const { data, error } = await query;
       if (error) throw error;
       return data as DayLaborEntry[];
     },

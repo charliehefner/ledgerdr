@@ -37,6 +37,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Plus, Pencil, MapPin, Layers, Upload, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { KMLImportDialog } from "./KMLImportDialog";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface Farm {
   id: string;
@@ -69,15 +70,15 @@ export function FarmsFieldsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   // Fetch farms
   const { data: farms, isLoading: farmsLoading } = useQuery({
-    queryKey: ["farms"],
+    queryKey: ["farms", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("farms")
-        .select("*")
-        .order("name");
+      let q = supabase.from("farms").select("*").order("name");
+      q = applyEntityFilter(q as any);
+      const { data, error } = await q;
       if (error) throw error;
       return data as Farm[];
     },
@@ -85,12 +86,11 @@ export function FarmsFieldsView() {
 
   // Fetch fields
   const { data: fields, isLoading: fieldsLoading } = useQuery({
-    queryKey: ["fields"],
+    queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fields")
-        .select("*, farms(name)")
-        .order("name");
+      let q = supabase.from("fields").select("*, farms(name)").order("name");
+      q = applyEntityFilter(q as any);
+      const { data, error } = await q;
       if (error) throw error;
       return data as Field[];
     },

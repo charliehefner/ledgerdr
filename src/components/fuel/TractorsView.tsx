@@ -34,6 +34,7 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TractorMaintenanceDialog } from "./TractorMaintenanceDialog";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface TractorEquipment {
   id: string;
@@ -78,6 +79,7 @@ export function TractorsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const tractorColumns: ColumnConfig[] = useMemo(() => [
     { key: "name", label: t("equipment.col.name"), defaultVisible: true },
@@ -103,13 +105,15 @@ export function TractorsView() {
   } = useColumnVisibility("tractors", tractorColumns);
 
   const { data: tractors, isLoading } = useQuery({
-    queryKey: ["tractors"],
+    queryKey: ["tractors", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("fuel_equipment")
         .select("*")
         .eq("equipment_type", "tractor")
         .order("name");
+      query = applyEntityFilter(query as any);
+      const { data, error } = await query;
       if (error) throw error;
       return data as TractorEquipment[];
     },

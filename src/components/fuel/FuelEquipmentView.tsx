@@ -29,6 +29,7 @@ import {
 import { Plus, Pencil, Tractor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface FuelEquipment {
   id: string;
@@ -49,14 +50,14 @@ export function FuelEquipmentView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const { data: equipment = [], isLoading } = useQuery({
-    queryKey: ["fuelEquipment"],
+    queryKey: ["fuelEquipment", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fuel_equipment")
-        .select("*")
-        .order("name");
+      let q = supabase.from("fuel_equipment").select("*").order("name");
+      q = applyEntityFilter(q as any);
+      const { data, error } = await q;
       if (error) throw error;
       return data as FuelEquipment[];
     },

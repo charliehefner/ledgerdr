@@ -12,15 +12,38 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // ---- JWT Auth Check ----
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "No autorizado. Se requiere autenticación." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Supabase credentials not configured");
+    }
+
+    // Validate user token
+    const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Token inválido o expirado." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     const { query } = await req.json();
@@ -28,20 +51,13 @@ serve(async (req) => {
       throw new Error("Query is required");
     }
 
+    // Use service role for data fetching
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Fetch context data for the AI to use
     const [
-      farmsRes, 
-      fieldsRes, 
-      operationTypesRes, 
-      recentOpsRes, 
-      employeesRes,
-      rainfallRes,
-      dayLaborRes,
-      inventoryRes,
-      purchasesRes,
-      opInputsRes
+      farmsRes, fieldsRes, operationTypesRes, recentOpsRes, employeesRes,
+      rainfallRes, dayLaborRes, inventoryRes, purchasesRes, opInputsRes
     ] = await Promise.all([
       supabase.from("farms").select("id, name").eq("is_active", true),
       supabase.from("fields").select("id, name, farm_id, hectares").eq("is_active", true),
@@ -68,7 +84,6 @@ serve(async (req) => {
       `).order("created_at", { ascending: false }).limit(200),
     ]);
 
-    // Build context for the AI
     const farms = farmsRes.data || [];
     const fields = fieldsRes.data || [];
     const operationTypes = operationTypesRes.data || [];

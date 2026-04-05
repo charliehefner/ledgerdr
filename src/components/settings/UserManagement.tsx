@@ -50,11 +50,18 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
 
+interface EntityGroup {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface UserWithRole {
   id: string;
   email: string;
   role: AppRole;
   entity_id: string | null;
+  entity_group_id: string | null;
   entity_name: string;
   created_at: string;
   mfa_enrolled?: boolean;

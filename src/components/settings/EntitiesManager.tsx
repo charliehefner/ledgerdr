@@ -72,6 +72,7 @@ const emptyForm: FormState = {
   is_active: true,
   rnc: "",
   tss_nomina_code: "001",
+  entity_group_id: "__none__",
 };
 
 export function EntitiesManager() {

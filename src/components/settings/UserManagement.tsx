@@ -89,7 +89,9 @@ export function UserManagement() {
   // Edit dialog
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);
   const [editRole, setEditRole] = useState<AppRole>("accountant");
-  const [editEntityId, setEditEntityId] = useState<string>("__global__");
+  const [editScopeType, setEditScopeType] = useState<"global" | "entity" | "group">("entity");
+  const [editEntityId, setEditEntityId] = useState<string>("");
+  const [editGroupId, setEditGroupId] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Reset password

@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
 import { VacationCountdownDialog } from "./VacationCountdownDialog";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface VacationSummary {
   employee_id: string;

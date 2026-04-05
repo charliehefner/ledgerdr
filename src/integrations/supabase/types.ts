@@ -5004,12 +5004,14 @@ export type Database = {
           date_of_birth: string | null
           date_of_hire: string | null
           date_of_termination: string | null
+          entity_id: string | null
           id: string | null
           is_active: boolean | null
           name: string | null
           pant_size: string | null
           position: string | null
           salary: number | null
+          sex: string | null
           shirt_size: string | null
           updated_at: string | null
         }
@@ -5022,12 +5024,14 @@ export type Database = {
           date_of_birth?: string | null
           date_of_hire?: string | null
           date_of_termination?: string | null
+          entity_id?: string | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
           pant_size?: string | null
           position?: string | null
           salary?: number | null
+          sex?: string | null
           shirt_size?: string | null
           updated_at?: string | null
         }
@@ -5040,16 +5044,26 @@ export type Database = {
           date_of_birth?: string | null
           date_of_hire?: string | null
           date_of_termination?: string | null
+          entity_id?: string | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
           pant_size?: string | null
           position?: string | null
           salary?: number | null
+          sex?: string | null
           shirt_size?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       general_ledger: {
         Row: {

@@ -586,7 +586,11 @@ export function UserManagement() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {user.entity_id ? (
+                        {user.entity_group_id ? (
+                          <span className="flex items-center gap-1 text-sm text-accent-foreground">
+                            <Network className="h-3 w-3" /> Grupo: {entityGroups.find(g => g.id === user.entity_group_id)?.code || "—"}
+                          </span>
+                        ) : user.entity_id ? (
                           <span className="flex items-center gap-1 text-sm">
                             <Building2 className="h-3 w-3" /> {user.entity_name}
                           </span>

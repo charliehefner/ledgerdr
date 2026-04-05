@@ -51,6 +51,7 @@ import { TransportationManager } from "@/components/settings/TransportationManag
 import { EntitiesManager } from "@/components/settings/EntitiesManager";
 import { ApprovalThresholdsManager } from "@/components/settings/ApprovalThresholdsManager";
 import { MfaSettings } from "@/components/settings/MfaSettings";
+import { TelegramSettings } from "@/components/settings/TelegramSettings";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();

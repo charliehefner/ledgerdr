@@ -29,6 +29,7 @@ import {
 import { Plus, Pencil, Tractor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface FuelEquipment {
   id: string;

@@ -84,6 +84,7 @@ export function EntitiesManager() {
   const [saving, setSaving] = useState(false);
   const [wizardEntity, setWizardEntity] = useState<EntityRow | null>(null);
   const [entityDataCounts, setEntityDataCounts] = useState<Record<string, number>>({});
+  const [groups, setGroups] = useState<EntityGroup[]>([]);
 
   const fetchEntities = async () => {
     setLoading(true);

@@ -48,6 +48,7 @@ interface EntityRow {
   is_active: boolean;
   rnc: string | null;
   tss_nomina_code: string | null;
+  entity_group_id: string | null;
 }
 
 interface FormState {

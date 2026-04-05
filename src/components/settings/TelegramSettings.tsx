@@ -141,8 +141,8 @@ export function TelegramSettings() {
     }
   };
 
-  const toggleCategory = (cat: string) => {
-    setNewCategories(prev => {
+  const toggleCategoryIn = (cat: string, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setter(prev => {
       if (cat === "all") return ["all"];
       const without = prev.filter(c => c !== "all");
       if (without.includes(cat)) {
@@ -151,6 +151,33 @@ export function TelegramSettings() {
       }
       return [...without, cat];
     });
+  };
+
+  const toggleCategory = (cat: string) => toggleCategoryIn(cat, setNewCategories);
+
+  const startEditing = (r: Recipient) => {
+    setEditingId(r.id);
+    setEditLabel(r.label);
+    setEditCategories([...r.categories]);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    const { error } = await supabase
+      .from("telegram_recipients" as any)
+      .update({ label: editLabel, categories: editCategories } as any)
+      .eq("id", editingId);
+    if (error) {
+      toast.error("Error actualizando destinatario");
+      return;
+    }
+    setRecipients(prev => prev.map(r => r.id === editingId ? { ...r, label: editLabel, categories: editCategories } : r));
+    toast.success("Destinatario actualizado");
+    setEditingId(null);
   };
 
   return (

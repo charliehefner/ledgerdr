@@ -12,6 +12,7 @@ import { createTransaction } from "@/lib/api";
 import { generatePayrollReceiptsZip } from "@/lib/payrollReceipts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntity } from "@/contexts/EntityContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import {
   Table,
   TableBody,

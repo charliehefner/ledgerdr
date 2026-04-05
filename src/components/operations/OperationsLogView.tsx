@@ -115,6 +115,7 @@ export function OperationsLogView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const {
     visibility,

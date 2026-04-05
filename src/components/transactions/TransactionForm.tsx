@@ -1061,7 +1061,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   {(() => {
-                    const banks = bankAccounts.filter(a => a.account_type === 'bank');
+                    const banks = bankAccounts.filter(a => a.account_type === 'bank' && !siblingSharedAccounts.some(s => s.id === a.id));
                     const cards = bankAccounts.filter(a => a.account_type === 'credit_card');
                     const petty = bankAccounts.filter(a => a.account_type === 'petty_cash');
                     return (
@@ -1073,6 +1073,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                               <SelectItem key={a.id} value={a.id}>{a.account_name} ({a.currency})</SelectItem>
                             ))}
                           </SelectGroup>
+                        )}
+                        {siblingSharedAccounts.length > 0 && (
+                          <>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel>Bancos Compartidos (Grupo)</SelectLabel>
+                              {siblingSharedAccounts.map(a => {
+                                const ownerEntity = siblingEntities.find(e => e.id === a.entity_id);
+                                const label = ownerEntity ? `${a.account_name} — ${ownerEntity.code}` : a.account_name;
+                                return (
+                                  <SelectItem key={a.id} value={a.id}>{label} ({a.currency})</SelectItem>
+                                );
+                              })}
+                            </SelectGroup>
+                          </>
                         )}
                         {cards.length > 0 && (
                           <SelectGroup>
@@ -1097,6 +1112,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   })()}
                 </SelectContent>
               </Select>
+              {form.pay_method && isIntercompanyPayment(form.pay_method) && (
+                <Alert className="mt-2 border-primary/30 bg-primary/5">
+                  <AlertDescription className="text-xs text-primary">
+                    {t('intercompany.banner')}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -1,39 +1,29 @@
 
-# Multi-Recipient Telegram Alert Routing
 
-## 1. Database Migration
-Create a `telegram_recipients` table:
-- `id` (uuid PK)
-- `chat_id` (text, not null)
-- `label` (text) — e.g. "Juan Personal", "Operations Group"
-- `categories` (text[]) — e.g. `{'operations','finance','maintenance','all'}`
-- `is_active` (boolean, default true)
-- `created_at`, `updated_at`
+## Add Edit Capability to Telegram Recipients
 
-RLS: admin-only access.
+### Problem
+Once a recipient is added, there's no way to change their label or alert categories without deleting and re-adding them.
 
-Migrate existing chat ID from `notification_settings` into the new table.
+### Solution
+Add an inline edit mode to each recipient card in `TelegramSettings.tsx`:
 
-## 2. Update Edge Function (`send-telegram`)
-- Add a `category` parameter (optional, defaults to `'all'`)
-- Query `telegram_recipients` to find all active recipients matching the category or `'all'`
-- Send to each matching recipient
-- Keep backward compatibility (if `chat_id` is passed directly, send to that one)
+**File: `src/components/settings/TelegramSettings.tsx`**
 
-## 3. Update Settings UI (`TelegramSettings.tsx`)
-- Show a list of recipients with label, chat ID, categories, and active toggle
-- Add/remove recipients
-- Discover chat ID still works (fills into "add" form)
-- Test message per recipient
-- Category checkboxes: `operations`, `finance`, `maintenance`, `equipment`, `inventory`, `hr`, `all`
+1. Add an **Edit** button (pencil icon) next to each recipient's action buttons
+2. When clicked, the recipient card expands to show:
+   - Editable label input
+   - Category checkboxes (same grid as the "add" form)
+   - Save / Cancel buttons
+3. On save, update the `telegram_recipients` row via Supabase
+4. Track editing state with `editingId` in component state
 
-## 4. Update Operation Trigger
-- Pass `category: 'operations'` when invoking send-telegram for new operations (currently in the operations code)
+### Technical Details
+- Add `editingId: string | null` state
+- Add `editCategories: string[]` and `editLabel: string` state
+- Reuse the existing `toggleCategory` logic for the edit form
+- Update via `supabase.from("telegram_recipients").update({ label, categories }).eq("id", id)`
+- On success, update local state and clear editing mode
 
-## Categories
-- `all` — receives everything
-- `operations` — new field operations
-- `finance` — transactions, payments, AP/AR
-- `maintenance` — equipment alerts
-- `inventory` — stock alerts
-- `hr` — payroll, employee alerts
+Single file change, no database migration needed.
+

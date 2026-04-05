@@ -377,7 +377,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         due_date: form.due_date || undefined,
         destination_amount: destinationAmount,
         itbis_override_reason: form.itbis_override_reason || undefined,
-      });
+      }, selectedEntityId);
 
       // Save all attachments to local database
       if (result.id) {

@@ -70,15 +70,15 @@ export function FuelTanksView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const isAdmin = user?.role === "admin" || user?.role === "management";
 
   const { data: tanks = [], isLoading } = useQuery({
-    queryKey: ["fuelTanks"],
+    queryKey: ["fuelTanks", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fuel_tanks")
-        .select("*")
-        .order("name");
+      let q = supabase.from("fuel_tanks").select("*").order("name");
+      q = applyEntityFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       return data as FuelTank[];
     },

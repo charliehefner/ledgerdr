@@ -55,12 +55,9 @@ export function FuelEquipmentView() {
   const { data: equipment = [], isLoading } = useQuery({
     queryKey: ["fuelEquipment", selectedEntityId],
     queryFn: async () => {
-      let query = supabase
-        .from("fuel_equipment")
-        .select("*")
-        .order("name");
-      query = applyEntityFilter(query);
-      const { data, error } = await query;
+      let q = supabase.from("fuel_equipment").select("*").order("name");
+      q = applyEntityFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       return data as FuelEquipment[];
     },

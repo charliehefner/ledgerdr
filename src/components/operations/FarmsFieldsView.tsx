@@ -76,12 +76,9 @@ export function FarmsFieldsView() {
   const { data: farms, isLoading: farmsLoading } = useQuery({
     queryKey: ["farms", selectedEntityId],
     queryFn: async () => {
-      let query = supabase
-        .from("farms")
-        .select("*")
-        .order("name");
-      query = applyEntityFilter(query);
-      const { data, error } = await query;
+      let q = supabase.from("farms").select("*").order("name");
+      q = applyEntityFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       return data as Farm[];
     },
@@ -91,12 +88,9 @@ export function FarmsFieldsView() {
   const { data: fields, isLoading: fieldsLoading } = useQuery({
     queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      let query = supabase
-        .from("fields")
-        .select("*, farms(name)")
-        .order("name");
-      query = applyEntityFilter(query);
-      const { data, error } = await query;
+      let q = supabase.from("fields").select("*, farms(name)").order("name");
+      q = applyEntityFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       return data as Field[];
     },

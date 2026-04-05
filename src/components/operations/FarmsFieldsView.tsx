@@ -37,6 +37,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Plus, Pencil, MapPin, Layers, Upload, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { KMLImportDialog } from "./KMLImportDialog";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface Farm {
   id: string;

@@ -25,6 +25,7 @@ import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
 import { DayLaborAttachment } from "./DayLaborAttachment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { generateDayLaborReceiptsZip } from "@/lib/dayLaborReceipts";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface Jornalero {
   id: string;

@@ -30,7 +30,8 @@ import {
   BookOpen,
   Truck,
   Building2,
-  ClipboardCheck
+  ClipboardCheck,
+  MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +52,7 @@ import { TransportationManager } from "@/components/settings/TransportationManag
 import { EntitiesManager } from "@/components/settings/EntitiesManager";
 import { ApprovalThresholdsManager } from "@/components/settings/ApprovalThresholdsManager";
 import { MfaSettings } from "@/components/settings/MfaSettings";
+import { TelegramSettings } from "@/components/settings/TelegramSettings";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -170,6 +172,12 @@ export default function Settings() {
               <TabsTrigger value="backup">
                 <Database className="h-4 w-4 mr-2" />
                 Backup
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="telegram">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Telegram
               </TabsTrigger>
             )}
           </TabsList>
@@ -394,6 +402,12 @@ export default function Settings() {
           {canModifySettings && (
             <TabsContent value="backup" className="mt-6">
               <BackupExportView />
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="telegram" className="mt-6">
+              <TelegramSettings />
             </TabsContent>
           )}
         </Tabs>

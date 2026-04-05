@@ -21,8 +21,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil, Wand2 } from "lucide-react";
 import { EntitySetupWizard } from "./EntitySetupWizard";
+import { EntityGroupsManager } from "./EntityGroupsManager";
+
+interface EntityGroup {
+  id: string;
+  name: string;
+  code: string;
+}
 
 interface EntityRow {
   id: string;
@@ -34,6 +48,7 @@ interface EntityRow {
   is_active: boolean;
   rnc: string | null;
   tss_nomina_code: string | null;
+  entity_group_id: string | null;
 }
 
 interface FormState {
@@ -45,6 +60,7 @@ interface FormState {
   is_active: boolean;
   rnc: string;
   tss_nomina_code: string;
+  entity_group_id: string;
 }
 
 const emptyForm: FormState = {
@@ -56,6 +72,7 @@ const emptyForm: FormState = {
   is_active: true,
   rnc: "",
   tss_nomina_code: "001",
+  entity_group_id: "__none__",
 };
 
 export function EntitiesManager() {
@@ -67,13 +84,18 @@ export function EntitiesManager() {
   const [saving, setSaving] = useState(false);
   const [wizardEntity, setWizardEntity] = useState<EntityRow | null>(null);
   const [entityDataCounts, setEntityDataCounts] = useState<Record<string, number>>({});
+  const [groups, setGroups] = useState<EntityGroup[]>([]);
 
   const fetchEntities = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("entities")
-      .select("id, name, code, description, country_code, currency, is_active, rnc, tss_nomina_code")
-      .order("code");
+    const [{ data, error }, { data: groupsData }] = await Promise.all([
+      supabase
+        .from("entities")
+        .select("id, name, code, description, country_code, currency, is_active, rnc, tss_nomina_code, entity_group_id")
+        .order("code"),
+      supabase.from("entity_groups").select("id, name, code").order("code"),
+    ]);
+    if (groupsData) setGroups(groupsData);
     if (error) {
       toast.error("Error loading entities");
       console.error(error);
@@ -118,6 +140,7 @@ export function EntitiesManager() {
       is_active: e.is_active,
       rnc: e.rnc || "",
       tss_nomina_code: e.tss_nomina_code || "001",
+      entity_group_id: e.entity_group_id || "__none__",
     });
     setDialogOpen(true);
   };
@@ -131,6 +154,7 @@ export function EntitiesManager() {
     setSaving(true);
     try {
       if (editingId) {
+        const groupId = form.entity_group_id === "__none__" ? null : form.entity_group_id;
         const { error } = await supabase
           .from("entities")
           .update({
@@ -139,6 +163,7 @@ export function EntitiesManager() {
             is_active: form.is_active,
             rnc: form.rnc.trim() || null,
             tss_nomina_code: form.tss_nomina_code.trim() || "001",
+            entity_group_id: groupId,
           })
           .eq("id", editingId);
         if (error) throw error;
@@ -146,6 +171,7 @@ export function EntitiesManager() {
         setDialogOpen(false);
         fetchEntities();
       } else {
+        const groupId = form.entity_group_id === "__none__" ? null : form.entity_group_id;
         const { data: inserted, error } = await supabase.from("entities").insert({
           name: form.name.trim(),
           code: form.code.trim().toUpperCase(),
@@ -153,6 +179,7 @@ export function EntitiesManager() {
           country_code: form.country_code.trim() || "DO",
           currency: form.currency.trim() || "DOP",
           rnc: form.rnc.trim() || null,
+          entity_group_id: groupId,
         }).select().single();
         if (error) {
           if (error.code === "23505") {
@@ -177,7 +204,10 @@ export function EntitiesManager() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      <EntityGroupsManager />
+
+      <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Entidades</h3>
         <Button onClick={openNew} size="sm">
@@ -192,6 +222,7 @@ export function EntitiesManager() {
             <TableRow>
               <TableHead>Código</TableHead>
               <TableHead>Nombre</TableHead>
+              <TableHead>Grupo</TableHead>
               <TableHead>RNC</TableHead>
               <TableHead>País</TableHead>
               <TableHead>Moneda</TableHead>
@@ -202,13 +233,13 @@ export function EntitiesManager() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : entities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No hay entidades
                 </TableCell>
               </TableRow>
@@ -217,6 +248,15 @@ export function EntitiesManager() {
                 <TableRow key={e.id}>
                   <TableCell className="font-mono font-medium">{e.code}</TableCell>
                   <TableCell>{e.name}</TableCell>
+                  <TableCell>
+                    {e.entity_group_id ? (
+                      <Badge variant="outline" className="text-xs">
+                        {groups.find(g => g.id === e.entity_group_id)?.code || "—"}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Independiente</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{e.rnc || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>{e.country_code}</TableCell>
                   <TableCell>{e.currency}</TableCell>
@@ -306,6 +346,30 @@ export function EntitiesManager() {
                 placeholder="Opcional"
               />
             </div>
+            {groups.length > 0 && (
+              <div className="space-y-2">
+                <Label>Grupo Intercompañía</Label>
+                <Select
+                  value={form.entity_group_id}
+                  onValueChange={(v) => setForm((f) => ({ ...f, entity_group_id: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin grupo (independiente)</SelectItem>
+                    {groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.code} — {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Asignar a un grupo permite compartir cuentas bancarias y generar asientos intercompañía.
+                </p>
+              </div>
+            )}
             {!editingId && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -356,7 +420,8 @@ export function EntitiesManager() {
           entityCode={wizardEntity.code}
           onComplete={() => { setWizardEntity(null); fetchEntities(); }}
         />
-      )}
+       )}
+      </div>
     </div>
   );
 }

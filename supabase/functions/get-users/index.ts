@@ -48,7 +48,7 @@ serve(async (req) => {
     // Get user roles with entity info
     const { data: roles, error: rolesError } = await adminClient
       .from("user_roles")
-      .select("*, entities:entity_id(name)");
+      .select("*, entities:entity_id(name), entity_groups:entity_group_id(name, code)");
 
     if (rolesError) throw rolesError;
 
@@ -59,9 +59,11 @@ serve(async (req) => {
           data: { user: authUser },
         } = await adminClient.auth.admin.getUserById(role.user_id);
 
-        const entityName = role.entity_id === null
-          ? "Global Admin"
-          : role.entities?.name || "Unknown Entity";
+        const entityName = role.entity_group_id
+          ? `Grupo: ${role.entity_groups?.code || "?"}`
+          : role.entity_id === null
+            ? "Global Admin"
+            : role.entities?.name || "Unknown Entity";
 
         // Check MFA enrollment via user factors
         let mfaEnrolled = false;
@@ -76,6 +78,7 @@ serve(async (req) => {
             email: authUser?.email || "Unknown",
             role: role.role,
             entity_id: role.entity_id,
+            entity_group_id: role.entity_group_id,
             entity_name: entityName,
             created_at: role.created_at,
             mfa_enrolled: mfaEnrolled,

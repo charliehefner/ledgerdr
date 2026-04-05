@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff, Globe, Building2, Filter, ShieldCheck, ShieldOff } from "lucide-react";
+import { Users, UserPlus, Loader2, Trash2, Mail, User, KeyRound, Eye, EyeOff, Globe, Building2, Filter, ShieldCheck, ShieldOff, Network } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntity } from "@/contexts/EntityContext";
@@ -50,11 +50,18 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
 
+interface EntityGroup {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface UserWithRole {
   id: string;
   email: string;
   role: AppRole;
   entity_id: string | null;
+  entity_group_id: string | null;
   entity_name: string;
   created_at: string;
   mfa_enrolled?: boolean;
@@ -75,13 +82,26 @@ export function UserManagement() {
   const [newUserIdentifier, setNewUserIdentifier] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<AppRole>("accountant");
-  const [newUserEntityId, setNewUserEntityId] = useState<string>("__global__");
+  const [newUserScopeType, setNewUserScopeType] = useState<"global" | "entity" | "group">("entity");
+  const [newUserEntityId, setNewUserEntityId] = useState<string>("");
+  const [newUserGroupId, setNewUserGroupId] = useState<string>("");
 
   // Edit dialog
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);
   const [editRole, setEditRole] = useState<AppRole>("accountant");
-  const [editEntityId, setEditEntityId] = useState<string>("__global__");
+  const [editScopeType, setEditScopeType] = useState<"global" | "entity" | "group">("entity");
+  const [editEntityId, setEditEntityId] = useState<string>("");
+  const [editGroupId, setEditGroupId] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Entity groups
+  const { data: entityGroups = [] } = useQuery({
+    queryKey: ["entity-groups"],
+    queryFn: async () => {
+      const { data } = await supabase.from("entity_groups").select("id, name, code").order("code");
+      return (data as EntityGroup[]) || [];
+    },
+  });
 
   // Reset password
   const [resetPasswordUser, setResetPasswordUser] = useState<UserWithRole | null>(null);
@@ -152,7 +172,17 @@ export function UserManagement() {
       return;
     }
 
-    const entityId = newUserEntityId === "__global__" ? null : newUserEntityId;
+    const entityId = newUserScopeType === "entity" ? newUserEntityId : null;
+    const entityGroupId = newUserScopeType === "group" ? newUserGroupId : null;
+
+    if (newUserScopeType === "entity" && !entityId) {
+      toast.error("Seleccione una entidad");
+      return;
+    }
+    if (newUserScopeType === "group" && !entityGroupId) {
+      toast.error("Seleccione un grupo");
+      return;
+    }
 
     setIsCreating(true);
     try {
@@ -160,6 +190,7 @@ export function UserManagement() {
         password: newUserPassword,
         role: newUserRole,
         entity_id: entityId,
+        entity_group_id: entityGroupId,
       };
       if (useUsername) {
         body.username = newUserIdentifier;
@@ -175,7 +206,9 @@ export function UserManagement() {
       setNewUserIdentifier("");
       setNewUserPassword("");
       setNewUserRole("accountant");
-      setNewUserEntityId("__global__");
+      setNewUserScopeType("entity");
+      setNewUserEntityId("");
+      setNewUserGroupId("");
       setUseUsername(false);
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
@@ -189,17 +222,39 @@ export function UserManagement() {
   const handleOpenEdit = (user: UserWithRole) => {
     setEditUser(user);
     setEditRole(user.role);
-    setEditEntityId(user.entity_id || "__global__");
+    if (user.entity_group_id) {
+      setEditScopeType("group");
+      setEditGroupId(user.entity_group_id);
+      setEditEntityId("");
+    } else if (user.entity_id) {
+      setEditScopeType("entity");
+      setEditEntityId(user.entity_id);
+      setEditGroupId("");
+    } else {
+      setEditScopeType("global");
+      setEditEntityId("");
+      setEditGroupId("");
+    }
   };
 
   const handleUpdateUser = async () => {
     if (!editUser) return;
-    const entityId = editEntityId === "__global__" ? null : editEntityId;
+    const entityId = editScopeType === "entity" ? editEntityId : null;
+    const entityGroupId = editScopeType === "group" ? editGroupId : null;
+
+    if (editScopeType === "entity" && !entityId) {
+      toast.error("Seleccione una entidad");
+      return;
+    }
+    if (editScopeType === "group" && !entityGroupId) {
+      toast.error("Seleccione un grupo");
+      return;
+    }
 
     setIsUpdating(true);
     try {
       const { error } = await supabase.functions.invoke("update-user-role", {
-        body: { userId: editUser.id, role: editRole, entity_id: entityId },
+        body: { userId: editUser.id, role: editRole, entity_id: entityId, entity_group_id: entityGroupId },
       });
       if (error) throw error;
 
@@ -400,31 +455,58 @@ export function UserManagement() {
                   </Select>
                 </div>
 
-                {/* Entity assignment */}
+                {/* Scope assignment */}
                 <div className="space-y-2">
-                  <Label>Asignación de Entidad</Label>
-                  <Select value={newUserEntityId} onValueChange={setNewUserEntityId}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isGlobalAdmin && (
-                        <SelectItem value="__global__">
-                          <span className="flex items-center gap-2">
-                            <Globe className="h-3 w-3" /> Global Admin — Todas las Entidades
-                          </span>
-                        </SelectItem>
-                      )}
-                      {entities.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          <span className="flex items-center gap-2">
-                            <Building2 className="h-3 w-3" /> {e.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Asignación de Acceso</Label>
+                  <div className="flex gap-2">
+                    {isGlobalAdmin && (
+                      <Button type="button" size="sm" variant={newUserScopeType === "global" ? "default" : "outline"} onClick={() => setNewUserScopeType("global")}>
+                        <Globe className="h-3 w-3 mr-1" /> Global
+                      </Button>
+                    )}
+                    <Button type="button" size="sm" variant={newUserScopeType === "entity" ? "default" : "outline"} onClick={() => setNewUserScopeType("entity")}>
+                      <Building2 className="h-3 w-3 mr-1" /> Entidad
+                    </Button>
+                    {entityGroups.length > 0 && (
+                      <Button type="button" size="sm" variant={newUserScopeType === "group" ? "default" : "outline"} onClick={() => setNewUserScopeType("group")}>
+                        <Network className="h-3 w-3 mr-1" /> Grupo
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {newUserScopeType === "entity" && (
+                  <div className="space-y-2">
+                    <Label>Entidad</Label>
+                    <Select value={newUserEntityId} onValueChange={setNewUserEntityId}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar entidad..." /></SelectTrigger>
+                      <SelectContent>
+                        {entities.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            <span className="flex items-center gap-2"><Building2 className="h-3 w-3" /> {e.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {newUserScopeType === "group" && (
+                  <div className="space-y-2">
+                    <Label>Grupo</Label>
+                    <Select value={newUserGroupId} onValueChange={setNewUserGroupId}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar grupo..." /></SelectTrigger>
+                      <SelectContent>
+                        {entityGroups.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            <span className="flex items-center gap-2"><Network className="h-3 w-3" /> {g.code} — {g.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">El usuario tendrá acceso a todas las entidades del grupo.</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isCreating}>
@@ -504,7 +586,11 @@ export function UserManagement() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {user.entity_id ? (
+                        {user.entity_group_id ? (
+                          <span className="flex items-center gap-1 text-sm text-accent-foreground">
+                            <Network className="h-3 w-3" /> Grupo: {entityGroups.find(g => g.id === user.entity_group_id)?.code || "—"}
+                          </span>
+                        ) : user.entity_id ? (
                           <span className="flex items-center gap-1 text-sm">
                             <Building2 className="h-3 w-3" /> {user.entity_name}
                           </span>
@@ -582,29 +668,56 @@ export function UserManagement() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Asignación de Entidad</Label>
-              <Select value={editEntityId} onValueChange={setEditEntityId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {isGlobalAdmin && (
-                    <SelectItem value="__global__">
-                      <span className="flex items-center gap-2">
-                        <Globe className="h-3 w-3" /> Global Admin — Todas las Entidades
-                      </span>
-                    </SelectItem>
-                  )}
-                  {entities.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      <span className="flex items-center gap-2">
-                        <Building2 className="h-3 w-3" /> {e.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Asignación de Acceso</Label>
+              <div className="flex gap-2">
+                {isGlobalAdmin && (
+                  <Button type="button" size="sm" variant={editScopeType === "global" ? "default" : "outline"} onClick={() => setEditScopeType("global")}>
+                    <Globe className="h-3 w-3 mr-1" /> Global
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant={editScopeType === "entity" ? "default" : "outline"} onClick={() => setEditScopeType("entity")}>
+                  <Building2 className="h-3 w-3 mr-1" /> Entidad
+                </Button>
+                {entityGroups.length > 0 && (
+                  <Button type="button" size="sm" variant={editScopeType === "group" ? "default" : "outline"} onClick={() => setEditScopeType("group")}>
+                    <Network className="h-3 w-3 mr-1" /> Grupo
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {editScopeType === "entity" && (
+              <div className="space-y-2">
+                <Label>Entidad</Label>
+                <Select value={editEntityId} onValueChange={setEditEntityId}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar entidad..." /></SelectTrigger>
+                  <SelectContent>
+                    {entities.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        <span className="flex items-center gap-2"><Building2 className="h-3 w-3" /> {e.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {editScopeType === "group" && (
+              <div className="space-y-2">
+                <Label>Grupo</Label>
+                <Select value={editGroupId} onValueChange={setEditGroupId}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar grupo..." /></SelectTrigger>
+                  <SelectContent>
+                    {entityGroups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <span className="flex items-center gap-2"><Network className="h-3 w-3" /> {g.code} — {g.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">El usuario tendrá acceso a todas las entidades del grupo.</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)} disabled={isUpdating}>

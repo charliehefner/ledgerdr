@@ -33,6 +33,7 @@ export function EntityProvider({ children }: { children: ReactNode }) {
   const { user, session } = useAuth();
   const [selectedEntityId, setSelectedEntityIdState] = useState<string | null>(null);
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [isGroupUser, setIsGroupUser] = useState(false);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
@@ -53,7 +54,7 @@ export function EntityProvider({ children }: { children: ReactNode }) {
 
         if (cancelled) return;
         setIsGlobalAdmin(isAdmin);
-
+        setIsGroupUser(false);
         if (isAdmin) {
           // Fetch all active entities
           const { data: ents, error } = await supabase
@@ -83,21 +84,49 @@ export function EntityProvider({ children }: { children: ReactNode }) {
             }
           }
         } else {
-          // Entity-scoped user — fetch their fixed entity
-          const { data: entityId } = await supabase.rpc("current_user_entity_id");
+          // Check if user has a group assignment
+          const { data: userRole } = await supabase
+            .from("user_roles")
+            .select("entity_id, entity_group_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
           if (cancelled) return;
 
-          if (entityId) {
-            setSelectedEntityIdState(entityId);
+          if (userRole?.entity_group_id) {
+            // Group-scoped user — fetch all entities in their group
+            setIsGroupUser(true);
+            const { data: groupEnts } = await supabase
+              .from("entities")
+              .select("id, name, code")
+              .eq("entity_group_id", userRole.entity_group_id)
+              .eq("is_active", true)
+              .order("name");
 
-            // Fetch entity details
+            if (!cancelled && groupEnts) {
+              setEntities(groupEnts);
+              if (groupEnts.length === 1) {
+                setSelectedEntityIdState(groupEnts[0].id);
+                localStorage.setItem(STORAGE_KEY, groupEnts[0].id);
+              } else {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored && groupEnts.some((e) => e.id === stored)) {
+                  setSelectedEntityIdState(stored);
+                } else if (groupEnts.length > 0) {
+                  setSelectedEntityIdState(groupEnts[0].id);
+                }
+              }
+            }
+          } else if (userRole?.entity_id) {
+            // Entity-scoped user — fetch their fixed entity
             const { data: ent } = await supabase
               .from("entities")
               .select("id, name, code")
-              .eq("id", entityId)
+              .eq("id", userRole.entity_id)
               .single();
 
             if (!cancelled && ent) {
+              setSelectedEntityIdState(ent.id);
               setEntities([ent]);
             }
           }

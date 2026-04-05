@@ -37,12 +37,17 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, username, password, role, entity_id } = body;
+    const { email, username, password, role, entity_id, entity_group_id } = body;
 
     // Validate entity_id format if provided
     if (entity_id !== undefined && entity_id !== null) {
       if (typeof entity_id !== "string" || !UUID_REGEX.test(entity_id)) {
         throw new Error("Invalid entity_id format");
+      }
+    }
+    if (entity_group_id !== undefined && entity_group_id !== null) {
+      if (typeof entity_group_id !== "string" || !UUID_REGEX.test(entity_group_id)) {
+        throw new Error("Invalid entity_group_id format");
       }
     }
 
@@ -156,11 +161,12 @@ serve(async (req) => {
       throw new Error("Failed to create user");
     }
 
-    // Add role to user_roles table with entity_id
+    // Add role to user_roles table with entity_id or entity_group_id
     const { error: roleError } = await adminClient.from("user_roles").insert({
       user_id: newUser.user.id,
       role: role,
       entity_id: entity_id || null,
+      entity_group_id: entity_group_id || null,
     });
 
     if (roleError) {

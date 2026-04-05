@@ -514,6 +514,7 @@ export type Database = {
           fixed_amount: number | null
           id: string
           is_active: boolean | null
+          is_shared: boolean
           updated_at: string | null
         }
         Insert: {
@@ -528,6 +529,7 @@ export type Database = {
           fixed_amount?: number | null
           id?: string
           is_active?: boolean | null
+          is_shared?: boolean
           updated_at?: string | null
         }
         Update: {
@@ -542,6 +544,7 @@ export type Database = {
           fixed_amount?: number | null
           id?: string
           is_active?: boolean | null
+          is_shared?: boolean
           updated_at?: string | null
         }
         Relationships: [
@@ -1635,6 +1638,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          entity_group_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -1648,6 +1652,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          entity_group_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -1661,11 +1666,44 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          entity_group_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
           rnc?: string | null
           tss_nomina_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entities_entity_group_id_fkey"
+            columns: ["entity_group_id"]
+            isOneToOne: false
+            referencedRelation: "entity_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_groups: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -2407,6 +2445,136 @@ export type Database = {
           {
             foreignKeyName: "industrial_trucks_entity_id_fkey"
             columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intercompany_account_config: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          payable_account_id: string
+          receivable_account_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          payable_account_id: string
+          receivable_account_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          payable_account_id?: string
+          receivable_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intercompany_account_config_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: true
+            referencedRelation: "entity_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_account_config_payable_account_id_fkey"
+            columns: ["payable_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_account_config_receivable_account_id_fkey"
+            columns: ["receivable_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intercompany_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          group_id: string
+          id: string
+          is_settled: boolean
+          journal_id_source: string | null
+          journal_id_target: string | null
+          settled_at: string | null
+          source_entity_id: string
+          target_entity_id: string
+          transaction_date: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          group_id: string
+          id?: string
+          is_settled?: boolean
+          journal_id_source?: string | null
+          journal_id_target?: string | null
+          settled_at?: string | null
+          source_entity_id: string
+          target_entity_id: string
+          transaction_date: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          group_id?: string
+          id?: string
+          is_settled?: boolean
+          journal_id_source?: string | null
+          journal_id_target?: string | null
+          settled_at?: string | null
+          source_entity_id?: string
+          target_entity_id?: string
+          transaction_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intercompany_transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "entity_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_transactions_journal_id_source_fkey"
+            columns: ["journal_id_source"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_transactions_journal_id_target_fkey"
+            columns: ["journal_id_target"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_transactions_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_transactions_target_entity_id_fkey"
+            columns: ["target_entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
             referencedColumns: ["id"]
@@ -4752,6 +4920,7 @@ export type Database = {
       user_roles: {
         Row: {
           created_at: string
+          entity_group_id: string | null
           entity_id: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
@@ -4759,6 +4928,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entity_group_id?: string | null
           entity_id?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
@@ -4766,12 +4936,20 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entity_group_id?: string | null
           entity_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_roles_entity_group_id_fkey"
+            columns: ["entity_group_id"]
+            isOneToOne: false
+            referencedRelation: "entity_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_roles_entity_id_fkey"
             columns: ["entity_id"]
@@ -5548,6 +5726,7 @@ export type Database = {
         Args: { p_entity_id: string }
         Returns: boolean
       }
+      user_has_group_access: { Args: { p_group_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:

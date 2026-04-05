@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle, Ban } from "lucide-react";
+import { Search, Edit, Eye, Users, ArrowUpDown, ArrowUp, ArrowDown, Umbrella, AlertTriangle, Clock, CheckCircle, Ban, ToggleLeft, ToggleRight } from "lucide-react";
 import { format, differenceInDays, addYears, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
@@ -72,6 +72,7 @@ const EMPLOYEE_COLUMNS: ColumnConfig[] = [
 
 export function EmployeeList({ onEdit }: EmployeeListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showActive, setShowActive] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [vacationDialogEmployee, setVacationDialogEmployee] = useState<{
     id: string;
@@ -175,8 +176,11 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
   const sortedAndFilteredEmployees = useMemo(() => {
     if (!employees) return [];
 
-    // Filter
-    let filtered = employees.filter(
+    // Filter by active/inactive
+    let filtered = employees.filter((emp) => emp.is_active === showActive);
+
+    // Filter by search term
+    filtered = filtered.filter(
       (emp) =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.cedula.includes(searchTerm) ||
@@ -217,7 +221,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     }
 
     return filtered;
-  }, [employees, searchTerm, sortConfig]);
+  }, [employees, searchTerm, sortConfig, showActive]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-DO", {
@@ -323,6 +327,24 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
               )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant={showActive ? "default" : "secondary"}
+                size="sm"
+                onClick={() => setShowActive(!showActive)}
+                className="gap-1.5 shrink-0"
+              >
+                {showActive ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Activos
+                  </>
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4" />
+                    Inactivos
+                  </>
+                )}
+              </Button>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

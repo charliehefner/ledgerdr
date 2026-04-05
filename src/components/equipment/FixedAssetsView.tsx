@@ -72,9 +72,6 @@ export function FixedAssetsView() {
       return data;
     },
   });
-      return data;
-    },
-  });
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", minimumFractionDigits: 0 }).format(val);

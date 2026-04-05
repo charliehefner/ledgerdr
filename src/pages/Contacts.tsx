@@ -135,9 +135,6 @@ export default function Contacts() {
       return data as Contact[];
     },
   });
-      return data as Contact[];
-    },
-  });
 
   const { data: allBankAccounts = [] } = useQuery({
     queryKey: ['contactBankAccounts'],

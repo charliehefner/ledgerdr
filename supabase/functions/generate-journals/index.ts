@@ -30,6 +30,14 @@ interface BankAccountLookup {
   id: string;
   chart_account_id: string | null;
   currency: string | null;
+  entity_id: string | null;
+  is_shared: boolean;
+}
+
+interface IntercompanyConfig {
+  group_id: string;
+  receivable_account_id: string;
+  payable_account_id: string;
 }
 
 function costCenterLabel(cc: string | null): string {

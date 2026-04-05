@@ -129,8 +129,8 @@ export function OperationsLogView() {
   const { data: fields } = useQuery({
     queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      let q = supabase.from("fields").select("*, farms(name)").eq("is_active", true).order("name");
-      q = applyEntityFilter(q as any);
+      let q: any = supabase.from("fields").select("*, farms(name)").eq("is_active", true).order("name");
+      q = applyEntityFilter(q);
       const { data, error } = await q;
       if (error) throw error;
       return data as Field[];

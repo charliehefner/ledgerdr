@@ -108,13 +108,57 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bank_accounts')
-        .select('id, account_name, account_type, bank_name, chart_account_id, currency')
+        .select('id, account_name, account_type, bank_name, chart_account_id, currency, is_shared, entity_id')
         .eq('is_active', true)
         .order('account_type, account_name');
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Fetch current entity's group to detect sibling shared accounts
+  const { data: currentEntityGroup } = useQuery({
+    queryKey: ['entity-group-for-tx'],
+    queryFn: async () => {
+      const { data: userRole } = await supabase.rpc('get_current_entity_id');
+      if (!userRole) return null;
+      const { data: ent } = await supabase
+        .from('entities')
+        .select('id, entity_group_id, code')
+        .eq('id', userRole)
+        .maybeSingle();
+      return ent;
+    },
+  });
+
+  // Fetch sibling entities in same group for labeling
+  const { data: siblingEntities = [] } = useQuery({
+    queryKey: ['sibling-entities', currentEntityGroup?.entity_group_id],
+    queryFn: async () => {
+      if (!currentEntityGroup?.entity_group_id) return [];
+      const { data } = await supabase
+        .from('entities')
+        .select('id, code, name')
+        .eq('entity_group_id', currentEntityGroup.entity_group_id)
+        .eq('is_active', true)
+        .neq('id', currentEntityGroup.id);
+      return data || [];
+    },
+    enabled: !!currentEntityGroup?.entity_group_id,
+  });
+
+  // Filter sibling shared bank accounts
+  const siblingSharedAccounts = bankAccounts.filter(a =>
+    a.is_shared &&
+    a.entity_id &&
+    currentEntityGroup?.id &&
+    a.entity_id !== currentEntityGroup.id &&
+    siblingEntities.some(s => s.id === a.entity_id)
+  );
+
+  const isIntercompanyPayment = (payMethodId: string) => {
+    return siblingSharedAccounts.some(a => a.id === payMethodId);
+  };
 
   // Fetch JORD AB head office account for transfer destination
   const { data: headOfficeAccounts = [] } = useQuery({

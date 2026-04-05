@@ -1,47 +1,55 @@
 
-# Reports Section Implementation Plan
 
-## Overview
-Build a `/reports` route with 6 report tabs, entity-aware filtering, date pickers, and Excel/PDF exports.
+# Proactive Bug Fix: Multi-Entity Gaps
 
-## Phase 1: Page structure & shared components
-- Create `src/pages/Reports.tsx` with `TabbedPageLayout`
-- Add `/reports` route, nav link (visible to admin, management, accountant only)
-- Add date range pickers (start/end) and entity filter at the top
-- Entity filter uses existing `useEntity()` context
+## What Caused the Schedule Issue
 
-## Phase 2: Tab components (6 files)
-Each tab gets its own component file under `src/components/reports/`:
+Yes, the Schedule problem was directly caused by the multi-entity implementation. Two things went wrong:
+1. Users like `cedenojord` had `entity_id = NULL` in their role, which is only valid for admin/management "global" access — supervisors need an explicit entity assignment
+2. The frontend code wasn't passing `entity_id` correctly during saves
 
-1. **ProfitLossReport.tsx** — calls `get_profit_loss` RPC, groups by INCOME/EXPENSE, footer totals, side-by-side entity columns when "All Entities"
-2. **BalanceSheetReport.tsx** — calls `get_balance_sheet` RPC, groups by ASSET/LIABILITY/EQUITY, single as-of date picker
-3. **CostPerFieldReport.tsx** — calls `get_cost_per_field` RPC, table + recharts bar chart
-4. **AgingReport.tsx** — queries `v_ap_ar_aging` view, groups by aging bucket, summary bar
-5. **TrialBalanceReport.tsx** — queries `v_trial_balance` view, debit/credit balance check
-6. **PayrollSummaryReport.tsx** — queries `v_payroll_summary` view joined with date range
+Both have been fixed. All 14 users are now assigned to E1.
 
-## Phase 3: Shared behaviors per tab
-- Loading skeleton
-- Empty state message
-- Error state with retry
-- Excel export (reuse existing `exceljs` pattern)
-- PDF export (reuse existing `jspdf` + `jspdf-autotable` pattern)
-- DOP currency formatting via `formatMoney` or `Intl.NumberFormat`
+## Remaining Issues Found
 
-## Phase 4: Nav visibility
-- Add Reports link to sidebar, gated to admin/management/accountant roles
-- Hide from supervisor/viewer/driver
+My audit uncovered three categories of problems that could cause similar failures in other modules:
 
-## Files to create (~8 files)
-- `src/pages/Reports.tsx`
-- `src/components/reports/ProfitLossReport.tsx`
-- `src/components/reports/BalanceSheetReport.tsx`
-- `src/components/reports/CostPerFieldReport.tsx`
-- `src/components/reports/AgingReport.tsx`
-- `src/components/reports/TrialBalanceReport.tsx`
-- `src/components/reports/PayrollSummaryReport.tsx`
-- `src/components/reports/ReportExports.tsx` (shared export utilities)
+### Issue 1: Tables Missing Auto-Entity Default (HIGH RISK)
 
-## Files to modify (~2 files)
-- `src/App.tsx` — add route
-- `src/components/layout/Sidebar.tsx` — add nav link with role gate
+Six tables have an `entity_id` column but **no `DEFAULT current_user_entity_id()`** and allow NULL. If the frontend doesn't explicitly pass entity_id, inserts succeed but with `NULL` — making the record invisible to entity-scoped queries and potentially orphaned.
+
+| Table | Affected Module |
+|---|---|
+| `bank_accounts` | Treasury, Petty Cash, Credit Cards |
+| `fixed_assets` | Equipment / Fixed Assets |
+| `contacts` | Contacts |
+| `approval_policies` | Approvals |
+| `approval_requests` | Approvals |
+| `hr_audit_log` | HR (audit trail) |
+
+**Fix:** Add `DEFAULT current_user_entity_id()` to each, and backfill any existing NULL rows with E1's UUID.
+
+### Issue 2: Duplicate / Conflicting RLS Policies (MEDIUM RISK)
+
+~30 tables have **both** old-style `has_role()` policies AND new entity-scoped `has_role_for_entity()` policies. Since PostgreSQL PERMISSIVE policies use OR logic, the old policies effectively **bypass entity isolation** — any supervisor could theoretically see another entity's data through the old policy. In a single-entity environment this is harmless, but it will become a real security issue if a second entity is added.
+
+**Fix:** Drop the old `has_role()` policies on tables that already have `has_role_for_entity()` equivalents, and add entity-scoped policies to the 6 tables that still lack them.
+
+### Issue 3: Frontend Components Not Filtering by Entity (LOW RISK)
+
+Several components (BankAccountsList, CreditCardsList, PettyCashView, FixedAssetDialog, Contacts) insert records without passing `entity_id` and don't filter queries by entity. With the database default fix (Issue 1), inserts will auto-tag correctly, but queries still need `useEntityFilter` to scope results.
+
+**Fix:** Add `useEntityFilter` to query hooks in affected components.
+
+## Implementation Steps
+
+1. **Database migration** — Add `DEFAULT current_user_entity_id()` to the 6 tables missing it; backfill existing NULL entity_id rows with E1's UUID
+2. **Database migration** — Drop redundant old-style `has_role()` RLS policies on tables that already have entity-scoped equivalents; add entity-scoped policies to the 6 tables that lack them
+3. **Frontend fixes** — Add `useEntityFilter` to BankAccountsList, CreditCardsList, PettyCashView, FixedAssetDialog, and Contacts page queries so data is properly scoped
+
+## Risk
+
+- All changes are additive or cleanup; no existing working functionality should break
+- The backfill targets only NULL entity_id rows, so already-tagged records are untouched
+- Single-entity environments see no behavioral difference, but the system is now ready for multi-entity
+

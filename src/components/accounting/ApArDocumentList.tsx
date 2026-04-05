@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,7 @@ interface Props {
 export function ApArDocumentList({ direction }: Props) {
   const { t } = useLanguage();
   const { canWriteSection, user } = useAuth();
+  const { selectedEntityId } = useEntity();
   const queryClient = useQueryClient();
   const canWrite = canWriteSection("ap-ar");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -283,6 +285,7 @@ export function ApArDocumentList({ direction }: Props) {
         status: 'open',
         amount_paid: 0,
         balance_remaining: totalAmount,
+        ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
       } as any);
       if (error) throw error;
     },

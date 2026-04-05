@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 type PettyCashAccount = {
   id: string;
@@ -33,6 +34,7 @@ const fmtNum = (n: number) =>
 
 export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
   const { t } = useLanguage();
+  const { selectedEntityId } = useEntity();
   const queryClient = useQueryClient();
   const [cashCounted, setCashCounted] = useState("");
   const [sourceAccountId, setSourceAccountId] = useState("");
@@ -118,6 +120,7 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
         destination_acct_code: fund.id,
         account_code: "0000",
         name: fund.account_name,
+        ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
       } as any);
       if (error) throw error;
     },

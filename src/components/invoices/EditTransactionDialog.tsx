@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { Ban, Loader2, Lock, Save } from "lucide-react";
 import { getDescription } from "@/lib/getDescription";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { TIPO_BIENES_SERVICIOS, TIPO_ANULACION } from "@/components/accounting/dgiiConstants";
 
 interface EditTransactionDialogProps {
@@ -53,6 +54,7 @@ export function EditTransactionDialog({
 }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const { selectedEntityId } = useEntity();
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isJournalPosted, setIsJournalPosted] = useState(false);
@@ -324,6 +326,7 @@ export function EditTransactionDialog({
               account_id: defaultAcct?.id || null,
               document_type: direction === 'receivable' ? 'invoice' : 'bill',
               document_number: transaction.legacy_id?.toString() || null,
+              ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
             });
           } else {
             // Sync updated fields to existing AP/AR document

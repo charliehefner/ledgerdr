@@ -38,11 +38,11 @@ export function CarretasView() {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["industrial-carretas", selectedEntityId],
     queryFn: async () => {
-      let query = supabase
+      let query: any = supabase
         .from("industrial_carretas")
         .select("*")
         .order("created_at", { ascending: false });
-      query = applyEntityFilter(query as any);
+      query = applyEntityFilter(query);
       const { data, error } = await query;
       if (error) throw error;
       return data;

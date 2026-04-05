@@ -33,11 +33,11 @@ export function PlantHoursView() {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["industrial-plant-hours", selectedEntityId],
     queryFn: async () => {
-      let query = supabase
+      let query: any = supabase
         .from("industrial_plant_hours")
         .select("*")
         .order("date", { ascending: false });
-      query = applyEntityFilter(query as any);
+      query = applyEntityFilter(query);
       const { data, error } = await query;
       if (error) throw error;
       return data;

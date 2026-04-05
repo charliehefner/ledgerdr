@@ -4498,6 +4498,36 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_recipients: {
+        Row: {
+          categories: string[]
+          chat_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          categories?: string[]
+          chat_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Update: {
+          categories?: string[]
+          chat_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tractor_maintenance: {
         Row: {
           created_at: string

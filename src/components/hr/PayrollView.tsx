@@ -72,17 +72,19 @@ export function PayrollView() {
       "payroll-period",
       format(selectedPeriod.startDate, "yyyy-MM-dd"),
       format(selectedPeriod.endDate, "yyyy-MM-dd"),
+      selectedEntityId,
     ],
     queryFn: async () => {
       const startStr = format(selectedPeriod.startDate, "yyyy-MM-dd");
       const endStr = format(selectedPeriod.endDate, "yyyy-MM-dd");
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("payroll_periods")
         .select("*")
         .eq("start_date", startStr)
-        .eq("end_date", endStr)
-        .maybeSingle();
+        .eq("end_date", endStr);
+      query = applyEntityFilter(query);
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       return data as PayrollPeriod | null;

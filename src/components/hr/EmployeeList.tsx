@@ -89,14 +89,15 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
   } = useColumnVisibility("employee-list", EMPLOYEE_COLUMNS);
 
   const { data: employees, isLoading } = useQuery({
-    queryKey: ["employees"],
+    queryKey: ["employees", selectedEntityId],
     queryFn: async () => {
       // Use employees_safe view to mask sensitive PII for non-admin users
-      const { data, error } = await supabase
+      let query = supabase
         .from("employees_safe")
         .select("*")
         .order("name");
-
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Employee[];
     },

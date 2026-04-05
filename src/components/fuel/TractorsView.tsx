@@ -104,13 +104,15 @@ export function TractorsView() {
   } = useColumnVisibility("tractors", tractorColumns);
 
   const { data: tractors, isLoading } = useQuery({
-    queryKey: ["tractors"],
+    queryKey: ["tractors", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("fuel_equipment")
         .select("*")
         .eq("equipment_type", "tractor")
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as TractorEquipment[];
     },

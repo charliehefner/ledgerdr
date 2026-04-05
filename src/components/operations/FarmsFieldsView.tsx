@@ -70,15 +70,18 @@ export function FarmsFieldsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   // Fetch farms
   const { data: farms, isLoading: farmsLoading } = useQuery({
-    queryKey: ["farms"],
+    queryKey: ["farms", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("farms")
         .select("*")
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Farm[];
     },
@@ -86,12 +89,14 @@ export function FarmsFieldsView() {
 
   // Fetch fields
   const { data: fields, isLoading: fieldsLoading } = useQuery({
-    queryKey: ["fields"],
+    queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("fields")
         .select("*, farms(name)")
         .order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Field[];
     },

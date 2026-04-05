@@ -235,9 +235,9 @@ export function OperationsLogView() {
 
   // Fetch operations with inputs
   const { data: operations, isLoading } = useQuery({
-    queryKey: ["operations"],
+    queryKey: ["operations", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("operations")
         .select(`
           *,
@@ -248,6 +248,8 @@ export function OperationsLogView() {
           operation_inputs:operation_inputs!operation_inputs_operation_id_fkey(id, inventory_item_id, quantity_used, inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit))
         `)
         .order("operation_date", { ascending: false });
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Operation[];
     },

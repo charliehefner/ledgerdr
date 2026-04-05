@@ -113,15 +113,16 @@ export function DayLaborView() {
 
   // Fetch entries for the selected week
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["day-labor", formatDateLocal(selectedFriday)],
+    queryKey: ["day-labor", formatDateLocal(selectedFriday), selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("day_labor_entries")
         .select("*")
         .eq("week_ending_date", formatDateLocal(selectedFriday))
         .order("work_date", { ascending: true })
         .order("created_at", { ascending: true });
-
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as DayLaborEntry[];
     },

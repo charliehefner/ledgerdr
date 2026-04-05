@@ -32,14 +32,17 @@ export function TrucksView() {
   const { toast } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["industrial-trucks"],
+    queryKey: ["industrial-trucks", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("industrial_trucks")
         .select("*")
         .order("created_at", { ascending: false });
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

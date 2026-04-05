@@ -329,6 +329,95 @@ Deno.serve(async (req) => {
           skipped.push(`${label}: líneas: ${lErr.message}`);
         } else {
           created++;
+
+          // ── INTERCOMPANY DETECTION ──
+          // Check if pay_method bank account belongs to a different entity in the same group
+          const bankAcct = txn.pay_method ? bankAccountMap.get(txn.pay_method) : null;
+          if (
+            bankAcct?.is_shared &&
+            bankAcct.entity_id &&
+            txn.entity_id &&
+            bankAcct.entity_id !== txn.entity_id
+          ) {
+            const payerGroupId = entityGroupMap.get(bankAcct.entity_id);
+            const beneficiaryGroupId = entityGroupMap.get(txn.entity_id);
+
+            if (payerGroupId && payerGroupId === beneficiaryGroupId) {
+              const icConfig = icConfigByGroup.get(payerGroupId);
+              if (icConfig) {
+                try {
+                  // Create payer journal: DR 1570 (receivable from beneficiary) / CR Bank
+                  const { data: payerJournalId, error: pjErr } = await db.rpc("create_journal_from_transaction", {
+                    p_transaction_id: txn.id,
+                    p_date: txn.transaction_date,
+                    p_description: `IC: ${txn.description || "Pago intercompañía"}${costCenterLabel(txn.cost_center)}`,
+                    p_created_by: userId,
+                    p_journal_type: "GJ",
+                  });
+
+                  if (!pjErr && payerJournalId) {
+                    await db.from("journals").update({
+                      currency: txn.currency || "DOP",
+                      exchange_rate: exchangeRate,
+                      entity_id: bankAcct.entity_id,
+                    }).eq("id", payerJournalId);
+
+                    const payerLines = [
+                      {
+                        journal_id: payerJournalId,
+                        account_id: icConfig.receivable_account_id,
+                        debit: txn.amount, credit: 0, created_by: userId,
+                        description: `CxC Intercompañía`,
+                      },
+                      {
+                        journal_id: payerJournalId,
+                        account_id: bankAcct.chart_account_id,
+                        debit: 0, credit: txn.amount, created_by: userId,
+                        description: `Pago por cuenta de subsidiaria`,
+                      },
+                    ];
+
+                    const { error: plErr } = await db.from("journal_lines").insert(payerLines);
+                    if (plErr) {
+                      await db.from("journals").delete().eq("id", payerJournalId);
+                      skipped.push(`${label}: IC payer lines: ${plErr.message}`);
+                    } else {
+                      created++;
+
+                      // Update beneficiary journal: replace bank credit with CR 2470 (payable to payer)
+                      // The beneficiary journal already has the expense lines correct,
+                      // but we need to swap the bank credit line to use the payable account
+                      await db.from("journal_lines")
+                        .update({ account_id: icConfig.payable_account_id, description: "CxP Intercompañía" })
+                        .eq("journal_id", journalId)
+                        .eq("account_id", payAccountId)
+                        .gt("credit", 0);
+
+                      // Record in intercompany_transactions
+                      await db.from("intercompany_transactions").insert({
+                        group_id: payerGroupId,
+                        source_entity_id: bankAcct.entity_id,
+                        target_entity_id: txn.entity_id,
+                        journal_id_source: payerJournalId,
+                        journal_id_target: journalId,
+                        amount: txn.amount,
+                        currency: txn.currency || "DOP",
+                        description: txn.description || null,
+                        transaction_date: txn.transaction_date,
+                        is_settled: false,
+                      });
+                    }
+                  } else if (pjErr) {
+                    skipped.push(`${label}: IC payer journal: ${pjErr.message}`);
+                  }
+                } catch (icErr: any) {
+                  skipped.push(`${label}: IC error: ${icErr.message || "unknown"}`);
+                }
+              } else {
+                skipped.push(`${label}: IC sin config para grupo ${payerGroupId}`);
+              }
+            }
+          }
         }
       } catch (e: any) {
         skipped.push(`${label}: ${e.message || "error desconocido"}`);

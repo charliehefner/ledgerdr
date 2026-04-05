@@ -34,6 +34,7 @@ const fmtNum = (n: number) =>
 
 export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
   const { t } = useLanguage();
+  const { selectedEntityId } = useEntity();
   const queryClient = useQueryClient();
   const [cashCounted, setCashCounted] = useState("");
   const [sourceAccountId, setSourceAccountId] = useState("");

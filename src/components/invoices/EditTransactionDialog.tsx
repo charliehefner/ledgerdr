@@ -54,6 +54,7 @@ export function EditTransactionDialog({
 }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const { selectedEntityId } = useEntity();
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isJournalPosted, setIsJournalPosted] = useState(false);

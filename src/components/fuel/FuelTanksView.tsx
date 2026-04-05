@@ -31,6 +31,7 @@ import { Plus, Pencil, Fuel, ArrowLeftRight, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { Progress } from "@/components/ui/progress";
 
 interface FuelTank {

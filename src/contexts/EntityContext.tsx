@@ -54,7 +54,7 @@ export function EntityProvider({ children }: { children: ReactNode }) {
 
         if (cancelled) return;
         setIsGlobalAdmin(isAdmin);
-
+        setIsGroupUser(false);
         if (isAdmin) {
           // Fetch all active entities
           const { data: ents, error } = await supabase

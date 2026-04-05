@@ -82,7 +82,9 @@ export function UserManagement() {
   const [newUserIdentifier, setNewUserIdentifier] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<AppRole>("accountant");
-  const [newUserEntityId, setNewUserEntityId] = useState<string>("__global__");
+  const [newUserScopeType, setNewUserScopeType] = useState<"global" | "entity" | "group">("entity");
+  const [newUserEntityId, setNewUserEntityId] = useState<string>("");
+  const [newUserGroupId, setNewUserGroupId] = useState<string>("");
 
   // Edit dialog
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);

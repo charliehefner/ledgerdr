@@ -297,19 +297,32 @@ export function CronogramaGrid() {
       if (!entityId) throw new Error("Seleccione una entidad antes de guardar.");
 
       // Ensure week row exists before inserting entry (FK constraint)
-      const { data: weekRow, error: weekError } = await supabase
+      const { data: existingWeek, error: existingWeekError } = await supabase
         .from("cronograma_weeks")
-        .upsert(
-          { week_ending_date: entry.week_ending_date, is_closed: false, entity_id: entityId },
-          { onConflict: "week_ending_date,entity_id", ignoreDuplicates: true }
-        )
         .select("id")
-        .single();
-      if (weekError) throw weekError;
+        .eq("week_ending_date", entry.week_ending_date)
+        .eq("entity_id", entityId)
+        .maybeSingle();
+      if (existingWeekError) throw existingWeekError;
+
+      let weekId = existingWeek?.id;
+
+      if (!weekId) {
+        const { data: newWeek, error: newWeekError } = await supabase
+          .from("cronograma_weeks")
+          .insert({ week_ending_date: entry.week_ending_date, is_closed: false, entity_id: entityId })
+          .select("id")
+          .single();
+
+        if (newWeekError) throw newWeekError;
+        weekId = newWeek.id;
+      }
       
       // Find existing entry
       const existing = entries.find(
-        e => e.worker_name === entry.worker_name && 
+        e => e.worker_type === entry.worker_type &&
+             e.worker_id === ((entry as Partial<CronogramaEntry>).worker_id ?? null) &&
+             e.worker_name === entry.worker_name && 
              e.day_of_week === entry.day_of_week && 
              e.time_slot === entry.time_slot
       );
@@ -324,7 +337,7 @@ export function CronogramaGrid() {
         const { error } = await supabase
           .from("cronograma_entries")
           .insert({
-            cronograma_week_id: weekRow.id,
+            cronograma_week_id: weekId,
             week_ending_date: entry.week_ending_date,
             worker_type: entry.worker_type,
             worker_name: entry.worker_name,
@@ -343,7 +356,10 @@ export function CronogramaGrid() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cronograma-entries", weekEndingDate] });
+      queryClient.invalidateQueries({ queryKey: ["cronograma-entries", weekEndingDate, selectedEntityId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : t("common.error"));
     },
   });
 

@@ -171,6 +171,7 @@ export function EntitiesManager() {
         setDialogOpen(false);
         fetchEntities();
       } else {
+        const groupId = form.entity_group_id === "__none__" ? null : form.entity_group_id;
         const { data: inserted, error } = await supabase.from("entities").insert({
           name: form.name.trim(),
           code: form.code.trim().toUpperCase(),
@@ -178,6 +179,7 @@ export function EntitiesManager() {
           country_code: form.country_code.trim() || "DO",
           currency: form.currency.trim() || "DOP",
           rnc: form.rnc.trim() || null,
+          entity_group_id: groupId,
         }).select().single();
         if (error) {
           if (error.code === "23505") {

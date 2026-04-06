@@ -70,6 +70,8 @@ export function ServicesView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const canWrite = canWriteHrTab(user?.role, "servicios");
   const [showClosed, setShowClosed] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

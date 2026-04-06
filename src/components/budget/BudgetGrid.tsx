@@ -617,7 +617,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
               <span className="text-foreground text-xs">{lc.desc}</span>
               <button
                 onClick={() => { setAddSubLineFor(lc.code); setNewSubLabel(""); }}
-                className="ml-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                className="ml-1 text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-opacity"
                 title={t("budget.addSubLine")}
               >
                 <Plus className="h-3.5 w-3.5" />

@@ -515,6 +515,7 @@ export function PayrollTimeGrid({
             end_time: null,
             is_absent: false, // Holiday without times is NOT an absence
             is_holiday: true,
+            entity_id: selectedEntityId!,
           }));
           
           const { error } = await supabase

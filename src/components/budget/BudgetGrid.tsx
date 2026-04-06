@@ -7,7 +7,9 @@ import { getDescription } from "@/lib/getDescription";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Download, FileSpreadsheet, FileText, ChevronRight, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Search, Download, FileSpreadsheet, FileText, ChevronRight, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ActualDetailDialog } from "./ActualDetailDialog";
 import { AccountSelector } from "./AccountSelector";
 import { useExport } from "@/hooks/useExport";
@@ -39,45 +41,30 @@ interface PLSection {
   key: string;
   labelKey: string;
   type: PLSectionType;
-  /** For "accounts" sections: match account codes starting with these prefixes */
   codePrefixes?: string[];
-  /** For "accounts" sections: filter by account_type */
   accountTypes?: string[];
-  /** Sign multiplier: +1 for revenue, -1 for cost. Used in computed rows. */
   sign?: number;
-  /** For "computed" rows: which subtotal keys to sum (with their signs) */
   computeFrom?: { key: string; sign: number }[];
 }
 
 const PL_SECTIONS: PLSection[] = [
-  // Revenue
   { key: "netSales", labelKey: "budget.section.netSales", type: "accounts", codePrefixes: ["30","31","32","33","34","35","36","37","38"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
   { key: "totalRevenue", labelKey: "budget.section.totalRevenue", type: "subtotal", computeFrom: [{ key: "netSales", sign: 1 }] },
-
-  // Costs
   { key: "rawMaterial", labelKey: "budget.section.rawMaterial", type: "accounts", codePrefixes: ["40","41","42","43","44","45","46","47","48"], accountTypes: ["EXPENSE","COST_OF_GOODS_SOLD"], sign: -1 },
   { key: "otherExternal", labelKey: "budget.section.otherExternal", type: "accounts", codePrefixes: ["50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "personnelCost", labelKey: "budget.section.personnelCost", type: "accounts", codePrefixes: ["70","71","72","73","74","75","76"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "depreciation", labelKey: "budget.section.depreciation", type: "accounts", codePrefixes: ["77","78"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "totalCost", labelKey: "budget.section.totalCost", type: "subtotal", computeFrom: [{ key: "rawMaterial", sign: 1 },{ key: "otherExternal", sign: 1 },{ key: "personnelCost", sign: 1 },{ key: "depreciation", sign: 1 }] },
-
-  // Operating profit
   { key: "operatingProfit", labelKey: "budget.section.operatingProfit", type: "computed", computeFrom: [{ key: "totalRevenue", sign: 1 },{ key: "totalCost", sign: 1 }] },
-
-  // Financial items
   { key: "interestIncome", labelKey: "budget.section.interestIncome", type: "accounts", codePrefixes: ["80","81","82","831","834","835","836","837","838","839"], accountTypes: ["INCOME","REVENUE"], sign: 1 },
   { key: "interestExpense", labelKey: "budget.section.interestExpense", type: "accounts", codePrefixes: ["841","842","844","845","846"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "realizedFx", labelKey: "budget.section.realizedFx", type: "accounts", codePrefixes: ["833","843"], sign: 1 },
   { key: "unrealizedFx", labelKey: "budget.section.unrealizedFx", type: "accounts", codePrefixes: ["851"], sign: -1 },
   { key: "totalFinancial", labelKey: "budget.section.totalFinancial", type: "subtotal", computeFrom: [{ key: "interestIncome", sign: 1 },{ key: "interestExpense", sign: 1 },{ key: "realizedFx", sign: 1 },{ key: "unrealizedFx", sign: 1 }] },
   { key: "profitAfterFinancial", labelKey: "budget.section.profitAfterFinancial", type: "computed", computeFrom: [{ key: "operatingProfit", sign: 1 },{ key: "totalFinancial", sign: 1 }] },
-
-  // Appropriations (88xx are EQUITY type)
   { key: "appropriations", labelKey: "budget.section.appropriations", type: "accounts", codePrefixes: ["88"], accountTypes: ["EQUITY"], sign: -1 },
   { key: "totalAppropriations", labelKey: "budget.section.totalAppropriations", type: "subtotal", computeFrom: [{ key: "appropriations", sign: 1 }] },
   { key: "profitBeforeTax", labelKey: "budget.section.profitBeforeTax", type: "computed", computeFrom: [{ key: "profitAfterFinancial", sign: 1 },{ key: "totalAppropriations", sign: 1 }] },
-
-  // Tax
   { key: "companyTax", labelKey: "budget.section.companyTax", type: "accounts", codePrefixes: ["89"], accountTypes: ["EXPENSE"], sign: -1 },
   { key: "totalTaxes", labelKey: "budget.section.totalTaxes", type: "subtotal", computeFrom: [{ key: "companyTax", sign: 1 }] },
   { key: "netProfit", labelKey: "budget.section.netProfit", type: "computed", computeFrom: [{ key: "profitBeforeTax", sign: 1 },{ key: "totalTaxes", sign: 1 }] },
@@ -107,6 +94,11 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   const [detailCode, setDetailCode] = useState("");
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
+  // Sub-line state
+  const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
+  const [addSubLineFor, setAddSubLineFor] = useState<string | null>(null);
+  const [newSubLabel, setNewSubLabel] = useState("");
+
   // ── Hidden accounts (display-only filter) ───────────────────────
   const hiddenStorageKey = `budget-hidden-accounts-${budgetType}-${fiscalYear}`;
   const [hiddenCodes, setHiddenCodes] = useState<Set<string>>(() => {
@@ -116,7 +108,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     } catch { return new Set<string>(); }
   });
 
-  // Re-read from localStorage when storage key changes (tab/year switch)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(hiddenStorageKey);
@@ -124,7 +115,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     } catch { setHiddenCodes(new Set<string>()); }
   }, [hiddenStorageKey]);
 
-  // Persist selections to localStorage
   useEffect(() => {
     localStorage.setItem(hiddenStorageKey, JSON.stringify(Array.from(hiddenCodes)));
   }, [hiddenCodes, hiddenStorageKey]);
@@ -138,7 +128,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   }, []);
 
   const showAllAccounts = useCallback(() => setHiddenCodes(new Set()), []);
-  // hideAllAccounts defined after lineCodes
 
   // Fetch line codes
   const { data: rawLineCodes = [] } = useQuery({
@@ -148,8 +137,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         const { data } = await supabase.from("cbs_codes").select("code, english_description, spanish_description").order("code");
         return (data || []).map((c) => ({ code: c.code, desc: getDescription(c, language) }));
       }
-
-      // For P&L: fetch ALL income + expense accounts (not just expense)
       const { data: accounts } = await supabase
         .from("chart_of_accounts")
         .select("account_code, english_description, spanish_description, account_type")
@@ -169,7 +156,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     },
   });
 
-  // Defensive: also filter cached data so it disappears immediately without a hard refresh
   const lineCodes = useMemo(
     () =>
       budgetType === "pl"
@@ -182,6 +168,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     setHiddenCodes(new Set(lineCodes.map(lc => lc.code)));
   }, [lineCodes]);
 
+  // Fetch budget lines (including sub-lines)
   const { data: budgetLines = [] } = useQuery({
     queryKey: ["budget-lines", budgetType, projectCode, fiscalYear],
     queryFn: async () => {
@@ -202,6 +189,40 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       return data || [];
     },
   });
+
+  // Separate top-level lines from sub-lines
+  const topLevelLines = useMemo(() => budgetLines.filter(bl => !bl.parent_line_id), [budgetLines]);
+  const subLinesByParent = useMemo(() => {
+    const map: Record<string, typeof budgetLines> = {};
+    budgetLines.forEach(bl => {
+      if (bl.parent_line_id) {
+        if (!map[bl.parent_line_id]) map[bl.parent_line_id] = [];
+        map[bl.parent_line_id].push(bl);
+      }
+    });
+    return map;
+  }, [budgetLines]);
+
+  // Build line map (top-level only for account-code lookup)
+  const lineMap: Record<string, any> = {};
+  topLevelLines.forEach(bl => { lineMap[bl.line_code] = bl; });
+
+  // Compute auto-summed values for parents that have sub-lines
+  const getLineValues = useCallback((lineCode: string) => {
+    const bl = lineMap[lineCode];
+    if (!bl) return null;
+    const children = subLinesByParent[bl.id];
+    if (!children || children.length === 0) return bl;
+
+    // Auto-sum from children
+    const summed: any = { ...bl };
+    summed.annual_budget = children.reduce((s: number, c: any) => s + (c.annual_budget ?? 0), 0);
+    summed.current_forecast = children.reduce((s: number, c: any) => s + (c.current_forecast ?? 0), 0);
+    MONTH_KEYS.forEach(mk => {
+      summed[mk] = children.reduce((s: number, c: any) => s + (c[mk] ?? 0), 0);
+    });
+    return summed;
+  }, [lineMap, subLinesByParent]);
 
   // Fetch actuals
   const { data: actuals = {} } = useQuery({
@@ -249,7 +270,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
 
       const map: Record<string, number> = {};
       txns.forEach((tx: any) => {
-        // Prefer UUID-joined codes, fall back to legacy text columns
         const acctCode = tx.chart_of_accounts?.account_code || tx.master_acct_code;
         const cbsCode = tx.cbs_codes?.code || tx.cbs_code;
         const key = budgetType === "project" ? cbsCode : acctCode;
@@ -263,21 +283,18 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     },
   });
 
-  // Build line map
-  const lineMap: Record<string, any> = {};
-  budgetLines.forEach(bl => { lineMap[bl.line_code] = bl; });
-
-  // Upsert mutation
+  // Upsert mutation (works for both top-level and sub-lines)
   const upsertMutation = useMutation({
-    mutationFn: async (params: { lineCode: string; field: string; value: number }) => {
-      const existing = lineMap[params.lineCode];
-      if (existing) {
+    mutationFn: async (params: { lineId?: string; lineCode: string; field: string; value: number; parentLineId?: string; subLabel?: string }) => {
+      if (params.lineId) {
+        // Update existing line (top-level or sub-line)
         const { error } = await supabase
           .from("budget_lines")
           .update({ [params.field]: params.value } as any)
-          .eq("id", existing.id);
+          .eq("id", params.lineId);
         if (error) throw error;
       } else {
+        // Insert new top-level line
         const row: any = {
           budget_type: budgetType,
           project_code: budgetType === "project" ? projectCode : null,
@@ -285,6 +302,8 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           line_code: params.lineCode,
           [params.field]: params.value,
           created_by: user?.id || null,
+          parent_line_id: params.parentLineId || null,
+          sub_label: params.subLabel || null,
         };
         const { error } = await supabase.from("budget_lines").insert(row);
         if (error) throw error;
@@ -299,32 +318,117 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
   });
 
   const handleBlur = useCallback(
-    (lineCode: string, field: string, value: string) => {
+    (lineCode: string, field: string, value: string, lineId?: string) => {
       const num = parseFloat(value) || 0;
-      const existing = lineMap[lineCode];
-      const current = existing ? (existing[field] ?? 0) : 0;
-      if (num !== current) {
-        upsertMutation.mutate({ lineCode, field, value: num });
+      if (lineId) {
+        // Sub-line or existing line by ID
+        const existing = budgetLines.find(bl => bl.id === lineId);
+        const current = existing ? (existing[field as keyof typeof existing] ?? 0) : 0;
+        if (num !== current) {
+          upsertMutation.mutate({ lineId, lineCode, field, value: num });
+        }
+      } else {
+        const existing = lineMap[lineCode];
+        const current = existing ? (existing[field] ?? 0) : 0;
+        if (num !== current) {
+          upsertMutation.mutate({ lineCode, field, value: num });
+        }
       }
     },
-    [lineMap, upsertMutation]
+    [lineMap, budgetLines, upsertMutation]
   );
 
+  // Add sub-line mutation
+  const addSubLineMutation = useMutation({
+    mutationFn: async ({ parentId, lineCode, label }: { parentId: string; lineCode: string; label: string }) => {
+      const row: any = {
+        budget_type: budgetType,
+        project_code: budgetType === "project" ? projectCode : null,
+        fiscal_year: fiscalYear,
+        line_code: lineCode,
+        parent_line_id: parentId,
+        sub_label: label,
+        created_by: user?.id || null,
+      };
+      const { error } = await supabase.from("budget_lines").insert(row);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget-lines", budgetType, projectCode, fiscalYear] });
+      toast.success(t("budget.subLineAdded"));
+      setAddSubLineFor(null);
+      setNewSubLabel("");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Delete sub-line mutation
+  const deleteSubLineMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("budget_lines").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget-lines", budgetType, projectCode, fiscalYear] });
+      toast.success(t("budget.subLineDeleted"));
+    },
+  });
+
+  const handleAddSubLine = () => {
+    if (!addSubLineFor || !newSubLabel.trim()) return;
+    const parentBl = lineMap[addSubLineFor];
+    if (!parentBl) {
+      // Need to create the parent line first, then add sub-line
+      // For simplicity, create parent first
+      const createParentAndChild = async () => {
+        const { data: parentData, error: parentErr } = await supabase
+          .from("budget_lines")
+          .insert({
+            budget_type: budgetType,
+            project_code: budgetType === "project" ? projectCode : null,
+            fiscal_year: fiscalYear,
+            line_code: addSubLineFor!,
+            created_by: user?.id || null,
+          })
+          .select("id")
+          .single();
+        if (parentErr) throw parentErr;
+        await addSubLineMutation.mutateAsync({
+          parentId: parentData.id,
+          lineCode: addSubLineFor!,
+          label: newSubLabel.trim(),
+        });
+      };
+      createParentAndChild().catch(err => toast.error(err.message));
+    } else {
+      addSubLineMutation.mutate({
+        parentId: parentBl.id,
+        lineCode: addSubLineFor,
+        label: newSubLabel.trim(),
+      });
+    }
+  };
+
+  const toggleExpanded = useCallback((code: string) => {
+    setExpandedAccounts(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  }, []);
+
   // ── P&L sectioned data ──────────────────────────────────────────
-  // Group line codes into sections and compute aggregates
   const plData = useMemo(() => {
     if (budgetType !== "pl") return null;
 
-    // Assign each account to a section
     const sectionAccounts: Record<string, typeof lineCodes> = {};
     PL_SECTIONS.forEach(s => { if (s.type === "accounts") sectionAccounts[s.key] = []; });
 
-    // Sort sections by prefix length descending so more specific prefixes match first
     const accountSections = PL_SECTIONS.filter(s => s.type === "accounts" && s.codePrefixes);
     const sortedSections = [...accountSections].sort((a, b) => {
       const maxA = Math.max(...(a.codePrefixes || []).map(p => p.length));
       const maxB = Math.max(...(b.codePrefixes || []).map(p => p.length));
-      return maxB - maxA; // longer prefixes first
+      return maxB - maxA;
     });
 
     lineCodes.forEach(lc => {
@@ -336,16 +440,14 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       }
     });
 
-    // Compute aggregates per section
     type Agg = { budget: number; forecast: number; actual: number; months: number[] };
     const sectionAgg: Record<string, Agg> = {};
 
-    // First pass: account sections
     PL_SECTIONS.forEach(section => {
       if (section.type === "accounts") {
         const agg: Agg = { budget: 0, forecast: 0, actual: 0, months: new Array(12).fill(0) };
         (sectionAccounts[section.key] || []).forEach(lc => {
-          const bl = lineMap[lc.code];
+          const bl = getLineValues(lc.code);
           agg.budget += bl?.annual_budget ?? 0;
           agg.forecast += bl?.current_forecast ?? 0;
           agg.actual += actuals[lc.code] ?? 0;
@@ -355,7 +457,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       }
     });
 
-    // Resolve subtotals and computed rows (order matters)
     const resolveAgg = (key: string): Agg => {
       if (sectionAgg[key]) return sectionAgg[key];
       return { budget: 0, forecast: 0, actual: 0, months: new Array(12).fill(0) };
@@ -376,20 +477,20 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     });
 
     return { sectionAccounts, sectionAgg };
-  }, [budgetType, lineCodes, lineMap, actuals]);
+  }, [budgetType, lineCodes, getLineValues, actuals]);
 
-  // ── Totals (for project tabs and export) ─────────────────────────
+  // ── Totals ─────────────────────────────────────────────────
   const totals = useMemo(() => {
     const t = { budget: 0, forecast: 0, actual: 0, months: new Array(12).fill(0) };
     lineCodes.forEach(lc => {
-      const bl = lineMap[lc.code];
+      const bl = getLineValues(lc.code);
       t.budget += bl?.annual_budget ?? 0;
       t.forecast += bl?.current_forecast ?? 0;
       t.actual += actuals[lc.code] ?? 0;
       MONTH_KEYS.forEach((mk, mi) => { t.months[mi] += bl?.[mk] ?? 0; });
     });
     return t;
-  }, [lineCodes, lineMap, actuals]);
+  }, [lineCodes, getLineValues, actuals]);
 
   const totalMonthsSum = totals.months.reduce((a, b) => a + b, 0);
   const totalToDistribute = totals.forecast - totals.actual - totalMonthsSum;
@@ -413,7 +514,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
       ...monthLabels.map((m, i) => ({ key: `m${i}`, header: m, width: 12 })),
     ];
     const rows = lineCodes.map(lc => {
-      const bl = lineMap[lc.code];
+      const bl = getLineValues(lc.code);
       const actualVal = actuals[lc.code] ?? 0;
       const forecastVal = bl?.current_forecast ?? 0;
       const row: Record<string, string | number> = {
@@ -435,49 +536,143 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     };
     totals.months.forEach((mv, mi) => { totalsRow[`m${mi}`] = mv; });
     return { columns, rows, totalsRow };
-  }, [lineCodes, lineMap, actuals, totals, totalToDistribute, monthLabels, t]);
+  }, [lineCodes, getLineValues, actuals, totals, totalToDistribute, monthLabels, t]);
 
   // ── Render helpers ───────────────────────────────────────────────
-  const renderAccountRow = (lc: { code: string; desc: string }, rowIdx: number) => {
-    const bl = lineMap[lc.code];
-    const actualVal = actuals[lc.code] ?? 0;
-    const forecastVal = bl?.current_forecast ?? 0;
-    const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0);
-    const toDistribute = forecastVal - actualVal - monthsSum;
-    const stripeBg = rowIdx % 2 === 1 ? "bg-accent" : "";
+  const renderSubLineRow = (subLine: any, rowIdx: number) => {
+    const forecastVal = subLine.current_forecast ?? 0;
+    const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (subLine[mk] ?? 0), 0);
+    const toDistribute = forecastVal - monthsSum;
+    const stripeBg = rowIdx % 2 === 1 ? "bg-accent/50" : "";
 
     return (
-      <tr key={lc.code} className={cn("border-b hover:bg-muted/60", stripeBg)}>
+      <tr key={subLine.id} className={cn("border-b hover:bg-muted/40", stripeBg)}>
         <td className={cn("sticky left-0 z-20 border-r px-3 py-1.5 whitespace-nowrap", stripeBg || "bg-background")} style={{ minWidth: 100 }}>
-          <span className="font-mono text-xs">{lc.code}</span>
-          <span className="ml-2 text-foreground text-xs">{lc.desc}</span>
-        </td>
-        <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
-          <Input key={`${lc.code}-budget-${bl?.annual_budget ?? 0}`} type="number" defaultValue={bl?.annual_budget ?? 0}
-            className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(lc.code, "annual_budget", e.target.value)} />
-        </td>
-        <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
-          <Input key={`${lc.code}-forecast-${bl?.current_forecast ?? 0}`} type="number" defaultValue={bl?.current_forecast ?? 0}
-            className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(lc.code, "current_forecast", e.target.value)} />
-        </td>
-        <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs", stripeBg || "bg-background")} style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
-          <button onClick={() => { setDetailCode(lc.code); setDetailOpen(true); }}
-            className="inline-flex items-center gap-1 hover:text-primary transition-colors">
-            {fmt(actualVal)}<Search className="h-3 w-3" />
+          <span className="ml-6 text-xs text-muted-foreground">↳</span>
+          <span className="ml-1 text-xs text-foreground">{subLine.sub_label}</span>
+          <button
+            onClick={() => {
+              if (confirm(t("budget.deleteSubLine") + "?")) {
+                deleteSubLineMutation.mutate(subLine.id);
+              }
+            }}
+            className="ml-2 text-destructive/60 hover:text-destructive inline-flex"
+            title={t("budget.deleteSubLine")}
+          >
+            <Trash2 className="h-3 w-3" />
           </button>
         </td>
-        <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs font-semibold",
+        <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
+          <Input key={`sub-${subLine.id}-budget-${subLine.annual_budget ?? 0}`} type="number" defaultValue={subLine.annual_budget ?? 0}
+            className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(subLine.line_code, "annual_budget", e.target.value, subLine.id)} />
+        </td>
+        <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
+          <Input key={`sub-${subLine.id}-forecast-${subLine.current_forecast ?? 0}`} type="number" defaultValue={subLine.current_forecast ?? 0}
+            className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(subLine.line_code, "current_forecast", e.target.value, subLine.id)} />
+        </td>
+        <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs text-muted-foreground", stripeBg || "bg-background")} style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
+          —
+        </td>
+        <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs",
           stripeBg || "bg-background", toDistribute >= 0 ? "text-green-600" : "text-red-600"
         )} style={{ left: stickyLeft[4], minWidth: COL_W[4] }}>
           {fmt(toDistribute)}
         </td>
         {MONTH_KEYS.map((mk, mi) => (
           <td key={mi} className="px-1 py-1" style={{ minWidth: 100 }}>
-            <Input key={`${lc.code}-${mk}-${bl?.[mk] ?? 0}`} type="number" defaultValue={bl?.[mk] ?? 0}
-              className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(lc.code, mk, e.target.value)} />
+            <Input key={`sub-${subLine.id}-${mk}-${subLine[mk] ?? 0}`} type="number" defaultValue={subLine[mk] ?? 0}
+              className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(subLine.line_code, mk, e.target.value, subLine.id)} />
           </td>
         ))}
       </tr>
+    );
+  };
+
+  const renderAccountRow = (lc: { code: string; desc: string }, rowIdx: number) => {
+    const bl = getLineValues(lc.code);
+    const rawBl = lineMap[lc.code];
+    const hasSubLines = rawBl && subLinesByParent[rawBl.id]?.length > 0;
+    const isExpanded = expandedAccounts.has(lc.code);
+    const actualVal = actuals[lc.code] ?? 0;
+    const forecastVal = bl?.current_forecast ?? 0;
+    const monthsSum = MONTH_KEYS.reduce((s, mk) => s + (bl?.[mk] ?? 0), 0);
+    const toDistribute = forecastVal - actualVal - monthsSum;
+    const stripeBg = rowIdx % 2 === 1 ? "bg-accent" : "";
+
+    const children = hasSubLines ? subLinesByParent[rawBl.id] : [];
+
+    return (
+      <>
+        <tr key={lc.code} className={cn("border-b hover:bg-muted/60 group/row", stripeBg)}>
+          <td className={cn("sticky left-0 z-20 border-r px-3 py-1.5 whitespace-nowrap", stripeBg || "bg-background")} style={{ minWidth: 100 }}>
+            <span className="inline-flex items-center gap-1">
+              {hasSubLines ? (
+                <button onClick={() => toggleExpanded(lc.code)} className="hover:text-primary">
+                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                </button>
+              ) : (
+                <span className="w-3.5" />
+              )}
+              <span className="font-mono text-xs">{lc.code}</span>
+              <span className="text-foreground text-xs">{lc.desc}</span>
+              <button
+                onClick={() => { setAddSubLineFor(lc.code); setNewSubLabel(""); }}
+                className="ml-1 text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-opacity"
+                title={t("budget.addSubLine")}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          </td>
+          {hasSubLines ? (
+            <>
+              <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs", stripeBg || "bg-background")} style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
+                {fmt(bl?.annual_budget ?? 0)}
+              </td>
+              <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs", stripeBg || "bg-background")} style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
+                {fmt(forecastVal)}
+              </td>
+            </>
+          ) : (
+            <>
+              <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[1], minWidth: COL_W[1] }}>
+                <Input key={`${lc.code}-budget-${bl?.annual_budget ?? 0}`} type="number" defaultValue={bl?.annual_budget ?? 0}
+                  className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(lc.code, "annual_budget", e.target.value)} />
+              </td>
+              <td className={cn("sticky z-20 border-r px-1 py-1", stripeBg || "bg-background")} style={{ left: stickyLeft[2], minWidth: COL_W[2] }}>
+                <Input key={`${lc.code}-forecast-${bl?.current_forecast ?? 0}`} type="number" defaultValue={bl?.current_forecast ?? 0}
+                  className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(lc.code, "current_forecast", e.target.value)} />
+              </td>
+            </>
+          )}
+          <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs", stripeBg || "bg-background")} style={{ left: stickyLeft[3], minWidth: COL_W[3] }}>
+            <button onClick={() => { setDetailCode(lc.code); setDetailOpen(true); }}
+              className="inline-flex items-center gap-1 hover:text-primary transition-colors">
+              {fmt(actualVal)}<Search className="h-3 w-3" />
+            </button>
+          </td>
+          <td className={cn("sticky z-20 border-r px-3 py-1.5 text-right font-mono text-xs font-semibold",
+            stripeBg || "bg-background", toDistribute >= 0 ? "text-green-600" : "text-red-600"
+          )} style={{ left: stickyLeft[4], minWidth: COL_W[4] }}>
+            {fmt(toDistribute)}
+          </td>
+          {hasSubLines ? (
+            MONTH_KEYS.map((mk, mi) => (
+              <td key={mi} className="px-3 py-1.5 text-right font-mono text-xs" style={{ minWidth: 100 }}>
+                {fmt(bl?.[mk] ?? 0)}
+              </td>
+            ))
+          ) : (
+            MONTH_KEYS.map((mk, mi) => (
+              <td key={mi} className="px-1 py-1" style={{ minWidth: 100 }}>
+                <Input key={`${lc.code}-${mk}-${bl?.[mk] ?? 0}`} type="number" defaultValue={bl?.[mk] ?? 0}
+                  className="h-7 text-right text-xs font-mono" onBlur={e => handleBlur(lc.code, mk, e.target.value)} />
+              </td>
+            ))
+          )}
+        </tr>
+        {hasSubLines && isExpanded && children.map((sub, si) => renderSubLineRow(sub, si))}
+      </>
     );
   };
 
@@ -541,16 +736,13 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
 
     PL_SECTIONS.forEach(section => {
       if (section.type === "accounts") {
-        // Section header
         rows.push(renderSectionHeader(section));
-        // Account rows
         const accounts = (plData.sectionAccounts[section.key] || []).filter(lc => !hiddenCodes.has(lc.code));
         if (!collapsedSections[section.key]) {
           accounts.forEach(lc => {
             rows.push(renderAccountRow(lc, rowCounter++));
           });
         }
-        // Section subtotal (inline — look ahead for next subtotal)
       } else if (section.type === "subtotal") {
         rows.push(renderAggregateRow(section, false));
       } else if (section.type === "computed") {
@@ -566,7 +758,6 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
     return (
       <>
         {visibleLineCodes.map((lc, rowIdx) => renderAccountRow(lc, rowIdx))}
-        {/* Totals row */}
         <tr className="border-t-2 font-bold bg-muted/30">
           <td className="sticky left-0 z-20 bg-muted/30 border-r px-3 py-2 text-sm" style={{ minWidth: COL_W[0] }}>
             {t("common.total")}
@@ -687,6 +878,31 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         projectCode={projectCode}
         fiscalYear={fiscalYear}
       />
+
+      {/* Add Sub-Line Dialog */}
+      <Dialog open={!!addSubLineFor} onOpenChange={(open) => { if (!open) setAddSubLineFor(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("budget.addSubLine")} — {addSubLineFor}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>{t("budget.subLineLabel")}</Label>
+              <Input
+                value={newSubLabel}
+                onChange={e => setNewSubLabel(e.target.value)}
+                placeholder={t("budget.subLinePlaceholder")}
+                onKeyDown={e => { if (e.key === "Enter") handleAddSubLine(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAddSubLine} disabled={!newSubLabel.trim() || addSubLineMutation.isPending}>
+              {t("budget.addSubLine")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

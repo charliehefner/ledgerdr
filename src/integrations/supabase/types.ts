@@ -658,7 +658,9 @@ export type Database = {
           month_7: number
           month_8: number
           month_9: number
+          parent_line_id: string | null
           project_code: string | null
+          sub_label: string | null
           updated_at: string
         }
         Insert: {
@@ -683,7 +685,9 @@ export type Database = {
           month_7?: number
           month_8?: number
           month_9?: number
+          parent_line_id?: string | null
           project_code?: string | null
+          sub_label?: string | null
           updated_at?: string
         }
         Update: {
@@ -708,7 +712,9 @@ export type Database = {
           month_7?: number
           month_8?: number
           month_9?: number
+          parent_line_id?: string | null
           project_code?: string | null
+          sub_label?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -717,6 +723,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_parent_line_id_fkey"
+            columns: ["parent_line_id"]
+            isOneToOne: false
+            referencedRelation: "budget_lines"
             referencedColumns: ["id"]
           },
         ]

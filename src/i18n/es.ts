@@ -1216,6 +1216,12 @@ export const es = {
   "budget.accounts": "Cuentas",
   "budget.selectAccounts": "Seleccionar Cuentas",
   "budget.selectAccountsDesc": "Elija qué cuentas mostrar. Los totales siempre incluyen todas las cuentas.",
+  "budget.addSubLine": "Agregar Sub-Línea",
+  "budget.subLineLabel": "Etiqueta de Sub-Línea",
+  "budget.subLinePlaceholder": "ej. Alquiler Oficina, Contrato Terreno A",
+  "budget.subLineAdded": "Sub-línea agregada",
+  "budget.subLineDeleted": "Sub-línea eliminada",
+  "budget.deleteSubLine": "Eliminar sub-línea",
 
   // Treasury
   "txForm.pettyCash": "Caja Chica",

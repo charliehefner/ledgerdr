@@ -1215,6 +1215,12 @@ export const en = {
   "budget.accounts": "Accounts",
   "budget.selectAccounts": "Select Accounts",
   "budget.selectAccountsDesc": "Choose which accounts to display. Totals always include all accounts.",
+  "budget.addSubLine": "Add Sub-Line",
+  "budget.subLineLabel": "Sub-Line Label",
+  "budget.subLinePlaceholder": "e.g. Office Rent, Land Contract A",
+  "budget.subLineAdded": "Sub-line added",
+  "budget.subLineDeleted": "Sub-line deleted",
+  "budget.deleteSubLine": "Delete sub-line",
 
   // Treasury
   "txForm.pettyCash": "Petty Cash",

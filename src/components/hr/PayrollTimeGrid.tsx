@@ -471,6 +471,7 @@ export function PayrollTimeGrid({
         end_time: null,
         is_absent: true,
         is_holiday: false,
+        entity_id: selectedEntityId!,
       };
       saveTimesheet.mutate(absentEntry);
     }

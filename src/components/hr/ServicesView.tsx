@@ -21,6 +21,8 @@ import { numberToSpanishWords } from "@/lib/numberToWords";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import { ServicePaymentDialog, ServicePaymentRecord } from "./ServicePaymentDialog";
+import { useEntity } from "@/contexts/EntityContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface ServiceProvider {
   id: string;

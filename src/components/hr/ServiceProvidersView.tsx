@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+import { useEntity } from "@/contexts/EntityContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface ServiceProvider {
   id: string;

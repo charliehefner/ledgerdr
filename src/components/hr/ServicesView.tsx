@@ -133,7 +133,7 @@ export function ServicesView() {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof emptyForm & { id?: string }) => {
       const parsedAmount = data.amount ? parseFloat(data.amount) : 0;
-      const payload = {
+      const payload: Record<string, any> = {
         provider_id: data.provider_id,
         service_date: data.service_date,
         master_acct_code: data.master_acct_code || null,
@@ -147,10 +147,13 @@ export function ServicesView() {
         pay_method: data.pay_method || null,
       };
       if (data.id) {
-        const { error } = await supabase.from("service_entries").update(payload).eq("id", data.id);
+        const { error } = await supabase.from("service_entries").update(payload as any).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("service_entries").insert(payload);
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Seleccione una entidad antes de crear un servicio");
+        payload.entity_id = entityId;
+        const { error } = await supabase.from("service_entries").insert(payload as any);
         if (error) throw error;
       }
     },

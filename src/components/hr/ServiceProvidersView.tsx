@@ -54,6 +54,8 @@ export function ServiceProvidersView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
+  const { selectedEntityId, isAllEntities } = useEntityFilter();
   const canWrite = canWriteHrTab(user?.role, "prestadores");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -63,10 +65,11 @@ export function ServiceProvidersView() {
   const [historyProvider, setHistoryProvider] = useState<ServiceProvider | null>(null);
 
   const { data: providers = [], isLoading } = useQuery({
-    queryKey: ["service-providers", showInactive],
+    queryKey: ["service-providers", showInactive, selectedEntityId],
     queryFn: async () => {
-      let query = supabase.from("service_providers").select("*").order("name");
+      let query = supabase.from("service_providers").select("*").order("name") as any;
       if (!showInactive) query = query.eq("is_active", true);
+      if (!isAllEntities && selectedEntityId) query = query.eq("entity_id", selectedEntityId);
       const { data, error } = await query;
       if (error) throw error;
       return data as ServiceProvider[];

@@ -959,7 +959,7 @@ export function OperationsLogView() {
   return (
     <div className="space-y-6">
       {/* Top 5 Operations and Filters Row */}
-      <div className="flex flex-wrap items-start gap-6">
+      <div className="flex flex-wrap items-start gap-6 overflow-visible">
         {/* Top 5 Operations by Hectares */}
         <Card className="w-fit">
           <CardHeader className="pb-3">
@@ -991,7 +991,7 @@ export function OperationsLogView() {
         </Card>
 
         {/* Filter Dropdowns */}
-        <Card className="w-fit">
+        <Card className="w-fit min-w-0 flex-shrink-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" />
@@ -999,7 +999,7 @@ export function OperationsLogView() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select value={filterFarm || "__all__"} onValueChange={(v) => setFilterFarm(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue>

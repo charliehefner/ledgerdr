@@ -4128,6 +4128,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          entity_id: string
           id: string
           is_closed: boolean
           master_acct_code: string | null
@@ -4148,6 +4149,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          entity_id?: string
           id?: string
           is_closed?: boolean
           master_acct_code?: string | null
@@ -4168,6 +4170,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          entity_id?: string
           id?: string
           is_closed?: boolean
           master_acct_code?: string | null
@@ -4193,6 +4196,13 @@ export type Database = {
             columns: ["ap_document_id"]
             isOneToOne: false
             referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -4317,6 +4327,7 @@ export type Database = {
           cedula: string
           created_at: string
           currency: string | null
+          entity_id: string
           id: string
           is_active: boolean
           name: string
@@ -4329,6 +4340,7 @@ export type Database = {
           cedula: string
           created_at?: string
           currency?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name: string
@@ -4341,12 +4353,21 @@ export type Database = {
           cedula?: string
           created_at?: string
           currency?: string | null
+          entity_id?: string
           id?: string
           is_active?: boolean
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_providers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_count_lines: {
         Row: {
@@ -5566,15 +5587,26 @@ export type Database = {
           usd_balance: number
         }[]
       }
-      generate_closing_journal: {
-        Args: {
-          p_end_date: string
-          p_period_id: string
-          p_start_date: string
-          p_user_id: string
-        }
-        Returns: string
-      }
+      generate_closing_journal:
+        | {
+            Args: {
+              p_end_date: string
+              p_period_id: string
+              p_start_date: string
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_end_date: string
+              p_entity_id?: string
+              p_period_id: string
+              p_start_date: string
+              p_user_id: string
+            }
+            Returns: string
+          }
       generate_dgii_606: {
         Args: {
           p_entity_id?: string
@@ -5748,30 +5780,18 @@ export type Database = {
           variance: number
         }[]
       }
-      register_service_partial_payment:
-        | {
-            Args: {
-              p_amount: number
-              p_bank_account_id: string
-              p_ncf?: string
-              p_notes?: string
-              p_payment_date: string
-              p_service_entry_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_bank_account_id: string
-              p_is_final_payment?: boolean
-              p_ncf?: string
-              p_notes?: string
-              p_payment_date: string
-              p_service_entry_id: string
-            }
-            Returns: Json
-          }
+      register_service_partial_payment: {
+        Args: {
+          p_amount: number
+          p_bank_account_id: string
+          p_is_final_payment?: boolean
+          p_ncf?: string
+          p_notes?: string
+          p_payment_date: string
+          p_service_entry_id: string
+        }
+        Returns: Json
+      }
       reject_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: boolean

@@ -5748,18 +5748,30 @@ export type Database = {
           variance: number
         }[]
       }
-      register_service_partial_payment: {
-        Args: {
-          p_amount: number
-          p_bank_account_id: string
-          p_is_final_payment?: boolean
-          p_ncf?: string
-          p_notes?: string
-          p_payment_date: string
-          p_service_entry_id: string
-        }
-        Returns: Json
-      }
+      register_service_partial_payment:
+        | {
+            Args: {
+              p_amount: number
+              p_bank_account_id: string
+              p_ncf?: string
+              p_notes?: string
+              p_payment_date: string
+              p_service_entry_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_bank_account_id: string
+              p_is_final_payment?: boolean
+              p_ncf?: string
+              p_notes?: string
+              p_payment_date: string
+              p_service_entry_id: string
+            }
+            Returns: Json
+          }
       reject_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: boolean

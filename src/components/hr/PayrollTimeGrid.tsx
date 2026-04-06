@@ -50,6 +50,7 @@ interface TimesheetEntry {
   is_holiday: boolean;
   is_sunday_work?: boolean; // Track Sunday work for 100% bonus
   notes?: string | null;
+  entity_id?: string;
 }
 
 interface EmployeeBenefit {
@@ -233,6 +234,8 @@ export function PayrollTimeGrid({
         if (refreshError) throw new Error("Sesión expirada. Por favor, vuelva a iniciar sesión.");
       }
 
+      if (!selectedEntityId) throw new Error("Debe seleccionar una entidad antes de guardar.");
+
       const { error } = await supabase
         .from("employee_timesheets")
         .upsert(
@@ -245,6 +248,7 @@ export function PayrollTimeGrid({
             is_absent: entry.is_absent,
             is_holiday: entry.is_holiday ?? false,
             notes: entry.notes ?? null,
+            entity_id: selectedEntityId,
           },
           {
             onConflict: "employee_id,work_date",
@@ -295,6 +299,7 @@ export function PayrollTimeGrid({
           .eq("id", existing.id);
         if (error) throw error;
       } else {
+        if (!selectedEntityId) throw new Error("Debe seleccionar una entidad.");
         const { error } = await supabase
           .from("employee_benefits")
           .insert({
@@ -302,6 +307,7 @@ export function PayrollTimeGrid({
             benefit_type: benefit.benefit_type,
             amount: benefit.amount,
             is_recurring: true,
+            entity_id: selectedEntityId,
           });
         if (error) throw error;
       }
@@ -362,6 +368,7 @@ export function PayrollTimeGrid({
             end_time: isSaturdayDay ? "11:30" : "16:30",
             is_absent: false,
             is_holiday: false,
+            entity_id: selectedEntityId!,
           });
         }
       }
@@ -467,6 +474,7 @@ export function PayrollTimeGrid({
         end_time: null,
         is_absent: true,
         is_holiday: false,
+        entity_id: selectedEntityId!,
       };
       saveTimesheet.mutate(absentEntry);
     }
@@ -510,6 +518,7 @@ export function PayrollTimeGrid({
             end_time: null,
             is_absent: false, // Holiday without times is NOT an absence
             is_holiday: true,
+            entity_id: selectedEntityId!,
           }));
           
           const { error } = await supabase

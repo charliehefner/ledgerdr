@@ -50,6 +50,7 @@ interface TimesheetEntry {
   is_holiday: boolean;
   is_sunday_work?: boolean; // Track Sunday work for 100% bonus
   notes?: string | null;
+  entity_id?: string;
 }
 
 interface EmployeeBenefit {

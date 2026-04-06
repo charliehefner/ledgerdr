@@ -959,7 +959,7 @@ export function OperationsLogView() {
   return (
     <div className="space-y-6">
       {/* Top 5 Operations and Filters Row */}
-      <div className="flex flex-wrap items-start gap-6">
+      <div className="flex flex-wrap items-start gap-6 overflow-visible">
         {/* Top 5 Operations by Hectares */}
         <Card className="w-fit">
           <CardHeader className="pb-3">

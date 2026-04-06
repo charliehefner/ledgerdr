@@ -96,6 +96,7 @@ export function PayrollView() {
   // Create period mutation
   const createPeriod = useMutation({
     mutationFn: async () => {
+      if (!selectedEntityId) throw new Error("Debe seleccionar una entidad antes de crear un período.");
       const startStr = format(selectedPeriod.startDate, "yyyy-MM-dd");
       const endStr = format(selectedPeriod.endDate, "yyyy-MM-dd");
 
@@ -106,6 +107,7 @@ export function PayrollView() {
           end_date: endStr,
           status: "open",
           is_current: true,
+          entity_id: selectedEntityId,
         })
         .select()
         .single();

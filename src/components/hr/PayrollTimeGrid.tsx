@@ -298,6 +298,7 @@ export function PayrollTimeGrid({
           .eq("id", existing.id);
         if (error) throw error;
       } else {
+        if (!selectedEntityId) throw new Error("Debe seleccionar una entidad.");
         const { error } = await supabase
           .from("employee_benefits")
           .insert({
@@ -305,6 +306,7 @@ export function PayrollTimeGrid({
             benefit_type: benefit.benefit_type,
             amount: benefit.amount,
             is_recurring: true,
+            entity_id: selectedEntityId,
           });
         if (error) throw error;
       }

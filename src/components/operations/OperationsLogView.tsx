@@ -115,7 +115,7 @@ export function OperationsLogView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
+  const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
 
   const {
     visibility,
@@ -129,8 +129,10 @@ export function OperationsLogView() {
   const { data: fields } = useQuery({
     queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
-      let q: any = supabase.from("fields").select("*, farms(name)").eq("is_active", true).order("name");
-      q = applyEntityFilter(q);
+      let q: any = supabase.from("fields").select("*, farms!inner(name, entity_id)").eq("is_active", true).order("name");
+      if (!isAllEntities && selectedEntityId) {
+        q = q.eq("farms.entity_id", selectedEntityId);
+      }
       const { data, error } = await q;
       if (error) throw error;
       return data as Field[];

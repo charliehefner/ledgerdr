@@ -365,6 +365,7 @@ export function PayrollTimeGrid({
             end_time: isSaturdayDay ? "11:30" : "16:30",
             is_absent: false,
             is_holiday: false,
+            entity_id: selectedEntityId!,
           });
         }
       }

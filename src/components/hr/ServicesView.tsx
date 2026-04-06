@@ -93,10 +93,12 @@ export function ServicesView() {
   });
 
   const { data: providers = [] } = useQuery({
-    queryKey: ["service-providers-active"],
+    queryKey: ["service-providers-active", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("service_providers")
+      let query = supabase.from("service_providers")
         .select("id, name, cedula").eq("is_active", true).order("name");
+      query = applyEntityFilter(query);
+      const { data, error } = await query;
       if (error) throw error;
       return data as ServiceProvider[];
     },

@@ -92,7 +92,7 @@ export function ServiceProvidersView() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof emptyForm & { id?: string }) => {
-      const payload = {
+      const payload: Record<string, any> = {
         name: data.name, cedula: data.cedula,
         bank: data.bank || null,
         bank_account_type: data.bank_account_type || null,
@@ -100,10 +100,13 @@ export function ServiceProvidersView() {
         bank_account_number: data.bank_account_number || null,
       };
       if (data.id) {
-        const { error } = await supabase.from("service_providers").update(payload).eq("id", data.id);
+        const { error } = await supabase.from("service_providers").update(payload as any).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("service_providers").insert(payload);
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Seleccione una entidad antes de crear un prestador");
+        payload.entity_id = entityId;
+        const { error } = await supabase.from("service_providers").insert(payload as any);
         if (error) throw error;
       }
     },

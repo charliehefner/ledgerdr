@@ -603,7 +603,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
 
     return (
       <>
-        <tr key={lc.code} className={cn("border-b hover:bg-muted/60", stripeBg)}>
+        <tr key={lc.code} className={cn("border-b hover:bg-muted/60 group/row", stripeBg)}>
           <td className={cn("sticky left-0 z-20 border-r px-3 py-1.5 whitespace-nowrap", stripeBg || "bg-background")} style={{ minWidth: 100 }}>
             <span className="inline-flex items-center gap-1">
               {hasSubLines ? (

@@ -233,6 +233,8 @@ export function PayrollTimeGrid({
         if (refreshError) throw new Error("Sesión expirada. Por favor, vuelva a iniciar sesión.");
       }
 
+      if (!selectedEntityId) throw new Error("Debe seleccionar una entidad antes de guardar.");
+
       const { error } = await supabase
         .from("employee_timesheets")
         .upsert(
@@ -245,6 +247,7 @@ export function PayrollTimeGrid({
             is_absent: entry.is_absent,
             is_holiday: entry.is_holiday ?? false,
             notes: entry.notes ?? null,
+            entity_id: selectedEntityId,
           },
           {
             onConflict: "employee_id,work_date",

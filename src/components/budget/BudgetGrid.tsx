@@ -838,7 +838,7 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         </div>
       ) : (
         <div className="overflow-x-auto overflow-y-auto max-h-[75vh] border rounded-lg">
-          <table className="w-max min-w-full text-sm border-collapse [&_tr]:group">
+          <table className="w-max min-w-full text-sm border-collapse">
             <thead className="sticky top-0 z-40">
               <tr className="bg-muted/50">
                 <th className="sticky left-0 z-30 bg-muted/50 border-r border-b px-3 py-2 text-left font-medium whitespace-nowrap" style={{ minWidth: 100 }}>

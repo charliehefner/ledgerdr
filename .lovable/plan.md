@@ -1,61 +1,31 @@
 
-Goal: do a second, broader entity-scoping audit instead of assuming the single payment RPC fix was enough.
 
-What I found
-- The last migration did fix `register_service_partial_payment` itself: it now inserts `v_service.entity_id` into `ap_ar_documents` and `transactions`.
-- But the surrounding service flow still looks inconsistent:
-  - `ServicesView.tsx` inserts/updates `service_entries` without using `requireEntity()` or an explicit `entity_id`.
-  - `ServicesView.tsx` reads `service_entries` without `useEntityFilter()`.
-  - `ServicePaymentDialog.tsx` updates `service_entries` after the RPC without entity-aware guarding.
-  - Generated types still show `service_entries` and `service_entry_payments` without `entity_id`, and the RPC still has two signatures, which suggests schema/type drift and increases the risk that other entity bugs were missed.
-- Older migrations show `service_entries` was originally created without `entity_id`, so this area likely needs a full reconciliation, not just one patch.
+## Problem
 
-Implementation plan
+When an operation is saved, a database trigger updates the tractor's `current_hour_meter` in `fuel_equipment`. The backend data is correct (Pala Volvo shows 553 in the database). However, the **frontend never re-fetches the tractor data** after saving/editing/deleting an operation, so the Equipment tab keeps showing the stale cached value (550).
 
-1. Re-audit the service-payment data model
-- Verify whether `service_entries`, `service_entry_payments`, and `service_providers` actually have `entity_id` in the backend today.
-- Verify RLS/policies for those tables match the current multi-entity model.
-- Confirm whether any triggers/defaults are still masking missing explicit entity assignment.
+## Root cause
 
-2. Harden the HR service flow end-to-end
-- Update the service creation/edit flow to require a selected entity before any write.
-- Explicitly pass `entity_id` on inserts where the table is entity-scoped instead of relying on defaults.
-- Apply entity-aware filtering to service list queries so reads match the selected entity context.
-- Ensure payment follow-up updates only operate within the selected entity context.
+In `OperationsLogView.tsx`, the three mutation `onSuccess` handlers (create, update, delete) invalidate `["operations"]` and `["inventoryItems"]` but do not invalidate `["tractors"]` or `["tractors-for-horometer"]`.
 
-3. Reconcile backend function drift
-- Review all versions/usages of `register_service_partial_payment` and remove legacy signature drift so app types and runtime behavior match.
-- Audit other `SECURITY DEFINER` functions that insert into entity-scoped tables and make them propagate `entity_id` explicitly from the source record or validated input.
+## Fix
 
-4. Run a broader entity bug sweep in high-risk areas
-- Search for write paths that:
-  - insert into tables with `NOT NULL entity_id`
-  - depend on `current_user_entity_id()`
-  - are callable in “All Entities” mode
-  - use RPC/database functions instead of direct inserts
-- Prioritize HR, Accounting, Treasury, AP/AR, and Operations payment/journal flows.
+Add cache invalidation for tractor-related queries after every operation mutation:
 
-5. Close the gaps with consistency safeguards
-- Align generated types with the real backend schema so missing `entity_id` shows up immediately in code.
-- Standardize a rule: all write-capable screens must use `requireEntity()` and all entity-scoped reads must use `useEntityFilter()` unless intentionally consolidated.
-- Add at least one focused regression check for the service flow:
-  - create service
-  - list service under entity filter
-  - register partial payment
-  - verify linked AP/AR + transaction records inherit the same entity
+**File: `src/components/operations/OperationsLogView.tsx`**
 
-Technical details
-- Files already showing risk:
-  - `src/components/hr/ServicesView.tsx`
-  - `src/components/hr/ServicePaymentDialog.tsx`
-  - `src/integrations/supabase/types.ts`
-  - service-related migrations under `supabase/migrations/`
-- Likely backend work:
-  - one or more migrations to reconcile service-table entity columns and any dependent functions/policies
-- Likely frontend work:
-  - add `useEntity()` / `useEntityFilter()` to the HR service screens
-  - explicit `entity_id` propagation on inserts
-  - tighter query filters for bank/service-related reads where needed
+Add these two invalidation calls to all three mutation `onSuccess` blocks (create ~line 526, update ~line 638, delete ~line 700):
 
-Expected outcome
-- The service-payment bug is fixed at the source and the whole HR service module becomes consistent with the project’s multi-entity architecture, reducing the chance of more “null entity_id” failures appearing one screen later.
+```typescript
+queryClient.invalidateQueries({ queryKey: ["tractors"] });
+queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
+```
+
+This ensures that after any operation is created, edited, or deleted, the tractor list and hour-meter sequence views will re-fetch and display the updated `current_hour_meter` value from the database.
+
+## Scope
+
+- Single file change: `src/components/operations/OperationsLogView.tsx`
+- Three insertion points (one per mutation's `onSuccess`)
+- No backend or schema changes needed — the trigger already works correctly
+

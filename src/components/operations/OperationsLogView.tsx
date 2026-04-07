@@ -526,6 +526,8 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
       queryClient.invalidateQueries({ queryKey: ["cronograma-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
         title: "Operación registrada",
         description: "La operación de campo ha sido registrada y el inventario actualizado.",
@@ -637,6 +639,8 @@ export function OperationsLogView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
         title: "Operación actualizada",
         description: "La operación ha sido actualizada y el inventario ajustado.",
@@ -699,6 +703,8 @@ export function OperationsLogView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors"] });
+      queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
         title: "Operación eliminada",
         description: "La operación ha sido eliminada y el inventario restaurado.",

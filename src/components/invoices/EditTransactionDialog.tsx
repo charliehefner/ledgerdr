@@ -181,6 +181,7 @@ export function EditTransactionDialog({
       const isTransfer = (transaction.transaction_direction || "purchase") === "payment" || (transaction.transaction_direction || "purchase") === "investment";
       const newFormData = {
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
+        purchase_date: (transaction as any).purchase_date?.split("T")[0] || "",
         due_date: transaction.due_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
         project_code: transaction.project_code || "",

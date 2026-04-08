@@ -85,6 +85,7 @@ export function EditTransactionDialog({
   // Form data for previously read-only fields
   const [formData, setFormData] = useState({
     transaction_date: "",
+    purchase_date: "",
     due_date: "",
     master_acct_code: "",
     project_code: "",
@@ -180,6 +181,7 @@ export function EditTransactionDialog({
       const isTransfer = (transaction.transaction_direction || "purchase") === "payment" || (transaction.transaction_direction || "purchase") === "investment";
       const newFormData = {
         transaction_date: transaction.transaction_date?.split("T")[0] || "",
+        purchase_date: (transaction as any).purchase_date?.split("T")[0] || "",
         due_date: transaction.due_date?.split("T")[0] || "",
         master_acct_code: transaction.master_acct_code || "",
         project_code: transaction.project_code || "",
@@ -255,6 +257,7 @@ export function EditTransactionDialog({
 
       // New editable fields
       if (formData.transaction_date !== originalFormData.transaction_date) updates.transaction_date = formData.transaction_date;
+      if (formData.purchase_date !== originalFormData.purchase_date) updates.purchase_date = formData.purchase_date || null;
       if (formData.due_date !== originalFormData.due_date) updates.due_date = formData.due_date || null;
       if (formData.master_acct_code !== originalFormData.master_acct_code) updates.master_acct_code = formData.master_acct_code;
       if (formData.project_code !== originalFormData.project_code) updates.project_code = formData.project_code || null;
@@ -395,6 +398,7 @@ export function EditTransactionDialog({
     editedCostCenter !== originalCostCenter ||
     editedItbisOverrideReason !== originalItbisOverrideReason ||
     formData.transaction_date !== originalFormData.transaction_date ||
+    formData.purchase_date !== originalFormData.purchase_date ||
     formData.due_date !== originalFormData.due_date ||
     formData.master_acct_code !== originalFormData.master_acct_code ||
     formData.project_code !== originalFormData.project_code ||
@@ -433,7 +437,7 @@ export function EditTransactionDialog({
           )}
 
           <div className="space-y-6">
-            {/* Row 1: Date and Due Date */}
+            {/* Row 1: Transaction Date and Purchase Date */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Fecha de Transacción</Label>
@@ -446,11 +450,11 @@ export function EditTransactionDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Fecha de Vencimiento</Label>
+                <Label>Fecha de Compra</Label>
                 <Input
                   type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
+                  value={formData.purchase_date}
+                  onChange={(e) => setFormData(f => ({ ...f, purchase_date: e.target.value }))}
                   readOnly={locked}
                   className={locked ? "bg-muted" : ""}
                 />
@@ -952,32 +956,44 @@ export function EditTransactionDialog({
               </div>
             </div>
 
-            {/* Tipo Bienes/Servicios - only for purchases */}
-            {formData.transaction_direction === 'purchase' && (
-              <div className="space-y-2 max-w-xs">
-                <Label>Tipo Bienes/Servicios</Label>
-                {locked ? (
-                  <Input value={editedTipoBienes} readOnly className="bg-muted" />
-                ) : (
-                  <Select
-                    value={editedTipoBienes || "__none__"}
-                    onValueChange={(v) => setEditedTipoBienes(v === "__none__" ? "" : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="__none__">— Ninguno —</SelectItem>
-                      {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
-                        <SelectItem key={code} value={code}>
-                          {code} - {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+            {/* Fecha de Vencimiento + Tipo Bienes/Servicios */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Fecha de Vencimiento</Label>
+                <Input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
+                  readOnly={locked}
+                  className={locked ? "bg-muted" : ""}
+                />
               </div>
-            )}
+              {formData.transaction_direction === 'purchase' && (
+                <div className="space-y-2">
+                  <Label>Tipo Bienes/Servicios</Label>
+                  {locked ? (
+                    <Input value={editedTipoBienes} readOnly className="bg-muted" />
+                  ) : (
+                    <Select
+                      value={editedTipoBienes || "__none__"}
+                      onValueChange={(v) => setEditedTipoBienes(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="__none__">— Ninguno —</SelectItem>
+                        {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
+                          <SelectItem key={code} value={code}>
+                            {code} - {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Tipo Anulación */}
             <div className="space-y-2">

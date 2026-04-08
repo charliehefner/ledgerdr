@@ -85,6 +85,7 @@ export function EditTransactionDialog({
   // Form data for previously read-only fields
   const [formData, setFormData] = useState({
     transaction_date: "",
+    purchase_date: "",
     due_date: "",
     master_acct_code: "",
     project_code: "",

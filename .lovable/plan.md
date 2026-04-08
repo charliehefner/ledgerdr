@@ -1,31 +1,34 @@
 
 
-## Problem
+## Fix: Missing entity_id on Operation Insert
 
-When an operation is saved, a database trigger updates the tractor's `current_hour_meter` in `fuel_equipment`. The backend data is correct (Pala Volvo shows 553 in the database). However, the **frontend never re-fetches the tractor data** after saving/editing/deleting an operation, so the Equipment tab keeps showing the stale cached value (550).
+### Problem
+Creating a new operation fails with: `null value in column "entity_id" of relation "operations" violates not-null constraint`. The insert record in the create mutation (line 435) does not include `entity_id`.
 
-## Root cause
+### Root Cause
+The `selectedEntityId` is available from `useEntityFilter()` (line 118), but it's never added to the insert payload.
 
-In `OperationsLogView.tsx`, the three mutation `onSuccess` handlers (create, update, delete) invalidate `["operations"]` and `["inventoryItems"]` but do not invalidate `["tractors"]` or `["tractors-for-horometer"]`.
-
-## Fix
-
-Add cache invalidation for tractor-related queries after every operation mutation:
+### Fix
 
 **File: `src/components/operations/OperationsLogView.tsx`**
 
-Add these two invalidation calls to all three mutation `onSuccess` blocks (create ~line 526, update ~line 638, delete ~line 700):
+Add `entity_id: selectedEntityId` to the `record` object in the **create mutation** (around line 435):
 
 ```typescript
-queryClient.invalidateQueries({ queryKey: ["tractors"] });
-queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
+const record = {
+  entity_id: selectedEntityId,   // <-- add this
+  operation_date: formatDateLocal(data.operation_date),
+  field_id: data.field_id,
+  // ... rest unchanged
+};
 ```
 
-This ensures that after any operation is created, edited, or deleted, the tractor list and hour-meter sequence views will re-fetch and display the updated `current_hour_meter` value from the database.
+The update mutation (line 558) does not need this since `entity_id` doesn't change on update.
 
-## Scope
-
+### Scope
 - Single file change: `src/components/operations/OperationsLogView.tsx`
-- Three insertion points (one per mutation's `onSuccess`)
-- No backend or schema changes needed — the trigger already works correctly
+- One line addition in the create mutation's record object
+
+### Verification Needed
+After this fix, creating a new operation should succeed, and the hour meter should update immediately in the Equipment tab (testing both the trigger fix and the cache invalidation fix together).
 

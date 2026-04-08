@@ -956,32 +956,44 @@ export function EditTransactionDialog({
               </div>
             </div>
 
-            {/* Tipo Bienes/Servicios - only for purchases */}
-            {formData.transaction_direction === 'purchase' && (
-              <div className="space-y-2 max-w-xs">
-                <Label>Tipo Bienes/Servicios</Label>
-                {locked ? (
-                  <Input value={editedTipoBienes} readOnly className="bg-muted" />
-                ) : (
-                  <Select
-                    value={editedTipoBienes || "__none__"}
-                    onValueChange={(v) => setEditedTipoBienes(v === "__none__" ? "" : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="__none__">— Ninguno —</SelectItem>
-                      {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
-                        <SelectItem key={code} value={code}>
-                          {code} - {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+            {/* Fecha de Vencimiento + Tipo Bienes/Servicios */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Fecha de Vencimiento</Label>
+                <Input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
+                  readOnly={locked}
+                  className={locked ? "bg-muted" : ""}
+                />
               </div>
-            )}
+              {formData.transaction_direction === 'purchase' && (
+                <div className="space-y-2">
+                  <Label>Tipo Bienes/Servicios</Label>
+                  {locked ? (
+                    <Input value={editedTipoBienes} readOnly className="bg-muted" />
+                  ) : (
+                    <Select
+                      value={editedTipoBienes || "__none__"}
+                      onValueChange={(v) => setEditedTipoBienes(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="__none__">— Ninguno —</SelectItem>
+                        {Object.entries(TIPO_BIENES_SERVICIOS).map(([code, label]) => (
+                          <SelectItem key={code} value={code}>
+                            {code} - {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Tipo Anulación */}
             <div className="space-y-2">

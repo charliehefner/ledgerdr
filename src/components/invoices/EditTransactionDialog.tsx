@@ -398,6 +398,7 @@ export function EditTransactionDialog({
     editedCostCenter !== originalCostCenter ||
     editedItbisOverrideReason !== originalItbisOverrideReason ||
     formData.transaction_date !== originalFormData.transaction_date ||
+    formData.purchase_date !== originalFormData.purchase_date ||
     formData.due_date !== originalFormData.due_date ||
     formData.master_acct_code !== originalFormData.master_acct_code ||
     formData.project_code !== originalFormData.project_code ||

@@ -437,7 +437,7 @@ export function EditTransactionDialog({
           )}
 
           <div className="space-y-6">
-            {/* Row 1: Date and Due Date */}
+            {/* Row 1: Transaction Date and Purchase Date */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Fecha de Transacción</Label>
@@ -450,11 +450,11 @@ export function EditTransactionDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Fecha de Vencimiento</Label>
+                <Label>Fecha de Compra</Label>
                 <Input
                   type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData(f => ({ ...f, due_date: e.target.value }))}
+                  value={formData.purchase_date}
+                  onChange={(e) => setFormData(f => ({ ...f, purchase_date: e.target.value }))}
                   readOnly={locked}
                   className={locked ? "bg-muted" : ""}
                 />

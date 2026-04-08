@@ -504,8 +504,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       // Only fill empty fields
       if (result.vendor_name && !prev.name) updated.name = result.vendor_name;
       if (result.rnc && !prev.rnc) updated.rnc = result.rnc;
-      if (result.date && !prev.transaction_date) {
-        updated.transaction_date = new Date(result.date + 'T12:00:00');
+      if (result.date && !prev.purchase_date) {
+        updated.purchase_date = new Date(result.date + 'T12:00:00');
       }
       if (result.amount != null && !prev.amount) updated.amount = result.amount.toString();
       if (result.itbis != null && !prev.itbis) updated.itbis = result.itbis.toString();

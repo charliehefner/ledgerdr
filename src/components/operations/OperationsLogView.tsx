@@ -433,6 +433,7 @@ export function OperationsLogView() {
   const mutation = useMutation({
     mutationFn: async ({ data, currentInputs }: { data: typeof form; currentInputs: OperationInput[] }): Promise<{ followUpMessage?: string }> => {
       const record = {
+        entity_id: selectedEntityId,
         operation_date: formatDateLocal(data.operation_date),
         field_id: data.field_id,
         operation_type_id: data.operation_type_id,

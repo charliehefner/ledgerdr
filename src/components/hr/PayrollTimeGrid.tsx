@@ -275,11 +275,20 @@ export function PayrollTimeGrid({
         .eq("work_date", date);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+    onMutate: async ({ employeeId, date }) => {
+      await queryClient.cancelQueries({ queryKey: ["timesheets", periodId] });
+      const previous = queryClient.getQueryData<TimesheetEntry[]>(["timesheets", periodId]);
+      queryClient.setQueryData<TimesheetEntry[]>(["timesheets", periodId], (old) =>
+        (old || []).filter((t) => !(t.employee_id === employeeId && t.work_date === date))
+      );
+      return { previous };
     },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["timesheets", periodId], context.previous);
       toast.error("Error al limpiar entrada: " + error.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
     },
   });
 

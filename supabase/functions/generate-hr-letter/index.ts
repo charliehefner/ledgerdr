@@ -203,13 +203,19 @@ function escapePdf(text: string): string {
     .replace(/\$/g, "\\$");
 }
 
+interface HiringClause {
+  title: string;
+  body: string;
+}
+
 interface HiringData {
   employee_name: string;
   cedula: string;
   position: string;
   salary: number;
   start_date: string;
-  benefits: string;
+  clauses: HiringClause[];
+  benefits?: string; // legacy fallback
   address: string;
   company_name: string;
   company_rnc: string;
@@ -288,18 +294,25 @@ function generateHiringPdf(data: HiringData): Uint8Array {
   const primeroLines = Math.ceil(primeroText.length * 11 * 0.52 / mw);
   y -= primeroLines * 15.4 + 15;
 
-  // SEGUNDO (benefits)
-  if (data.benefits) {
-    const segundoText = `SEGUNDO: ${data.benefits}`;
-    lines.push({ text: segundoText, x: lm, y, size: 11, maxWidth: mw });
-    const segundoLines = Math.ceil(segundoText.length * 11 * 0.52 / mw);
-    y -= segundoLines * 15.4 + 15;
+  // Dynamic clauses (SEGUNDO, TERCERO, etc.)
+  const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO", "UNDÉCIMO", "DUODÉCIMO"];
+  const allClauses: HiringClause[] = data.clauses && data.clauses.length > 0
+    ? data.clauses
+    : data.benefits ? [{ title: "Beneficios", body: data.benefits }] : [];
+
+  for (let i = 0; i < allClauses.length; i++) {
+    const label = ordinals[i] || `CLÁUSULA ${i + 2}`;
+    const clauseText = `${label}: ${allClauses[i].body}`;
+    lines.push({ text: clauseText, x: lm, y, size: 11, maxWidth: mw });
+    const clauseLines = Math.ceil(clauseText.length * 11 * 0.52 / mw);
+    y -= clauseLines * 15.4 + 15;
   }
 
-  // TERCERO (trial period)
+  // Trial period clause (auto-numbered after custom clauses)
   if (data.trial_period_months > 0) {
-    const terceroText = `${data.benefits ? "TERCERO" : "SEGUNDO"}: EL TRABAJADOR hará un periodo de prueba de ${data.trial_period_months} meses.`;
-    lines.push({ text: terceroText, x: lm, y, size: 11, maxWidth: mw });
+    const trialLabel = ordinals[allClauses.length] || `CLÁUSULA ${allClauses.length + 2}`;
+    const trialText = `${trialLabel}: EL TRABAJADOR hará un periodo de prueba de ${data.trial_period_months} meses.`;
+    lines.push({ text: trialText, x: lm, y, size: 11, maxWidth: mw });
     y -= 30;
   }
 

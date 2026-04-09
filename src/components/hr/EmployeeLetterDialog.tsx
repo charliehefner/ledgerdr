@@ -18,11 +18,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEntity } from "@/contexts/EntityContext";
+
+interface Clause {
+  title: string;
+  body: string;
+}
+
+const CLAUSE_TEMPLATES: { label: string; title: string; body: string }[] = [
+  { label: "Teléfono celular", title: "Beneficios", body: "EL TRABAJADOR recibirá un teléfono celular para uso laboral." },
+  { label: "Gastos de combustible", title: "Beneficios", body: "LA EMPRESA cubrirá los gastos de combustible del TRABAJADOR para fines laborales." },
+  { label: "Vehículo de la empresa", title: "Beneficios", body: "LA EMPRESA proporcionará un vehículo para uso del TRABAJADOR en el desempeño de sus funciones." },
+  { label: "Responsabilidades", title: "Responsabilidades", body: "EL TRABAJADOR será responsable de " },
+  { label: "Horario de trabajo", title: "Condiciones", body: "El horario de trabajo será de lunes a viernes de 8:00 AM a 5:00 PM y sábados de 8:00 AM a 12:00 PM." },
+];
 
 interface EmployeeLetterDialogProps {
   employee: {
@@ -49,7 +62,7 @@ export function EmployeeLetterDialog({
 
   // Hiring fields
   const [address, setAddress] = useState("");
-  const [benefits, setBenefits] = useState("");
+  const [clauses, setClauses] = useState<Clause[]>([]);
   const [trialMonths, setTrialMonths] = useState("3");
   const [companyName, setCompanyName] = useState("");
   const [companyRnc, setCompanyRnc] = useState("");
@@ -80,7 +93,6 @@ export function EmployeeLetterDialog({
     new Date().toISOString().split("T")[0]
   );
 
-  // Load entity info for company fields
   useEffect(() => {
     if (!selectedEntityId || !open) return;
     supabase
@@ -95,6 +107,25 @@ export function EmployeeLetterDialog({
         }
       });
   }, [selectedEntityId, open]);
+
+  const addClause = (template?: typeof CLAUSE_TEMPLATES[number]) => {
+    setClauses((prev) => [
+      ...prev,
+      template
+        ? { title: template.title, body: template.body }
+        : { title: "Beneficios", body: "" },
+    ]);
+  };
+
+  const updateClause = (index: number, field: keyof Clause, value: string) => {
+    setClauses((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
+  };
+
+  const removeClause = (index: number) => {
+    setClauses((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleGenerate = async () => {
     if (!employee) return;
@@ -119,7 +150,7 @@ export function EmployeeLetterDialog({
           ...payload,
           salary: employee.salary,
           start_date: employee.date_of_hire,
-          benefits,
+          clauses,
           address,
           company_name: companyName,
           company_rnc: companyRnc,
@@ -229,10 +260,7 @@ export function EmployeeLetterDialog({
               </div>
               <div>
                 <Label>Salario Mensual (DOP)</Label>
-                <Input
-                  value={employee.salary.toLocaleString()}
-                  disabled
-                />
+                <Input value={employee.salary.toLocaleString()} disabled />
               </div>
               <div>
                 <Label>Fecha de Inicio</Label>
@@ -257,14 +285,92 @@ export function EmployeeLetterDialog({
               />
             </div>
 
-            <div>
-              <Label>Beneficios Adicionales (SEGUNDO)</Label>
-              <Textarea
-                value={benefits}
-                onChange={(e) => setBenefits(e.target.value)}
-                placeholder="Ej: EL TRABAJADOR recibe como beneficios un adicional de..."
-                rows={3}
-              />
+            {/* Dynamic Clauses */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Cláusulas Adicionales (SEGUNDO, TERCERO, etc.)
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addClause()}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar Cláusula
+                </Button>
+              </div>
+
+              {/* Quick-add templates */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {CLAUSE_TEMPLATES.map((tpl) => (
+                  <Button
+                    key={tpl.label}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => addClause(tpl)}
+                  >
+                    + {tpl.label}
+                  </Button>
+                ))}
+              </div>
+
+              {clauses.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">
+                  Sin cláusulas adicionales. Use los botones arriba para agregar beneficios, responsabilidades, etc.
+                </p>
+              )}
+
+              <div className="space-y-3">
+                {clauses.map((clause, idx) => {
+                  const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO"];
+                  const label = ordinals[idx] || `CLÁUSULA ${idx + 2}`;
+                  return (
+                    <div key={idx} className="border rounded-md p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-primary">{label}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeClause(idx)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Tipo</Label>
+                        <Select
+                          value={clause.title}
+                          onValueChange={(v) => updateClause(idx, "title", v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Beneficios">Beneficios</SelectItem>
+                            <SelectItem value="Responsabilidades">Responsabilidades</SelectItem>
+                            <SelectItem value="Condiciones">Condiciones</SelectItem>
+                            <SelectItem value="Otro">Otro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Contenido</Label>
+                        <Textarea
+                          value={clause.body}
+                          onChange={(e) => updateClause(idx, "body", e.target.value)}
+                          rows={3}
+                          placeholder="Escriba el contenido de esta cláusula..."
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="border-t pt-4">
@@ -370,9 +476,7 @@ export function EmployeeLetterDialog({
                   <SelectContent>
                     <SelectItem value="renuncia">Renuncia</SelectItem>
                     <SelectItem value="despido">Despido</SelectItem>
-                    <SelectItem value="mutuo_acuerdo">
-                      Mutuo Acuerdo
-                    </SelectItem>
+                    <SelectItem value="mutuo_acuerdo">Mutuo Acuerdo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -404,10 +508,7 @@ export function EmployeeLetterDialog({
               </div>
               <div>
                 <Label>Salario Mensual (DOP)</Label>
-                <Input
-                  value={employee.salary.toLocaleString()}
-                  disabled
-                />
+                <Input value={employee.salary.toLocaleString()} disabled />
               </div>
               <div>
                 <Label>Banco</Label>

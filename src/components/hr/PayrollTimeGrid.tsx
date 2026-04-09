@@ -1036,7 +1036,7 @@ export function PayrollTimeGrid({
                             ) : (
                               <button
                                 onClick={() => toggleAbsentForDay(employee.id, day)}
-                                className="text-red-600 dark:text-red-400 font-bold text-sm py-2 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-colors"
+                                className="text-red-600 dark:text-red-400 font-bold text-sm w-full py-3 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-colors cursor-pointer active:scale-95"
                                 title="Click para quitar ausencia"
                               >
                                 AUSENTE

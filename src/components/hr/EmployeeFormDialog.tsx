@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { UserPlus, Save } from "lucide-react";
 import { EmployeeLoansSection } from "./EmployeeLoansSection";
+import { ScanCedulaButton, CedulaOcrResult } from "./ScanCedulaButton";
 
 const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
@@ -234,14 +235,24 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     }
   };
 
+  const handleCedulaScan = (result: CedulaOcrResult) => {
+    if (result.name) form.setValue("name", result.name);
+    if (result.cedula) form.setValue("cedula", result.cedula);
+    if (result.date_of_birth) form.setValue("date_of_birth", result.date_of_birth);
+    if (result.sex) form.setValue("sex", result.sex);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-primary" />
-            {isEditing ? "Editar Empleado" : "Agregar Nuevo Empleado"}
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-4">
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              {isEditing ? "Editar Empleado" : "Agregar Nuevo Empleado"}
+            </DialogTitle>
+            {!isEditing && <ScanCedulaButton onResult={handleCedulaScan} />}
+          </div>
         </DialogHeader>
 
         <Form {...form}>

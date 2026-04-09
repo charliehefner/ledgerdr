@@ -203,13 +203,19 @@ function escapePdf(text: string): string {
     .replace(/\$/g, "\\$");
 }
 
+interface HiringClause {
+  title: string;
+  body: string;
+}
+
 interface HiringData {
   employee_name: string;
   cedula: string;
   position: string;
   salary: number;
   start_date: string;
-  benefits: string;
+  clauses: HiringClause[];
+  benefits?: string; // legacy fallback
   address: string;
   company_name: string;
   company_rnc: string;

@@ -50,6 +50,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { PrestacionesCalculatorDialog } from "./PrestacionesCalculatorDialog";
+import { EmployeeLetterDialog } from "./EmployeeLetterDialog";
 
 interface SalarySegment {
   startDate: string;
@@ -74,6 +75,7 @@ export function EmployeeDetailDialog({
   const { canModifySettings, canWriteSection, user } = useAuth();
   const [activeTab, setActiveTab] = useState("info");
   const [prestacionesOpen, setPrestacionesOpen] = useState(false);
+  const [letterDialogOpen, setLetterDialogOpen] = useState(false);
 
   // Vacation form state
   const [vacationStart, setVacationStart] = useState("");

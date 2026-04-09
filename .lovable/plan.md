@@ -1,36 +1,43 @@
 
 
-## HR Letter Generator — Hiring & Termination Letters
+## Customizable Hiring Letter Clauses
 
-### Overview
-Add a "Cartas" (Letters) section to the HR module that lets users generate formatted PDF letters for hiring and termination, automatically stored in the employee's document directory.
+### Problem
+The current hiring letter has a single "Beneficios" textarea field, but you need to specify multiple structured clauses: specific benefits (telephone, gas), responsibilities, and other considerations — each as separate numbered paragraphs in the contract.
 
-### How It Works
+### Solution
+Replace the single benefits textarea with a **dynamic clause builder** in the Contrato tab. You can add, remove, reorder, and edit multiple clauses (SEGUNDO, TERCERO, CUARTO, etc.) before generating.
 
-1. **New tab or action in Employee Detail Dialog** — a "Generar Carta" button opens a letter wizard
-2. **Two letter types:**
-   - **Contratación (Hiring):** Fields pre-filled from employee record (name, cédula, position, salary, start date) with editable benefits/conditions
-   - **Terminación (Termination):** Date and motive (Renuncia / Despido / Mutuo Acuerdo), with reason details
-3. **PDF Generation:** Uses your uploaded template format, with company branding from the project
-4. **Auto-storage:** Generated PDF is saved to the `employee-documents` bucket under the employee's directory and linked in `employee_documents` table
-5. **Re-upload signed copy:** The existing document upload functionality already supports replacing — we'll add a "Subir copia firmada" action next to the generated letter
+### UI Changes — `EmployeeLetterDialog.tsx`
 
-### Technical Approach
+- Remove the single `benefits` textarea
+- Add a "Cláusulas Adicionales" section with:
+  - Each clause has a **title dropdown** (Beneficios, Responsabilidades, Condiciones, Otro) and a **free-text body**
+  - "Agregar Cláusula" button to add more
+  - Delete button on each clause
+  - Clauses auto-number as SEGUNDO, TERCERO, etc. in the PDF
+- Pre-populated template snippets available (e.g., "Teléfono celular", "Gastos de combustible", "Vehículo de la empresa") as quick-add buttons
 
-| Component | Detail |
-|-----------|--------|
-| Letter form UI | New `EmployeeLetterDialog.tsx` component with hiring/termination modes |
-| PDF generation | Edge function using your template format (server-side, consistent output) |
-| Storage | Existing `employee-documents` bucket + `employee_documents` table |
-| Access | Available from Employee Detail Dialog, restricted by role permissions |
-| Template | Will replicate your uploaded format exactly |
+### Backend Changes — `generate-hr-letter/index.ts`
 
-### Files to Create/Modify
-- `src/components/hr/EmployeeLetterDialog.tsx` — letter form UI
-- `supabase/functions/generate-hr-letter/index.ts` — PDF generation edge function
-- `src/components/hr/EmployeeDetailDialog.tsx` — add "Generar Carta" button
-- Database migration — add `letter_type` and `letter_metadata` columns to `employee_documents` (to distinguish generated letters from regular uploads)
+- Replace the single `benefits` string with a `clauses` array: `{ title: string, body: string }[]`
+- Each clause renders as a numbered paragraph (SEGUNDO, TERCERO, CUARTO...) before the trial period and closing sections
+- The trial period clause auto-adjusts its numbering based on how many custom clauses precede it
 
-### Next Step
-**Upload your template(s)** (PDF or Word) and I'll match the format precisely in the generator.
+### Data Flow
+```text
+UI: clauses = [
+  { title: "Beneficios", body: "EL TRABAJADOR recibe teléfono celular..." },
+  { title: "Responsabilidades", body: "EL TRABAJADOR será responsable de..." },
+  { title: "Condiciones", body: "El horario de trabajo será..." }
+]
+→ PDF: SEGUNDO: EL TRABAJADOR recibe teléfono celular...
+        TERCERO: EL TRABAJADOR será responsable de...
+        CUARTO: El horario de trabajo será...
+        QUINTO: EL TRABAJADOR hará un periodo de prueba de 3 meses.
+```
+
+### Files to Modify
+- `src/components/hr/EmployeeLetterDialog.tsx` — dynamic clause builder UI
+- `supabase/functions/generate-hr-letter/index.ts` — accept `clauses[]` array, render numbered paragraphs
 

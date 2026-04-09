@@ -1119,6 +1119,10 @@ export function EmployeeDetailDialog({
                       onChange={handleDocumentUpload}
                       className="max-w-sm"
                     />
+                    <Button size="sm" variant="outline" onClick={() => setLetterDialogOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generar Carta
+                    </Button>
                     <p className="text-sm text-muted-foreground">
                       Subir permisos médicos, contratos, etc.
                     </p>

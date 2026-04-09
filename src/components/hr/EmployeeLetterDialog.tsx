@@ -77,21 +77,31 @@ export function EmployeeLetterDialog({
   const [terminationDate, setTerminationDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [motive, setMotive] = useState("renuncia");
-  const [motiveDetail, setMotiveDetail] = useState("");
+  const [desahucioType, setDesahucioType] = useState<"immediate" | "preaviso">("immediate");
+  const [lastWorkingDay, setLastWorkingDay] = useState("");
+  const [preavisoDays, setPreavisoDays] = useState("28");
+  const [managerName, setManagerName] = useState("");
+  const [managerTitle, setManagerTitle] = useState("Gerente operacional");
 
   // Bank letter fields
   const [bankName, setBankName] = useState("");
   const [bankLetterDate, setBankLetterDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [signerName, setSignerName] = useState("");
+  const [signerTitle, setSignerTitle] = useState("Gerente General");
 
   // Vacation fields
   const [vacationStart, setVacationStart] = useState("");
   const [vacationEnd, setVacationEnd] = useState("");
+  const [vacationReturnDate, setVacationReturnDate] = useState("");
+  const [vacationDays, setVacationDays] = useState("14");
+  const [vacationPeriod, setVacationPeriod] = useState("");
   const [vacationLetterDate, setVacationLetterDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [vacationManagerName, setVacationManagerName] = useState("");
+  const [vacationManagerTitle, setVacationManagerTitle] = useState("Gerente operacional");
 
   useEffect(() => {
     if (!selectedEntityId || !open) return;
@@ -166,10 +176,13 @@ export function EmployeeLetterDialog({
         payload = {
           ...payload,
           termination_date: terminationDate,
-          motive,
-          motive_detail: motiveDetail,
+          desahucio_type: desahucioType,
+          last_working_day: lastWorkingDay,
+          preaviso_days: desahucioType === "preaviso" ? parseInt(preavisoDays) || 28 : 0,
           company_name: companyName,
           company_rnc: companyRnc,
+          manager_name: managerName,
+          manager_title: managerTitle,
         };
       } else if (letterType === "carta_banco") {
         if (!bankName) {
@@ -183,8 +196,11 @@ export function EmployeeLetterDialog({
           start_date: employee.date_of_hire,
           company_name: companyName,
           company_rnc: companyRnc,
+          company_address: companyAddress,
           bank_name: bankName,
           letter_date: bankLetterDate,
+          signer_name: signerName,
+          signer_title: signerTitle,
         };
       } else if (letterType === "vacaciones") {
         if (!vacationStart || !vacationEnd) {
@@ -196,9 +212,14 @@ export function EmployeeLetterDialog({
           ...payload,
           vacation_start: vacationStart,
           vacation_end: vacationEnd,
+          vacation_return_date: vacationReturnDate,
+          vacation_days: parseInt(vacationDays) || 14,
+          vacation_period: vacationPeriod,
           company_name: companyName,
           company_rnc: companyRnc,
           letter_date: vacationLetterDate,
+          manager_name: vacationManagerName,
+          manager_title: vacationManagerTitle,
         };
       }
 
@@ -238,7 +259,7 @@ export function EmployeeLetterDialog({
         <Tabs value={letterType} onValueChange={setLetterType}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="contrato">Contrato</TabsTrigger>
-            <TabsTrigger value="terminacion">Terminación</TabsTrigger>
+            <TabsTrigger value="terminacion">Desahucio</TabsTrigger>
             <TabsTrigger value="carta_banco">Banco</TabsTrigger>
             <TabsTrigger value="vacaciones">Vacaciones</TabsTrigger>
           </TabsList>
@@ -448,7 +469,7 @@ export function EmployeeLetterDialog({
             </div>
           </TabsContent>
 
-          {/* Termination */}
+          {/* Termination - Desahucio */}
           <TabsContent value="terminacion" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -460,7 +481,7 @@ export function EmployeeLetterDialog({
                 <Input value={employee.cedula} disabled />
               </div>
               <div>
-                <Label>Fecha de Terminación</Label>
+                <Label>Fecha del Aviso</Label>
                 <Input
                   type="date"
                   value={terminationDate}
@@ -468,26 +489,55 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Motivo</Label>
-                <Select value={motive} onValueChange={setMotive}>
+                <Label>Tipo de Desahucio</Label>
+                <Select value={desahucioType} onValueChange={(v) => setDesahucioType(v as "immediate" | "preaviso")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="renuncia">Renuncia</SelectItem>
-                    <SelectItem value="despido">Despido</SelectItem>
-                    <SelectItem value="mutuo_acuerdo">Mutuo Acuerdo</SelectItem>
+                    <SelectItem value="immediate">Despido inmediato</SelectItem>
+                    <SelectItem value="preaviso">Pre-aviso trabajado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>Último Día Laborando</Label>
+                <Input
+                  type="date"
+                  value={lastWorkingDay}
+                  onChange={(e) => setLastWorkingDay(e.target.value)}
+                />
+              </div>
+              {desahucioType === "preaviso" && (
+                <div>
+                  <Label>Días de Pre-aviso</Label>
+                  <Input
+                    type="number"
+                    value={preavisoDays}
+                    onChange={(e) => setPreavisoDays(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
-            <div>
-              <Label>Detalle del Motivo (opcional)</Label>
-              <Textarea
-                value={motiveDetail}
-                onChange={(e) => setMotiveDetail(e.target.value)}
-                rows={3}
-              />
+            <div className="border-t pt-4">
+              <p className="text-sm font-semibold text-muted-foreground mb-3">Firmantes</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Nombre del Gerente</Label>
+                  <Input
+                    value={managerName}
+                    onChange={(e) => setManagerName(e.target.value)}
+                    placeholder="Ej: Reynaldo Cedeño Class"
+                  />
+                </div>
+                <div>
+                  <Label>Cargo del Gerente</Label>
+                  <Input
+                    value={managerTitle}
+                    onChange={(e) => setManagerTitle(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -515,7 +565,7 @@ export function EmployeeLetterDialog({
                 <Input
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  placeholder="Ej: Banco Popular Dominicano"
+                  placeholder="Ej: Banco BHD"
                 />
               </div>
               <div>
@@ -525,6 +575,26 @@ export function EmployeeLetterDialog({
                   value={bankLetterDate}
                   onChange={(e) => setBankLetterDate(e.target.value)}
                 />
+              </div>
+            </div>
+            <div className="border-t pt-4">
+              <p className="text-sm font-semibold text-muted-foreground mb-3">Firmante</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Nombre</Label>
+                  <Input
+                    value={signerName}
+                    onChange={(e) => setSignerName(e.target.value)}
+                    placeholder="Ej: Charles Russell Hefner"
+                  />
+                </div>
+                <div>
+                  <Label>Cargo</Label>
+                  <Input
+                    value={signerTitle}
+                    onChange={(e) => setSignerTitle(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -557,12 +627,56 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
+                <Label>Fecha de Reincorporación</Label>
+                <Input
+                  type="date"
+                  value={vacationReturnDate}
+                  onChange={(e) => setVacationReturnDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Días Laborables</Label>
+                <Input
+                  type="number"
+                  value={vacationDays}
+                  onChange={(e) => setVacationDays(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Período (ej: 2024/2025)</Label>
+                <Input
+                  value={vacationPeriod}
+                  onChange={(e) => setVacationPeriod(e.target.value)}
+                  placeholder="2024/2025"
+                />
+              </div>
+              <div>
                 <Label>Fecha de la Carta</Label>
                 <Input
                   type="date"
                   value={vacationLetterDate}
                   onChange={(e) => setVacationLetterDate(e.target.value)}
                 />
+              </div>
+            </div>
+            <div className="border-t pt-4">
+              <p className="text-sm font-semibold text-muted-foreground mb-3">Firmantes</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Nombre del Gerente</Label>
+                  <Input
+                    value={vacationManagerName}
+                    onChange={(e) => setVacationManagerName(e.target.value)}
+                    placeholder="Ej: Reynaldo Cedeño Class"
+                  />
+                </div>
+                <div>
+                  <Label>Cargo del Gerente</Label>
+                  <Input
+                    value={vacationManagerTitle}
+                    onChange={(e) => setVacationManagerTitle(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>

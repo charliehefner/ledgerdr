@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { UserPlus, Save } from "lucide-react";
 import { EmployeeLoansSection } from "./EmployeeLoansSection";
+import { ScanCedulaButton, CedulaOcrResult } from "./ScanCedulaButton";
 
 const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 

@@ -50,6 +50,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { PrestacionesCalculatorDialog } from "./PrestacionesCalculatorDialog";
+import { EmployeeLetterDialog } from "./EmployeeLetterDialog";
 
 interface SalarySegment {
   startDate: string;
@@ -74,6 +75,7 @@ export function EmployeeDetailDialog({
   const { canModifySettings, canWriteSection, user } = useAuth();
   const [activeTab, setActiveTab] = useState("info");
   const [prestacionesOpen, setPrestacionesOpen] = useState(false);
+  const [letterDialogOpen, setLetterDialogOpen] = useState(false);
 
   // Vacation form state
   const [vacationStart, setVacationStart] = useState("");
@@ -1117,6 +1119,10 @@ export function EmployeeDetailDialog({
                       onChange={handleDocumentUpload}
                       className="max-w-sm"
                     />
+                    <Button size="sm" variant="outline" onClick={() => setLetterDialogOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generar Carta
+                    </Button>
                     <p className="text-sm text-muted-foreground">
                       Subir permisos médicos, contratos, etc.
                     </p>
@@ -1191,6 +1197,21 @@ export function EmployeeDetailDialog({
           salarySegments={laborSummary.salarySegments}
           canSave={isHrWriter}
           userId={user?.id}
+        />
+      )}
+
+      {employee && (
+        <EmployeeLetterDialog
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            cedula: employee.cedula,
+            position: employee.position,
+            salary: employee.salary,
+            date_of_hire: employee.date_of_hire,
+          }}
+          open={letterDialogOpen}
+          onOpenChange={setLetterDialogOpen}
         />
       )}
     </Dialog>

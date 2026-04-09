@@ -1216,6 +1216,8 @@ export type Database = {
           employee_id: string
           entity_id: string
           id: string
+          letter_metadata: Json | null
+          letter_type: string | null
           notes: string | null
           storage_path: string
         }
@@ -1226,6 +1228,8 @@ export type Database = {
           employee_id: string
           entity_id?: string
           id?: string
+          letter_metadata?: Json | null
+          letter_type?: string | null
           notes?: string | null
           storage_path: string
         }
@@ -1236,6 +1240,8 @@ export type Database = {
           employee_id?: string
           entity_id?: string
           id?: string
+          letter_metadata?: Json | null
+          letter_type?: string | null
           notes?: string | null
           storage_path?: string
         }

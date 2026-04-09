@@ -1199,6 +1199,21 @@ export function EmployeeDetailDialog({
           userId={user?.id}
         />
       )}
+
+      {employee && (
+        <EmployeeLetterDialog
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            cedula: employee.cedula,
+            position: employee.position,
+            salary: employee.salary,
+            date_of_hire: employee.date_of_hire,
+          }}
+          open={letterDialogOpen}
+          onOpenChange={setLetterDialogOpen}
+        />
+      )}
     </Dialog>
   );
 }

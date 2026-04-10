@@ -146,34 +146,20 @@ export function FuelTanksView() {
       });
       if (txError) throw txError;
 
-      // Deduct from source tank (re-fetch for latest level)
-      const { data: freshSource } = await supabase
-        .from("fuel_tanks")
-        .select("current_level_gallons")
-        .eq("id", data.source_tank_id)
-        .maybeSingle();
-      if (freshSource) {
-        const { error } = await supabase
-          .from("fuel_tanks")
-          .update({ current_level_gallons: Math.max(0, freshSource.current_level_gallons - gallons) })
-          .eq("id", data.source_tank_id);
-        if (error) throw error;
-      }
+      // Tank levels are automatically adjusted by DB trigger trg_adjust_tank_level
 
-      // Add to destination tank (re-fetch for latest level)
+      // Adjust destination pump gauge: adding fuel increases the reading
       const { data: freshDest } = await supabase
         .from("fuel_tanks")
-        .select("current_level_gallons, capacity_gallons, last_pump_end_reading")
+        .select("last_pump_end_reading")
         .eq("id", data.destination_tank_id)
         .maybeSingle();
       if (freshDest) {
-        const newLevel = Math.min(freshDest.capacity_gallons, freshDest.current_level_gallons + gallons);
-        // Adjust pump gauge: adding fuel increases the reading
         const oldPumpReading = freshDest.last_pump_end_reading ?? 0;
         const newPumpReading = oldPumpReading + gallons;
         const { error } = await supabase
           .from("fuel_tanks")
-          .update({ current_level_gallons: newLevel, last_pump_end_reading: newPumpReading })
+          .update({ last_pump_end_reading: newPumpReading })
           .eq("id", data.destination_tank_id);
         if (error) throw error;
       }

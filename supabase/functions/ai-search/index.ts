@@ -12,7 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    // ---- JWT Auth Check ----
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
@@ -28,7 +27,6 @@ serve(async (req) => {
       throw new Error("Supabase credentials not configured");
     }
 
-    // Validate user token
     const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -50,14 +48,15 @@ serve(async (req) => {
       throw new Error("Query is required");
     }
 
-    // Use service role for data fetching
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch context data for the AI to use
     const [
       farmsRes, fieldsRes, operationTypesRes, recentOpsRes, employeesRes,
       rainfallRes, dayLaborRes, inventoryRes, purchasesRes, opInputsRes,
-      fuelTxRes, fuelTanksRes
+      fuelTxRes, fuelTanksRes,
+      equipmentRes, implementsRes, fixedAssetsRes,
+      carretasRes, plantHoursRes, trucksRes,
+      contractsRes, contractEntriesRes
     ] = await Promise.all([
       supabase.from("farms").select("id, name").eq("is_active", true),
       supabase.from("fields").select("id, name, farm_id, hectares").eq("is_active", true),
@@ -88,6 +87,18 @@ serve(async (req) => {
         equipment:fuel_equipment!fuel_transactions_equipment_id_fkey(name)
       `).order("created_at", { ascending: false }).limit(200),
       supabase.from("fuel_tanks").select("id, name, capacity_gallons, current_level_gallons, last_pump_end_reading"),
+      // New queries
+      supabase.from("fuel_equipment").select("id, name, equipment_type, current_hour_meter, maintenance_interval_hours, is_active").eq("is_active", true),
+      supabase.from("implements").select("id, name, implement_type, working_width_m, is_active").eq("is_active", true),
+      supabase.from("fixed_assets").select("id, name, category, acquisition_date, acquisition_value, accumulated_depreciation, useful_life_years, is_active, disposal_date, serial_number").eq("is_active", true),
+      supabase.from("industrial_carretas").select("id, identifier, datetime_out, datetime_in, tare, payload, weigh_ticket_number, notes").order("datetime_out", { ascending: false }).limit(200),
+      supabase.from("industrial_plant_hours").select("id, date, equipment_name, start_hour_meter, finish_hour_meter, diesel_gallons, notes").order("date", { ascending: false }).limit(200),
+      supabase.from("industrial_trucks").select("id, identifier, datetime_in, datetime_out, tare, payload, destination_payload, weigh_ticket_number, notes").order("datetime_in", { ascending: false }).limit(200),
+      supabase.from("service_contracts").select("id, contract_name, land_owner, operation_type, price_per_unit, unit_type, is_active").eq("is_active", true),
+      supabase.from("contract_entries").select(`
+        id, entry_date, quantity, amount, notes,
+        contract:service_contracts!contract_entries_contract_id_fkey(contract_name, land_owner)
+      `).order("entry_date", { ascending: false }).limit(200),
     ]);
 
     const farms = farmsRes.data || [];
@@ -102,6 +113,14 @@ serve(async (req) => {
     const opInputs = opInputsRes.data || [];
     const fuelTx = fuelTxRes.data || [];
     const fuelTanks = fuelTanksRes.data || [];
+    const equipment = equipmentRes.data || [];
+    const implements_ = implementsRes.data || [];
+    const fixedAssets = fixedAssetsRes.data || [];
+    const carretas = carretasRes.data || [];
+    const plantHours = plantHoursRes.data || [];
+    const trucks = trucksRes.data || [];
+    const contracts = contractsRes.data || [];
+    const contractEntries = contractEntriesRes.data || [];
 
     const systemPrompt = `Eres un asistente de datos para una empresa agrícola en República Dominicana llamada Dallas Agro / Jord Dominicana.
 Tu trabajo es responder preguntas sobre las operaciones, empleados y datos de la empresa basándote en los datos proporcionados.
@@ -163,6 +182,18 @@ ${opInputs.slice(0, 100).map((oi: any) => {
   return `- ${opDate}: ${itemName} ${oi.quantity_used} ${unit} en ${fieldName} (${farmName})`;
 }).join("\n")}
 
+EQUIPOS (Tractores/Vehículos activos):
+${equipment.map((e: any) => `- ${e.name} (${e.equipment_type || "?"}), horómetro: ${e.current_hour_meter || 0} hrs, intervalo mantto: ${e.maintenance_interval_hours || "?"} hrs`).join("\n")}
+
+IMPLEMENTOS (activos):
+${implements_.map((i: any) => `- ${i.name} (${i.implement_type || "?"}), ancho: ${i.working_width_m || "?"} m`).join("\n")}
+
+ACTIVOS FIJOS (activos):
+${fixedAssets.map((a: any) => {
+  const nbv = (a.acquisition_value || 0) - (a.accumulated_depreciation || 0);
+  return `- ${a.name} (${a.category}): costo RD$${a.acquisition_value?.toLocaleString() || 0}, dep. acum. RD$${a.accumulated_depreciation?.toLocaleString() || 0}, VNL RD$${nbv.toLocaleString()}, vida útil ${a.useful_life_years} años${a.serial_number ? `, S/N: ${a.serial_number}` : ""}${a.acquisition_date ? `, adq: ${a.acquisition_date}` : ""}`;
+}).join("\n")}
+
 TANQUES DE COMBUSTIBLE:
 ${fuelTanks.map((t: any) => `- ${t.name}: ${t.current_level_gallons?.toFixed(1) || 0}/${t.capacity_gallons} galones, bomba en ${t.last_pump_end_reading || 0}`).join("\n")}
 
@@ -171,6 +202,25 @@ ${fuelTx.slice(0, 100).map((tx: any) => {
   const tankName = tx.tank?.name || "?";
   const eqName = tx.equipment?.name || "?";
   return `- ${tx.created_at?.slice(0, 10)}: ${tx.transaction_type} ${tx.gallons?.toFixed(1)} gal, equipo: ${eqName}, tanque: ${tankName}${tx.hour_meter_reading ? `, horómetro: ${tx.hour_meter_reading}` : ""}${tx.gallons_per_hour ? `, gal/hr: ${tx.gallons_per_hour.toFixed(2)}` : ""}`;
+}).join("\n")}
+
+CARRETAS INDUSTRIALES (últimos 200 registros):
+${carretas.slice(0, 100).map((c: any) => `- ${c.identifier || "?"}: salida ${c.datetime_out || "?"}, entrada ${c.datetime_in || "?"}, tara ${c.tare || 0}, carga ${c.payload || 0}${c.weigh_ticket_number ? `, ticket: ${c.weigh_ticket_number}` : ""}${c.notes ? `, ${c.notes}` : ""}`).join("\n")}
+
+HORAS DE PLANTA (últimos 200 registros):
+${plantHours.slice(0, 100).map((p: any) => `- ${p.date}: ${p.equipment_name || "?"}, inicio ${p.start_hour_meter || 0}, fin ${p.finish_hour_meter || 0}${p.diesel_gallons ? `, diesel: ${p.diesel_gallons} gal` : ""}${p.notes ? `, ${p.notes}` : ""}`).join("\n")}
+
+CAMIONES INDUSTRIALES (últimos 200 registros):
+${trucks.slice(0, 100).map((t: any) => `- ${t.identifier || "?"}: entrada ${t.datetime_in || "?"}, salida ${t.datetime_out || "?"}, tara ${t.tare || 0}, carga ${t.payload || 0}${t.destination_payload ? `, destino: ${t.destination_payload}` : ""}${t.weigh_ticket_number ? `, ticket: ${t.weigh_ticket_number}` : ""}${t.notes ? `, ${t.notes}` : ""}`).join("\n")}
+
+SERVICIOS CONTRATADOS (contratos activos):
+${contracts.map((c: any) => `- ${c.contract_name}: propietario ${c.land_owner || "?"}, operación ${c.operation_type || "?"}, precio RD$${c.price_per_unit || 0}/${c.unit_type || "unit"}`).join("\n")}
+
+ENTRADAS DE SERVICIOS CONTRATADOS (últimas 200):
+${contractEntries.slice(0, 100).map((e: any) => {
+  const cName = e.contract?.contract_name || "?";
+  const owner = e.contract?.land_owner || "?";
+  return `- ${e.entry_date}: ${cName} (${owner}), cantidad: ${e.quantity}, monto: RD$${e.amount}${e.notes ? `, ${e.notes}` : ""}`;
 }).join("\n")}
 
 INSTRUCCIONES:

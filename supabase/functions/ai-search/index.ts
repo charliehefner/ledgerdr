@@ -100,6 +100,8 @@ serve(async (req) => {
     const inventory = inventoryRes.data || [];
     const purchases = purchasesRes.data || [];
     const opInputs = opInputsRes.data || [];
+    const fuelTx = fuelTxRes.data || [];
+    const fuelTanks = fuelTanksRes.data || [];
 
     const systemPrompt = `Eres un asistente de datos para una empresa agrícola en República Dominicana llamada Dallas Agro / Jord Dominicana.
 Tu trabajo es responder preguntas sobre las operaciones, empleados y datos de la empresa basándote en los datos proporcionados.

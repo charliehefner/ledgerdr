@@ -1,47 +1,32 @@
 
 
-# Fix: Trigger not updating pump end reading on dispense
+# Add Equipment, Industrial & Extended Data to AI Search
 
-## Problem
-The newly created `trg_adjust_tank_level` trigger correctly adjusts `current_level_gallons` but does **not** update `last_pump_end_reading` on dispense transactions. The Pala Volvo operation (Apr 9) recorded `pump_end_reading = 100.4`, but the Mobile tank still shows `48.8`.
+## What's Changing
+Expand the AI search edge function to include data from all major operational modules that are currently missing.
 
-## Root Cause
-When we created the trigger in the last migration, we only included level adjustments and omitted the pump reading update that the client-side code previously handled. The offline queue (`useOfflineQueue.ts`) does update it for portal submissions, but the Agriculture dispense form no longer does (it was removed to avoid double-counting).
+## Currently Available
+Farms, fields, operation types, operations, employees, rainfall, day labor, inventory (items + purchases + usage), fuel transactions, fuel tanks.
 
-## Fix
+## Data to Add
 
-### 1. Update the database trigger
-Create a migration that replaces the `adjust_tank_level_on_fuel_tx()` function to also set `last_pump_end_reading = NEW.pump_end_reading` when `transaction_type = 'dispense'` and `NEW.pump_end_reading IS NOT NULL`.
+1. **Fuel Equipment (Tractors/Vehicles)** — `fuel_equipment` table: name, equipment_type, current_hour_meter, maintenance_interval_hours, is_active
+2. **Implements** — `implements` table: name, implement_type, working_width_m, is_active
+3. **Fixed Assets** — `fixed_assets` table: name, category, acquisition_date, acquisition_cost, accumulated_depreciation, useful_life_years, is_active, disposal_date
+4. **Industrial Carretas** — `industrial_carretas` table: identifier, datetime_out, datetime_in, tare, payload, weigh_ticket_number, notes
+5. **Industrial Plant Hours** — `industrial_plant_hours` table: date, start_hour_meter, finish_hour_meter, notes
+6. **Industrial Trucks** — `industrial_trucks` table: identifier, datetime_in, datetime_out, tare, payload, destination_payload, weigh_ticket_number, notes
+7. **Contracted Services** — `service_contracts` + `contract_entries` tables: contract name, owner, operation type, price per unit, daily entries with quantities
 
-### 2. Correct current data
-In the same migration, update Mobile tank's `last_pump_end_reading` to `100.4` (the actual pump end from the last dispense).
+## Implementation
 
-### 3. Remove redundant client-side pump update from offline queue
-Since the trigger now handles pump readings, remove the manual `last_pump_end_reading` update in `useOfflineQueue.ts` (lines 129-134) to avoid double writes.
+### Single file change: `supabase/functions/ai-search/index.ts`
 
-### Technical Details
+- Add 7 new queries to the existing `Promise.all` block
+- Add corresponding sections to the system prompt with formatted data
+- Limit industrial tables to last 200 records each, fixed assets to active ones, equipment/implements to active ones
+- Redeploy the edge function
 
-**Migration SQL:**
-```sql
-CREATE OR REPLACE FUNCTION public.adjust_tank_level_on_fuel_tx()
-RETURNS TRIGGER ...
-AS $$
-BEGIN
-  IF NEW.transaction_type = 'dispense' THEN
-    UPDATE fuel_tanks
-       SET current_level_gallons = GREATEST(0, current_level_gallons - NEW.gallons),
-           last_pump_end_reading = COALESCE(NEW.pump_end_reading, last_pump_end_reading),
-           updated_at = now()
-     WHERE id = NEW.tank_id;
-  -- ... refill and transfer unchanged
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
--- Fix current data
-UPDATE fuel_tanks SET last_pump_end_reading = 100.4 WHERE name ILIKE '%mobile%';
-```
-
-**useOfflineQueue.ts:** Remove the manual `fuel_tanks.update({ last_pump_end_reading })` call since the trigger now handles it.
+### System prompt additions
+New sections: EQUIPOS (tractors/vehicles with hour meters), IMPLEMENTOS (implements with working widths), ACTIVOS FIJOS (fixed assets with depreciation info), CARRETAS INDUSTRIALES, HORAS DE PLANTA, CAMIONES INDUSTRIALES, SERVICIOS CONTRATADOS.
 

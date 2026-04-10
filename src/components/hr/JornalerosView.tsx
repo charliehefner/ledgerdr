@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEntity } from "@/contexts/EntityContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ export function JornalerosView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
   const canWrite = canWriteHrTab(user?.role, "jornaleros");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -62,9 +64,11 @@ export function JornalerosView() {
           .eq("id", data.id);
         if (error) throw error;
       } else {
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Seleccione una entidad antes de registrar un jornalero.");
         const { error } = await supabase
           .from("jornaleros")
-          .insert({ name: data.name, cedula: data.cedula });
+          .insert({ name: data.name, cedula: data.cedula, entity_id: entityId });
         if (error) throw error;
       }
     },

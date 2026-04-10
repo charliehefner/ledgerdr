@@ -64,9 +64,11 @@ export function JornalerosView() {
           .eq("id", data.id);
         if (error) throw error;
       } else {
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Seleccione una entidad antes de registrar un jornalero.");
         const { error } = await supabase
           .from("jornaleros")
-          .insert({ name: data.name, cedula: data.cedula });
+          .insert({ name: data.name, cedula: data.cedula, entity_id: entityId });
         if (error) throw error;
       }
     },

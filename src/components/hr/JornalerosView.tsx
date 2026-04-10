@@ -27,6 +27,7 @@ export function JornalerosView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
   const canWrite = canWriteHrTab(user?.role, "jornaleros");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);

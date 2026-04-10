@@ -124,38 +124,16 @@ export function PurchaseDialog({
 
       if (purchaseError) throw purchaseError;
 
-      // For fuel items, update the tank level (trigger will sync to inventory)
+      // For fuel items, update pump gauge if reset requested, then record refill transaction
       if (isFuelItem && data.tank_id) {
-        // Fetch current tank state
-        const { data: currentTank, error: tankFetchError } = await supabase
-          .from("fuel_tanks")
-          .select("current_level_gallons, last_pump_end_reading")
-          .eq("id", data.tank_id)
-          .maybeSingle();
-
-        if (tankFetchError) throw tankFetchError;
-        if (!currentTank) throw new Error("Tank not found");
-
-        const newTankLevel = Number(currentTank.current_level_gallons) + addedQuantity;
-
-        // Build update: always update level, only reset pump if explicitly requested
-        const tankUpdate: Record<string, number> = {
-          current_level_gallons: newTankLevel,
-        };
-
         if (data.reset_tank_gauge) {
           // User explicitly confirms the physical pump gauge was reset to 0
-          tankUpdate.last_pump_end_reading = 0;
+          const { error: tankUpdateError } = await supabase
+            .from("fuel_tanks")
+            .update({ last_pump_end_reading: 0 })
+            .eq("id", data.tank_id);
+          if (tankUpdateError) throw tankUpdateError;
         }
-        // Otherwise do NOT touch last_pump_end_reading — the physical pump
-        // gauge doesn't change when a tanker truck refills the tank
-
-        const { error: tankUpdateError } = await supabase
-          .from("fuel_tanks")
-          .update(tankUpdate)
-          .eq("id", data.tank_id);
-
-        if (tankUpdateError) throw tankUpdateError;
 
         // Also record a refill transaction for tank history
         const { error: transactionError } = await supabase

@@ -235,20 +235,7 @@ export function AgricultureFuelView() {
       });
       if (txError) throw txError;
 
-      // Update tank level
-      const { data: tank } = await supabase
-        .from("fuel_tanks")
-        .select("current_level_gallons")
-        .eq("id", data.tank_id)
-        .maybeSingle();
-
-      if (tank) {
-        const { error: tankError } = await supabase
-          .from("fuel_tanks")
-          .update({ current_level_gallons: Math.max(0, tank.current_level_gallons - gallons) })
-          .eq("id", data.tank_id);
-        if (tankError) throw tankError;
-      }
+      // Tank level is automatically adjusted by DB trigger trg_adjust_tank_level
 
       // NOTE: We do NOT update fuel_equipment.current_hour_meter here.
       // The canonical source for tractor hour meters is the operations log,

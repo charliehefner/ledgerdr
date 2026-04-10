@@ -158,24 +158,7 @@ export function IndustryFuelView() {
       });
       if (txError) throw txError;
 
-      // Update tank level
-      const { data: tank } = await supabase
-        .from("fuel_tanks")
-        .select("current_level_gallons, capacity_gallons")
-        .eq("id", data.tank_id)
-        .maybeSingle();
-
-      if (tank) {
-        const newLevel = Math.min(
-          tank.capacity_gallons,
-          tank.current_level_gallons + gallons
-        );
-        const { error: tankError } = await supabase
-          .from("fuel_tanks")
-          .update({ current_level_gallons: newLevel })
-          .eq("id", data.tank_id);
-        if (tankError) throw tankError;
-      }
+      // Tank level is automatically adjusted by DB trigger trg_adjust_tank_level
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
@@ -241,12 +224,7 @@ export function IndustryFuelView() {
       });
       if (txError) throw txError;
 
-      // Reset tank level (assuming it's being refilled)
-      const { error: tankError } = await supabase
-        .from("fuel_tanks")
-        .update({ current_level_gallons: 0 })
-        .eq("id", industryTank.id);
-      if (tankError) throw tankError;
+      // Tank level is automatically adjusted by DB trigger trg_adjust_tank_level
 
       // Update equipment hour meter
       const { error: equipError } = await supabase

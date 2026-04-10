@@ -163,6 +163,16 @@ ${opInputs.slice(0, 100).map((oi: any) => {
   return `- ${opDate}: ${itemName} ${oi.quantity_used} ${unit} en ${fieldName} (${farmName})`;
 }).join("\n")}
 
+TANQUES DE COMBUSTIBLE:
+${fuelTanks.map((t: any) => `- ${t.name}: ${t.current_level_gallons?.toFixed(1) || 0}/${t.capacity_gallons} galones, bomba en ${t.last_pump_end_reading || 0}`).join("\n")}
+
+TRANSACCIONES DE COMBUSTIBLE (últimas 200):
+${fuelTx.slice(0, 100).map((tx: any) => {
+  const tankName = tx.tank?.name || "?";
+  const eqName = tx.equipment?.name || "?";
+  return `- ${tx.created_at?.slice(0, 10)}: ${tx.transaction_type} ${tx.gallons?.toFixed(1)} gal, equipo: ${eqName}, tanque: ${tankName}${tx.hour_meter_reading ? `, horómetro: ${tx.hour_meter_reading}` : ""}${tx.gallons_per_hour ? `, gal/hr: ${tx.gallons_per_hour.toFixed(2)}` : ""}`;
+}).join("\n")}
+
 INSTRUCCIONES:
 - Responde siempre en español
 - Responde en oraciones naturales y completas, no listas de datos crudos

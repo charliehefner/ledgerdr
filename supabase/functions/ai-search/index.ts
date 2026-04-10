@@ -56,7 +56,8 @@ serve(async (req) => {
     // Fetch context data for the AI to use
     const [
       farmsRes, fieldsRes, operationTypesRes, recentOpsRes, employeesRes,
-      rainfallRes, dayLaborRes, inventoryRes, purchasesRes, opInputsRes
+      rainfallRes, dayLaborRes, inventoryRes, purchasesRes, opInputsRes,
+      fuelTxRes, fuelTanksRes
     ] = await Promise.all([
       supabase.from("farms").select("id, name").eq("is_active", true),
       supabase.from("fields").select("id, name, farm_id, hectares").eq("is_active", true),
@@ -81,6 +82,12 @@ serve(async (req) => {
         inventory_items:inventory_items!operation_inputs_inventory_item_id_fkey(commercial_name, use_unit),
         operations:operations!operation_inputs_operation_id_fkey(operation_date, fields:fields!operations_field_id_fkey(name, farms:farms!fields_farm_id_fkey(name)))
       `).order("created_at", { ascending: false }).limit(200),
+      supabase.from("fuel_transactions").select(`
+        id, created_at, transaction_type, gallons, pump_start_reading, pump_end_reading, hour_meter_reading, previous_hour_meter, gallons_per_hour,
+        tank:fuel_tanks!fuel_transactions_tank_id_fkey(name),
+        equipment:fuel_equipment!fuel_transactions_equipment_id_fkey(name)
+      `).order("created_at", { ascending: false }).limit(200),
+      supabase.from("fuel_tanks").select("id, name, capacity_gallons, current_level_gallons, last_pump_end_reading"),
     ]);
 
     const farms = farmsRes.data || [];

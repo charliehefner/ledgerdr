@@ -1,72 +1,47 @@
 
 
-# Fuel System Audit Findings and Fix Plan
+# Fix: Trigger not updating pump end reading on dispense
 
-## Audit Summary
+## Problem
+The newly created `trg_adjust_tank_level` trigger correctly adjusts `current_level_gallons` but does **not** update `last_pump_end_reading` on dispense transactions. The Pala Volvo operation (Apr 9) recorded `pump_end_reading = 100.4`, but the Mobile tank still shows `48.8`.
 
-### Critical Bug Found: Driver Portal Does Not Deduct Tank Level
+## Root Cause
+When we created the trigger in the last migration, we only included level adjustments and omitted the pump reading update that the client-side code previously handled. The offline queue (`useOfflineQueue.ts`) does update it for portal submissions, but the Agriculture dispense form no longer does (it was removed to avoid double-counting).
 
-The **offline queue sync** (`useOfflineQueue.ts`, lines 126-133) inserts the fuel transaction and updates `last_pump_end_reading`, but **never subtracts gallons from `current_level_gallons`**. Every fuel dispensing submitted through the Driver Portal leaves the tank level unchanged.
+## Fix
 
-**Evidence:**
-- Mobile tank DB level: **510.8 gal**
-- Apr 9 dispense via portal: **51.6 gal** (submission_source = 'portal') — never deducted
-- Correct level after deduction: **459.2 gal**
-- Feb 7 portal dispense of 100 gal was also never deducted, but was absorbed by the manual migration reset on Mar 10
+### 1. Update the database trigger
+Create a migration that replaces the `adjust_tank_level_on_fuel_tx()` function to also set `last_pump_end_reading = NEW.pump_end_reading` when `transaction_type = 'dispense'` and `NEW.pump_end_reading IS NOT NULL`.
 
-### Transaction Reconstruction (from Mar 10 manual reset of 559.7)
+### 2. Correct current data
+In the same migration, update Mobile tank's `last_pump_end_reading` to `100.4` (the actual pump end from the last dispense).
 
-| Date | Type | Gallons | Calculated Level |
-|------|------|---------|-----------------|
-| Mar 10 (migration) | Reset | — | 559.7 |
-| Mar 10 | Dispense | -17.5 | 542.2 |
-| Mar 11 | Dispense | -50.0 | 492.2 |
-| Mar 20 | Dispense | -30.0 | 462.2 |
-| Mar 23 | Refill | +235.9 | 698.1 |
-| Mar 23 | Transfer out | -100.0 | 598.1 |
-| Mar 25 | Dispense ×3 | -87.3 | 510.8 |
-| Apr 9 | Dispense (PORTAL) | -51.6 | **459.2** (but DB still shows 510.8) |
-
-### Planta Tank Is Correct
-Planta Tank: 374.4 (refills) + 100.0 (transfer in) = **474.4** — matches DB exactly. The Mar 23 transfer DID register correctly in Planta Tank.
-
-### Your Expected 389.2
-The difference between calculated (459.2) and your expected (389.2) is 70.0 gallons. This may represent additional physical dispensing not yet recorded in the system, or manual adjustments. The system math checks out from recorded transactions.
-
----
-
-## Fix Plan
-
-### 1. Fix Driver Portal sync to deduct tank level
-In `useOfflineQueue.ts`, add `current_level_gallons` deduction after inserting the transaction — fetch fresh tank level, subtract gallons, and update.
-
-### 2. Add a database trigger as safety net
-Create a trigger on `fuel_transactions` INSERT that automatically adjusts `current_level_gallons` based on transaction type (dispense: subtract, refill: add, transfer: subtract from source). This ensures the level stays accurate regardless of which code path creates the transaction.
-
-### 3. Correct the current Mobile tank level
-Run a migration to set Mobile tank `current_level_gallons` to **459.2** (or **389.2** if you confirm that's the physically correct amount).
-
-### 4. Remove redundant client-side level updates
-Once the database trigger handles level updates, the duplicate client-side deductions in `AgricultureFuelView.tsx`, `FuelTanksView.tsx`, and `PurchaseDialog.tsx` should be removed to prevent double-counting.
-
----
+### 3. Remove redundant client-side pump update from offline queue
+Since the trigger now handles pump readings, remove the manual `last_pump_end_reading` update in `useOfflineQueue.ts` (lines 129-134) to avoid double writes.
 
 ### Technical Details
 
-**Root cause code** (`useOfflineQueue.ts` lines 126-133):
-```typescript
-// Only updates pump reading — MISSING current_level_gallons deduction
-const { error: tankError } = await supabase
-  .from("fuel_tanks")
-  .update({ 
-    last_pump_end_reading: submission.pumpEndReading,
-    updated_at: new Date().toISOString()
-  })
-  .eq("id", submission.tankId);
+**Migration SQL:**
+```sql
+CREATE OR REPLACE FUNCTION public.adjust_tank_level_on_fuel_tx()
+RETURNS TRIGGER ...
+AS $$
+BEGIN
+  IF NEW.transaction_type = 'dispense' THEN
+    UPDATE fuel_tanks
+       SET current_level_gallons = GREATEST(0, current_level_gallons - NEW.gallons),
+           last_pump_end_reading = COALESCE(NEW.pump_end_reading, last_pump_end_reading),
+           updated_at = now()
+     WHERE id = NEW.tank_id;
+  -- ... refill and transfer unchanged
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- Fix current data
+UPDATE fuel_tanks SET last_pump_end_reading = 100.4 WHERE name ILIKE '%mobile%';
 ```
 
-**Database trigger** will handle all three transaction types:
-- `dispense` → subtract from source tank
-- `refill` → add to tank (capped at capacity)
-- `transfer` → subtract from source, add to destination
+**useOfflineQueue.ts:** Remove the manual `fuel_tanks.update({ last_pump_end_reading })` call since the trigger now handles it.
 

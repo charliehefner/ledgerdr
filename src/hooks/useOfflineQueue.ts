@@ -123,19 +123,7 @@ export function useOfflineQueue() {
       // synced by the DB trigger update_tractor_hour_meter (MAX end_hours).
       // Overwriting it from fuel transactions caused data corruption (see March 2026 incident).
 
-      // Tank level is automatically adjusted by DB trigger trg_adjust_tank_level.
-      // Only update the pump reading for validation continuity.
-      const { error: tankError } = await supabase
-        .from("fuel_tanks")
-        .update({ 
-          last_pump_end_reading: submission.pumpEndReading,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", submission.tankId);
-
-      if (tankError) {
-        console.error("[OfflineQueue] Failed to update tank pump reading:", tankError);
-      }
+      // Tank level AND pump reading are now handled by DB trigger trg_adjust_tank_level.
 
       // Success - remove from queue
       await db.delete("submissions", submission.id);

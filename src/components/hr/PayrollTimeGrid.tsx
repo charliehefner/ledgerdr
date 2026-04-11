@@ -875,8 +875,8 @@ export function PayrollTimeGrid({
                   key={day.toISOString()}
                   className={cn(
                     "text-center min-w-[100px] h-16 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap",
-                    isSunday(day) && "bg-muted",
-                    !isSunday(day) && isHoliday && "bg-amber-300 dark:bg-amber-800",
+                    isSunday(day) && "bg-emerald-800 text-white dark:bg-emerald-900",
+                    !isSunday(day) && isHoliday && "bg-emerald-700 text-white dark:bg-emerald-900",
                     !isSunday(day) && !isHoliday && index % 2 === 1 && "bg-muted/40",
                     !isSunday(day) && !isHoliday && index % 2 === 0 && "bg-background"
                   )}
@@ -895,7 +895,7 @@ export function PayrollTimeGrid({
                         htmlFor={`holiday-${day.toISOString()}`}
                         className={cn(
                           "text-[10px] cursor-pointer",
-                          isHoliday && "text-amber-600 font-medium"
+                          isHoliday && "text-emerald-200 font-medium"
                         )}
                       >
                         {t("timeGrid.holiday")}
@@ -976,14 +976,14 @@ export function PayrollTimeGrid({
                         <td
                           key={day.toISOString()}
                           className={cn(
-                            "p-1 text-center border-r border-border/30 align-middle relative",
+                          "p-1 text-center border-r border-border/30 align-middle relative",
                             // Sunday with work = darker green for 100% bonus
                             sunday && hasData && "bg-emerald-400 dark:bg-emerald-800",
-                            // Sunday without work = muted
-                            sunday && !hasData && "bg-muted/60",
+                            // Sunday without work = dark green
+                            sunday && !hasData && "bg-emerald-700/40 dark:bg-emerald-900/60",
                             // Status-based colors (priority order: vacation > holiday > absent > overtime > filled)
                             !sunday && isVacation && "bg-violet-300 dark:bg-violet-900",
-                            !sunday && !isVacation && isHoliday && "bg-amber-300 dark:bg-amber-800",
+                            !sunday && !isVacation && isHoliday && "bg-emerald-600/30 dark:bg-emerald-900/50",
                             !sunday && !isVacation && !isHoliday && isAbsent && "bg-red-100 dark:bg-red-900/50",
                             !sunday && !isVacation && !isAbsent && !isHoliday && hasOvertime && "bg-orange-200 dark:bg-orange-900",
                             !sunday && !isVacation && !isAbsent && hasData && !hasOvertime && !isHoliday && "bg-green-200 dark:bg-green-900",
@@ -1001,7 +1001,7 @@ export function PayrollTimeGrid({
                           {/* Holiday indicator overlay */}
                           {isHoliday && !sunday && !hasData && !isVacation && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-amber-700 dark:text-amber-300 font-bold text-xs opacity-80">FER</span>
+                              <span className="text-emerald-800 dark:text-emerald-300 font-bold text-xs opacity-80">FER</span>
                             </div>
                           )}
                           {/* Absence indicator overlay */}

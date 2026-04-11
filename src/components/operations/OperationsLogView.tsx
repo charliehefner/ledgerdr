@@ -1086,7 +1086,7 @@ export function OperationsLogView() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "MMM d, yyyy") : "Fecha inicio"}
+                {startDate ? format(startDate, "MMM d, yyyy") : t("operations.startDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -1098,12 +1098,12 @@ export function OperationsLogView() {
               />
             </PopoverContent>
           </Popover>
-          <span className="text-muted-foreground">a</span>
+          <span className="text-muted-foreground">{t("operations.dateTo")}</span>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "MMM d, yyyy") : "Fecha fin"}
+                {endDate ? format(endDate, "MMM d, yyyy") : t("operations.endDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -1123,7 +1123,7 @@ export function OperationsLogView() {
               <DropdownMenuTrigger asChild>
                 <Button variant="excel">
                   <Download className="mr-2 h-4 w-4" />
-                  Exportar Reporte
+                  {t("operations.exportReport")}
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1451,7 +1451,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("date")}
                 >
                   <div className="flex items-center">
-                    Fecha
+                    {t("operations.th.date")}
                     {getSortIcon("date")}
                   </div>
                 </TableHead>
@@ -1462,7 +1462,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("field")}
                 >
                   <div className="flex items-center">
-                    Campo
+                    {t("operations.th.field")}
                     {getSortIcon("field")}
                   </div>
                 </TableHead>
@@ -1473,7 +1473,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("farm")}
                 >
                   <div className="flex items-center">
-                    Finca
+                    {t("operations.th.farm")}
                     {getSortIcon("farm")}
                   </div>
                 </TableHead>
@@ -1484,7 +1484,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("operation")}
                 >
                   <div className="flex items-center">
-                    Operación
+                    {t("operations.th.operation")}
                     {getSortIcon("operation")}
                   </div>
                 </TableHead>
@@ -1495,7 +1495,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("tractor")}
                 >
                   <div className="flex items-center">
-                    Tractor/Obreros
+                    {t("operations.th.tractorWorkers")}
                     {getSortIcon("tractor")}
                   </div>
                 </TableHead>
@@ -1506,7 +1506,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("driver")}
                 >
                   <div className="flex items-center">
-                    Operador
+                    {t("operations.th.operator")}
                     {getSortIcon("driver")}
                   </div>
                 </TableHead>
@@ -1517,7 +1517,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("implement")}
                 >
                   <div className="flex items-center">
-                    Implemento
+                    {t("operations.th.implement")}
                     {getSortIcon("implement")}
                   </div>
                 </TableHead>
@@ -1528,7 +1528,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("hours")}
                 >
                   <div className="flex items-center">
-                    Horas
+                    {t("operations.th.hours")}
                     {getSortIcon("hours")}
                   </div>
                 </TableHead>
@@ -1539,14 +1539,14 @@ export function OperationsLogView() {
                   onClick={() => handleSort("hectares")}
                 >
                   <div className="flex items-center">
-                    Hectáreas
+                    {t("operations.th.hectares")}
                     {getSortIcon("hectares")}
                   </div>
                 </TableHead>
               )}
-              {isVisible("inputs") && <TableHead>Insumos</TableHead>}
-              {isVisible("notes") && <TableHead>Notas</TableHead>}
-              {canEdit && <TableHead className="w-[70px] text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Acciones</TableHead>}
+              {isVisible("inputs") && <TableHead>{t("operations.th.inputs")}</TableHead>}
+              {isVisible("notes") && <TableHead>{t("operations.th.notes")}</TableHead>}
+              {canEdit && <TableHead className="w-[70px] text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">{t("operations.th.actions")}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1558,7 +1558,7 @@ export function OperationsLogView() {
                   {isVisible("date") && (
                     <TableCell className="flex items-center gap-2">
                       {missingClosingData && (
-                        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label="Falta datos de cierre" />
+                        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label={t("operations.missingClosingData")} />
                       )}
                       {format(parseDateLocal(op.operation_date), "MMM d, yyyy")}
                     </TableCell>
@@ -1576,7 +1576,7 @@ export function OperationsLogView() {
                     <TableCell>
                       {op.operation_types?.is_mechanical
                         ? op.fuel_equipment?.name || "-"
-                        : `${op.workers_count ?? 0} obreros`}
+                        : `${op.workers_count ?? 0} ${t("operations.workers")}`}
                     </TableCell>
                   )}
                   {isVisible("driver") && <TableCell>{op.driver || "-"}</TableCell>}
@@ -1652,7 +1652,7 @@ export function OperationsLogView() {
                             onClick={() => setDeleteOperationId(op.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
+                            {t("common.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1693,16 +1693,16 @@ export function OperationsLogView() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Operación Duplicada
+              {t("operations.duplicateTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe una operación idéntica (mismo campo, tipo de operación, fecha e insumos) registrada para este día. ¿Desea guardarla de todos modos?
+              {t("operations.duplicateDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDuplicateSave}>
-              Guardar de todos modos
+              {t("operations.saveAnyway")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

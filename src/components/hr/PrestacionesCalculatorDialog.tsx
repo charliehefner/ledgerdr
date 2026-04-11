@@ -109,6 +109,8 @@ export function PrestacionesCalculatorDialog({
   userId,
 }: PrestacionesCalculatorDialogProps) {
   const queryClient = useQueryClient();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "en" ? enUS : es;
   const [scenario, setScenario] = useState<PrestacionesScenario>("desahucio");
   const [terminationDate, setTerminationDate] = useState(employee.date_of_termination || format(new Date(), "yyyy-MM-dd"));
   const [workedNotice, setWorkedNotice] = useState(false);

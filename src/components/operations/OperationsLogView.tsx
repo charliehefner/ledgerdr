@@ -752,8 +752,8 @@ export function OperationsLogView() {
     
     if (!form.field_id || !form.operation_type_id) {
       toast({
-        title: "Error de Validación",
-        description: "Campo y tipo de operación son requeridos.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.fieldAndTypeRequired"),
         variant: "destructive",
       });
       return;
@@ -764,8 +764,8 @@ export function OperationsLogView() {
       const hectares = parseFloat(form.hectares_done);
       if (isNaN(hectares) || hectares < 0) {
         toast({
-          title: "Error de Validación",
-          description: "Las hectáreas trabajadas no pueden ser negativas.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.negativeHectares"),
           variant: "destructive",
         });
         return;
@@ -774,8 +774,8 @@ export function OperationsLogView() {
 
     if (isMechanical && (!form.tractor_id || !form.implement_id)) {
       toast({
-        title: "Error de Validación",
-        description: "Las operaciones mecánicas requieren tractor e implemento.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.mechanicalRequires"),
         variant: "destructive",
       });
       return;
@@ -788,8 +788,8 @@ export function OperationsLogView() {
       
       if (startHours >= endHours) {
         toast({
-          title: "Error de Validación",
-          description: "El horómetro inicio debe ser menor que el horómetro fin.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.hourMeterStartLess"),
           variant: "destructive",
         });
         return;
@@ -809,8 +809,8 @@ export function OperationsLogView() {
 
         if (gap > 100) {
           toast({
-            title: "🚫 Horómetro Bloqueado",
-            description: `Salto de ${gap.toFixed(1)} horas es demasiado grande (máx 100h). Verifique el tractor seleccionado.`,
+            title: t("operations.toast.hourMeterBlocked"),
+            description: t("operations.toast.hourMeterBlockedDesc").replace("{gap}", gap.toFixed(1)),
             variant: "destructive",
             duration: 10000,
           });
@@ -819,7 +819,7 @@ export function OperationsLogView() {
 
         // Small gap: just warn
         toast({
-          title: "⚠️ Alerta de Horómetro",
+          title: t("operations.toast.hourMeterAlert"),
           description: gapWarning,
           variant: "default",
           duration: 8000,
@@ -833,8 +833,8 @@ export function OperationsLogView() {
       if (maintenanceStatus?.isOverdue) {
         const tractorName = tractors?.find(t => t.id === form.tractor_id)?.name || "Tractor";
         toast({
-          title: "🔧 ¡Mantenimiento Vencido!",
-          description: `${tractorName} tiene el mantenimiento vencido por ${maintenanceStatus.hoursOverdue} horas. Se recomienda realizar mantenimiento antes de continuar.`,
+          title: t("operations.toast.maintenanceOverdue"),
+          description: t("operations.toast.maintenanceOverdueDesc").replace("{tractor}", tractorName).replace("{hours}", String(maintenanceStatus.hoursOverdue)),
           variant: "destructive",
           duration: 10000,
         });
@@ -843,8 +843,8 @@ export function OperationsLogView() {
 
     if (!isMechanical && !form.workers_count) {
       toast({
-        title: "Error de Validación",
-        description: "Las operaciones manuales requieren cantidad de obreros.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.manualRequiresWorkers"),
         variant: "destructive",
       });
       return;
@@ -855,8 +855,8 @@ export function OperationsLogView() {
       const workers = parseInt(form.workers_count);
       if (isNaN(workers) || workers <= 0) {
         toast({
-          title: "Error de Validación",
-          description: "La cantidad de obreros debe ser un número positivo.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.positiveWorkers"),
           variant: "destructive",
         });
         return;
@@ -868,8 +868,8 @@ export function OperationsLogView() {
     if (newInput.inventory_item_id || newInput.quantity_used) {
       if (!newInput.inventory_item_id || !newInput.quantity_used) {
         toast({
-          title: "Error de Validación",
-          description: "Complete artículo y cantidad del insumo pendiente o limpie ambos campos.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.completePendingInput"),
           variant: "destructive",
         });
         return;

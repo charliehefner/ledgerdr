@@ -266,7 +266,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
           return (
             <Badge variant="secondary" className="gap-1">
               <Ban className="h-3 w-3" />
-              Desvinculado
+              {t("empList.terminated")}
             </Badge>
           );
         }
@@ -288,17 +288,20 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
             {status.isOverdue ? (
               <Badge variant="destructive" className="gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                {Math.abs(status.daysUntil)} días vencido
+                {Math.abs(status.daysUntil)} {t("empList.daysOverdue").replace("{days}", "")}
+              </Badge>
               </Badge>
             ) : status.isDueSoon ? (
               <Badge variant="secondary" className="gap-1 bg-warning/20 text-warning-foreground">
                 <Clock className="h-3 w-3" />
-                {status.daysUntil} días
+                {status.daysUntil} {t("empList.daysLeft").replace("{days}", "")}
+              </Badge>
               </Badge>
             ) : (
               <Badge variant="outline" className="gap-1 text-success border-success/30">
                 <CheckCircle className="h-3 w-3" />
-                {status.daysUntil} días
+                {status.daysUntil} {t("empList.daysLeft").replace("{days}", "")}
+              </Badge>
               </Badge>
             )}
           </Button>
@@ -307,7 +310,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "is_active":
         return (
           <Badge variant={employee.is_active ? "default" : "secondary"}>
-            {employee.is_active ? "Activo" : "Inactivo"}
+            {employee.is_active ? t("common.active") : t("common.inactive")}
           </Badge>
         );
       default:
@@ -322,10 +325,10 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              <CardTitle>Directorio de Empleados</CardTitle>
+              <CardTitle>{t("empList.title")}</CardTitle>
               {employees && (
                 <Badge variant="secondary" className="ml-2">
-                  {sortedAndFilteredEmployees.length} de {employees.length}
+                  {sortedAndFilteredEmployees.length} {t("empList.of")} {employees.length}
                 </Badge>
               )}
             </div>
@@ -339,19 +342,19 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                 {showActive ? (
                   <>
                     <CheckCircle className="h-4 w-4" />
-                    Activos
+                    {t("empList.activeToggle")}
                   </>
                 ) : (
                   <>
                     <Ban className="h-4 w-4" />
-                    Inactivos
+                    {t("empList.inactiveToggle")}
                   </>
                 )}
               </Button>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar nombre, cédula, banco..."
+                  placeholder={t("empList.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -374,8 +377,8 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
           ) : sortedAndFilteredEmployees.length === 0 ? (
             <EmptyState
               icon={Users}
-              title={searchTerm ? "No hay resultados" : "Sin empleados"}
-              description={searchTerm ? "No hay empleados que coincidan con la búsqueda" : "Agregue el primer empleado para comenzar."}
+              title={searchTerm ? t("empList.noResults") : t("empList.noEmployees")}
+              description={searchTerm ? t("empList.noResultsDesc") : t("empList.noEmployeesDesc")}
             />
           ) : (
             <div className="overflow-x-auto">
@@ -396,7 +399,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                         </div>
                       </TableHead>
                     ))}
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-right">{t("empList.col.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -416,7 +419,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedEmployee(employee.id)}
-                            title="Ver Detalles e Historial"
+                            title={t("empList.viewDetails")}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -425,7 +428,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => onEdit(employee.id)}
-                              title="Editar Empleado"
+                              title={t("empList.editEmployee")}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>

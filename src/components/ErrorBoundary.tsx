@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   children: ReactNode;
@@ -9,6 +10,48 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+}
+
+/** Fire-and-forget error logger – never throws */
+async function logErrorToDb(
+  errorMessage: string,
+  stackTrace?: string,
+  componentName?: string
+) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await (supabase as any).from("app_error_log").insert({
+      user_id: user?.id ?? null,
+      error_message: errorMessage.slice(0, 2000),
+      stack_trace: stackTrace?.slice(0, 8000) ?? null,
+      page_url: window.location.href,
+      user_agent: navigator.userAgent,
+      component_name: componentName ?? null,
+    });
+  } catch {
+    // swallow – logging must never break the app
+  }
+}
+
+// Global handlers for errors outside React tree
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (event) => {
+    logErrorToDb(
+      event.message || "Unhandled error",
+      event.error?.stack,
+      "window.onerror"
+    );
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const msg =
+      event.reason instanceof Error
+        ? event.reason.message
+        : String(event.reason);
+    const stack =
+      event.reason instanceof Error ? event.reason.stack : undefined;
+    logErrorToDb(msg, stack, "unhandledrejection");
+  });
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -32,6 +75,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Uncaught error:", error, errorInfo);
+    logErrorToDb(
+      error.message,
+      error.stack,
+      errorInfo.componentStack?.slice(0, 500) ?? "ErrorBoundary"
+    );
   }
 
   handleReset = () => {

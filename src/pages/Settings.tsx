@@ -31,7 +31,8 @@ import {
   Truck,
   Building2,
   ClipboardCheck,
-  MessageCircle
+  MessageCircle,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +54,7 @@ import { EntitiesManager } from "@/components/settings/EntitiesManager";
 import { ApprovalThresholdsManager } from "@/components/settings/ApprovalThresholdsManager";
 import { MfaSettings } from "@/components/settings/MfaSettings";
 import { TelegramSettings } from "@/components/settings/TelegramSettings";
+import { ErrorLogView } from "@/components/settings/ErrorLogView";
 
 export default function Settings() {
   const { canModifySettings } = useAuth();
@@ -178,6 +180,12 @@ export default function Settings() {
               <TabsTrigger value="telegram">
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Telegram
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="error-log">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Error Log
               </TabsTrigger>
             )}
           </TabsList>
@@ -408,6 +416,14 @@ export default function Settings() {
           {canModifySettings && (
             <TabsContent value="telegram" className="mt-6">
               <TelegramSettings />
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="error-log" className="mt-6">
+              <div className="max-w-5xl">
+                <ErrorLogView />
+              </div>
             </TabsContent>
           )}
         </Tabs>

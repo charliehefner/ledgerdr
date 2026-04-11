@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addWeeks, subWeeks, isAfter, startOfDay, eachDayOfInterval, getDay } from "date-fns";
+import { es, enUS } from "date-fns/locale";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

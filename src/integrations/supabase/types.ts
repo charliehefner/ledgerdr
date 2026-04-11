@@ -5475,6 +5475,7 @@ export type Database = {
               account_name: string
               account_type: string
               balance: number
+              balance_dop: number
               currency: string
               total_credit: number
               total_debit: number

@@ -1,64 +1,46 @@
 
 
-# Proactive Error Detection — What I Can Implement Now
+# Complete Bilingual (EN/ES) Sweep
 
-From the 7 strategies discussed, here's what's actionable inside Lovable right now (excluding E2E which we'll do later):
+## Current State
+- **~1,450 translation keys** already exist in `es.ts` and `en.ts`
+- **127 component files** still contain hardcoded Spanish strings
+- Affected modules: HR (17 files), Accounting (12), Fuel/Equipment (14), Operations (12), Settings (13), Inventory (6), Industrial (3), Driver Portal (7), Analytics (7), Transactions (6), Pages (9), Layout/UI (6)
 
-## 1. Security Scan & RLS Hardening (ready now)
+## Approach
 
-The scan just found **8 issues**, including 2 critical ones:
-- `contact_bank_accounts` — bank account numbers readable by ALL authenticated users
-- `service_entry_payments` — payment records across all entities exposed
-- 4 additional tables with overly permissive SELECT policies
+Work module-by-module. For each file:
+1. Extract every hardcoded Spanish string into a new `t()` key
+2. Add the Spanish value to `es.ts` and the English translation to `en.ts`
+3. Replace the inline string with `t("key")`
 
-**Action:** Write migrations to tighten RLS policies on these 6 tables, scoping them to appropriate roles and entities.
+This is a mechanical but large task — roughly **400-500 new keys** across 127 files.
 
-## 2. Error Monitoring Table + Auto-Logging
+## Batch Order (by module, largest first)
 
-Currently the ErrorBoundary just `console.error`s and shows a Spanish error page. Errors vanish when the user reloads.
+| Batch | Module | Files | Est. New Keys |
+|-------|--------|-------|---------------|
+| 1 | HR (employees, payroll, jornaleros, services) | 17 | ~90 |
+| 2 | Accounting (DGII, payments, chart of accounts) | 12 | ~60 |
+| 3 | Operations (farms, fields, contracts, maps) | 12 | ~55 |
+| 4 | Settings (entities, users, approvals, backup) | 13 | ~50 |
+| 5 | Fuel & Equipment (tanks, tractors, implements) | 14 | ~50 |
+| 6 | Driver Portal (wizard steps, QR, meter) | 7 | ~35 |
+| 7 | Analytics tabs | 7 | ~30 |
+| 8 | Inventory | 6 | ~25 |
+| 9 | Transactions & Invoices | 6 | ~25 |
+| 10 | Pages, Layout, Industrial, remaining | 18 | ~40 |
 
-**Action:**
-- Create an `app_error_log` table (timestamp, user_id, error_message, stack_trace, page_url, user_agent)
-- Modify ErrorBoundary to POST errors to the database (fire-and-forget, non-blocking)
-- Add a global `window.onerror` / `unhandledrejection` handler to catch errors outside React
-- Add an admin-only "Error Log" tab in Settings to review recent errors
+## What Changes
 
-## 3. Database Constraint Tightening
+- **`src/i18n/es.ts`** — add ~460 new keys (Spanish values matching current hardcoded text)
+- **`src/i18n/en.ts`** — add ~460 new keys (English translations)
+- **127 `.tsx` files** — replace hardcoded strings with `t("...")` calls, adding `useLanguage()` import where missing
+- **No database changes, no new dependencies**
 
-Catch bugs like the missing `entity_id` at the database level before they reach the UI.
+## Result
 
-**Action:**
-- Audit key tables for missing NOT NULL constraints on critical foreign keys
-- Add validation triggers where CHECK constraints aren't appropriate (time-based validations)
-- Add missing unique constraints to prevent duplicate records
+Every visible string in the app will flow through the `t()` function. Switching to English (or adding French later) becomes a matter of adding one new file per language — no component changes needed.
 
-## 4. Integration Tests for Critical DB Operations
-
-Expand the existing Vitest suite to test actual insert/update patterns that have caused bugs.
-
-**Action:**
-- Add tests for jornalero registration (entity_id required)
-- Add tests for fuel transaction insertion (tank_id, entity_id, pump readings)
-- Add tests for inventory stock mutations (quantity reconciliation)
-- These mock Supabase calls and verify payloads include all required fields
-
-## 5. Enable Leaked Password Protection
-
-The linter flagged this is disabled — a one-click security improvement.
-
-**Action:** Enable via auth configuration.
-
----
-
-## Summary of Changes
-
-| # | What | Files |
-|---|------|-------|
-| 1 | Tighten 6 RLS policies | 1 migration |
-| 2 | Error monitoring table + logging | 1 migration + ErrorBoundary.tsx + new Settings tab |
-| 3 | DB constraint audit + triggers | 1 migration |
-| 4 | Integration tests | 3-4 new test files |
-| 5 | Leaked password protection | Auth config change |
-
-All of this can be done without any action from you.
+Due to the volume (127 files), I'll process this in multiple batches across several messages. Ready to start on your approval.
 

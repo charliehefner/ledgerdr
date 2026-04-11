@@ -878,8 +878,8 @@ export function OperationsLogView() {
       const pendingQty = parseFloat(newInput.quantity_used);
       if (isNaN(pendingQty) || pendingQty <= 0) {
         toast({
-          title: "Error de Validación",
-          description: "La cantidad del insumo debe ser mayor que cero.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.inputQtyPositive"),
           variant: "destructive",
         });
         return;
@@ -888,8 +888,8 @@ export function OperationsLogView() {
       const pendingItem = inventoryItems?.find(i => i.id === newInput.inventory_item_id);
       if (!pendingItem) {
         toast({
-          title: "Error de Validación",
-          description: "El insumo seleccionado no está disponible.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.inputNotAvailable"),
           variant: "destructive",
         });
         return;
@@ -901,8 +901,8 @@ export function OperationsLogView() {
 
       if (pendingQty > maxAllowed) {
         toast({
-          title: "Stock Insuficiente",
-          description: `Solo ${maxAllowed} ${pendingItem.use_unit} disponibles para guardar este cambio.`,
+          title: t("operations.toast.insufficientStock"),
+          description: t("operations.toast.onlyAvailableForSave").replace("{qty}", String(maxAllowed)).replace("{unit}", pendingItem.use_unit),
           variant: "destructive",
         });
         return;

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInDays, addYears, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { format, differenceInDays, addYears } from "date-fns";
+import { es, enUS } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import {
@@ -36,6 +36,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface VacationRecord {
   id: string;
@@ -67,8 +68,9 @@ export function VacationCountdownDialog({
   const [notes, setNotes] = useState("");
   const queryClient = useQueryClient();
   const { canModifySettings } = useAuth();
+  const { t, language } = useLanguage();
+  const dateLocale = language === "en" ? enUS : es;
 
-  // Fetch vacation history
   const { data: vacationHistory = [], isLoading } = useQuery({
     queryKey: ["employee-vacations", employeeId],
     queryFn: async () => {
@@ -78,14 +80,12 @@ export function VacationCountdownDialog({
         .select("*")
         .eq("employee_id", employeeId)
         .order("end_date", { ascending: false });
-
       if (error) throw error;
       return data as VacationRecord[];
     },
     enabled: !!employeeId && open,
   });
 
-  // Calculate vacation status
   const lastVacation = vacationHistory[0];
   const baseDate = lastVacation
     ? parseDateLocal(lastVacation.end_date)
@@ -96,7 +96,6 @@ export function VacationCountdownDialog({
   const isOverdue = daysUntilVacation < 0;
   const isDueSoon = daysUntilVacation >= 0 && daysUntilVacation <= 30;
 
-  // Add vacation mutation
   const addVacationMutation = useMutation({
     mutationFn: async () => {
       if (!employeeId) throw new Error("No employee selected");
@@ -111,18 +110,17 @@ export function VacationCountdownDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
       queryClient.invalidateQueries({ queryKey: ["employee-vacations-summary"] });
-      toast.success("Vacaciones registradas correctamente");
+      toast.success(t("vacation.registered"));
       setStartDate("");
       setEndDate("");
       setNotes("");
       setActiveTab("status");
     },
     onError: (error: Error) => {
-      toast.error(`Error al registrar: ${error.message}`);
+      toast.error(`${t("vacation.registerError")}: ${error.message}`);
     },
   });
 
-  // Delete vacation mutation
   const deleteVacationMutation = useMutation({
     mutationFn: async (vacationId: string) => {
       const { error } = await supabase
@@ -134,21 +132,21 @@ export function VacationCountdownDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
       queryClient.invalidateQueries({ queryKey: ["employee-vacations-summary"] });
-      toast.success("Registro eliminado");
+      toast.success(t("vacation.deleted"));
     },
     onError: (error: Error) => {
-      toast.error(`Error al eliminar: ${error.message}`);
+      toast.error(`${t("vacation.deleteError")}: ${error.message}`);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate) {
-      toast.error("Por favor complete las fechas");
+      toast.error(t("vacation.fillDates"));
       return;
     }
     if (endDate < startDate) {
-      toast.error("La fecha de fin debe ser posterior a la fecha de inicio");
+      toast.error(t("vacation.endAfterStart"));
       return;
     }
     addVacationMutation.mutate();
@@ -159,7 +157,7 @@ export function VacationCountdownDialog({
       return (
         <Badge variant="destructive" className="text-sm">
           <AlertTriangle className="h-3 w-3 mr-1" />
-          Vencido por {Math.abs(daysUntilVacation)} días
+          {t("vacation.overdueBy").replace("{days}", String(Math.abs(daysUntilVacation)))}
         </Badge>
       );
     }
@@ -167,14 +165,14 @@ export function VacationCountdownDialog({
       return (
         <Badge variant="secondary" className="bg-warning/20 text-warning-foreground text-sm">
           <Clock className="h-3 w-3 mr-1" />
-          Próximo en {daysUntilVacation} días
+          {t("vacation.dueSoon").replace("{days}", String(daysUntilVacation))}
         </Badge>
       );
     }
     return (
       <Badge variant="default" className="bg-success/20 text-success-foreground text-sm">
         <CheckCircle className="h-3 w-3 mr-1" />
-        {daysUntilVacation} días restantes
+        {t("vacation.daysRemaining").replace("{days}", String(daysUntilVacation))}
       </Badge>
     );
   };
@@ -191,51 +189,50 @@ export function VacationCountdownDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Umbrella className="h-5 w-5" />
-            Vacaciones - {employeeName}
+            {t("vacation.title")} - {employeeName}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="status">Estado</TabsTrigger>
+            <TabsTrigger value="status">{t("vacation.statusTab")}</TabsTrigger>
             <TabsTrigger value="add" disabled={!canModifySettings}>
-              Registrar
+              {t("vacation.registerTab")}
             </TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
+            <TabsTrigger value="history">{t("vacation.historyTab")}</TabsTrigger>
           </TabsList>
 
-          {/* Status Tab */}
           <TabsContent value="status" className="space-y-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center justify-between">
-                  <span>Estado de Vacaciones</span>
+                  <span>{t("vacation.vacationStatus")}</span>
                   {getStatusBadge()}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fecha de Ingreso</span>
+                  <span className="text-muted-foreground">{t("vacation.hireDate")}</span>
                   <span className="font-medium">
-                    {format(parseDateLocal(dateOfHire), "d MMM yyyy", { locale: es })}
+                    {format(parseDateLocal(dateOfHire), "d MMM yyyy", { locale: dateLocale })}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Última Vacación</span>
+                  <span className="text-muted-foreground">{t("vacation.lastVacation")}</span>
                   <span className="font-medium">
                     {lastVacation
-                      ? format(parseDateLocal(lastVacation.end_date), "d MMM yyyy", { locale: es })
-                      : "Sin registro"}
+                      ? format(parseDateLocal(lastVacation.end_date), "d MMM yyyy", { locale: dateLocale })
+                      : t("vacation.noRecord")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Base para Cálculo</span>
+                  <span className="text-muted-foreground">{t("vacation.calcBasis")}</span>
                   <span className="font-medium">
-                    {lastVacation ? "Última vacación" : "Fecha de ingreso"}
+                    {lastVacation ? t("vacation.basedOnLastVacation") : t("vacation.basedOnHireDate")}
                   </span>
                 </div>
                 <div className="flex justify-between border-t pt-3">
-                  <span className="text-muted-foreground font-medium">Próximas Vacaciones</span>
+                  <span className="text-muted-foreground font-medium">{t("vacation.nextVacation")}</span>
                   <span
                     className={`font-bold ${
                       isOverdue
@@ -245,34 +242,32 @@ export function VacationCountdownDialog({
                         : "text-green-600"
                     }`}
                   >
-                    {format(nextVacationDue, "d MMM yyyy", { locale: es })}
+                    {format(nextVacationDue, "d MMM yyyy", { locale: dateLocale })}
                   </span>
                 </div>
                 {isOverdue && (
                   <div className="mt-3 p-3 bg-destructive/10 rounded-md text-destructive text-sm">
                     <AlertTriangle className="h-4 w-4 inline mr-2" />
-                    Las vacaciones están vencidas por {Math.abs(daysUntilVacation)} días.
-                    Registre las vacaciones tomadas para actualizar el contador.
+                    {t("vacation.overdueWarning").replace("{days}", String(Math.abs(daysUntilVacation)))}
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Add Tab */}
           <TabsContent value="add" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Plus className="h-4 w-4" />
-                  Registrar Vacaciones
+                  {t("vacation.registerVacation")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="startDate">Fecha de Inicio</Label>
+                      <Label htmlFor="startDate">{t("vacation.startDate")}</Label>
                       <Input
                         id="startDate"
                         type="date"
@@ -282,7 +277,7 @@ export function VacationCountdownDialog({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="endDate">Fecha de Fin</Label>
+                      <Label htmlFor="endDate">{t("vacation.endDate")}</Label>
                       <Input
                         id="endDate"
                         type="date"
@@ -294,16 +289,16 @@ export function VacationCountdownDialog({
                   </div>
                   {startDate && endDate && endDate >= startDate && (
                     <div className="text-sm text-muted-foreground">
-                      Duración: {calculateVacationDays(startDate, endDate)} días
+                      {t("vacation.duration")}: {t("vacation.durationDays").replace("{days}", String(calculateVacationDays(startDate, endDate)))}
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Notas (opcional)</Label>
+                    <Label htmlFor="notes">{t("vacation.notesOptional")}</Label>
                     <Textarea
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Observaciones adicionales..."
+                      placeholder={t("vacation.notesPlaceholder")}
                       rows={2}
                     />
                   </div>
@@ -313,18 +308,17 @@ export function VacationCountdownDialog({
                     disabled={addVacationMutation.isPending}
                   >
                     <Calendar className="h-4 w-4 mr-2" />
-                    {addVacationMutation.isPending ? "Guardando..." : "Registrar Vacaciones"}
+                    {addVacationMutation.isPending ? t("vacation.saving") : t("vacation.registerBtn")}
                   </Button>
                 </form>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* History Tab */}
           <TabsContent value="history" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Historial de Vacaciones</CardTitle>
+                <CardTitle className="text-sm">{t("vacation.history")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -333,16 +327,16 @@ export function VacationCountdownDialog({
                   </div>
                 ) : vacationHistory.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">
-                    No hay registros de vacaciones
+                    {t("vacation.noHistory")}
                   </p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Inicio</TableHead>
-                        <TableHead>Fin</TableHead>
-                        <TableHead>Días</TableHead>
-                        <TableHead>Notas</TableHead>
+                        <TableHead>{t("vacation.start")}</TableHead>
+                        <TableHead>{t("vacation.end")}</TableHead>
+                        <TableHead>{t("vacation.days")}</TableHead>
+                        <TableHead>{t("common.notes")}</TableHead>
                         {canModifySettings && <TableHead className="w-[50px]"></TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -350,10 +344,10 @@ export function VacationCountdownDialog({
                       {vacationHistory.map((vacation) => (
                         <TableRow key={vacation.id}>
                           <TableCell>
-                            {format(parseDateLocal(vacation.start_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(vacation.start_date), "d MMM yyyy", { locale: dateLocale })}
                           </TableCell>
                           <TableCell>
-                            {format(parseDateLocal(vacation.end_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(vacation.end_date), "d MMM yyyy", { locale: dateLocale })}
                           </TableCell>
                           <TableCell>
                             {calculateVacationDays(vacation.start_date, vacation.end_date)}

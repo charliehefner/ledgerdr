@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface CedulaOcrResult {
   name: string | null;
@@ -37,6 +38,7 @@ interface ScanCedulaButtonProps {
 }
 
 export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) {
+  const { t } = useLanguage();
   const [isScanning, setIsScanning] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -58,7 +60,7 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
 
       if (error) {
         console.error('OCR cédula error:', error);
-        toast.error(`Error al escanear: ${error.message || 'Error desconocido'}`);
+        toast.error(`${t("scanCedula.scanError")}: ${error.message || 'Unknown'}`);
         return;
       }
 
@@ -70,20 +72,20 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
       onResult(data);
 
       const filledFields = [
-        data.name && 'Nombre',
-        data.cedula && 'Cédula',
-        data.date_of_birth && 'Fecha Nac.',
-        data.sex && 'Sexo',
+        data.name && t("common.name"),
+        data.cedula && t("employees.cedula"),
+        data.date_of_birth && t("employees.dateOfBirth"),
+        data.sex && t("employees.sex"),
       ].filter(Boolean);
 
       if (filledFields.length > 0) {
-        toast.success(`Cédula escaneada: ${filledFields.join(', ')}`);
+        toast.success(`${t("scanCedula.scanned")}: ${filledFields.join(', ')}`);
       } else {
-        toast.warning('No se pudieron extraer datos de la cédula. Verifique la imagen.');
+        toast.warning(t("scanCedula.noData"));
       }
     } catch (err) {
       console.error('Scan error:', err);
-      toast.error('Error al procesar la cédula');
+      toast.error(t("scanCedula.scanError"));
     } finally {
       setIsScanning(false);
     }
@@ -104,7 +106,7 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('El archivo es demasiado grande (máx 10MB)');
+      toast.error(t("scanCedula.tooLarge"));
       return;
     }
 
@@ -148,9 +150,9 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
         setIsCameraActive(true);
       }
     } catch {
-      toast.error('No se pudo acceder a la cámara.');
+      toast.error(t("scanCedula.cameraError"));
     }
-  }, []);
+  }, [t]);
 
   const openCamera = useCallback(async () => {
     setShowCamera(true);
@@ -162,10 +164,10 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
       setSelectedCameraId(cameraToUse);
       await startCameraWithDevice(cameraToUse);
     } else {
-      toast.error('No se encontraron cámaras.');
+      toast.error(t("scanCedula.noCameras"));
       setShowCamera(false);
     }
-  }, [loadCameras, selectedCameraId, startCameraWithDevice]);
+  }, [loadCameras, selectedCameraId, startCameraWithDevice, t]);
 
   const switchCamera = useCallback(async (deviceId: string) => {
     setSelectedCameraId(deviceId);
@@ -235,17 +237,17 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
             ) : (
               <Camera className="h-4 w-4 mr-2" />
             )}
-            {isScanning ? 'Escaneando...' : 'Escanear Cédula'}
+            {isScanning ? t("scanCedula.scanning") : t("scanCedula.scan")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-2" />
-            Subir Imagen
+            {t("scanCedula.uploadImage")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={openCamera}>
             <Camera className="h-4 w-4 mr-2" />
-            Tomar Foto
+            {t("scanCedula.takePhoto")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -255,7 +257,7 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5" />
-              Escanear Cédula
+              {t("scanCedula.scanTitle")}
             </DialogTitle>
           </DialogHeader>
 
@@ -264,11 +266,11 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <SwitchCamera className="h-4 w-4" />
-                  Seleccionar Cámara
+                  {t("scanCedula.selectCamera")}
                 </Label>
                 <Select value={selectedCameraId} onValueChange={switchCamera}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Elegir cámara" />
+                    <SelectValue placeholder={t("scanCedula.chooseCamera")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableCameras.map((camera, index) => (
@@ -299,18 +301,18 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={closeCamera}>
                 <XCircle className="mr-2 h-4 w-4" />
-                Cancelar
+                {t("scanCedula.cancel")}
               </Button>
               {!capturedImage ? (
                 <Button type="button" onClick={capturePhoto} disabled={!isCameraActive}>
                   <Camera className="mr-2 h-4 w-4" />
-                  Capturar
+                  {t("scanCedula.capture")}
                 </Button>
               ) : (
                 <>
                   <Button type="button" variant="outline" onClick={retakePhoto}>
                     <Video className="mr-2 h-4 w-4" />
-                    Volver a tomar
+                    {t("scanCedula.retake")}
                   </Button>
                   <Button type="button" onClick={useCapturedPhoto} disabled={isScanning}>
                     {isScanning ? (
@@ -318,7 +320,7 @@ export function ScanCedulaButton({ onResult, disabled }: ScanCedulaButtonProps) 
                     ) : (
                       <FileImage className="mr-2 h-4 w-4" />
                     )}
-                    Escanear
+                    {t("scanCedula.scanBtn")}
                   </Button>
                 </>
               )}

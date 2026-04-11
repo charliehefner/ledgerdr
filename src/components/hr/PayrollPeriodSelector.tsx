@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, setDate, addMonths, subMonths } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PayrollPeriodSelectorProps {
   selectedPeriod: { startDate: Date; endDate: Date };
@@ -21,6 +22,8 @@ export function PayrollPeriodSelector({
   onPeriodChange,
 }: PayrollPeriodSelectorProps) {
   const [currentMonth, setCurrentMonth] = useState(selectedPeriod.startDate);
+  const { t, language } = useLanguage();
+  const dateLocale = language === "en" ? enUS : es;
 
   const getPeriodOptions = (month: Date) => {
     const monthStart = startOfMonth(month);
@@ -29,13 +32,13 @@ export function PayrollPeriodSelector({
 
     return [
       {
-        label: `1 - 15 ${format(month, "MMM yyyy", { locale: es })}`,
+        label: `1 - 15 ${format(month, "MMM yyyy", { locale: dateLocale })}`,
         startDate: setDate(monthStart, 1),
         endDate: setDate(monthStart, 15),
         value: "first",
       },
       {
-        label: `16 - ${lastDay} ${format(month, "MMM yyyy", { locale: es })}`,
+        label: `16 - ${lastDay} ${format(month, "MMM yyyy", { locale: dateLocale })}`,
         startDate: setDate(monthStart, 16),
         endDate: monthEnd,
         value: "second",
@@ -60,7 +63,6 @@ export function PayrollPeriodSelector({
   const handlePrevMonth = () => {
     const prevMonth = subMonths(currentMonth, 1);
     setCurrentMonth(prevMonth);
-    // Select second half of previous month
     const monthEnd = endOfMonth(prevMonth);
     onPeriodChange({
       startDate: setDate(startOfMonth(prevMonth), 16),
@@ -71,7 +73,6 @@ export function PayrollPeriodSelector({
   const handleNextMonth = () => {
     const nextMonth = addMonths(currentMonth, 1);
     setCurrentMonth(nextMonth);
-    // Select first half of next month
     onPeriodChange({
       startDate: setDate(startOfMonth(nextMonth), 1),
       endDate: setDate(startOfMonth(nextMonth), 15),
@@ -105,7 +106,7 @@ export function PayrollPeriodSelector({
       </Button>
 
       <span className="text-sm text-muted-foreground ml-2">
-        Pago: {format(selectedPeriod.endDate, "d MMM yyyy", { locale: es })}
+        {t("payrollPeriod.payment")}: {format(selectedPeriod.endDate, "d MMM yyyy", { locale: dateLocale })}
       </span>
     </div>
   );

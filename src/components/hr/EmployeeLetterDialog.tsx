@@ -30,12 +30,12 @@ interface Clause {
   body: string;
 }
 
-const CLAUSE_TEMPLATES: { label: string; title: string; body: string }[] = [
-  { label: "Teléfono celular", title: "Beneficios", body: "EL TRABAJADOR recibirá un teléfono celular para uso laboral." },
-  { label: "Gastos de combustible", title: "Beneficios", body: "LA EMPRESA cubrirá los gastos de combustible del TRABAJADOR para fines laborales." },
-  { label: "Vehículo de la empresa", title: "Beneficios", body: "LA EMPRESA proporcionará un vehículo para uso del TRABAJADOR en el desempeño de sus funciones." },
-  { label: "Responsabilidades", title: "Responsabilidades", body: "EL TRABAJADOR será responsable de " },
-  { label: "Horario de trabajo", title: "Condiciones", body: "El horario de trabajo será de lunes a viernes de 8:00 AM a 5:00 PM y sábados de 8:00 AM a 12:00 PM." },
+const CLAUSE_TEMPLATES: { labelKey: string; title: string; body: string }[] = [
+  { labelKey: "letter.cellPhone", title: "Beneficios", body: "EL TRABAJADOR recibirá un teléfono celular para uso laboral." },
+  { labelKey: "letter.fuelExpenses", title: "Beneficios", body: "LA EMPRESA cubrirá los gastos de combustible del TRABAJADOR para fines laborales." },
+  { labelKey: "letter.companyVehicle", title: "Beneficios", body: "LA EMPRESA proporcionará un vehículo para uso del TRABAJADOR en el desempeño de sus funciones." },
+  { labelKey: "letter.responsibilities", title: "Responsabilidades", body: "EL TRABAJADOR será responsable de " },
+  { labelKey: "letter.workSchedule", title: "Condiciones", body: "El horario de trabajo será de lunes a viernes de 8:00 AM a 5:00 PM y sábados de 8:00 AM a 12:00 PM." },
 ];
 
 interface EmployeeLetterDialogProps {
@@ -58,6 +58,7 @@ export function EmployeeLetterDialog({
 }: EmployeeLetterDialogProps) {
   const queryClient = useQueryClient();
   const { selectedEntityId } = useEntity();
+  const { t } = useLanguage();
   const [letterType, setLetterType] = useState("contrato");
   const [generating, setGenerating] = useState(false);
 
@@ -153,7 +154,7 @@ export function EmployeeLetterDialog({
 
       if (letterType === "contrato") {
         if (!companyName || !companyRnc) {
-          toast.error("Nombre y RNC de la empresa son requeridos");
+          toast.error(t("letter.companyRncRequired"));
           setGenerating(false);
           return;
         }
@@ -187,7 +188,7 @@ export function EmployeeLetterDialog({
         };
       } else if (letterType === "carta_banco") {
         if (!bankName) {
-          toast.error("El nombre del banco es requerido");
+          toast.error(t("letter.bankRequired"));
           setGenerating(false);
           return;
         }
@@ -205,7 +206,7 @@ export function EmployeeLetterDialog({
         };
       } else if (letterType === "vacaciones") {
         if (!vacationStart || !vacationEnd) {
-          toast.error("Las fechas de vacaciones son requeridas");
+          toast.error(t("letter.vacationDatesRequired"));
           setGenerating(false);
           return;
         }
@@ -232,14 +233,14 @@ export function EmployeeLetterDialog({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success("Carta generada exitosamente");
+      toast.success(t("letter.generated"));
       queryClient.invalidateQueries({
         queryKey: ["employee-documents", employee.id],
       });
       onOpenChange(false);
     } catch (err: any) {
       console.error("Error generating letter:", err);
-      toast.error("Error al generar carta: " + (err.message || "Unknown error"));
+      toast.error(t("letter.generateError") + (err.message || "Unknown error"));
     } finally {
       setGenerating(false);
     }
@@ -247,49 +248,51 @@ export function EmployeeLetterDialog({
 
   if (!employee) return null;
 
+  const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO"];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Generar Carta — {employee.name}
+            {t("letter.title").replace("{name}", employee.name)}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={letterType} onValueChange={setLetterType}>
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="contrato">Contrato</TabsTrigger>
-            <TabsTrigger value="terminacion">Desahucio</TabsTrigger>
-            <TabsTrigger value="carta_banco">Banco</TabsTrigger>
-            <TabsTrigger value="vacaciones">Vacaciones</TabsTrigger>
+            <TabsTrigger value="contrato">{t("letter.contract")}</TabsTrigger>
+            <TabsTrigger value="terminacion">{t("letter.termination")}</TabsTrigger>
+            <TabsTrigger value="carta_banco">{t("letter.bankLetter")}</TabsTrigger>
+            <TabsTrigger value="vacaciones">{t("letter.vacation")}</TabsTrigger>
           </TabsList>
 
           {/* Hiring Contract */}
           <TabsContent value="contrato" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Nombre del Empleado</Label>
+                <Label>{t("letter.employeeName")}</Label>
                 <Input value={employee.name} disabled />
               </div>
               <div>
-                <Label>Cédula</Label>
+                <Label>{t("employees.cedula")}</Label>
                 <Input value={employee.cedula} disabled />
               </div>
               <div>
-                <Label>Posición</Label>
+                <Label>{t("letter.position")}</Label>
                 <Input value={employee.position} disabled />
               </div>
               <div>
-                <Label>Salario Mensual (DOP)</Label>
+                <Label>{t("letter.monthlySalary")}</Label>
                 <Input value={employee.salary.toLocaleString()} disabled />
               </div>
               <div>
-                <Label>Fecha de Inicio</Label>
+                <Label>{t("letter.startDate")}</Label>
                 <Input value={employee.date_of_hire} disabled />
               </div>
               <div>
-                <Label>Período de Prueba (meses)</Label>
+                <Label>{t("letter.trialPeriod")}</Label>
                 <Input
                   type="number"
                   value={trialMonths}
@@ -299,7 +302,7 @@ export function EmployeeLetterDialog({
             </div>
 
             <div>
-              <Label>Dirección del Trabajador</Label>
+              <Label>{t("letter.workerAddress")}</Label>
               <Input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -311,7 +314,7 @@ export function EmployeeLetterDialog({
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold text-muted-foreground">
-                  Cláusulas Adicionales (SEGUNDO, TERCERO, etc.)
+                  {t("letter.additionalClauses")}
                 </p>
                 <Button
                   type="button"
@@ -320,7 +323,7 @@ export function EmployeeLetterDialog({
                   onClick={() => addClause()}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Agregar Cláusula
+                  {t("letter.addClause")}
                 </Button>
               </div>
 
@@ -328,27 +331,26 @@ export function EmployeeLetterDialog({
               <div className="flex flex-wrap gap-2 mb-3">
                 {CLAUSE_TEMPLATES.map((tpl) => (
                   <Button
-                    key={tpl.label}
+                    key={tpl.labelKey}
                     type="button"
                     variant="secondary"
                     size="sm"
                     className="text-xs"
                     onClick={() => addClause(tpl)}
                   >
-                    + {tpl.label}
+                    + {t(tpl.labelKey)}
                   </Button>
                 ))}
               </div>
 
               {clauses.length === 0 && (
                 <p className="text-xs text-muted-foreground italic">
-                  Sin cláusulas adicionales. Use los botones arriba para agregar beneficios, responsabilidades, etc.
+                  {t("letter.noClausesHint")}
                 </p>
               )}
 
               <div className="space-y-3">
                 {clauses.map((clause, idx) => {
-                  const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO"];
                   const label = ordinals[idx] || `CLÁUSULA ${idx + 2}`;
                   return (
                     <div key={idx} className="border rounded-md p-3 space-y-2">
@@ -364,7 +366,7 @@ export function EmployeeLetterDialog({
                         </Button>
                       </div>
                       <div>
-                        <Label className="text-xs">Tipo</Label>
+                        <Label className="text-xs">{t("letter.clauseType")}</Label>
                         <Select
                           value={clause.title}
                           onValueChange={(v) => updateClause(idx, "title", v)}
@@ -373,20 +375,20 @@ export function EmployeeLetterDialog({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Beneficios">Beneficios</SelectItem>
-                            <SelectItem value="Responsabilidades">Responsabilidades</SelectItem>
-                            <SelectItem value="Condiciones">Condiciones</SelectItem>
-                            <SelectItem value="Otro">Otro</SelectItem>
+                            <SelectItem value="Beneficios">{t("letter.benefits")}</SelectItem>
+                            <SelectItem value="Responsabilidades">{t("letter.responsibilities")}</SelectItem>
+                            <SelectItem value="Condiciones">{t("letter.conditions")}</SelectItem>
+                            <SelectItem value="Otro">{t("letter.other")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs">Contenido</Label>
+                        <Label className="text-xs">{t("letter.clauseContent")}</Label>
                         <Textarea
                           value={clause.body}
                           onChange={(e) => updateClause(idx, "body", e.target.value)}
                           rows={3}
-                          placeholder="Escriba el contenido de esta cláusula..."
+                          placeholder={t("letter.clausePlaceholder")}
                         />
                       </div>
                     </div>
@@ -397,11 +399,11 @@ export function EmployeeLetterDialog({
 
             <div className="border-t pt-4">
               <p className="text-sm font-semibold text-muted-foreground mb-3">
-                Datos de la Empresa
+                {t("letter.companyData")}
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre de la Empresa</Label>
+                  <Label>{t("letter.companyName")}</Label>
                   <Input
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
@@ -422,7 +424,7 @@ export function EmployeeLetterDialog({
                   />
                 </div>
                 <div>
-                  <Label>Dirección de la Empresa</Label>
+                  <Label>{t("letter.companyAddress")}</Label>
                   <Input
                     value={companyAddress}
                     onChange={(e) => setCompanyAddress(e.target.value)}
@@ -433,18 +435,18 @@ export function EmployeeLetterDialog({
 
             <div className="border-t pt-4">
               <p className="text-sm font-semibold text-muted-foreground mb-3">
-                Representante Legal
+                {t("letter.legalRep")}
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre</Label>
+                  <Label>{t("common.name")}</Label>
                   <Input
                     value={repName}
                     onChange={(e) => setRepName(e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label>Nacionalidad</Label>
+                  <Label>{t("letter.nationality")}</Label>
                   <Input
                     value={repNationality}
                     onChange={(e) => setRepNationality(e.target.value)}
@@ -452,7 +454,7 @@ export function EmployeeLetterDialog({
                   />
                 </div>
                 <div>
-                  <Label>Documento</Label>
+                  <Label>{t("letter.document")}</Label>
                   <Input
                     value={repDocument}
                     onChange={(e) => setRepDocument(e.target.value)}
@@ -460,7 +462,7 @@ export function EmployeeLetterDialog({
                   />
                 </div>
                 <div>
-                  <Label>Cargo</Label>
+                  <Label>{t("letter.title2")}</Label>
                   <Input
                     value={repTitle}
                     onChange={(e) => setRepTitle(e.target.value)}
@@ -474,15 +476,15 @@ export function EmployeeLetterDialog({
           <TabsContent value="terminacion" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Nombre del Empleado</Label>
+                <Label>{t("letter.employeeName")}</Label>
                 <Input value={employee.name} disabled />
               </div>
               <div>
-                <Label>Cédula</Label>
+                <Label>{t("employees.cedula")}</Label>
                 <Input value={employee.cedula} disabled />
               </div>
               <div>
-                <Label>Fecha del Aviso</Label>
+                <Label>{t("letter.noticeDate")}</Label>
                 <Input
                   type="date"
                   value={terminationDate}
@@ -490,19 +492,19 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Tipo de Desahucio</Label>
+                <Label>{t("letter.terminationType")}</Label>
                 <Select value={desahucioType} onValueChange={(v) => setDesahucioType(v as "immediate" | "preaviso")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="immediate">Despido inmediato</SelectItem>
-                    <SelectItem value="preaviso">Pre-aviso trabajado</SelectItem>
+                    <SelectItem value="immediate">{t("letter.immediateTermination")}</SelectItem>
+                    <SelectItem value="preaviso">{t("letter.preavisoTermination")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Último Día Laborando</Label>
+                <Label>{t("letter.lastWorkingDay")}</Label>
                 <Input
                   type="date"
                   value={lastWorkingDay}
@@ -511,7 +513,7 @@ export function EmployeeLetterDialog({
               </div>
               {desahucioType === "preaviso" && (
                 <div>
-                  <Label>Días de Pre-aviso</Label>
+                  <Label>{t("letter.preavisoDays")}</Label>
                   <Input
                     type="number"
                     value={preavisoDays}
@@ -521,10 +523,10 @@ export function EmployeeLetterDialog({
               )}
             </div>
             <div className="border-t pt-4">
-              <p className="text-sm font-semibold text-muted-foreground mb-3">Firmantes</p>
+              <p className="text-sm font-semibold text-muted-foreground mb-3">{t("letter.signers")}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre del Gerente</Label>
+                  <Label>{t("letter.managerName")}</Label>
                   <Input
                     value={managerName}
                     onChange={(e) => setManagerName(e.target.value)}
@@ -532,7 +534,7 @@ export function EmployeeLetterDialog({
                   />
                 </div>
                 <div>
-                  <Label>Cargo del Gerente</Label>
+                  <Label>{t("letter.managerTitle")}</Label>
                   <Input
                     value={managerTitle}
                     onChange={(e) => setManagerTitle(e.target.value)}
@@ -546,23 +548,23 @@ export function EmployeeLetterDialog({
           <TabsContent value="carta_banco" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Nombre del Empleado</Label>
+                <Label>{t("letter.employeeName")}</Label>
                 <Input value={employee.name} disabled />
               </div>
               <div>
-                <Label>Cédula</Label>
+                <Label>{t("employees.cedula")}</Label>
                 <Input value={employee.cedula} disabled />
               </div>
               <div>
-                <Label>Posición</Label>
+                <Label>{t("letter.position")}</Label>
                 <Input value={employee.position} disabled />
               </div>
               <div>
-                <Label>Salario Mensual (DOP)</Label>
+                <Label>{t("letter.monthlySalary")}</Label>
                 <Input value={employee.salary.toLocaleString()} disabled />
               </div>
               <div>
-                <Label>Banco</Label>
+                <Label>{t("letter.bankName")}</Label>
                 <Input
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
@@ -570,7 +572,7 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Fecha de la Carta</Label>
+                <Label>{t("letter.letterDate")}</Label>
                 <Input
                   type="date"
                   value={bankLetterDate}
@@ -579,10 +581,10 @@ export function EmployeeLetterDialog({
               </div>
             </div>
             <div className="border-t pt-4">
-              <p className="text-sm font-semibold text-muted-foreground mb-3">Firmante</p>
+              <p className="text-sm font-semibold text-muted-foreground mb-3">{t("letter.signer")}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre</Label>
+                  <Label>{t("letter.signerName")}</Label>
                   <Input
                     value={signerName}
                     onChange={(e) => setSignerName(e.target.value)}
@@ -590,7 +592,7 @@ export function EmployeeLetterDialog({
                   />
                 </div>
                 <div>
-                  <Label>Cargo</Label>
+                  <Label>{t("letter.signerTitle")}</Label>
                   <Input
                     value={signerTitle}
                     onChange={(e) => setSignerTitle(e.target.value)}
@@ -604,15 +606,15 @@ export function EmployeeLetterDialog({
           <TabsContent value="vacaciones" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Nombre del Empleado</Label>
+                <Label>{t("letter.employeeName")}</Label>
                 <Input value={employee.name} disabled />
               </div>
               <div>
-                <Label>Cédula</Label>
+                <Label>{t("employees.cedula")}</Label>
                 <Input value={employee.cedula} disabled />
               </div>
               <div>
-                <Label>Inicio de Vacaciones</Label>
+                <Label>{t("letter.vacationStart")}</Label>
                 <Input
                   type="date"
                   value={vacationStart}
@@ -620,7 +622,7 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Fin de Vacaciones</Label>
+                <Label>{t("letter.vacationEnd")}</Label>
                 <Input
                   type="date"
                   value={vacationEnd}
@@ -628,7 +630,7 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Fecha de Reincorporación</Label>
+                <Label>{t("letter.returnDate")}</Label>
                 <Input
                   type="date"
                   value={vacationReturnDate}
@@ -636,7 +638,7 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Días Laborables</Label>
+                <Label>{t("letter.workDays")}</Label>
                 <Input
                   type="number"
                   value={vacationDays}
@@ -644,7 +646,7 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Período (ej: 2024/2025)</Label>
+                <Label>{t("letter.period")}</Label>
                 <Input
                   value={vacationPeriod}
                   onChange={(e) => setVacationPeriod(e.target.value)}
@@ -652,7 +654,7 @@ export function EmployeeLetterDialog({
                 />
               </div>
               <div>
-                <Label>Fecha de la Carta</Label>
+                <Label>{t("letter.letterDate")}</Label>
                 <Input
                   type="date"
                   value={vacationLetterDate}
@@ -661,10 +663,10 @@ export function EmployeeLetterDialog({
               </div>
             </div>
             <div className="border-t pt-4">
-              <p className="text-sm font-semibold text-muted-foreground mb-3">Firmantes</p>
+              <p className="text-sm font-semibold text-muted-foreground mb-3">{t("letter.signers")}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre del Gerente</Label>
+                  <Label>{t("letter.managerName")}</Label>
                   <Input
                     value={vacationManagerName}
                     onChange={(e) => setVacationManagerName(e.target.value)}
@@ -672,7 +674,7 @@ export function EmployeeLetterDialog({
                   />
                 </div>
                 <div>
-                  <Label>Cargo del Gerente</Label>
+                  <Label>{t("letter.managerTitle")}</Label>
                   <Input
                     value={vacationManagerTitle}
                     onChange={(e) => setVacationManagerTitle(e.target.value)}
@@ -685,18 +687,18 @@ export function EmployeeLetterDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleGenerate} disabled={generating}>
             {generating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generando...
+                {t("letter.generating")}
               </>
             ) : (
               <>
                 <FileText className="h-4 w-4 mr-2" />
-                Generar PDF
+                {t("letter.generatePdf")}
               </>
             )}
           </Button>

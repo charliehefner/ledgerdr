@@ -13,6 +13,7 @@ import { Download, Eye, FileText, Loader2, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import { useEntity } from "@/contexts/EntityContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // DR TSS contribution rates
 const TSS_RATES = {
@@ -23,7 +24,6 @@ const TSS_RATES = {
   erSRL: 0.0110,
 };
 
-// TSS salary ceilings (monthly)
 const TSS_CEILINGS = {
   sfs: 210000,
   afp: 420000,
@@ -71,7 +71,7 @@ interface TssEmployeeRow {
   name: string;
   cedula: string;
   dateOfBirth: string | null;
-  monthlySalary: number; // earned salary for the month (from snapshots or master)
+  monthlySalary: number;
   source: "snapshot" | "estimate";
 }
 
@@ -90,14 +90,14 @@ function generateDetalle(emp: TssEmployeeRow, claveNomina = "001"): string {
   line += " ";
   line += formatDateDDMMAAAA(emp.dateOfBirth);
   line += formatAmount(emp.monthlySalary);
-  line += formatAmount(0); // Aporte voluntario
-  line += formatAmount(0); // Salario_ISR
-  line += formatAmount(0); // Otras remuneraciones ISR
-  line += padLeft("", 11); // RNC agente retención
-  line += formatAmount(0); // Remuneraciones otros empleadores
-  line += formatAmount(0); // Ingresos exentos ISR
-  line += formatAmount(0); // Saldo a favor
-  line += formatAmount(0); // Salario INFOTEP
+  line += formatAmount(0);
+  line += formatAmount(0);
+  line += formatAmount(0);
+  line += padLeft("", 11);
+  line += formatAmount(0);
+  line += formatAmount(0);
+  line += formatAmount(0);
+  line += formatAmount(0);
   line += "0001";
   line += "01" + formatAmount(0);
   line += "02" + formatAmount(0);
@@ -108,15 +108,9 @@ function generateSumario(totalRecords: number): string {
   return "S" + String(totalRecords).padStart(6, "0");
 }
 
-const MONTHS = [
-  { value: "01", label: "Enero" }, { value: "02", label: "Febrero" }, { value: "03", label: "Marzo" },
-  { value: "04", label: "Abril" }, { value: "05", label: "Mayo" }, { value: "06", label: "Junio" },
-  { value: "07", label: "Julio" }, { value: "08", label: "Agosto" }, { value: "09", label: "Septiembre" },
-  { value: "10", label: "Octubre" }, { value: "11", label: "Noviembre" }, { value: "12", label: "Diciembre" },
-];
-
 export function TSSAutodeterminacionView() {
   const { selectedEntityId } = useEntity();
+  const { t } = useLanguage();
   const now = new Date();
   const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
   const currentYear = String(now.getFullYear());
@@ -126,7 +120,11 @@ export function TSSAutodeterminacionView() {
   const [retroactiva, setRetroactiva] = useState(false);
   const [downloadingTxt, setDownloadingTxt] = useState(false);
 
-  // Fetch entity RNC and TSS nómina code
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const val = String(i + 1).padStart(2, "0");
+    return { value: val, label: t(`month.${val}`) };
+  });
+
   const { data: entityInfo } = useQuery({
     queryKey: ["entity-tss-info", selectedEntityId],
     queryFn: async () => {
@@ -149,7 +147,6 @@ export function TSSAutodeterminacionView() {
   const monthInt = parseInt(selectedMonth);
   const yearInt = parseInt(selectedYear);
 
-  // Date range for the selected month
   const monthStart = `${selectedYear}-${selectedMonth}-01`;
   const lastDay = new Date(yearInt, monthInt, 0).getDate();
   const monthEnd = `${selectedYear}-${selectedMonth}-${String(lastDay).padStart(2, "0")}`;
@@ -159,7 +156,6 @@ export function TSSAutodeterminacionView() {
     return { value: String(y), label: String(y) };
   });
 
-  // Fetch employees (for fallback and identity info)
   const { data: employees = [], isLoading: loadingEmp } = useQuery({
     queryKey: ["employees-tss"],
     queryFn: async () => {
@@ -173,11 +169,9 @@ export function TSSAutodeterminacionView() {
     },
   });
 
-  // Fetch payroll periods that overlap with the selected month
   const { data: periodSnapshots = [], isLoading: loadingSnap } = useQuery({
     queryKey: ["tss-snapshots", selectedMonth, selectedYear],
     queryFn: async () => {
-      // Find periods whose date range overlaps with the selected month
       const { data: periods, error: pErr } = await supabase
         .from("payroll_periods")
         .select("id, start_date, end_date, status")
@@ -185,10 +179,8 @@ export function TSSAutodeterminacionView() {
         .gte("end_date", monthStart);
       if (pErr) throw pErr;
       if (!periods || periods.length === 0) return [];
-
       const closedPeriodIds = periods.filter((p) => p.status === "closed").map((p) => p.id);
       if (closedPeriodIds.length === 0) return [];
-
       const { data: snapshots, error: sErr } = await supabase
         .from("payroll_snapshots")
         .select("employee_id, gross_pay, tss")
@@ -198,9 +190,7 @@ export function TSSAutodeterminacionView() {
     },
   });
 
-  // Merge: sum snapshot gross_pay per employee for the month; fallback to master salary
   const tssRows = useMemo<TssEmployeeRow[]>(() => {
-    // Build snapshot salary map: employee_id → sum of gross_pay across periods in the month
     const snapshotMap = new Map<string, number>();
     for (const snap of periodSnapshots) {
       snapshotMap.set(snap.employee_id, (snapshotMap.get(snap.employee_id) || 0) + (snap.gross_pay || 0));
@@ -233,7 +223,7 @@ export function TSSAutodeterminacionView() {
 
   const handleDownload = () => {
     if (!fileContent) {
-      toast.error("No hay empleados activos para generar el archivo");
+      toast.error(t("tss.noEmployeesError"));
       return;
     }
     const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
@@ -244,7 +234,7 @@ export function TSSAutodeterminacionView() {
 
   const handleDownloadRpc = async () => {
     if (!selectedEntityId) {
-      toast.error("Seleccione una entidad específica para generar el archivo SDSS");
+      toast.error(t("tss.selectEntity"));
       return;
     }
     setDownloadingTxt(true);
@@ -259,20 +249,20 @@ export function TSSAutodeterminacionView() {
       });
       if (error) throw error;
       if (!data) {
-        toast.error("No se generó contenido. Verifique que hay empleados activos.");
+        toast.error(t("tss.noEmployeesError"));
         return;
       }
       const blob = new Blob([data], { type: "text/plain;charset=utf-8" });
       const suffix = retroactiva ? "EAR" : "AM";
       const fileName = `TSS_${suffix}_${selectedYear}${selectedMonth}.txt`;
       triggerDownload(blob, fileName);
-      toast.success("Archivo TSS para SDSS generado exitosamente");
+      toast.success(t("tss.fileGenerated"));
     } catch (err: any) {
       const msg = err?.message || "";
       if (msg.toLowerCase().includes("rnc")) {
-        toast.error("RNC no configurado. Configure el RNC de la entidad en Configuración → Entidades.");
+        toast.error(t("tss.rncNotConfigured"));
       } else {
-        toast.error("Error al generar archivo: " + msg);
+        toast.error(t("tss.generateError") + ": " + msg);
       }
     } finally {
       setDownloadingTxt(false);
@@ -297,40 +287,35 @@ export function TSSAutodeterminacionView() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            TSS — Autodeterminación Mensual (AM)
+            {t("tss.title")}
             <InfoTooltip translationKey="help.tss" />
           </CardTitle>
           <CardDescription>
-            Genera el archivo de texto (.txt) de Autodeterminación Mensual para cargar al SUIRPLUS de la TSS.
-            {hasAnySnapshot
-              ? " Salarios basados en nómina cerrada del período."
-              : " Usando salario base (no hay nómina cerrada para este mes)."}
+            {t("tss.description")}
+            {" "}
+            {hasAnySnapshot ? t("tss.snapshotBased") : t("tss.estimateBased")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* RNC warning */}
           {selectedEntityId && !entityRnc && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                RNC no configurado para esta entidad. Configúrelo en Configuración → Entidades para generar archivos .TXT de TSS.
-              </AlertDescription>
+              <AlertDescription>{t("tss.rncWarning")}</AlertDescription>
             </Alert>
           )}
 
-          {/* Period selector */}
           <div className="flex items-end gap-4 flex-wrap">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">Mes</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("ir3.month")}</label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {MONTHS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">Año</label>
+              <label className="text-sm font-medium text-muted-foreground">{t("ir3.year")}</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -340,9 +325,9 @@ export function TSSAutodeterminacionView() {
             </div>
 
             {hasAnySnapshot ? (
-              <Badge variant="default" className="h-7">Nómina cerrada</Badge>
+              <Badge variant="default" className="h-7">{t("tss.closedPayroll")}</Badge>
             ) : (
-              <Badge variant="secondary" className="h-7">Estimado (salario base)</Badge>
+              <Badge variant="secondary" className="h-7">{t("tss.estimateBase")}</Badge>
             )}
 
             <div className="flex items-center space-x-2">
@@ -351,17 +336,17 @@ export function TSSAutodeterminacionView() {
                 checked={retroactiva}
                 onCheckedChange={(checked) => setRetroactiva(checked === true)}
               />
-              <Label htmlFor="retroactiva" className="text-sm font-normal">Retroactiva</Label>
+              <Label htmlFor="retroactiva" className="text-sm font-normal">{t("tss.retroactive")}</Label>
             </div>
 
             <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
               <Eye className="h-4 w-4 mr-2" />
-              {showPreview ? "Ocultar Vista Previa" : "Vista Previa"}
+              {showPreview ? t("tss.hidePreview") : t("tss.showPreview")}
             </Button>
 
             <Button onClick={handleDownload} disabled={tssRows.length === 0 || isLoading}>
               <Download className="h-4 w-4 mr-2" />
-              Descargar Vista Previa
+              {t("tss.downloadPreview")}
             </Button>
 
             <Button
@@ -371,29 +356,28 @@ export function TSSAutodeterminacionView() {
               className="border-primary/50 text-primary hover:bg-primary/10"
             >
               {downloadingTxt ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-              Descargar .TXT para SDSS
+              {t("tss.downloadTxt")}
             </Button>
           </div>
 
           <div className="text-sm text-muted-foreground">
-            {isLoading ? "Cargando..." : `${tssRows.length} empleados activos en nómina`}
+            {isLoading ? t("common.loading") : t("tss.activeEmployees").replace("{count}", String(tssRows.length))}
           </div>
 
-          {/* Employee table */}
           <div className="rounded-md border overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">#</TableHead>
-                  <TableHead>Cédula</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="text-right">Salario Cotizable</TableHead>
+                  <TableHead>{t("ir3.cedula")}</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead className="text-right">{t("tss.cotizableSalary")}</TableHead>
                   <TableHead className="text-right">SFS Emp</TableHead>
                   <TableHead className="text-right">AFP Emp</TableHead>
                   <TableHead className="text-right">SFS Pat</TableHead>
                   <TableHead className="text-right">AFP Pat</TableHead>
                   <TableHead className="text-right">SRL Pat</TableHead>
-                  <TableHead className="text-right font-semibold">Total</TableHead>
+                  <TableHead className="text-right font-semibold">{t("common.total")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -407,8 +391,8 @@ export function TSSAutodeterminacionView() {
                       <TableCell className="font-mono text-xs">{cleanCedula(emp.cedula)}</TableCell>
                       <TableCell>
                         {emp.name}
-                        {hasCap && <span className="ml-1 text-xs text-destructive" title="Tope salarial aplicado">⚠</span>}
-                        {emp.source === "estimate" && <span className="ml-1 text-xs text-muted-foreground" title="Estimado - nómina no cerrada">~</span>}
+                        {hasCap && <span className="ml-1 text-xs text-destructive" title={t("tss.salaryCap")}>⚠</span>}
+                        {emp.source === "estimate" && <span className="ml-1 text-xs text-muted-foreground" title={t("tss.estimateNoPayroll")}>~</span>}
                       </TableCell>
                       <TableCell className="text-right font-mono">{fmt(emp.monthlySalary)}</TableCell>
                       <TableCell className="text-right font-mono text-xs">{fmt(c.empSFS)}</TableCell>
@@ -423,7 +407,7 @@ export function TSSAutodeterminacionView() {
                 {tssRows.length === 0 && !isLoading && (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                      No hay empleados activos
+                      {t("tss.noActiveEmployees")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -443,7 +427,7 @@ export function TSSAutodeterminacionView() {
                 return (
                   <TableFooter>
                     <TableRow className="font-semibold">
-                      <TableCell colSpan={3}>Totales</TableCell>
+                      <TableCell colSpan={3}>{t("tss.totals")}</TableCell>
                       <TableCell className="text-right font-mono">{fmt(totals.salary)}</TableCell>
                       <TableCell className="text-right font-mono">{fmt(totals.empSFS)}</TableCell>
                       <TableCell className="text-right font-mono">{fmt(totals.empAFP)}</TableCell>
@@ -458,7 +442,6 @@ export function TSSAutodeterminacionView() {
             </Table>
           </div>
 
-          {/* Autorización de Pago summary */}
           {tssRows.length > 0 && (() => {
             const totals = tssRows.reduce(
               (acc, e) => {
@@ -473,31 +456,33 @@ export function TSSAutodeterminacionView() {
             const totalEmployer = totals.erSFS + totals.erAFP + totals.erSRL;
             const autorizacion = totalEmployee + totalEmployer;
 
+            const monthLabel = months.find(m => m.value === selectedMonth)?.label || "";
+
             return (
               <Card className="border-primary/30 bg-primary/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">
-                    Autorización de Pago TSS — {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
-                    {!hasAnySnapshot && <span className="text-sm font-normal text-muted-foreground ml-2">(estimado)</span>}
+                    {t("tss.paymentAuth")} — {monthLabel} {selectedYear}
+                    {!hasAnySnapshot && <span className="text-sm font-normal text-muted-foreground ml-2">({t("ir17.estimated")})</span>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Aporte Empleado</p>
+                      <p className="text-xs text-muted-foreground">{t("tss.employeeContribution")}</p>
                       <p className="text-sm font-mono">(SFS {fmt(totals.empSFS)} + AFP {fmt(totals.empAFP)})</p>
                       <p className="text-lg font-semibold font-mono">RD$ {fmt(totalEmployee)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Aporte Patronal</p>
+                      <p className="text-xs text-muted-foreground">{t("tss.employerContribution")}</p>
                       <p className="text-sm font-mono">(SFS {fmt(totals.erSFS)} + AFP {fmt(totals.erAFP)} + SRL {fmt(totals.erSRL)})</p>
                       <p className="text-lg font-semibold font-mono">RD$ {fmt(totalEmployer)}</p>
                     </div>
                     <div className="col-span-2 sm:col-span-2 sm:text-right">
-                      <p className="text-xs text-muted-foreground">Total Autorización de Pago</p>
+                      <p className="text-xs text-muted-foreground">{t("tss.totalPaymentAuth")}</p>
                       <p className="text-2xl font-bold font-mono text-primary">RD$ {fmt(autorizacion)}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Topes: SFS ≤ {fmt(TSS_CEILINGS.sfs)} · AFP ≤ {fmt(TSS_CEILINGS.afp)}
+                        {t("tss.ceilings")}: SFS ≤ {fmt(TSS_CEILINGS.sfs)} · AFP ≤ {fmt(TSS_CEILINGS.afp)}
                       </p>
                     </div>
                   </div>
@@ -506,16 +491,15 @@ export function TSSAutodeterminacionView() {
             );
           })()}
 
-          {/* Raw file preview */}
           {showPreview && fileContent && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Vista previa del archivo .txt</h4>
+              <h4 className="text-sm font-medium">{t("tss.filePreview")}</h4>
               <pre className="bg-muted p-4 rounded-md text-xs font-mono overflow-auto max-h-[400px] whitespace-pre">
                 {fileContent}
               </pre>
               <p className="text-xs text-muted-foreground">
-                Nombre sugerido: AM_{EMPLOYER_RNC}_{periodo}.txt — {fileContent.split("\n").length} líneas,{" "}
-                {tssRows.length} empleados
+                {t("tss.suggestedName")}: AM_{EMPLOYER_RNC}_{periodo}.txt — {fileContent.split("\n").length} {t("tss.lines")},{" "}
+                {tssRows.length} {t("tss.employees")}
               </p>
             </div>
           )}

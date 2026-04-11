@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -93,6 +94,7 @@ export function PayrollSummary({
 }: PayrollSummaryProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
   const { applyEntityFilter } = useEntityFilter();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -204,7 +206,7 @@ export function PayrollSummary({
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots-check", periodId] });
       queryClient.invalidateQueries({ queryKey: ["employee-loans-active"] });
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
-      toast.success("Nómina guardada correctamente.");
+      toast.success(t("payrollSummary.payrollSaved"));
     },
     onError: (error) => {
       setRpcError(error.message);
@@ -477,9 +479,9 @@ export function PayrollSummary({
       a.download = `Nomina_${nominaNumber}_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Reporte de nómina exportado");
+      toast.success(t("payrollSummary.payrollExported"));
     } catch (error) {
-      toast.error("Error al exportar reporte");
+      toast.error(t("payrollSummary.payrollExportError"));
       console.error(error);
     } finally {
       setIsExporting(false);
@@ -517,9 +519,9 @@ export function PayrollSummary({
         didParseCell: (data) => { if (data.row.index === rows.length - 1) { data.cell.styles.fillColor = [226, 239, 218]; data.cell.styles.fontStyle = "bold"; } },
       });
       doc.save(`Nomina_${nominaNumber}_${format(startDate, "yyyy-MM-dd")}_${format(endDate, "yyyy-MM-dd")}.pdf`);
-      toast.success("Reporte PDF exportado");
+      toast.success(t("payrollSummary.pdfExported"));
     } catch (error) {
-      toast.error("Error al exportar PDF");
+      toast.error(t("payrollSummary.pdfExportError"));
       console.error(error);
     } finally {
       setIsExporting(false);
@@ -532,9 +534,9 @@ export function PayrollSummary({
     try {
       const legacyData = buildLegacyData();
       await generatePayrollReceiptsZip(legacyData, nominaNumber, startDate, endDate);
-      toast.success("Recibos de pago generados");
+      toast.success(t("payrollSummary.receiptsGenerated"));
     } catch (error) {
-      toast.error("Error al generar recibos");
+      toast.error(t("payrollSummary.receiptsError"));
       console.error(error);
     } finally {
       setIsGeneratingReceipts(false);
@@ -640,11 +642,11 @@ export function PayrollSummary({
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots", periodId] });
-      toast.success("Período cerrado, transacciones registradas y recibos generados");
+      toast.success(t("payrollSummary.periodClosed"));
       onPeriodClosed();
     },
     onError: (error) => {
-      toast.error("Error al cerrar período: " + error.message);
+      toast.error(t("payrollSummary.periodCloseError") + error.message);
     },
   });
 
@@ -664,7 +666,7 @@ export function PayrollSummary({
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-lg font-semibold">Resumen de Nómina</h3>
+        <h3 className="text-lg font-semibold">{t("payrollSummary.title")}</h3>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Preview button — only when no committed snapshots, or admin re-run */}
           {canManagePayroll && isOpen && !hasCommittedSnapshots && (
@@ -678,7 +680,7 @@ export function PayrollSummary({
               ) : (
                 <Eye className="h-4 w-4 mr-2" />
               )}
-              Vista Previa Nómina
+              {t("payrollSummary.preview")}
             </Button>
           )}
 
@@ -694,7 +696,7 @@ export function PayrollSummary({
               ) : (
                 <RotateCcw className="h-4 w-4 mr-2" />
               )}
-              Re-ejecutar Vista Previa
+              {t("payrollSummary.reRunPreview")}
             </Button>
           )}
 
@@ -710,7 +712,7 @@ export function PayrollSummary({
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Confirmar y Guardar Nómina
+              {t("payrollSummary.confirmAndSave")}
             </Button>
           )}
 
@@ -718,25 +720,25 @@ export function PayrollSummary({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={isExporting || payrollData.length === 0}>
                 {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                Exportar
+                {t("payrollSummary.export")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-popover">
-              <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar a Excel</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF}><FileText className="mr-2 h-4 w-4" />Exportar a PDF</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportMonthly}><Calendar className="mr-2 h-4 w-4" />Exportar Mes Completo</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="mr-2 h-4 w-4" />{t("payrollSummary.exportExcel")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF}><FileText className="mr-2 h-4 w-4" />{t("payrollSummary.exportPdf")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportMonthly}><Calendar className="mr-2 h-4 w-4" />{t("payrollSummary.exportMonthly")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
             {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-            Recibos PDF
+            {t("payrollSummary.receiptsPdf")}
           </Button>
 
           {!isClosed && (
             <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0}>
               <Lock className="h-4 w-4 mr-2" />
-              Cerrar Período
+              {t("payrollSummary.closePeriod")}
             </Button>
           )}
         </div>

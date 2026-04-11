@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { format, eachDayOfInterval, isSunday, isSaturday, isWithinInterval, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -165,6 +166,8 @@ export function PayrollTimeGrid({
 }: PayrollTimeGridProps) {
   const queryClient = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
+  const { t, language } = useLanguage();
+  const dateLocale = language === "en" ? enUS : es;
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
   // Fetch active employees
@@ -231,10 +234,10 @@ export function PayrollTimeGrid({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) throw new Error("Sesión expirada. Por favor, vuelva a iniciar sesión.");
+        if (refreshError) throw new Error(t("timeGrid.sessionExpired"));
       }
 
-      if (!selectedEntityId) throw new Error("Debe seleccionar una entidad antes de guardar.");
+      if (!selectedEntityId) throw new Error(t("timeGrid.selectEntity"));
 
       const { error } = await supabase
         .from("employee_timesheets")
@@ -261,7 +264,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
     },
     onError: (error) => {
-      toast.error("Error al guardar entrada: " + error.message);
+      toast.error(t("timeGrid.saveError") + error.message);
     },
   });
 
@@ -285,7 +288,7 @@ export function PayrollTimeGrid({
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["timesheets", periodId], context.previous);
-      toast.error("Error al limpiar entrada: " + error.message);
+      toast.error(t("timeGrid.clearError") + error.message);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
@@ -308,7 +311,7 @@ export function PayrollTimeGrid({
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        if (!selectedEntityId) throw new Error("Debe seleccionar una entidad.");
+        if (!selectedEntityId) throw new Error(t("timeGrid.selectEntity"));
         const { error } = await supabase
           .from("employee_benefits")
           .insert({
@@ -325,7 +328,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["employee-benefits"] });
     },
     onError: (error) => {
-      toast.error("Error al guardar beneficio: " + error.message);
+      toast.error(t("timeGrid.benefitError") + error.message);
     },
   });
 
@@ -351,7 +354,7 @@ export function PayrollTimeGrid({
     );
 
     if (salariedEmployees.length === 0) {
-      toast.info("No hay empleados asalariados para auto-llenar");
+      toast.info(t("timeGrid.noSalaried"));
       return;
     }
 
@@ -390,9 +393,9 @@ export function PayrollTimeGrid({
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
-      toast.success(`Auto-llenado para ${salariedEmployees.length} empleado(s) asalariado(s)`);
+      toast.success(t("timeGrid.autoFilled").replace("{count}", String(salariedEmployees.length)));
     } catch (error: any) {
-      toast.error("Error al auto-llenar: " + error.message);
+      toast.error(t("timeGrid.autoFillError") + error.message);
     }
   };
 
@@ -539,9 +542,9 @@ export function PayrollTimeGrid({
       }
       
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
-      toast.success(newHolidayStatus ? "Día marcado como feriado (100% bono)" : "Estado de feriado removido");
+      toast.success(newHolidayStatus ? t("timeGrid.holidayMarked") : t("timeGrid.holidayRemoved"));
     } catch (error: any) {
-      toast.error("Error al cambiar feriado: " + error.message);
+      toast.error(t("timeGrid.holidayError") + error.message);
     }
   };
 
@@ -806,7 +809,7 @@ export function PayrollTimeGrid({
                 ? "bg-red-500 hover:bg-red-600"
                 : "bg-green-500 hover:bg-green-600 opacity-40 hover:opacity-100"
             )}
-            title={hasNote ? "Ver nota" : "Agregar nota"}
+            title={hasNote ? t("timeGrid.viewNote") : t("timeGrid.addNote")}
           />
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2" side="top" align="end">
@@ -815,7 +818,7 @@ export function PayrollTimeGrid({
             onChange={(e) => setNoteText(e.target.value)}
             rows={3}
             className="text-xs min-h-[60px] resize-none"
-            placeholder="Nota del día..."
+            placeholder={t("timeGrid.dayNote")}
           />
           <Button
             size="sm"
@@ -825,7 +828,7 @@ export function PayrollTimeGrid({
               setOpen(false);
             }}
           >
-            Guardar
+            {t("timeGrid.save")}
           </Button>
         </PopoverContent>
       </Popover>
@@ -835,7 +838,7 @@ export function PayrollTimeGrid({
   if (!periodId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Seleccione o cree un período de nómina para comenzar
+        {t("timeGrid.selectPeriod")}
       </div>
     );
   }
@@ -854,7 +857,7 @@ export function PayrollTimeGrid({
             onClick={autoFillSalariedEmployees}
           >
             <Wand2 className="h-4 w-4 mr-2" />
-            Auto-llenar Asalariados
+            {t("timeGrid.autoFill")}
           </Button>
         </div>
       )}
@@ -863,7 +866,7 @@ export function PayrollTimeGrid({
         <thead className="sticky top-0 z-20 bg-background shadow-sm border-b">
           <tr>
             <th className="sticky left-0 bg-background z-30 min-w-[140px] h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
-              Empleado
+              {t("timeGrid.employee")}
             </th>
             {days.map((day, index) => {
               const isHoliday = isDayHoliday(day);
@@ -878,7 +881,7 @@ export function PayrollTimeGrid({
                     !isSunday(day) && !isHoliday && index % 2 === 0 && "bg-background"
                   )}
                 >
-                  <div className="text-xs">{format(day, "EEE", { locale: es })}</div>
+                  <div className="text-xs">{format(day, "EEE", { locale: dateLocale })}</div>
                   <div className="font-mono">{format(day, "d")}</div>
                   {!isSunday(day) && (
                     <div className="flex items-center justify-center gap-1 mt-1">
@@ -895,17 +898,17 @@ export function PayrollTimeGrid({
                           isHoliday && "text-amber-600 font-medium"
                         )}
                       >
-                        Feriado
+                        {t("timeGrid.holiday")}
                       </label>
                     </div>
                   )}
                 </th>
               );
             })}
-            <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">Hrs</th>
-            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Extra</th>
-            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Fer</th>
-            <th className="text-center min-w-[60px] text-emerald-700 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Dom</th>
+            <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">{t("timeGrid.hrs")}</th>
+            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.overtime")}</th>
+            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.holidayShort")}</th>
+            <th className="text-center min-w-[60px] text-emerald-700 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.sundayShort")}</th>
             {BENEFIT_TYPES.map((type) => (
               <th key={type} className="text-center min-w-[80px] text-green-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">
                 {type}
@@ -913,7 +916,7 @@ export function PayrollTimeGrid({
             ))}
             <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">TSS</th>
             <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">ISR</th>
-            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Ausencias</th>
+            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.absences")}</th>
           </tr>
         </thead>
         <tbody className="[&_tr:last-child]:border-0">
@@ -1037,9 +1040,9 @@ export function PayrollTimeGrid({
                               <button
                                 onClick={() => toggleAbsentForDay(employee.id, day)}
                                 className="text-red-600 dark:text-red-400 font-bold text-sm w-full py-3 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-colors cursor-pointer active:scale-95"
-                                title="Click para quitar ausencia"
+                                title={t("timeGrid.removeAbsent")}
                               >
-                                AUSENTE
+                                {t("timeGrid.absent")}
                               </button>
                             )}
                             {/* Toggle absent button - only show when not vacation and not already absent and not Sunday */}
@@ -1047,9 +1050,9 @@ export function PayrollTimeGrid({
                               <button
                                 onClick={() => toggleAbsentForDay(employee.id, day)}
                                 className="text-[10px] text-muted-foreground hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded px-1 py-0.5 transition-colors"
-                                title="Marcar como ausente"
+                                title={t("timeGrid.markAbsent")}
                               >
-                                AUS
+                                {t("timeGrid.absentShort")}
                               </button>
                             )}
                           </div>

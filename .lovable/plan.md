@@ -1,27 +1,37 @@
 
 
-## Fix: Industrial and Approvals sidebar items not visible immediately
+## Fix: Schedule Input Lag and Sticky Headers
 
-### Problem
-The sidebar items for "Industrial" and "Approvals" appear only after a delay. The permission matrix already grants admin access to both sections. The issue is a race condition in `AuthContext.tsx`: when `onAuthStateChange` fires, it sets the session immediately but fetches the user role asynchronously via `setTimeout`. During this gap, the sidebar renders without a role, hiding role-gated items.
+### Root Cause of Slowness
 
-### Root Cause
-In `AuthContext.tsx` line 124-145, the `onAuthStateChange` handler:
-1. Sets `session` immediately (line 128)
-2. Defers role fetch to a `setTimeout` (line 132)
+The Schedule grid has **three performance problems**:
 
-This creates a window where the component tree re-renders with a session but no `user.role`, causing `canAccessSection()` to return `false` for all items.
+1. **Every cell re-renders on any mutation success.** When a user leaves a cell (blur), `upsertMutation.mutate()` fires, and `onSuccess` calls `queryClient.invalidateQueries()` which refetches ALL entries and re-renders every single cell in the grid (employees × 6 days × 2 slots = 100+ cells). Users feel this as a "stutter" after each edit.
 
-### Plan
+2. **Linear scans on every render.** `getCellValue()` and `getEntryForCell()` both do `entries.find()` — an O(n) scan — and they're called for every cell during every render pass. With many entries, this compounds.
 
-**File: `src/contexts/AuthContext.tsx`**
+3. **TooltipProvider wraps each highlighted cell individually**, creating many context providers.
 
-Preserve the existing `user` state during auth state changes instead of allowing it to go stale. When `onAuthStateChange` fires for a token refresh (same user), keep the current user object while the role re-fetches in the background. Only clear `user` on explicit sign-out events.
+### Changes (single file: `CronogramaGrid.tsx`)
 
-Specifically:
-- In the `onAuthStateChange` callback, check if `currentSession?.user.id` matches the existing `user?.id`. If so, skip resetting user state — the role is already known.
-- Only trigger a new role fetch when the user ID actually changes (new login) or on `SIGNED_IN` events.
-- On `SIGNED_OUT`, clear user state as before.
+**1. Memoize entry lookups with a Map**
+- Build a `Map<string, CronogramaEntry>` keyed by `"workerName|workerType|day|slot"` once via `useMemo`, replacing all `entries.find()` calls with O(1) lookups.
 
-This is a ~10-line change in `AuthContext.tsx` with no other file modifications needed.
+**2. Debounce the mutation, not the input**
+- Keep the current blur-to-save approach but add a short debounce (300ms) to the `upsertMutation.mutate` call so rapid tab-between-cells doesn't fire overlapping mutations.
+- Use `queryClient.setQueryData` for optimistic local update instead of waiting for refetch, making the UI feel instant.
+
+**3. Memoize `CronogramaCell` with `React.memo`**
+- Wrap the cell component in `React.memo` with a custom comparator so cells only re-render when their specific value, highlight, or disabled state changes — not on every grid-wide refetch.
+
+**4. Lift `TooltipProvider` to grid level**
+- Move the single `<TooltipProvider>` to wrap the entire table instead of creating one per highlighted cell.
+
+**5. Make column headers sticky**
+- Add `sticky top-0 z-20` to the `<thead>` element so day/slot headers stay visible when scrolling vertically.
+
+### Expected Result
+- Typing and tabbing between cells will feel instant
+- Column headers (days + AM/PM) stay pinned at the top when scrolling
+- No functional changes to save behavior or data
 

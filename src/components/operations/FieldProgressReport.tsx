@@ -19,7 +19,7 @@ import autoTable from "jspdf-autotable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfDay, endOfDay, isWithinInterval, startOfMonth } from "date-fns";
 import { es, enUS } from "date-fns/locale";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -299,7 +299,7 @@ export function FieldProgressReport() {
 
     // Add date range
     worksheet.mergeCells("A2:H2");
-    worksheet.getCell("A2").value = `${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").value = `${t("progress.period")}: ${fmtDate(startDate!)} - ${fmtDate(endDate!)}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     // Add headers
@@ -392,7 +392,7 @@ export function FieldProgressReport() {
     doc.setFontSize(14);
     doc.text(`${t("progress.reportTitle")}: ${getOperationTypeName()}`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
+    doc.text(`${t("progress.period")}: ${fmtDate(startDate!)} - ${fmtDate(endDate!)}`, 14, 22);
 
     const totalDone = fieldProgressData.reduce((sum, f) => sum + f.hectaresDone, 0);
     const totalArea = fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0);
@@ -562,7 +562,7 @@ export function FieldProgressReport() {
               {getOperationTypeName()} - {t("progress.progressByField")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
+              {startDate && endDate && `${fmtDate(startDate)} - ${fmtDate(endDate)}`}
             </p>
           </CardHeader>
           <CardContent>

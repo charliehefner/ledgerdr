@@ -25,6 +25,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
+import { fmtDate } from "@/lib/dateUtils";
+
 type PrestacionesScenario = "desahucio" | "dimision";
 
 interface SalarySegment {
@@ -207,8 +209,8 @@ export function PrestacionesCalculatorDialog({
     doc.setFontSize(10);
     doc.text(`Empleado: ${employee.name}`, 14, 28);
     doc.text(`Cargo: ${employee.position || "—"}`, 14, 34);
-    doc.text(`Ingreso: ${format(new Date(`${employee.date_of_hire}T00:00:00`), "dd/MM/yyyy")}`, 14, 40);
-    doc.text(`Salida efectiva: ${format(new Date(`${terminationDate}T00:00:00`), "dd/MM/yyyy")}`, 110, 40);
+    doc.text(`Ingreso: ${fmtDate(new Date(`${employee.date_of_hire}T00:00:00`))}`, 14, 40);
+    doc.text(`Salida efectiva: ${fmtDate(new Date(`${terminationDate}T00:00:00`))}`, 110, 40);
     doc.text(`Escenario: ${scenario === "desahucio" ? "Desahucio" : "Dimisión"}`, 110, 28);
     doc.text(
       `Antigüedad: ${result.service_time.years} años, ${result.service_time.months} meses, ${result.service_time.days} días`,
@@ -239,8 +241,8 @@ export function PrestacionesCalculatorDialog({
       startY: (doc as any).lastAutoTable.finalY + 8,
       head: [["Tramo salarial", "Hasta", "Salario", "Meses"]],
       body: result.salary_segments.map((segment) => [
-        format(new Date(`${segment.start_date}T00:00:00`), "dd/MM/yyyy"),
-        format(new Date(`${segment.end_date}T00:00:00`), "dd/MM/yyyy"),
+        fmtDate(new Date(`${segment.start_date}T00:00:00`)),
+        fmtDate(new Date(`${segment.end_date}T00:00:00`)),
         formatCurrency(segment.salary),
         Number(segment.months).toFixed(2),
       ]),

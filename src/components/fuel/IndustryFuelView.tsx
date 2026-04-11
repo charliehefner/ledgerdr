@@ -34,7 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -273,7 +273,7 @@ export function IndustryFuelView() {
 
     transactions.forEach((tx) => {
       worksheet.addRow([
-        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(tx.transaction_date)),
         tx.transaction_type === "refill" ? "Refill" : "Usage",
         tx.fuel_tanks?.name || "-",
         tx.fuel_equipment?.name || "-",
@@ -305,7 +305,7 @@ export function IndustryFuelView() {
     autoTable(doc, {
       head: [["Date", "Type", "Tank", "Generator", "Hour Meter", "Gallons", "Efficiency", "Notes"]],
       body: transactions.map((tx) => [
-        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(tx.transaction_date)),
         tx.transaction_type === "refill" ? "Refill" : "Usage",
         tx.fuel_tanks?.name || "-",
         tx.fuel_equipment?.name || "-",

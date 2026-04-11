@@ -18,8 +18,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Plus, Upload, Landmark, CheckCircle2, XCircle, FileText } from "lucide-react";
-import { format } from "date-fns";
 import { QuickEntryDialog } from "./QuickEntryDialog";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 type BankAccount = {
   id: string;
@@ -395,7 +396,7 @@ export function BankReconciliationView() {
                       }
                     </button>
                   </TableCell>
-                  <TableCell>{format(new Date(line.statement_date + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>{fmtDate(new Date(line.statement_date + "T00:00:00"))}</TableCell>
                   <TableCell>{line.description || "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{line.reference || "—"}</TableCell>
                   <TableCell className={`text-right font-mono ${line.amount < 0 ? "text-destructive" : ""}`}>

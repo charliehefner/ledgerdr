@@ -3,7 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { format } from "date-fns";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 interface ActualDetailDialogProps {
   open: boolean;
@@ -132,7 +133,7 @@ export function ActualDetailDialog({
               {transactions.map((tx, i) => (
                 <TableRow key={i}>
                   <TableCell className="font-mono text-xs">{tx.legacy_id ?? "—"}</TableCell>
-                  <TableCell>{format(new Date(tx.transaction_date), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>{fmtDate(new Date(tx.transaction_date))}</TableCell>
                   <TableCell>{tx.name || "—"}</TableCell>
                   <TableCell className="text-right font-mono">
                     {(tx.dop_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}

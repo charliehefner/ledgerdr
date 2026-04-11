@@ -11,6 +11,8 @@ import { Users } from "lucide-react";
 import { format, startOfYear } from "date-fns";
 import { ExportDropdown } from "./ExportDropdown";
 
+import { fmtDate } from "@/lib/dateUtils";
+
 interface Props {
   entityId: string | null;
   isAllEntities: boolean;
@@ -56,8 +58,8 @@ export function PayrollSummaryTab({ entityId, isAllEntities }: Props) {
   );
 
   const periodLabel = (r: typeof data[0]) => {
-    const s = r.start_date ? format(new Date(r.start_date + "T12:00:00"), "dd/MM/yyyy") : "";
-    const e = r.end_date ? format(new Date(r.end_date + "T12:00:00"), "dd/MM/yyyy") : "";
+    const s = r.start_date ? fmtDate(new Date(r.start_date + "T12:00:00")) : "";
+    const e = r.end_date ? fmtDate(new Date(r.end_date + "T12:00:00")) : "";
     return `${s} – ${e}`;
   };
 

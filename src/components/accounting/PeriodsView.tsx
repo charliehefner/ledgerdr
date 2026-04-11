@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarDays } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { format } from "date-fns";
 import { PeriodClosingButton } from "./PeriodClosingButton";
 import { PeriodRevaluationButton } from "./PeriodRevaluationButton";
 import { PeriodClosingChecklist } from "./PeriodClosingChecklist";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 type PeriodStatus = "open" | "closed" | "reported" | "locked";
 
@@ -134,8 +135,8 @@ export function PeriodsView() {
               {periods.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.period_name}</TableCell>
-                  <TableCell>{format(new Date(p.start_date), "dd/MM/yyyy")}</TableCell>
-                  <TableCell>{format(new Date(p.end_date), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>{fmtDate(new Date(p.start_date))}</TableCell>
+                  <TableCell>{fmtDate(new Date(p.end_date))}</TableCell>
                   <TableCell>
                     <Badge variant={statusConfig[p.status].variant}>
                       {statusConfig[p.status].label}

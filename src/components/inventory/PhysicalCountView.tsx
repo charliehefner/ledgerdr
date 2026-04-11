@@ -28,6 +28,8 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 
+import { fmtDateTime } from "@/lib/dateUtils";
+
 export function PhysicalCountView() {
   const { selectedEntityId } = useEntity();
   const { user } = useAuth();
@@ -218,7 +220,7 @@ export function PhysicalCountView() {
               <div>
                 <span className="font-semibold">{openSession.session_name}</span>
                 <span className="text-muted-foreground ml-2">
-                  · Abierto {format(new Date(openSession.opened_at), "dd/MM/yyyy HH:mm")}
+                  · Abierto {fmtDateTime(new Date(openSession.opened_at))}
                 </span>
                 <span className="text-muted-foreground ml-2">
                   · {countedCount} de {totalCount} ítems contados
@@ -305,7 +307,7 @@ export function PhysicalCountView() {
               <TableBody>
                 {pastSessions.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell>{format(new Date(s.opened_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                    <TableCell>{fmtDateTime(new Date(s.opened_at))}</TableCell>
                     <TableCell className="font-medium">{s.session_name}</TableCell>
                     <TableCell>
                       <Badge variant={s.status === "reconciled" ? "default" : "destructive"}>

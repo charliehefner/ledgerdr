@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, addYears, isBefore, differenceInDays, format } from "date-fns";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import type { AlertSeverity } from "./AlertCard";
 
 export interface AlertItem {
@@ -91,13 +91,13 @@ export function useHrAlerts(configs: AlertConfig[] | undefined) {
       alerts.push({
         severity: "urgent",
         title: `Vacaciones vencidas — ${emp.name}`,
-        detail: `Vencido hace ${Math.abs(daysUntil)} días (desde ${format(nextDue, "dd/MM/yyyy")})`,
+        detail: `Vencido hace ${Math.abs(daysUntil)} días (desde ${fmtDate(nextDue)})`,
       });
     } else if (daysUntil <= thresholdDays) {
       alerts.push({
         severity: "warning",
         title: `Vacaciones próximas — ${emp.name}`,
-        detail: `Vence en ${daysUntil} días (${format(nextDue, "dd/MM/yyyy")})`,
+        detail: `Vence en ${daysUntil} días (${fmtDate(nextDue)})`,
       });
     }
   }
@@ -304,13 +304,13 @@ export function useOperationsAlerts(configs: AlertConfig[] | undefined) {
       alerts.push({
         severity: "urgent",
         title: `Seguimiento vencido — ${entry.task || "Sin descripción"}`,
-        detail: `${entry.worker_name} · ${format(scheduledDate, "dd/MM/yyyy")} (${entry.time_slot}) · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""} de atraso`,
+        detail: `${entry.worker_name} · ${fmtDate(scheduledDate)} (${entry.time_slot}) · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""} de atraso`,
       });
     } else if (daysUntil <= 5) {
       alerts.push({
         severity: "warning",
         title: `Seguimiento próximo — ${entry.task || "Sin descripción"}`,
-        detail: `${entry.worker_name} · ${format(scheduledDate, "dd/MM/yyyy")} (${entry.time_slot}) · en ${daysUntil} día${daysUntil !== 1 ? "s" : ""}`,
+        detail: `${entry.worker_name} · ${fmtDate(scheduledDate)} (${entry.time_slot}) · en ${daysUntil} día${daysUntil !== 1 ? "s" : ""}`,
       });
     }
   }
@@ -484,7 +484,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
         alerts.push({
           severity: "warning",
           title: `${op.fields.name}: ${op.hectares_done} ha registradas pero el campo tiene ${fieldHa} ha`,
-          detail: `${op.operation_types?.name || "Operación"} — ${format(parseDateLocal(op.operation_date), "dd/MM/yyyy")}`,
+          detail: `${op.operation_types?.name || "Operación"} — ${fmtDate(parseDateLocal(op.operation_date))}`,
         });
       }
     }
@@ -511,7 +511,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
           alerts.push({
             severity: "urgent",
             title: `${pos.tractorName} tuvo actividad GPS ayer pero no tiene operación registrada`,
-            detail: format(yesterday, "dd/MM/yyyy"),
+            detail: fmtDate(yesterday),
           });
         }
       }
@@ -525,7 +525,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
           alerts.push({
             severity: "warning",
             title: `${pos.tractorName} tuvo actividad GPS hoy pero no tiene operación registrada`,
-            detail: format(today, "dd/MM/yyyy"),
+            detail: fmtDate(today),
           });
         }
       }
@@ -600,7 +600,7 @@ export function useOperationsGpsAlerts(configs: AlertConfig[] | undefined) {
         alerts.push({
           severity: "warning",
           title: `${op.fields?.name || "Campo"} ${op.operation_types?.name || ""}: ${op.hectares_done} ha registradas vs ~${gpsHectares.toFixed(1)} ha estimadas por GPS`,
-          detail: `${format(parseDateLocal(op.operation_date), "dd/MM/yyyy")} · Diferencia: ${(diff * 100).toFixed(0)}%`,
+          detail: `${fmtDate(parseDateLocal(op.operation_date))} · Diferencia: ${(diff * 100).toFixed(0)}%`,
         });
       }
     }
@@ -726,7 +726,7 @@ export function usePayrollApproachingAlerts(configs: AlertConfig[] | undefined) 
   for (const period of periodsQuery.data) {
     const endDate = parseDateLocal(period.end_date);
     const daysUntil = differenceInDays(endDate, today);
-    const periodLabel = `${format(parseDateLocal(period.start_date), "dd/MM")}–${format(endDate, "dd/MM/yyyy")}`;
+    const periodLabel = `${format(parseDateLocal(period.start_date), "dd/MM")}–${fmtDate(endDate)}`;
 
     if (daysUntil <= thresholdDays && daysUntil >= -7) {
       const snapCount = snapshotsQuery.data[period.id] ?? 0;
@@ -735,7 +735,7 @@ export function usePayrollApproachingAlerts(configs: AlertConfig[] | undefined) 
           severity: daysUntil < 0 ? "urgent" : "warning",
           title: daysUntil < 0
             ? `Período de nómina ${periodLabel} venció hace ${Math.abs(daysUntil)} día(s) — sin procesar`
-            : `Período de nómina ${periodLabel} vence el ${format(endDate, "dd/MM/yyyy")} — sin procesar`,
+            : `Período de nómina ${periodLabel} vence el ${fmtDate(endDate)} — sin procesar`,
           detail: "Ir a Nómina para revisar y procesar",
         });
       }

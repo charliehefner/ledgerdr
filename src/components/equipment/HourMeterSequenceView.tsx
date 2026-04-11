@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AlertTriangle, Clock, Gauge } from "lucide-react";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 export function HourMeterSequenceView() {
   const { t } = useLanguage();
@@ -171,7 +172,7 @@ export function HourMeterSequenceView() {
                   {rows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell>
-                        {format(new Date(row.operation_date + "T12:00:00"), "dd/MM/yyyy")}
+                        {fmtDate(new Date(row.operation_date + "T12:00:00"))}
                       </TableCell>
                       <TableCell>{row.operation_types?.name ?? "—"}</TableCell>
                       <TableCell>{row.fields?.name ?? "—"}</TableCell>

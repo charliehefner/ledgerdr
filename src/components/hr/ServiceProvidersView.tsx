@@ -14,9 +14,10 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { format } from "date-fns";
 import { useEntity } from "@/contexts/EntityContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 interface ServiceProvider {
   id: string;
@@ -349,7 +350,7 @@ export function ServiceProvidersView() {
                 ) : (
                   history.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell>{format(new Date(s.service_date + "T12:00:00"), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{fmtDate(new Date(s.service_date + "T12:00:00"))}</TableCell>
                       <TableCell>{s.description || "—"}</TableCell>
                       <TableCell className="text-right font-mono">
                         {s.amount != null ? `${s.currency} ${Number(s.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : "—"}

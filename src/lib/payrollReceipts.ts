@@ -4,6 +4,8 @@ import JSZip from "jszip";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+import { fmtDate } from "@/lib/dateUtils";
+
 interface EmployeeBenefit {
   benefit_type: string;
   amount: number;
@@ -71,7 +73,7 @@ function generateEmployeeReceipt(
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  const periodStr = `${format(periodStart, "dd/MM/yyyy")} - ${format(periodEnd, "dd/MM/yyyy")}`;
+  const periodStr = `${fmtDate(periodStart)} - ${fmtDate(periodEnd)}`;
 
   // Generate receipt content for both copies (top and bottom half)
   const generateReceiptContent = (yOffset: number) => {

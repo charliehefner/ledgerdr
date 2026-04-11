@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+import { fmtDate } from "@/lib/dateUtils";
+
 interface Employee {
   id: string;
   name: string;
@@ -496,7 +498,7 @@ export function PayrollSummary({
       doc.setFontSize(16);
       doc.text(`Reporte de Nómina ${nominaNumber}`, 14, 15);
       doc.setFontSize(10);
-      doc.text(`Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`, 14, 22);
+      doc.text(`Período: ${fmtDate(startDate)} - ${fmtDate(endDate)}`, 14, 22);
       const headers = ["Nombre", "Salario", "Base", "Extras", "Feriado", "Domingo", "Benef.", "Bruto", "TSS", "ISR", "Prést.", "Ausencias", "Deduc.", "Neto"];
       const rows = payrollData.map((p) => [
         p.employee_name, formatCurrency(p.salary), formatCurrency(p.base_pay),
@@ -561,7 +563,7 @@ export function PayrollSummary({
           document: "Recibo",
           name: p.employee.name,
           is_internal: true,
-          comments: `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")} | Deducciones: ${p.totalDeductions.toFixed(2)}`,
+          comments: `Período: ${fmtDate(startDate)} - ${fmtDate(endDate)} | Deducciones: ${p.totalDeductions.toFixed(2)}`,
         });
       }
 
@@ -600,7 +602,7 @@ export function PayrollSummary({
         if (salaryAcct && tssLiabilityAcct) {
           const { data: journalId, error: jErr } = await supabase.rpc(
             "create_journal_from_transaction" as any,
-            { p_transaction_id: null, p_date: dateStr, p_description: `Nómina ${nominaNumber} — ${format(startDate, "dd/MM")} al ${format(endDate, "dd/MM/yyyy")}`, p_created_by: null, p_journal_type: "PRJ" }
+            { p_transaction_id: null, p_date: dateStr, p_description: `Nómina ${nominaNumber} — ${format(startDate, "dd/MM")} al ${fmtDate(endDate)}`, p_created_by: null, p_journal_type: "PRJ" }
           );
 
           if (!jErr && journalId) {

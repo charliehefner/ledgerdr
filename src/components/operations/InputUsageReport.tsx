@@ -19,7 +19,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
 import { es, enUS } from "date-fns/locale";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
 import { formatMoney } from "@/lib/formatters";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -521,7 +521,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
     // Add date range
     worksheet.mergeCells("A2:H2");
-    worksheet.getCell("A2").value = `${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").value = `${t("progress.period")}: ${fmtDate(startDate!)} - ${fmtDate(endDate!)}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     // Add headers
@@ -547,7 +547,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     // Add data rows
     usageData.forEach((row) => {
       worksheet.addRow([
-        format(parseDateLocal(row.date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(row.date)),
         row.fieldName,
         row.amount.toFixed(2),
         row.hectares.toFixed(2),
@@ -591,12 +591,12 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     doc.setFontSize(14);
     doc.text(`${t("inputUsage.usageReportTitle")}: ${selectedInputDetails?.commercial_name || t("inputUsage.allInputs")}`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
+    doc.text(`${t("progress.period")}: ${fmtDate(startDate!)} - ${fmtDate(endDate!)}`, 14, 22);
 
     autoTable(doc, {
       head: [[t("inputUsage.th.date"), t("inputUsage.th.field"), `${t("inputUsage.th.quantity")} (${unit})`, t("inputUsage.th.hectares"), `${unit}/Ha`, t("inputUsage.th.costPerUnit"), t("inputUsage.th.totalCost"), t("inputUsage.th.tractorOperator")]],
       body: usageData.map((row) => [
-        format(parseDateLocal(row.date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(row.date)),
         row.fieldName,
         row.amount.toFixed(2),
         row.hectares.toFixed(2),
@@ -801,7 +801,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
               {selectedInput === "all" ? t("inputUsage.allInputs") : (selectedInputDetails?.commercial_name || t("inputUsage.input"))}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
+              {startDate && endDate && `${fmtDate(startDate)} - ${fmtDate(endDate)}`}
             </p>
           </CardHeader>
           <CardContent>
@@ -871,7 +871,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                     <TableBody>
                       {usageData.map((row) => (
                         <TableRow key={row.operationId}>
-                          <TableCell>{format(parseDateLocal(row.date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{fmtDate(parseDateLocal(row.date))}</TableCell>
                           {selectedInput === "all" && <TableCell>{row.inputName}</TableCell>}
                           <TableCell>{row.fieldName}</TableCell>
                           <TableCell className="text-right">{row.amount.toFixed(2)} {row.inputUnit}</TableCell>

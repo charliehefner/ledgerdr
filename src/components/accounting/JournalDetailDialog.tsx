@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX, CheckCircle2 } from "lucide-react";
+
+import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
 
 type JournalLine = {
   id: string;
@@ -320,12 +321,12 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             )}
           </div>
           <DialogDescription className="flex gap-4 text-sm">
-            <span>{format(new Date(journal.journal_date), "dd/MM/yyyy")}</span>
+            <span>{fmtDate(new Date(journal.journal_date))}</span>
             <span>{journal.currency || "DOP"}</span>
             {journal.posted && journal.posted_at && (
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Lock className="h-3 w-3" />
-                {t("accounting.postedOn")} {format(new Date(journal.posted_at), "dd/MM/yyyy HH:mm")}
+                {t("accounting.postedOn")} {fmtDateTime(new Date(journal.posted_at))}
               </span>
             )}
           </DialogDescription>

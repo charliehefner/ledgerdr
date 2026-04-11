@@ -26,6 +26,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MonthlyRainfallReport } from "@/components/rainfall/MonthlyRainfallReport";
 import ExcelJS from "exceljs";
 
+import { fmtDate } from "@/lib/dateUtils";
+
 interface RainfallRecord {
   id: string;
   record_date: string;
@@ -206,7 +208,7 @@ export default function Rainfall() {
       const virgencita = record?.virgencita || 0;
 
       worksheet.addRow({
-        date: format(date, "dd/MM/yyyy"),
+        date: fmtDate(date),
         solar,
         caoba,
         palmarito,
@@ -251,12 +253,12 @@ export default function Rainfall() {
     const doc = new jsPDF();
     const title = language === "en" ? "Rainfall Report" : "Reporte de Pluviometría";
     doc.setFontSize(14);
-    doc.text(`${title} - ${format(fromDate, "dd/MM/yyyy")} a ${format(toDate, "dd/MM/yyyy")}`, 14, 15);
+    doc.text(`${title} - ${fmtDate(fromDate)} a ${fmtDate(toDate)}`, 14, 15);
 
     const body = allDates.map((date) => {
       const record = getRecordForDate(date);
       return [
-        format(date, "dd/MM/yyyy"),
+        fmtDate(date),
         (record?.solar || 0).toString(),
         (record?.caoba || 0).toString(),
         (record?.palmarito || 0).toString(),

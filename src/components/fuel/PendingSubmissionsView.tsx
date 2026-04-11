@@ -138,18 +138,18 @@ export function PendingSubmissionsView() {
                     <TableCell>
                       {sub.submitted_at
                         ? format(new Date(sub.submitted_at), "dd/MM/yy HH:mm", {
-                            locale: es,
+                            locale: dateFnsLocale,
                           })
                         : sub.created_at
                         ? format(new Date(sub.created_at), "dd/MM/yy HH:mm", {
-                            locale: es,
+                            locale: dateFnsLocale,
                           })
                         : "—"}
                     </TableCell>
                     <TableCell>
                       {sub.expires_at
                         ? format(new Date(sub.expires_at), "dd/MM/yy HH:mm", {
-                            locale: es,
+                            locale: dateFnsLocale,
                           })
                         : "—"}
                     </TableCell>
@@ -161,13 +161,13 @@ export function PendingSubmissionsView() {
                     <TableCell className="font-mono text-xs">
                       {sub.fuel_transaction_id
                         ? sub.fuel_transaction_id.substring(0, 8) + "…"
-                        : "Sin vincular"}
+                        : t("pending.unlinked")}
                     </TableCell>
                     <TableCell>
                       {isExpired ? (
-                        <Badge variant="destructive">Expirado</Badge>
+                        <Badge variant="destructive">{t("pending.expired")}</Badge>
                       ) : (
-                        <Badge variant="secondary">Pendiente</Badge>
+                        <Badge variant="secondary">{t("pending.pendingStatus")}</Badge>
                       )}
                     </TableCell>
                   </TableRow>

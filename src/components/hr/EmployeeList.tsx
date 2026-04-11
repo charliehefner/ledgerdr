@@ -288,20 +288,17 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
             {status.isOverdue ? (
               <Badge variant="destructive" className="gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                {Math.abs(status.daysUntil)} {t("empList.daysOverdue").replace("{days}", "")}
-              </Badge>
+                {t("empList.daysOverdue").replace("{days}", String(Math.abs(status.daysUntil)))}
               </Badge>
             ) : status.isDueSoon ? (
               <Badge variant="secondary" className="gap-1 bg-warning/20 text-warning-foreground">
                 <Clock className="h-3 w-3" />
-                {status.daysUntil} {t("empList.daysLeft").replace("{days}", "")}
-              </Badge>
+                {t("empList.daysLeft").replace("{days}", String(status.daysUntil))}
               </Badge>
             ) : (
               <Badge variant="outline" className="gap-1 text-success border-success/30">
                 <CheckCircle className="h-3 w-3" />
-                {status.daysUntil} {t("empList.daysLeft").replace("{days}", "")}
-              </Badge>
+                {t("empList.daysLeft").replace("{days}", String(status.daysUntil))}
               </Badge>
             )}
           </Button>

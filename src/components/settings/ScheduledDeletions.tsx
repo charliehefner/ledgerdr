@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,7 +14,7 @@ import { Clock, Undo2, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { roleDisplayNames, UserRole } from "@/lib/permissions";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 
 interface ScheduledDeletion {
   id: string;

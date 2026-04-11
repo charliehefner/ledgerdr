@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,7 @@ export function EmployeeDetailDialog({
 }: EmployeeDetailDialogProps) {
   const queryClient = useQueryClient();
   const { canModifySettings, canWriteSection, user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("info");
   const [prestacionesOpen, setPrestacionesOpen] = useState(false);
   const [letterDialogOpen, setLetterDialogOpen] = useState(false);
@@ -300,7 +302,7 @@ export function EmployeeDetailDialog({
 
   const handleAddVacation = async () => {
     if (!employeeId || !vacationStart || !vacationEnd) {
-      toast.error("Por favor complete las fechas de inicio y fin");
+      toast.error(t("empDetail.completeDates"));
       return;
     }
 
@@ -314,14 +316,14 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Período de vacaciones agregado");
+      toast.success(t("empDetail.vacationAdded"));
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
       setVacationStart("");
       setVacationEnd("");
       setVacationNotes("");
     } catch (error) {
       console.error("Error adding vacation:", error);
-      toast.error("Error al agregar vacaciones");
+      toast.error(t("empDetail.vacationAddError"));
     }
   };
 
@@ -334,17 +336,17 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Vacaciones eliminadas");
+      toast.success(t("empDetail.vacationDeleted"));
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
     } catch (error) {
       console.error("Error deleting vacation:", error);
-      toast.error("Error al eliminar vacaciones");
+      toast.error(t("empDetail.vacationDeleteError"));
     }
   };
 
   const handleAddIncident = async () => {
     if (!employeeId || !incidentDate || !incidentDesc) {
-      toast.error("Por favor complete la fecha y descripción");
+      toast.error(t("empDetail.completeDateDesc"));
       return;
     }
 
@@ -359,7 +361,7 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Incidente registrado");
+      toast.success(t("empDetail.incidentRecorded"));
       queryClient.invalidateQueries({ queryKey: ["employee-incidents", employeeId] });
       setIncidentDate("");
       setIncidentDesc("");
@@ -367,7 +369,7 @@ export function EmployeeDetailDialog({
       setIncidentResolution("");
     } catch (error) {
       console.error("Error adding incident:", error);
-      toast.error("Error al agregar incidente");
+      toast.error(t("empDetail.incidentError"));
     }
   };
 
@@ -380,11 +382,11 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Incidente eliminado");
+      toast.success(t("empDetail.incidentDeleted"));
       queryClient.invalidateQueries({ queryKey: ["employee-incidents", employeeId] });
     } catch (error) {
       console.error("Error deleting incident:", error);
-      toast.error("Error al eliminar incidente");
+      toast.error(t("empDetail.incidentDeleteError"));
     }
   };
 
@@ -409,11 +411,11 @@ export function EmployeeDetailDialog({
 
       if (dbError) throw dbError;
 
-      toast.success("Documento subido");
+      toast.success(t("empDetail.documentUploaded"));
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
     } catch (error) {
       console.error("Error uploading document:", error);
-      toast.error("Error al subir documento");
+      toast.error(t("empDetail.documentUploadError"));
     }
 
     e.target.value = "";
@@ -430,11 +432,11 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Documento eliminado");
+      toast.success(t("empDetail.documentDeleted"));
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
     } catch (error) {
       console.error("Error deleting document:", error);
-      toast.error("Error al eliminar documento");
+      toast.error(t("empDetail.documentDeleteError"));
     }
   };
 
@@ -448,20 +450,20 @@ export function EmployeeDetailDialog({
             <User className="h-5 w-5" />
             {employee.name}
             <Badge variant={employee.is_active ? "default" : "secondary"}>
-              {employee.is_active ? "Activo" : "Inactivo"}
+              {employee.is_active ? t("empDetail.active") : t("empDetail.inactive")}
             </Badge>
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="info">Info</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
-              <TabsTrigger value="prestaciones">Prestaciones</TabsTrigger>
-            <TabsTrigger value="salary">Salario</TabsTrigger>
-            <TabsTrigger value="vacations">Vacaciones</TabsTrigger>
-            <TabsTrigger value="incidents">Incidentes</TabsTrigger>
-            <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="info">{t("empDetail.info")}</TabsTrigger>
+            <TabsTrigger value="history">{t("empDetail.history")}</TabsTrigger>
+              <TabsTrigger value="prestaciones">{t("empDetail.prestaciones")}</TabsTrigger>
+            <TabsTrigger value="salary">{t("empDetail.salary")}</TabsTrigger>
+            <TabsTrigger value="vacations">{t("empDetail.vacations")}</TabsTrigger>
+            <TabsTrigger value="incidents">{t("empDetail.incidents")}</TabsTrigger>
+            <TabsTrigger value="documents">{t("empDetail.documents")}</TabsTrigger>
           </TabsList>
 
           {/* Info Tab */}
@@ -471,16 +473,16 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    Personal
+                    {t("empDetail.personal")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cédula</span>
+                    <span className="text-muted-foreground">{t("empDetail.cedula")}</span>
                     <span className="font-mono">{employee.cedula}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fecha de Nacimiento</span>
+                    <span className="text-muted-foreground">{t("empDetail.dateOfBirth")}</span>
                     <span>
                       {employee.date_of_birth
                         ? format(parseDateLocal(employee.date_of_birth), "d MMM yyyy", { locale: es })
@@ -494,24 +496,24 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Briefcase className="h-4 w-4" />
-                    Empleo
+                    {t("empDetail.employment")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fecha de Ingreso</span>
+                    <span className="text-muted-foreground">{t("empDetail.hireDate")}</span>
                     <span>{format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es })}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Salario Actual</span>
+                    <span className="text-muted-foreground">{t("empDetail.currentSalary")}</span>
                     <span className="font-semibold">{formatCurrency(employee.salary)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Antigüedad</span>
-                    <span>{laborSummary ? `${laborSummary.years} años, ${laborSummary.months} meses, ${laborSummary.days} días` : "—"}</span>
+                    <span className="text-muted-foreground">{t("empDetail.seniority")}</span>
+                    <span>{laborSummary ? t("empDetail.seniorityFormat").replace("{years}", String(laborSummary.years)).replace("{months}", String(laborSummary.months)).replace("{days}", String(laborSummary.days)) : "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fecha de Salida</span>
+                    <span className="text-muted-foreground">{t("empDetail.exitDate")}</span>
                     <span>
                       {employee.date_of_termination
                         ? format(parseDateLocal(employee.date_of_termination), "d MMM yyyy", { locale: es })
@@ -525,16 +527,16 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
-                    Bancario
+                    {t("empDetail.banking")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Banco</span>
+                    <span className="text-muted-foreground">{t("empDetail.bank")}</span>
                     <span>{employee.bank || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cuenta</span>
+                    <span className="text-muted-foreground">{t("empDetail.account")}</span>
                     <span className="font-mono">{employee.bank_account_number || "—"}</span>
                   </div>
                 </CardContent>
@@ -544,20 +546,20 @@ export function EmployeeDetailDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Shirt className="h-4 w-4" />
-                    Tallas de Uniforme
+                    {t("empDetail.uniformSizes")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Camisa</span>
+                    <span className="text-muted-foreground">{t("empDetail.shirt")}</span>
                     <span>{employee.shirt_size || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pantalón</span>
+                    <span className="text-muted-foreground">{t("empDetail.pants")}</span>
                     <span>{employee.pant_size || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Botas</span>
+                    <span className="text-muted-foreground">{t("empDetail.boots")}</span>
                     <span>{employee.boot_size || "—"}</span>
                   </div>
                 </CardContent>

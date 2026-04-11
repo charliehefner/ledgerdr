@@ -75,9 +75,11 @@ export function useOfflineQueue() {
     await db.add("submissions", newSubmission);
     await loadPending();
     
-    // If online, try to sync immediately
+    // If online, try to sync immediately.
+    // Must be awaited so that any unhandled rejection is caught by the
+    // outer try/catch and doesn't silently disappear.
     if (isOnline) {
-      syncPending();
+      await syncPending();
     }
     
     return newSubmission.id;
@@ -199,12 +201,15 @@ export function useOfflineQueue() {
     loadPending();
   }, [loadPending]);
 
-  // Auto-sync when coming online
+  // Auto-sync when coming online or when new items are queued while online.
+  // `pending` is included in the dependency array so the effect re-runs when
+  // a new submission is added while the device is already online, and so that
+  // the closure never reads a stale `pending.length`.
   useEffect(() => {
     if (isOnline && pending.length > 0) {
       syncPending();
     }
-  }, [isOnline]);
+  }, [isOnline, pending, syncPending]);
 
   return {
     pending,

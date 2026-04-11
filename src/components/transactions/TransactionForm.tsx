@@ -12,7 +12,6 @@ import {
   fetchProjects,
   fetchCbsCodes,
   fetchRecentTransactions,
-  createTransaction,
   Account,
   Project,
   CbsCode,
@@ -47,7 +46,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import { shouldCreateApAr as shouldCreateApArUtil, getApArAccountCode, getApArDirection, getDefaultDueDate } from './apArUtils';
+// apArUtils business rules are now enforced in the create_transaction_with_ap_ar DB function.
+// The utility module is kept for use by other consumers (AP/AR list views, etc.).
 
 interface TransactionFormProps {
   onSuccess: () => void;
@@ -350,34 +350,45 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         destinationAmount = parseFloat(form.transfer_dest_amount);
       }
 
-      const result = await createTransaction({
-        transaction_date: formatDateLocal(form.transaction_date!),
-        master_acct_code: form.master_acct_code,
-        project_code: form.project_code || undefined,
-        cbs_code: form.cbs_code || undefined,
-        purchase_date: form.purchase_date ? formatDateLocal(form.purchase_date) : undefined,
-        description: form.description,
-        currency: form.currency,
-        amount: parseFloat(form.amount),
-        itbis: form.itbis ? parseFloat(form.itbis) : undefined,
-        itbis_retenido: isB11 && form.itbis_retenido ? parseFloat(form.itbis_retenido) : undefined,
-        isr_retenido: isB11 && form.isr_retenido ? parseFloat(form.isr_retenido) : undefined,
-        pay_method: isTransfer ? form.transfer_from_account : (form.pay_method || undefined),
-        document: form.document || undefined,
-        name: form.name || undefined,
-        rnc: form.rnc || undefined,
-        comments: form.comments || undefined,
-        exchange_rate: form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
-        is_internal: isTransfer || form.master_acct_code === '0000',
-        cost_center: form.cost_center,
-        transaction_direction: form.transaction_direction,
-        destination_acct_code: isTransfer ? transferDestCode : undefined,
-        dgii_tipo_ingreso: form.transaction_direction === 'sale' ? form.dgii_tipo_ingreso || undefined : undefined,
-        dgii_tipo_bienes_servicios: form.transaction_direction === 'purchase' ? form.dgii_tipo_bienes_servicios || undefined : undefined,
-        due_date: form.due_date || undefined,
-        destination_amount: destinationAmount,
-        itbis_override_reason: form.itbis_override_reason || undefined,
-      }, selectedEntityId);
+      // Single atomic RPC: inserts the transaction and, when applicable, the AP/AR
+      // document and junction row in one DB transaction. Replaces the old two-step
+      // pattern that left orphaned transactions if the AP/AR insert failed.
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'create_transaction_with_ap_ar' as any,
+        {
+          p_transaction_date:          formatDateLocal(form.transaction_date!),
+          p_master_acct_code:          form.master_acct_code,
+          p_description:               form.description,
+          p_currency:                  form.currency,
+          p_amount:                    parseFloat(form.amount),
+          p_project_code:              form.project_code || null,
+          p_cbs_code:                  form.cbs_code || null,
+          p_purchase_date:             form.purchase_date ? formatDateLocal(form.purchase_date) : null,
+          p_itbis:                     form.itbis ? parseFloat(form.itbis) : 0,
+          p_itbis_retenido:            isB11 && form.itbis_retenido ? parseFloat(form.itbis_retenido) : 0,
+          p_isr_retenido:              isB11 && form.isr_retenido ? parseFloat(form.isr_retenido) : 0,
+          p_pay_method:                isTransfer ? form.transfer_from_account : (form.pay_method || null),
+          p_document:                  form.document || null,
+          p_name:                      form.name || null,
+          p_rnc:                       form.rnc || null,
+          p_comments:                  form.comments || null,
+          p_exchange_rate:             form.exchange_rate ? parseFloat(form.exchange_rate) : null,
+          p_is_internal:               isTransfer || form.master_acct_code === '0000',
+          p_cost_center:               form.cost_center,
+          p_transaction_direction:     form.transaction_direction,
+          p_destination_acct_code:     isTransfer ? (transferDestCode ?? null) : null,
+          p_dgii_tipo_ingreso:         form.transaction_direction === 'sale' ? (form.dgii_tipo_ingreso || null) : null,
+          p_dgii_tipo_bienes_servicios: form.transaction_direction === 'purchase' ? (form.dgii_tipo_bienes_servicios || null) : null,
+          p_due_date:                  form.due_date || null,
+          p_destination_amount:        destinationAmount ?? null,
+          p_itbis_override_reason:     form.itbis_override_reason || null,
+          p_entity_id:                 selectedEntityId || null,
+        }
+      );
+
+      if (rpcError) throw new Error(rpcError.message);
+
+      const result = rpcResult as { id: string; legacy_id: number | null };
 
       // Save all attachments to local database
       if (result.id) {
@@ -387,62 +398,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             await saveAttachment(result.id, form.attachments[category]!, category);
           }
         }
-        // Invalidate attachment queries
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
-
-        // Auto-create AP/AR document
-        const apArForm = {
-          transaction_direction: form.transaction_direction,
-          pay_method: form.pay_method,
-          due_date: form.due_date,
-          master_acct_code: form.master_acct_code,
-        };
-        const isAdvance = form.master_acct_code.startsWith('1690');
-        
-        if (shouldCreateApArUtil(apArForm, isTransfer) || isAdvance) {
-          const direction = getApArDirection(apArForm);
-          const totalAmount = parseFloat(form.amount);
-          // Default due_date to +30 days if credit but no explicit due_date
-          let dueDate = form.due_date;
-          if (!dueDate && form.pay_method === 'credit') {
-            dueDate = getDefaultDueDate(form.transaction_date!);
-          }
-          try {
-            // Look up default GL account
-            const acctCode = getApArAccountCode(isAdvance, direction);
-            const { data: defaultAcct } = await supabase
-              .from('chart_of_accounts')
-              .select('id')
-              .eq('account_code', acctCode)
-              .eq('allow_posting', true)
-              .is('deleted_at', null)
-              .maybeSingle();
-
-            await supabase.from('ap_ar_documents').insert({
-              direction,
-              document_type: isAdvance ? 'advance' : 'invoice',
-              contact_name: form.name || form.description,
-              contact_rnc: form.rnc || null,
-              document_number: result.legacy_id?.toString() || null,
-              document_date: formatDateLocal(form.transaction_date!),
-              due_date: isAdvance ? null : (dueDate || null),
-              currency: form.currency,
-              total_amount: totalAmount,
-              amount_paid: 0,
-              
-              status: 'open',
-              linked_transaction_ids: [result.id],
-              notes: form.description,
-              account_id: defaultAcct?.id || null,
-              ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
-            } as any);
-            queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
-          } catch (apArErr) {
-            console.error('Auto AP/AR creation error:', apArErr);
-            toast.error("Error creando documento CxP/CxC automático");
-          }
-        }
+        queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
       }
 
       toast.success(t('txForm.success'));

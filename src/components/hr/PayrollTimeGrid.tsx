@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { fetchTssEmployeeRate, fetchIsrBrackets, calculateAnnualISR as calcAnnualISRShared } from "@/lib/payrollCalculations";
 import { format, eachDayOfInterval, isSunday, isSaturday, isWithinInterval, parseISO } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -131,32 +132,9 @@ const SATURDAY_NORMAL_END = 11 * 60 + 30; // 11:30 AM - end of normal Saturday h
 const SATURDAY_NORMAL_HOURS = 4;    // Normal Saturday: 7:30 AM to 11:30 AM
 const SATURDAY_LUNCH_THRESHOLD = 14 * 60; // 2:00 PM - if end time > this, deduct lunch
 
-// DR Labor Law rates (DGII 2024/2025)
-const TSS_EMPLOYEE_RATE = 0.0591; // 3.04% AFP + 2.87% SFS
-
-// ISR Progressive Tax Brackets (Annual Income - DOP)
-// Source: DGII / PWC Tax Summaries
-const ISR_BRACKETS = [
-  { min: 0, max: 416220, rate: 0, baseTax: 0 },
-  { min: 416220, max: 624329, rate: 0.15, baseTax: 0 },
-  { min: 624329, max: 867123, rate: 0.20, baseTax: 31216 },
-  { min: 867123, max: Infinity, rate: 0.25, baseTax: 79776 },
-];
-
-/**
- * Calculate annual ISR using Dominican Republic progressive tax brackets
- */
-function calculateAnnualISR(annualIncome: number): number {
-  if (annualIncome <= ISR_BRACKETS[0].max) return 0;
-  
-  for (let i = ISR_BRACKETS.length - 1; i >= 0; i--) {
-    const bracket = ISR_BRACKETS[i];
-    if (annualIncome > bracket.min) {
-      return bracket.baseTax + (annualIncome - bracket.min) * bracket.rate;
-    }
-  }
-  return 0;
-}
+// TSS/ISR rates are loaded from the database at runtime via useQuery below.
+// Fallback values are used only while the query is loading.
+const TSS_RATE_FALLBACK = 0.0591; // 3.04% AFP + 2.87% SFS (2024/2025)
 
 export function PayrollTimeGrid({
   periodId,
@@ -213,6 +191,20 @@ export function PayrollTimeGrid({
       if (error) throw error;
       return data as EmployeeVacation[];
     },
+  });
+
+  // Fetch TSS rate and ISR brackets from the database so this component always
+  // uses the same rates as the authoritative calculate_payroll_for_period RPC.
+  const { data: tssEmployeeRate = TSS_RATE_FALLBACK } = useQuery({
+    queryKey: ["tss-employee-rate"],
+    queryFn: fetchTssEmployeeRate,
+    staleTime: 24 * 60 * 60 * 1000, // parameters change at most once a year
+  });
+
+  const { data: isrBrackets = [] } = useQuery({
+    queryKey: ["isr-brackets", new Date().getFullYear()],
+    queryFn: () => fetchIsrBrackets(new Date().getFullYear()),
+    staleTime: 24 * 60 * 60 * 1000,
   });
 
   // Fetch recurring employee benefits (these persist across periods)
@@ -712,16 +704,18 @@ export function PayrollTimeGrid({
 
     // TSS (employee portion) - applies to full biweekly salary (vacation pay is still paid)
     // Benefits are NOT included in TSS base per DR labor law
-    const tss = biweeklySalary * TSS_EMPLOYEE_RATE;
+    const tss = biweeklySalary * tssEmployeeRate;
 
     // ISR (progressive brackets - annual based, divided by 24 for bi-monthly)
+    // Uses DB-fetched brackets via the shared payrollCalculations module so this
+    // preview always matches what calculate_payroll_for_period commits.
     let isr = 0;
-    if (effectiveBasePay > 0 || totalBenefits > 0) {
+    if ((effectiveBasePay > 0 || totalBenefits > 0) && isrBrackets.length > 0) {
       const monthlyGross = monthlySalary + monthlyBenefits;
-      const monthlyTSS = monthlyGross * TSS_EMPLOYEE_RATE;
+      const monthlyTSS = monthlyGross * tssEmployeeRate;
       const monthlyTaxable = monthlyGross - monthlyTSS;
       const annualTaxableIncome = monthlyTaxable * 12;
-      const annualISR = calculateAnnualISR(annualTaxableIncome);
+      const annualISR = calcAnnualISRShared(annualTaxableIncome, isrBrackets);
       const workedRatio = (effectiveBasePay + totalBenefits) / (biweeklySalary + totalBenefits);
       isr = (annualISR / 24) * workedRatio;
     }

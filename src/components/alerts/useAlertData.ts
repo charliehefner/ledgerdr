@@ -183,10 +183,15 @@ export function useEquipmentAlerts(configs: AlertConfig[] | undefined) {
 
   const thresholdHours = maintConfig.threshold_value ?? 20;
 
-  // Latest maintenance per tractor
+  // Latest maintenance per tractor — keep the record with the HIGHEST
+  // hour_meter_reading, not just the first one seen.  The query is ordered by
+  // maintenance_date DESC but multiple records on the same date can arrive in
+  // any order, and a later date doesn't always mean a higher reading (e.g.
+  // backdated entries).  Comparing by reading value is authoritative.
   const latestMaint = new Map<string, number>();
   for (const m of maintenanceQuery.data) {
-    if (!latestMaint.has(m.tractor_id)) {
+    const existing = latestMaint.get(m.tractor_id);
+    if (existing === undefined || m.hour_meter_reading > existing) {
       latestMaint.set(m.tractor_id, m.hour_meter_reading);
     }
   }

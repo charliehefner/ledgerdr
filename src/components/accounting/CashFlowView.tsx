@@ -109,6 +109,10 @@ export function CashFlowView() {
     total_debit: number;
     total_credit: number;
     balance: number;
+    /** Balance converted to DOP using the stored exchange rate on each journal/transaction.
+     *  0 means no stored exchange rates were found for this account; the frontend
+     *  falls back to the user-provided exchangeRate in that case. */
+    balance_dop: number;
   }
 
   // Opening balances (before start date) — from posted journals
@@ -153,11 +157,17 @@ export function CashFlowView() {
     rows.forEach((r) => {
       const code = r.account_code;
       if (!code) return;
-      const amount = r.balance; // debit - credit
       if (r.currency === "USD" || r.currency === "EUR") {
-        totals[code] = (totals[code] || 0) + amount * exchangeRate;
+        // Prefer the per-transaction stored exchange rate (balance_dop).
+        // Fall back to the user-provided rate only when balance_dop is 0 AND
+        // there is actually a non-zero foreign-currency balance to convert.
+        const converted =
+          r.balance_dop !== 0 || r.balance === 0
+            ? r.balance_dop
+            : r.balance * exchangeRate;
+        totals[code] = (totals[code] || 0) + converted;
       } else {
-        totals[code] = (totals[code] || 0) + amount;
+        totals[code] = (totals[code] || 0) + r.balance;
       }
     });
     return totals;
@@ -401,7 +411,7 @@ export function CashFlowView() {
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>{t("pl.exchangeRate")} (USD→DOP)</Label>
+          <Label>{t("pl.exchangeRate")} (USD→DOP fallback)</Label>
           <Input type="number" step="0.01" min="1" value={exchangeRate}
             onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)} className="w-28" />
         </div>

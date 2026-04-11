@@ -1,51 +1,64 @@
 
 
-# E2E Testing Setup with Playwright
+# Proactive Error Detection — What I Can Implement Now
 
-## Recommendation: Playwright
+From the 7 strategies discussed, here's what's actionable inside Lovable right now (excluding E2E which we'll do later):
 
-**Why Playwright over Cypress:**
-- Faster execution, runs tests in parallel by default
-- Built-in auto-wait (no flaky `cy.wait()` calls)
-- Multi-browser support (Chromium, Firefox, WebKit)
-- Better TypeScript support out of the box
-- Works well with Vite projects
+## 1. Security Scan & RLS Hardening (ready now)
 
-## What I'll Do
+The scan just found **8 issues**, including 2 critical ones:
+- `contact_bank_accounts` — bank account numbers readable by ALL authenticated users
+- `service_entry_payments` — payment records across all entities exposed
+- 4 additional tables with overly permissive SELECT policies
 
-1. **Install Playwright** — add `@playwright/test` as a dev dependency and generate config
-2. **Create `playwright.config.ts`** — pointed at `http://localhost:8080` (your Vite dev server)
-3. **Write initial E2E tests** covering your most error-prone flows:
-   - Login flow (valid credentials, error handling)
-   - Jornaleros registration (the `entity_id` bug class)
-   - Fuel Driver Portal wizard (full submit flow)
-   - AI Search bar query
-   - Navigation between major modules
-4. **Add npm script** — `"test:e2e": "playwright test"`
+**Action:** Write migrations to tighten RLS policies on these 6 tables, scoping them to appropriate roles and entities.
 
-## What You'll Need To Do
+## 2. Error Monitoring Table + Auto-Logging
 
-- **Log in once** in the preview so the auth session is active, OR provide test credentials I can embed in the test setup (a test user email/password)
-- Playwright tests run against a live server, so the preview must be running (it already is in Lovable)
+Currently the ErrorBoundary just `console.error`s and shows a Spanish error page. Errors vanish when the user reloads.
 
-## Limitations in Lovable Sandbox
+**Action:**
+- Create an `app_error_log` table (timestamp, user_id, error_message, stack_trace, page_url, user_agent)
+- Modify ErrorBoundary to POST errors to the database (fire-and-forget, non-blocking)
+- Add a global `window.onerror` / `unhandledrejection` handler to catch errors outside React
+- Add an admin-only "Error Log" tab in Settings to review recent errors
 
-Playwright needs a running browser. I can install it and write the tests, but **running them requires either**:
-1. The Lovable preview server to be accessible at localhost:8080 (it is during dev)
-2. A CI pipeline (GitHub Actions) for ongoing regression — I can generate the workflow file too
+## 3. Database Constraint Tightening
 
-I'll install, configure, and write the tests. Then we'll run them together.
+Catch bugs like the missing `entity_id` at the database level before they reach the UI.
 
-## Files to Create/Modify
+**Action:**
+- Audit key tables for missing NOT NULL constraints on critical foreign keys
+- Add validation triggers where CHECK constraints aren't appropriate (time-based validations)
+- Add missing unique constraints to prevent duplicate records
 
-| File | Action |
-|------|--------|
-| `package.json` | Add `@playwright/test` dev dep + `test:e2e` script |
-| `playwright.config.ts` | New — config targeting localhost:8080 |
-| `e2e/auth.setup.ts` | New — shared login setup |
-| `e2e/login.spec.ts` | New — login flow test |
-| `e2e/jornaleros.spec.ts` | New — registration with entity_id |
-| `e2e/fuel-wizard.spec.ts` | New — driver portal fueling flow |
-| `e2e/ai-search.spec.ts` | New — AI search query |
-| `e2e/navigation.spec.ts` | New — module navigation smoke test |
+## 4. Integration Tests for Critical DB Operations
+
+Expand the existing Vitest suite to test actual insert/update patterns that have caused bugs.
+
+**Action:**
+- Add tests for jornalero registration (entity_id required)
+- Add tests for fuel transaction insertion (tank_id, entity_id, pump readings)
+- Add tests for inventory stock mutations (quantity reconciliation)
+- These mock Supabase calls and verify payloads include all required fields
+
+## 5. Enable Leaked Password Protection
+
+The linter flagged this is disabled — a one-click security improvement.
+
+**Action:** Enable via auth configuration.
+
+---
+
+## Summary of Changes
+
+| # | What | Files |
+|---|------|-------|
+| 1 | Tighten 6 RLS policies | 1 migration |
+| 2 | Error monitoring table + logging | 1 migration + ErrorBoundary.tsx + new Settings tab |
+| 3 | DB constraint audit + triggers | 1 migration |
+| 4 | Integration tests | 3-4 new test files |
+| 5 | Leaked password protection | Auth config change |
+
+All of this can be done without any action from you.
 

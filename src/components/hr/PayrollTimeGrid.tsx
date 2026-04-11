@@ -166,6 +166,8 @@ export function PayrollTimeGrid({
 }: PayrollTimeGridProps) {
   const queryClient = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
+  const { t, language } = useLanguage();
+  const dateLocale = language === "en" ? enUS : es;
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
   // Fetch active employees
@@ -232,10 +234,10 @@ export function PayrollTimeGrid({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) throw new Error("Sesión expirada. Por favor, vuelva a iniciar sesión.");
+        if (refreshError) throw new Error(t("timeGrid.sessionExpired"));
       }
 
-      if (!selectedEntityId) throw new Error("Debe seleccionar una entidad antes de guardar.");
+      if (!selectedEntityId) throw new Error(t("timeGrid.selectEntity"));
 
       const { error } = await supabase
         .from("employee_timesheets")
@@ -262,7 +264,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
     },
     onError: (error) => {
-      toast.error("Error al guardar entrada: " + error.message);
+      toast.error(t("timeGrid.saveError") + error.message);
     },
   });
 
@@ -286,7 +288,7 @@ export function PayrollTimeGrid({
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["timesheets", periodId], context.previous);
-      toast.error("Error al limpiar entrada: " + error.message);
+      toast.error(t("timeGrid.clearError") + error.message);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });

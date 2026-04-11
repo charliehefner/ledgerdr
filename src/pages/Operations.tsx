@@ -60,7 +60,7 @@ export default function Operations() {
             },
             {
               value: "map",
-              label: "Map",
+              label: t("operations.map"),
               content: <FieldsMapView expanded={mapExpanded} onExpandToggle={() => setMapExpanded((v) => !v)} />,
             },
           ],

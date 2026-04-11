@@ -1,37 +1,26 @@
 
 
-## Fix: Schedule Input Lag and Sticky Headers
+## Apply 6 Pending Migrations
 
-### Root Cause of Slowness
+**Status:** All 6 migration files exist in `supabase/migrations/` but none have been applied to the live database. The last applied version is `20260411170738`.
 
-The Schedule grid has **three performance problems**:
+| Migration | Description | Status |
+|-----------|-------------|--------|
+| 20260411180001 | Create transaction with AP/AR | Missing |
+| 20260411180002 | Account balances balance_dop | Missing |
+| 20260411180003 | RLS fix 1 — restore core accounting | Missing |
+| 20260411180004 | RLS fix 2 — payroll snapshots | Missing |
+| 20260411180005 | RLS fix 3 — entity-scoped tables (746 lines of RLS policies) | Missing |
+| 20260411180006 | RLS fix 4 — AP/AR and fuel submissions | Missing |
 
-1. **Every cell re-renders on any mutation success.** When a user leaves a cell (blur), `upsertMutation.mutate()` fires, and `onSuccess` calls `queryClient.invalidateQueries()` which refetches ALL entries and re-renders every single cell in the grid (employees × 6 days × 2 slots = 100+ cells). Users feel this as a "stutter" after each edit.
+### Plan
 
-2. **Linear scans on every render.** `getCellValue()` and `getEntryForCell()` both do `entries.find()` — an O(n) scan — and they're called for every cell during every render pass. With many entries, this compounds.
+1. **Apply each migration in order** using the database migration tool, executing the SQL content of each file sequentially (180001 → 180006).
 
-3. **TooltipProvider wraps each highlighted cell individually**, creating many context providers.
+2. **Verify** by querying `supabase_migrations.schema_migrations` to confirm all 6 versions are present.
 
-### Changes (single file: `CronogramaGrid.tsx`)
+3. **Spot-check** that the 4 RLS policies on `transactions` exist after 180005 runs.
 
-**1. Memoize entry lookups with a Map**
-- Build a `Map<string, CronogramaEntry>` keyed by `"workerName|workerType|day|slot"` once via `useMemo`, replacing all `entries.find()` calls with O(1) lookups.
-
-**2. Debounce the mutation, not the input**
-- Keep the current blur-to-save approach but add a short debounce (300ms) to the `upsertMutation.mutate` call so rapid tab-between-cells doesn't fire overlapping mutations.
-- Use `queryClient.setQueryData` for optimistic local update instead of waiting for refetch, making the UI feel instant.
-
-**3. Memoize `CronogramaCell` with `React.memo`**
-- Wrap the cell component in `React.memo` with a custom comparator so cells only re-render when their specific value, highlight, or disabled state changes — not on every grid-wide refetch.
-
-**4. Lift `TooltipProvider` to grid level**
-- Move the single `<TooltipProvider>` to wrap the entire table instead of creating one per highlighted cell.
-
-**5. Make column headers sticky**
-- Add `sticky top-0 z-20` to the `<thead>` element so day/slot headers stay visible when scrolling vertically.
-
-### Expected Result
-- Typing and tabbing between cells will feel instant
-- Column headers (days + AM/PM) stay pinned at the top when scrolling
-- No functional changes to save behavior or data
+### Risk Note
+Migration 180005 is large (746 lines) and creates RLS policies across many tables. If any referenced function (e.g., `user_has_entity_access`, `has_role_for_entity`) or table doesn't exist, that migration will fail. I'll review each file before executing and handle errors if they arise.
 

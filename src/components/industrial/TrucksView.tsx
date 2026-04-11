@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+import { useLanguage } from "@/contexts/LanguageContext";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -32,6 +33,7 @@ export function TrucksView() {
   const [form, setForm] = useState({ datetime_in: "", datetime_out: "", tare: "", payload: "", weigh_ticket_number: "", destination_payload: "", notes: "", identifier: "" });
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
@@ -81,7 +83,7 @@ export function TrucksView() {
       qc.invalidateQueries({ queryKey: ["industrial-trucks"] });
       setOpen(false);
       setForm({ datetime_in: "", datetime_out: "", tare: "", payload: "", weigh_ticket_number: "", destination_payload: "", notes: "", identifier: "" });
-      toast({ title: "Registro agregado" });
+      toast({ title: t("industrial.recordAdded") });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -93,23 +95,23 @@ export function TrucksView() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["industrial-trucks"] });
-      toast({ title: "Registro eliminado" });
+      toast({ title: t("industrial.recordDeleted") });
     },
   });
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Camiones");
+    const ws = wb.addWorksheet(t("industrial.trucks"));
     ws.columns = [
-      { header: "Entrada", key: "in", width: 20 },
-      { header: "Salida", key: "out", width: 20 },
-      { header: "Tara", key: "tare", width: 10 },
-      { header: "Payload", key: "payload", width: 10 },
-      { header: "Ticket #", key: "ticket", width: 14 },
-      { header: "Destino Payload", key: "dest", width: 18 },
-      { header: "Notas", key: "notes", width: 25 },
+      { header: t("industrial.in"), key: "in", width: 20 },
+      { header: t("industrial.out"), key: "out", width: 20 },
+      { header: t("industrial.tare"), key: "tare", width: 10 },
+      { header: t("industrial.payload"), key: "payload", width: 10 },
+      { header: t("industrial.weighTicket"), key: "ticket", width: 14 },
+      { header: t("industrial.destinationPayload"), key: "dest", width: 18 },
+      { header: t("industrial.notes"), key: "notes", width: 25 },
     ];
-    rows.forEach((r) => ws.addRow({
+    rows.forEach((r: any) => ws.addRow({
       in: r.datetime_in ? fmtDt(r.datetime_in) : "", out: r.datetime_out ? fmtDt(r.datetime_out) : "",
       tare: r.tare, payload: r.payload, ticket: r.weigh_ticket_number, dest: r.destination_payload, notes: r.notes,
     }));
@@ -120,11 +122,11 @@ export function TrucksView() {
 
   const exportPdf = () => {
     const doc = new jsPDF({ orientation: "landscape" });
-    doc.text("Camiones", 14, 16);
+    doc.text(t("industrial.trucks"), 14, 16);
     autoTable(doc, {
       startY: 22,
-      head: [["Entrada", "Salida", "Tara", "Payload", "Ticket #", "Destino Payload", "Notas"]],
-      body: rows.map((r) => [fmtDt(r.datetime_in), fmtDt(r.datetime_out), r.tare ?? "", r.payload ?? "", r.weigh_ticket_number || "", r.destination_payload || "", r.notes || ""]),
+      head: [[t("industrial.in"), t("industrial.out"), t("industrial.tare"), t("industrial.payload"), t("industrial.weighTicket"), t("industrial.destinationPayload"), t("industrial.notes")]],
+      body: rows.map((r: any) => [fmtDt(r.datetime_in), fmtDt(r.datetime_out), r.tare ?? "", r.payload ?? "", r.weigh_ticket_number || "", r.destination_payload || "", r.notes || ""]),
     });
     doc.save("camiones.pdf");
   };
@@ -133,38 +135,38 @@ export function TrucksView() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Agregar</Button></DialogTrigger>
+          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> {t("industrial.add")}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nuevo Camión</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("industrial.newTruck")}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
-                <Label>Identificador</Label>
+                <Label>{t("industrial.identifier")}</Label>
                 <Select value={form.identifier || undefined} onValueChange={(v) => setForm({ ...form, identifier: v })}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar unidad" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("industrial.selectUnit")} /></SelectTrigger>
                   <SelectContent>
-                    {transportUnits.map((u) => (
+                    {transportUnits.map((u: any) => (
                       <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Fecha/Hora Entrando</Label><Input type="datetime-local" value={form.datetime_in} onChange={(e) => setForm({ ...form, datetime_in: e.target.value })} /></div>
-              <div><Label>Fecha/Hora Saliendo</Label><Input type="datetime-local" value={form.datetime_out} onChange={(e) => setForm({ ...form, datetime_out: e.target.value })} /></div>
+              <div><Label>{t("industrial.datetimeIn")}</Label><Input type="datetime-local" value={form.datetime_in} onChange={(e) => setForm({ ...form, datetime_in: e.target.value })} /></div>
+              <div><Label>{t("industrial.datetimeOut")}</Label><Input type="datetime-local" value={form.datetime_out} onChange={(e) => setForm({ ...form, datetime_out: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Tara</Label><Input type="number" step="0.01" value={form.tare} onChange={(e) => setForm({ ...form, tare: e.target.value })} /></div>
-                <div><Label>Payload</Label><Input type="number" step="0.01" value={form.payload} onChange={(e) => setForm({ ...form, payload: e.target.value })} /></div>
+                <div><Label>{t("industrial.tare")}</Label><Input type="number" step="0.01" value={form.tare} onChange={(e) => setForm({ ...form, tare: e.target.value })} /></div>
+                <div><Label>{t("industrial.payload")}</Label><Input type="number" step="0.01" value={form.payload} onChange={(e) => setForm({ ...form, payload: e.target.value })} /></div>
               </div>
-              <div><Label>Ticket de Peso #</Label><Input value={form.weigh_ticket_number} onChange={(e) => setForm({ ...form, weigh_ticket_number: e.target.value })} /></div>
-              <div><Label>Destino Payload</Label><Input value={form.destination_payload} onChange={(e) => setForm({ ...form, destination_payload: e.target.value })} /></div>
-              <div><Label>Notas</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+              <div><Label>{t("industrial.weighTicket")}</Label><Input value={form.weigh_ticket_number} onChange={(e) => setForm({ ...form, weigh_ticket_number: e.target.value })} /></div>
+              <div><Label>{t("industrial.destinationPayload")}</Label><Input value={form.destination_payload} onChange={(e) => setForm({ ...form, destination_payload: e.target.value })} /></div>
+              <div><Label>{t("industrial.notes")}</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
-            <Button onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>Guardar</Button>
+            <Button onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>{t("industrial.save")}</Button>
           </DialogContent>
         </Dialog>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" /> Exportar <ChevronDown className="h-3 w-3 ml-1" /></Button>
+            <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" /> {t("industrial.export")} <ChevronDown className="h-3 w-3 ml-1" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={exportExcel}><FileSpreadsheet className="h-4 w-4 mr-2" /> Excel</DropdownMenuItem>
@@ -177,23 +179,23 @@ export function TrucksView() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Identificador</TableHead>
-              <TableHead>Entrada</TableHead>
-              <TableHead>Salida</TableHead>
-              <TableHead>Tara</TableHead>
-              <TableHead>Payload</TableHead>
-              <TableHead>Ticket #</TableHead>
-              <TableHead>Destino Payload</TableHead>
-              <TableHead>Notas</TableHead>
+              <TableHead>{t("industrial.identifier")}</TableHead>
+              <TableHead>{t("industrial.in")}</TableHead>
+              <TableHead>{t("industrial.out")}</TableHead>
+              <TableHead>{t("industrial.tare")}</TableHead>
+              <TableHead>{t("industrial.payload")}</TableHead>
+              <TableHead>{t("industrial.weighTicket")}</TableHead>
+              <TableHead>{t("industrial.destinationPayload")}</TableHead>
+              <TableHead>{t("industrial.notes")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">{t("industrial.loading")}</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Sin registros</TableCell></TableRow>
-            ) : rows.map((r) => (
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">{t("industrial.noRecords")}</TableCell></TableRow>
+            ) : rows.map((r: any) => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.identifier || "—"}</TableCell>
                 <TableCell>{fmtDt(r.datetime_in)}</TableCell>

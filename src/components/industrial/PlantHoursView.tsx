@@ -18,15 +18,17 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+import { useLanguage } from "@/contexts/LanguageContext";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export function PlantHoursView() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", notes: "" });
+  const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
@@ -50,6 +52,7 @@ export function PlantHoursView() {
         date: form.date || null,
         start_hour_meter: form.start_hour_meter ? Number(form.start_hour_meter) : null,
         finish_hour_meter: form.finish_hour_meter ? Number(form.finish_hour_meter) : null,
+        estimated_tons: form.estimated_tons ? Number(form.estimated_tons) : null,
         notes: form.notes || null,
         created_by: user?.id,
       });
@@ -58,8 +61,8 @@ export function PlantHoursView() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["industrial-plant-hours"] });
       setOpen(false);
-      setForm({ date: "", start_hour_meter: "", finish_hour_meter: "", notes: "" });
-      toast({ title: "Registro agregado" });
+      setForm({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
+      toast({ title: t("industrial.recordAdded") });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -71,24 +74,25 @@ export function PlantHoursView() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["industrial-plant-hours"] });
-      toast({ title: "Registro eliminado" });
+      toast({ title: t("industrial.recordDeleted") });
     },
   });
 
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Horas Planta");
+    const ws = wb.addWorksheet(t("industrial.plantHours"));
     ws.columns = [
-      { header: "Fecha", key: "date", width: 14 },
-      { header: "Inicio", key: "start", width: 12 },
-      { header: "Final", key: "finish", width: 12 },
-      { header: "Horas", key: "hours", width: 10 },
-      { header: "Notas", key: "notes", width: 30 },
+      { header: t("industrial.date"), key: "date", width: 14 },
+      { header: t("industrial.start"), key: "start", width: 12 },
+      { header: t("industrial.finish"), key: "finish", width: 12 },
+      { header: t("industrial.hours"), key: "hours", width: 10 },
+      { header: t("industrial.estimatedTons"), key: "estimated_tons", width: 14 },
+      { header: t("industrial.notes"), key: "notes", width: 30 },
     ];
-    rows.forEach((r) => {
+    rows.forEach((r: any) => {
       const hrs = r.start_hour_meter != null && r.finish_hour_meter != null
         ? Number(r.finish_hour_meter) - Number(r.start_hour_meter) : null;
-      ws.addRow({ date: r.date, start: r.start_hour_meter, finish: r.finish_hour_meter, hours: hrs, notes: r.notes });
+      ws.addRow({ date: r.date, start: r.start_hour_meter, finish: r.finish_hour_meter, hours: hrs, estimated_tons: r.estimated_tons, notes: r.notes });
     });
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -98,14 +102,14 @@ export function PlantHoursView() {
 
   const exportPdf = () => {
     const doc = new jsPDF();
-    doc.text("Horas Planta", 14, 16);
+    doc.text(t("industrial.plantHours"), 14, 16);
     autoTable(doc, {
       startY: 22,
-      head: [["Fecha", "Inicio", "Final", "Horas", "Notas"]],
-      body: rows.map((r) => {
+      head: [[t("industrial.date"), t("industrial.start"), t("industrial.finish"), t("industrial.hours"), t("industrial.estimatedTons"), t("industrial.notes")]],
+      body: rows.map((r: any) => {
         const hrs = r.start_hour_meter != null && r.finish_hour_meter != null
           ? (Number(r.finish_hour_meter) - Number(r.start_hour_meter)).toFixed(1) : "";
-        return [r.date || "", r.start_hour_meter ?? "", r.finish_hour_meter ?? "", hrs, r.notes || ""];
+        return [r.date || "", r.start_hour_meter ?? "", r.finish_hour_meter ?? "", hrs, r.estimated_tons ?? "", r.notes || ""];
       }),
     });
     doc.save("horas_planta.pdf");
@@ -116,23 +120,24 @@ export function PlantHoursView() {
       <div className="flex items-center justify-between">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-1" /> Agregar</Button>
+            <Button><Plus className="h-4 w-4 mr-1" /> {t("industrial.add")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nuevo Registro — Horas Planta</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("industrial.newPlantHours")}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
-              <div><Label>Fecha</Label><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-              <div><Label>Horómetro Inicio</Label><Input type="number" step="0.1" value={form.start_hour_meter} onChange={(e) => setForm({ ...form, start_hour_meter: e.target.value })} /></div>
-              <div><Label>Horómetro Final</Label><Input type="number" step="0.1" value={form.finish_hour_meter} onChange={(e) => setForm({ ...form, finish_hour_meter: e.target.value })} /></div>
-              <div><Label>Notas</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+              <div><Label>{t("industrial.date")}</Label><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+              <div><Label>{t("industrial.startMeter")}</Label><Input type="number" step="0.1" value={form.start_hour_meter} onChange={(e) => setForm({ ...form, start_hour_meter: e.target.value })} /></div>
+              <div><Label>{t("industrial.finishMeter")}</Label><Input type="number" step="0.1" value={form.finish_hour_meter} onChange={(e) => setForm({ ...form, finish_hour_meter: e.target.value })} /></div>
+              <div><Label>{t("industrial.estimatedTons")}</Label><Input type="number" step="0.01" value={form.estimated_tons} onChange={(e) => setForm({ ...form, estimated_tons: e.target.value })} /></div>
+              <div><Label>{t("industrial.notes")}</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
-            <Button onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>Guardar</Button>
+            <Button onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>{t("industrial.save")}</Button>
           </DialogContent>
         </Dialog>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" /> Exportar <ChevronDown className="h-3 w-3 ml-1" /></Button>
+            <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" /> {t("industrial.export")} <ChevronDown className="h-3 w-3 ml-1" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={exportExcel}><FileSpreadsheet className="h-4 w-4 mr-2" /> Excel</DropdownMenuItem>
@@ -145,20 +150,21 @@ export function PlantHoursView() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Inicio</TableHead>
-              <TableHead>Final</TableHead>
-              <TableHead>Horas</TableHead>
-              <TableHead>Notas</TableHead>
+              <TableHead>{t("industrial.date")}</TableHead>
+              <TableHead>{t("industrial.start")}</TableHead>
+              <TableHead>{t("industrial.finish")}</TableHead>
+              <TableHead>{t("industrial.hours")}</TableHead>
+              <TableHead>{t("industrial.estimatedTons")}</TableHead>
+              <TableHead>{t("industrial.notes")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">{t("industrial.loading")}</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Sin registros</TableCell></TableRow>
-            ) : rows.map((r) => {
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">{t("industrial.noRecords")}</TableCell></TableRow>
+            ) : rows.map((r: any) => {
               const hrs = r.start_hour_meter != null && r.finish_hour_meter != null
                 ? (Number(r.finish_hour_meter) - Number(r.start_hour_meter)).toFixed(1) : "—";
               return (
@@ -167,6 +173,7 @@ export function PlantHoursView() {
                   <TableCell>{r.start_hour_meter ?? "—"}</TableCell>
                   <TableCell>{r.finish_hour_meter ?? "—"}</TableCell>
                   <TableCell>{hrs}</TableCell>
+                  <TableCell>{r.estimated_tons ?? "—"}</TableCell>
                   <TableCell>{r.notes || "—"}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(r.id)}>

@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /* ── Auto-categorization rules ── */
 const AUTO_RULES: { pattern: RegExp; accountCode: string; label: string }[] = [
@@ -42,6 +43,7 @@ type Props = {
 
 export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Props) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -93,19 +95,18 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
   const createMutation = useMutation({
     mutationFn: async () => {
       const bankGLId = bankAccount?.chart_account_id;
-      if (!bankGLId) throw new Error("La cuenta bancaria no tiene cuenta contable vinculada. Vincúlela primero en Configuración.");
-      if (!selectedAccountId) throw new Error("Seleccione una cuenta contable.");
+      if (!bankGLId) throw new Error(t("quickEntry.noLinkedAccountError"));
+      if (!selectedAccountId) throw new Error(t("quickEntry.selectAccountError"));
 
       const absAmount = Math.abs(line.amount);
-      const isExpense = line.amount < 0; // negative = bank withdrawal = expense
+      const isExpense = line.amount < 0;
 
-      // Create journal (mark as reconciled since it comes from bank statement)
       const { data: journal, error: jErr } = await supabase
         .from("journals")
         .insert({
           journal_date: line.statement_date,
           journal_type: "GJ",
-          description: description || line.description || "Cargo bancario",
+          description: description || line.description || t("quickEntry.bankCharge"),
           approval_status: "pending",
           is_reconciled: true,
         } as any)
@@ -113,7 +114,6 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
         .single();
       if (jErr) throw jErr;
 
-      // Create two journal lines (double-entry)
       const lines = isExpense
         ? [
             { journal_id: journal.id, account_id: selectedAccountId, debit: absAmount, credit: 0 },
@@ -127,7 +127,6 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
       const { error: lErr } = await supabase.from("journal_lines").insert(lines as any);
       if (lErr) throw lErr;
 
-      // Mark bank line as reconciled and link
       const { error: uErr } = await supabase
         .from("bank_statement_lines" as any)
         .update({ is_reconciled: true, matched_journal_id: journal.id } as any)
@@ -137,7 +136,7 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank-lines"] });
       queryClient.invalidateQueries({ queryKey: ["journals"] });
-      toast({ title: "Entrada creada y línea conciliada" });
+      toast({ title: t("quickEntry.created") });
       onOpenChange(false);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -149,38 +148,38 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Crear Entrada Contable</DialogTitle>
+          <DialogTitle>{t("quickEntry.title")}</DialogTitle>
           <DialogDescription>
-            Cree una entrada de diario para esta línea del estado bancario.
+            {t("quickEntry.subtitle")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Fecha</Label>
+              <Label>{t("quickEntry.date")}</Label>
               <Input value={line.statement_date} disabled />
             </div>
             <div>
-              <Label>Monto</Label>
+              <Label>{t("quickEntry.amount")}</Label>
               <Input value={line.amount.toLocaleString("es-DO", { minimumFractionDigits: 2 })} disabled />
             </div>
           </div>
 
           <div>
-            <Label>Descripción</Label>
+            <Label>{t("quickEntry.description")}</Label>
             <Input value={description} onChange={e => setDescription(e.target.value)} />
           </div>
 
           <div>
             <Label>
-              Cuenta Contable
+              {t("quickEntry.glAccount")}
               {suggestedCode && selectedAccount?.account_code === suggestedCode && (
-                <span className="ml-2 text-xs text-muted-foreground">(sugerida automáticamente)</span>
+                <span className="ml-2 text-xs text-muted-foreground">{t("quickEntry.autoSuggested")}</span>
               )}
             </Label>
             <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar cuenta..." />
+                <SelectValue placeholder={t("quickEntry.selectAccount")} />
               </SelectTrigger>
               <SelectContent className="bg-popover max-h-60">
                 {accounts.map(a => (
@@ -194,17 +193,17 @@ export function QuickEntryDialog({ open, onOpenChange, line, bankAccountId }: Pr
 
           {!bankAccount?.chart_account_id && (
             <p className="text-xs text-destructive">
-              ⚠ Esta cuenta bancaria no tiene cuenta contable vinculada. Vincúlela en Plan de Cuentas antes de continuar.
+              {t("quickEntry.noLinkedAccount")}
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button
             onClick={() => createMutation.mutate()}
             disabled={createMutation.isPending || !selectedAccountId || !bankAccount?.chart_account_id}
           >
-            {createMutation.isPending ? "Creando..." : "Crear Entrada"}
+            {createMutation.isPending ? t("quickEntry.creating") : t("quickEntry.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

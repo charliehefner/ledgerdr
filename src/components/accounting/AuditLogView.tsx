@@ -15,6 +15,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChevronDown, ChevronRight, Shield, Filter } from "lucide-react";
 import { format } from "date-fns";
+import { fmtDateTime } from "@/lib/dateUtils";
 
 interface AuditEntry {
   id: string;

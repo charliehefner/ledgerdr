@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +71,7 @@ export function ServicePaymentDialog({
   onPaymentRegistered,
 }: ServicePaymentDialogProps) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [paymentDate, setPaymentDate] = useState(formatDateLocal(new Date()));
   const [amount, setAmount] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
@@ -92,27 +89,15 @@ export function ServicePaymentDialog({
       .eq("service_entry_id", serviceEntryId)
       .order("payment_date", { ascending: true })
       .order("created_at", { ascending: true });
-
     if (error) throw error;
-
-    const transactionIds = (data || [])
-      .map((item) => item.transaction_id)
-      .filter((value): value is string => Boolean(value));
-
+    const transactionIds = (data || []).map((item) => item.transaction_id).filter((value): value is string => Boolean(value));
     let transactionLegacyMap = new Map<string, number | null>();
     if (transactionIds.length > 0) {
       const { data: transactionData, error: transactionError } = await supabase
-        .from("transactions")
-        .select("id, legacy_id")
-        .in("id", transactionIds);
-
+        .from("transactions").select("id, legacy_id").in("id", transactionIds);
       if (transactionError) throw transactionError;
-
-      transactionLegacyMap = new Map(
-        (transactionData || []).map((transaction) => [transaction.id, transaction.legacy_id])
-      );
+      transactionLegacyMap = new Map((transactionData || []).map((tx) => [tx.id, tx.legacy_id]));
     }
-
     return (data || []).map((item) => ({
       id: item.id,
       payment_date: item.payment_date,
@@ -132,10 +117,10 @@ export function ServicePaymentDialog({
   });
 
   const paymentCountLabel = useMemo(() => {
-    if (payments.length === 0) return "Sin pagos registrados";
-    if (payments.length === 1) return "1 pago registrado";
-    return `${payments.length} pagos registrados`;
-  }, [payments.length]);
+    if (payments.length === 0) return t("svcPayment.noPayments");
+    if (payments.length === 1) return t("svcPayment.onePayment");
+    return t("svcPayment.nPayments").replace("{count}", String(payments.length));
+  }, [payments.length, t]);
 
   useEffect(() => {
     if (!open || !entry) return;
@@ -148,12 +133,11 @@ export function ServicePaymentDialog({
 
   const paymentMutation = useMutation({
     mutationFn: async () => {
-      if (!entry) throw new Error("Servicio no encontrado");
-
+      if (!entry) throw new Error(t("svcPayment.serviceNotFound"));
       const parsedAmount = parseFloat(amount);
-      if (!parsedAmount || parsedAmount <= 0) throw new Error("Ingrese un monto válido");
-      if (!bankAccountId) throw new Error("Seleccione la cuenta desde donde se pagó");
-      if (parsedAmount > remainingAmount + 0.005) throw new Error("El pago excede el saldo pendiente");
+      if (!parsedAmount || parsedAmount <= 0) throw new Error(t("svcPayment.invalidAmount"));
+      if (!bankAccountId) throw new Error(t("svcPayment.selectAccountError"));
+      if (parsedAmount > remainingAmount + 0.005) throw new Error(t("svcPayment.exceedsBalance"));
 
       const { data, error } = await supabase.rpc("register_service_partial_payment" as never, {
         p_service_entry_id: entry.id,
@@ -164,22 +148,16 @@ export function ServicePaymentDialog({
         p_notes: notes.trim() || null,
         p_is_final_payment: false,
       } as never);
-
       if (error) throw error;
-
       const result = (data || {}) as { transaction_id?: string | null; is_final_payment?: boolean };
-
       if (result.transaction_id) {
         const { error: updateError } = await supabase
           .from("service_entries")
           .update({ transaction_id: result.transaction_id } as never)
           .eq("id", entry.id);
-
         if (updateError) throw updateError;
       }
-
       const updatedPayments = await fetchPayments(entry.id);
-
       return { result, payments: updatedPayments };
     },
     onSuccess: ({ result, payments: updatedPayments }) => {
@@ -191,15 +169,13 @@ export function ServicePaymentDialog({
       queryClient.invalidateQueries({ queryKey: ["service-entry-payments", entry?.id] });
       onPaymentRegistered?.({ result, payments: updatedPayments });
       toast({
-        title: result.is_final_payment ? "Pago final registrado" : "Pago parcial registrado",
-        description: result.is_final_payment
-          ? "Se cerró el servicio y se generará el recibo final."
-          : "El servicio quedó actualizado con su nuevo saldo.",
+        title: result.is_final_payment ? t("svcPayment.finalPayment") : t("svcPayment.partialPayment"),
+        description: result.is_final_payment ? t("svcPayment.finalPaymentDesc") : t("svcPayment.partialPaymentDesc"),
       });
       onOpenChange(false);
     },
     onError: (error: any) => {
-      toast({ title: "Error al registrar pago", description: error.message, variant: "destructive" });
+      toast({ title: t("svcPayment.paymentError"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -209,23 +185,21 @@ export function ServicePaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Registrar pago de servicio</DialogTitle>
-          <DialogDescription>
-            Cada cuota crea su transacción, actualiza el saldo pendiente y queda en el historial del recibo final.
-          </DialogDescription>
+          <DialogTitle>{t("svcPayment.title")}</DialogTitle>
+          <DialogDescription>{t("svcPayment.desc")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total servicio</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("svcPayment.totalService")}</p>
             <p className="mt-1 text-lg font-semibold text-foreground">{formatMoney(entry.currency, committedAmount)}</p>
           </div>
           <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Pagado</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("svcPayment.paid")}</p>
             <p className="mt-1 text-lg font-semibold text-foreground">{formatMoney(entry.currency, paidAmount)}</p>
           </div>
           <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Pendiente</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("svcPayment.pending")}</p>
             <p className="mt-1 text-lg font-semibold text-foreground">{formatMoney(entry.currency, remainingAmount)}</p>
           </div>
         </div>
@@ -234,7 +208,7 @@ export function ServicePaymentDialog({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-foreground">{entry.service_providers.name}</p>
-              <p className="text-sm text-muted-foreground">{entry.description || "Servicio sin descripción"}</p>
+              <p className="text-sm text-muted-foreground">{entry.description || t("svcPayment.noDesc")}</p>
             </div>
             <Badge variant="outline">{paymentCountLabel}</Badge>
           </div>
@@ -242,25 +216,23 @@ export function ServicePaymentDialog({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Fecha de pago</Label>
+            <Label>{t("svcPayment.paymentDate")}</Label>
             <Input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Monto</Label>
+            <Label>{t("svcPayment.amount")}</Label>
             <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label>Pagado desde</Label>
+            <Label>{t("svcPayment.paidFrom")}</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
               value={bankAccountId}
               onChange={(e) => setBankAccountId(e.target.value)}
             >
-              <option value="">Seleccionar cuenta</option>
+              <option value="">{t("svcPayment.selectAccount")}</option>
               {bankAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.account_name}
-                </option>
+                <option key={account.id} value={account.id}>{account.account_name}</option>
               ))}
             </select>
           </div>
@@ -269,32 +241,32 @@ export function ServicePaymentDialog({
             <Input value={ncf} onChange={(e) => setNcf(e.target.value)} placeholder="B11" />
           </div>
           <div className="space-y-2">
-            <Label>Notas</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: adelanto inicial" />
+            <Label>{t("svcPayment.notes")}</Label>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("svcPayment.notesPlaceholder")} />
           </div>
         </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Historial de pagos</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t("svcPayment.paymentHistory")}</h3>
             <Badge variant="secondary">{paymentCountLabel}</Badge>
           </div>
           <div className="max-h-64 overflow-auto rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
+                  <TableHead>{t("common.date")}</TableHead>
                   <TableHead>NCF</TableHead>
-                  <TableHead>Cuenta</TableHead>
+                  <TableHead>{t("common.account")}</TableHead>
                   <TableHead>Trans. #</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-right">{t("common.amount")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
-                      Aún no hay pagos registrados.
+                      {t("svcPayment.noPaymentsYet")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -315,10 +287,10 @@ export function ServicePaymentDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="button" onClick={() => paymentMutation.mutate()} disabled={paymentMutation.isPending || remainingAmount <= 0}>
-            {paymentMutation.isPending ? "Guardando..." : "Registrar pago"}
+            {paymentMutation.isPending ? t("svcPayment.saving") : t("svcPayment.registerPayment")}
           </Button>
         </DialogFooter>
       </DialogContent>

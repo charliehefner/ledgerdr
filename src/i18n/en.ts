@@ -765,6 +765,12 @@ export const en = {
   "progress.totals": "TOTALS",
   "progress.reportTitle": "Progress Report",
   "progress.period": "Period",
+  "progress.export": "Export",
+  "progress.exportExcel": "Export to Excel",
+  "progress.exportPDF": "Export to PDF",
+  "progress.dateStart": "Start date",
+  "progress.dateEnd": "End date",
+  "progress.dateTo": "to",
 
   // Input Usage Report
   "inputUsage.title": "Input Usage by Field",
@@ -797,6 +803,9 @@ export const en = {
   "inputUsage.th.co2e": "CO₂-e (kg)",
   "inputUsage.totals": "TOTALS",
   "inputUsage.usageReportTitle": "Usage Report",
+  "inputUsage.export": "Export",
+  "inputUsage.exportExcel": "Export to Excel",
+  "inputUsage.exportPDF": "Export to PDF",
 
   // Farms & Fields
   "farms.importBoundaries": "Import Boundaries",

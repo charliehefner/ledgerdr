@@ -18,10 +18,11 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
 import { formatMoney } from "@/lib/formatters";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const DIESEL_VIRTUAL_ID = "__diesel__";
 
@@ -97,6 +98,8 @@ interface InputUsageReportProps {
 }
 
 export function InputUsageReport({ initialInputId }: InputUsageReportProps = {}) {
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "en" ? enUS : es;
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [selectedInput, setSelectedInput] = useState<string>(initialInputId || "");
@@ -297,7 +300,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         results.push({
           operationId: `fuel-${ft.id}`,
           date: txDate,
-          fieldName: "Sin operación",
+          fieldName: t("inputUsage.noOperation"),
           inputName: dieselLabel,
           inputUnit: "gal",
           amount: Number(ft.gallons) || 0,
@@ -337,7 +340,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     });
 
     return results;
-  }, [fuelTransactions, operations, startDate, endDate, hasSearched, selectedInput, fields, selectedFarm, selectedFields, costPerUnitMap, inventoryItems]);
+  }, [fuelTransactions, operations, startDate, endDate, hasSearched, selectedInput, fields, selectedFarm, selectedFields, costPerUnitMap, inventoryItems, t]);
 
   // Calculate usage data based on filters
   const usageData = useMemo(() => {
@@ -492,12 +495,12 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
   };
 
   const getFieldSelectorLabel = () => {
-    if (selectedFields.length === 0) return "Todos los Campos";
+    if (selectedFields.length === 0) return t("inputUsage.allFieldsLabel");
     if (selectedFields.length === 1) {
       const field = filteredFields.find((f) => f.id === selectedFields[0]);
-      return field?.name || "1 campo";
+      return field?.name || t("inputUsage.oneField");
     }
-    return `${selectedFields.length} campos`;
+    return t("inputUsage.fieldsSelected").replace("{count}", String(selectedFields.length));
   };
 
   const handleSearch = () => {
@@ -508,22 +511,22 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     if (usageData.length === 0) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Uso de Insumo");
+    const worksheet = workbook.addWorksheet(t("inputUsage.title"));
 
     // Add title
     worksheet.mergeCells("A1:H1");
-    worksheet.getCell("A1").value = `Reporte de Uso: ${selectedInputDetails?.commercial_name || ""}`;
+    worksheet.getCell("A1").value = `${t("inputUsage.usageReportTitle")}: ${selectedInputDetails?.commercial_name || ""}`;
     worksheet.getCell("A1").font = { bold: true, size: 14 };
     worksheet.getCell("A1").alignment = { horizontal: "center" };
 
     // Add date range
     worksheet.mergeCells("A2:H2");
-    worksheet.getCell("A2").value = `Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").value = `${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     // Add headers
     const unit = selectedInputDetails?.use_unit || "units";
-    const headers = ["Fecha", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, `Costo/${unit}`, "Costo Total", "Tractor/Operador"];
+    const headers = [t("inputUsage.th.date"), t("inputUsage.th.field"), `${t("inputUsage.th.quantity")} (${unit})`, t("inputUsage.th.hectares"), `${unit}/Ha`, `${t("inputUsage.th.costPerUnit")}`, t("inputUsage.th.totalCost"), t("inputUsage.th.tractorOperator")];
     worksheet.addRow([]);
     const headerRow = worksheet.addRow(headers);
     headerRow.eachCell((cell) => {
@@ -558,14 +561,8 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     // Add totals row
     worksheet.addRow([]);
     const totalsRow = worksheet.addRow([
-      "TOTALES",
-      "",
-      totals.totalAmount.toFixed(2),
-      totals.totalHectares.toFixed(2),
-      totals.avgPerHectare.toFixed(2),
-      "",
-      totals.totalCost.toFixed(2),
-      "",
+      t("inputUsage.totals"), "", totals.totalAmount.toFixed(2), totals.totalHectares.toFixed(2),
+      totals.avgPerHectare.toFixed(2), "", totals.totalCost.toFixed(2), "",
     ]);
     totalsRow.eachCell((cell) => {
       cell.font = { bold: true };
@@ -592,12 +589,12 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
     const doc = new jsPDF({ orientation: "landscape" });
     const unit = selectedInputDetails?.use_unit || "units";
     doc.setFontSize(14);
-    doc.text(`Reporte de Uso: ${selectedInputDetails?.commercial_name || "Todos"}`, 14, 15);
+    doc.text(`${t("inputUsage.usageReportTitle")}: ${selectedInputDetails?.commercial_name || t("inputUsage.allInputs")}`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
+    doc.text(`${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
 
     autoTable(doc, {
-      head: [["Fecha", "Campo", `Cantidad (${unit})`, "Hectáreas", `${unit}/Ha`, `Costo/${unit}`, "Costo Total", "Tractor/Operador"]],
+      head: [[t("inputUsage.th.date"), t("inputUsage.th.field"), `${t("inputUsage.th.quantity")} (${unit})`, t("inputUsage.th.hectares"), `${unit}/Ha`, t("inputUsage.th.costPerUnit"), t("inputUsage.th.totalCost"), t("inputUsage.th.tractorOperator")]],
       body: usageData.map((row) => [
         format(parseDateLocal(row.date), "dd/MM/yyyy"),
         row.fieldName,
@@ -611,7 +608,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       startY: 28,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [59, 130, 246] },
-      foot: [["TOTALES", "", totals.totalAmount.toFixed(2), totals.totalHectares.toFixed(2), totals.avgPerHectare.toFixed(2), "", totals.totalCost.toFixed(2), ""]],
+      foot: [[t("inputUsage.totals"), "", totals.totalAmount.toFixed(2), totals.totalHectares.toFixed(2), totals.avgPerHectare.toFixed(2), "", totals.totalCost.toFixed(2), ""]],
       footStyles: { fontStyle: "bold" },
     });
 
@@ -623,7 +620,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Uso de Insumo por Campo</CardTitle>
+          <CardTitle className="text-lg">{t("inputUsage.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-end gap-4">
@@ -633,7 +630,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd MMM yyyy", { locale: es }) : "Fecha inicio"}
+                    {startDate ? format(startDate, "dd MMM yyyy", { locale: dateFnsLocale }) : t("progress.dateStart")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -641,17 +638,17 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                     mode="single"
                     selected={startDate}
                     onSelect={setStartDate}
-                    locale={es}
+                    locale={dateFnsLocale}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              <span className="text-muted-foreground">a</span>
+              <span className="text-muted-foreground">{t("progress.dateTo")}</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd MMM yyyy", { locale: es }) : "Fecha fin"}
+                    {endDate ? format(endDate, "dd MMM yyyy", { locale: dateFnsLocale }) : t("progress.dateEnd")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -659,7 +656,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                     mode="single"
                     selected={endDate}
                     onSelect={setEndDate}
-                    locale={es}
+                    locale={dateFnsLocale}
                     initialFocus
                   />
                 </PopoverContent>
@@ -668,14 +665,14 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
             {/* Input Selection */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Insumo</label>
+              <label className="text-sm text-muted-foreground">{t("inputUsage.input")}</label>
               <Select value={selectedInput} onValueChange={setSelectedInput}>
                 <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="Seleccionar insumo" />
+                  <SelectValue placeholder={t("inputUsage.selectInput")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos Insumos</SelectItem>
-                  <SelectItem value={DIESEL_VIRTUAL_ID}>🛢️ Diesel (Combustible)</SelectItem>
+                  <SelectItem value="all">{t("inputUsage.allInputs")}</SelectItem>
+                  <SelectItem value={DIESEL_VIRTUAL_ID}>🛢️ Diesel</SelectItem>
                   {inventoryItems?.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.commercial_name}
@@ -687,13 +684,13 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
             {/* Farm Filter */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Finca</label>
+              <label className="text-sm text-muted-foreground">{t("progress.farm")}</label>
               <Select value={selectedFarm} onValueChange={handleFarmChange}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar finca" />
+                  <SelectValue placeholder={t("progress.selectFarm")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las Fincas</SelectItem>
+                  <SelectItem value="all">{t("progress.allFarms")}</SelectItem>
                   {farms?.map((farm) => (
                     <SelectItem key={farm.id} value={farm.id}>
                       {farm.name}
@@ -705,7 +702,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
 
             {/* Field Filter - Multi-select */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Campo (Cmd+click)</label>
+              <label className="text-sm text-muted-foreground">{t("inputUsage.fieldMultiSelect")}</label>
               <Popover open={fieldPopoverOpen} onOpenChange={setFieldPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -729,12 +726,12 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         className="pointer-events-none"
                       />
                       <span className="text-sm font-medium">
-                        {selectedFields.length === filteredFields.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                        {selectedFields.length === filteredFields.length ? t("inputUsage.deselectAll") : t("inputUsage.selectAll")}
                       </span>
                     </div>
                     <div className="border-t my-1" />
                     {filteredFields.length === 0 ? (
-                      <div className="text-sm text-muted-foreground p-2">No hay campos</div>
+                      <div className="text-sm text-muted-foreground p-2">{t("inputUsage.noFields")}</div>
                     ) : (
                       filteredFields.map((field) => (
                         <div
@@ -758,7 +755,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
             {/* Search Button */}
             <Button onClick={handleSearch} disabled={!startDate || !endDate}>
               <Search className="mr-2 h-4 w-4" />
-              Generar Reporte
+              {t("inputUsage.generateReport")}
             </Button>
 
             {/* Export */}
@@ -769,24 +766,24 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                   onClick={() => setShowSummary((v) => !v)}
                 >
                   <BarChart3 className="mr-2 h-4 w-4" />
-                  Resumen Moléculas
+                  {t("inputUsage.moleculeSummary")}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
                       <Download className="mr-2 h-4 w-4" />
-                      Exportar
+                      {t("inputUsage.export")}
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-popover">
                     <DropdownMenuItem onClick={exportToExcel} className="text-excel">
                       <FileSpreadsheet className="mr-2 h-4 w-4" />
-                      Exportar a Excel
+                      {t("inputUsage.exportExcel")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={exportToPDF}>
                       <FileText className="mr-2 h-4 w-4" />
-                      Exportar a PDF
+                      {t("inputUsage.exportPDF")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -801,7 +798,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {selectedInput === "all" ? "Todos los Insumos" : (selectedInputDetails?.commercial_name || "Insumo")}
+              {selectedInput === "all" ? t("inputUsage.allInputs") : (selectedInputDetails?.commercial_name || t("inputUsage.input"))}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
@@ -809,10 +806,10 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Cargando datos...</div>
+              <div className="text-center py-8 text-muted-foreground">{t("inputUsage.loadingData")}</div>
             ) : usageData.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No se encontró uso de este insumo para los filtros seleccionados.
+                {t("inputUsage.noUsageFound")}
               </div>
             ) : showSummary ? (
               /* Molecule Summary View */
@@ -821,11 +818,11 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Molécula</TableHead>
-                        <TableHead className="text-right">Cantidad Usada</TableHead>
-                        <TableHead className="text-right">Costo/Unidad</TableHead>
-                        <TableHead className="text-right">Costo Total</TableHead>
-                        <TableHead className="text-right">CO₂-e (kg)</TableHead>
+                        <TableHead>{t("inputUsage.th.molecule")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.amountUsed")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.costPerUnit")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.totalCost")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.co2e")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -839,7 +836,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                         </TableRow>
                       ))}
                       <TableRow className="font-bold bg-muted/50">
-                        <TableCell>TOTALES</TableCell>
+                        <TableCell>{t("inputUsage.totals")}</TableCell>
                         <TableCell></TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right">
@@ -860,15 +857,15 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        {selectedInput === "all" && <TableHead>Insumo</TableHead>}
-                        <TableHead>Campo</TableHead>
-                        <TableHead className="text-right">Cantidad</TableHead>
-                        <TableHead className="text-right">Hectáreas</TableHead>
-                        <TableHead className="text-right">Unidad/Ha</TableHead>
-                        <TableHead className="text-right">Costo/Unidad</TableHead>
-                        <TableHead className="text-right">Costo Total</TableHead>
-                        <TableHead>Tractor/Operador</TableHead>
+                        <TableHead>{t("inputUsage.th.date")}</TableHead>
+                        {selectedInput === "all" && <TableHead>{t("inputUsage.th.input")}</TableHead>}
+                        <TableHead>{t("inputUsage.th.field")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.quantity")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.hectares")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.unitPerHa")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.costPerUnit")}</TableHead>
+                        <TableHead className="text-right">{t("inputUsage.th.totalCost")}</TableHead>
+                        <TableHead>{t("inputUsage.th.tractorOperator")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -887,7 +884,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                       ))}
                       {/* Totals Row */}
                       <TableRow className="font-bold bg-muted/50">
-                        <TableCell colSpan={selectedInput === "all" ? 3 : 2}>TOTALES</TableCell>
+                        <TableCell colSpan={selectedInput === "all" ? 3 : 2}>{t("inputUsage.totals")}</TableCell>
                         <TableCell className="text-right">{totals.totalAmount.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.totalHectares.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{totals.avgPerHectare.toFixed(2)}</TableCell>

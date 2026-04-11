@@ -18,9 +18,10 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfDay, endOfDay, isWithinInterval, startOfMonth } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import ExcelJS from "exceljs";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Operation {
   id: string;
@@ -83,6 +84,8 @@ interface FieldProgress {
 }
 
 export function FieldProgressReport() {
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "en" ? enUS : es;
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [selectedOperationType, setSelectedOperationType] = useState<string>("all");
@@ -278,29 +281,29 @@ export function FieldProgressReport() {
   };
 
   const getOperationTypeName = () => {
-    if (selectedOperationType === "all") return "Todas las Operaciones";
-    return operationTypes?.find((t) => t.id === selectedOperationType)?.name || "";
+    if (selectedOperationType === "all") return t("progress.allOperations");
+    return operationTypes?.find((t2) => t2.id === selectedOperationType)?.name || "";
   };
 
   const exportToExcel = async () => {
     if (fieldProgressData.length === 0) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Progreso de Campos");
+    const worksheet = workbook.addWorksheet(t("progress.progressByField"));
 
     // Add title
     worksheet.mergeCells("A1:H1");
-    worksheet.getCell("A1").value = `Reporte de Progreso: ${getOperationTypeName()}`;
+    worksheet.getCell("A1").value = `${t("progress.reportTitle")}: ${getOperationTypeName()}`;
     worksheet.getCell("A1").font = { bold: true, size: 14 };
     worksheet.getCell("A1").alignment = { horizontal: "center" };
 
     // Add date range
     worksheet.mergeCells("A2:H2");
-    worksheet.getCell("A2").value = `Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").value = `${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`;
     worksheet.getCell("A2").alignment = { horizontal: "center" };
 
     // Add headers
-    const headers = ["Finca", "Campo", "Tipo de Operación", "Ha Totales", "Ha Realizadas", "Ha Pendientes", "% Completado", "Insumos Utilizados"];
+    const headers = [t("progress.th.farm"), t("progress.th.field"), t("progress.th.operationType"), t("progress.th.totalHa"), t("progress.th.doneHa"), t("progress.th.pendingHa"), t("progress.th.pctComplete"), t("progress.th.inputsUsed")];
     worksheet.addRow([]);
     const headerRow = worksheet.addRow(headers);
     headerRow.eachCell((cell) => {
@@ -353,7 +356,7 @@ export function FieldProgressReport() {
     const totalRemaining = fieldProgressData.reduce((sum, f) => sum + f.hectaresRemaining, 0);
     worksheet.addRow([]);
     const totalsRow = worksheet.addRow([
-      "TOTALES",
+      t("progress.totals"),
       "",
       "",
       totalArea,
@@ -387,16 +390,16 @@ export function FieldProgressReport() {
     if (fieldProgressData.length === 0) return;
     const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(14);
-    doc.text(`Reporte de Progreso: ${getOperationTypeName()}`, 14, 15);
+    doc.text(`${t("progress.reportTitle")}: ${getOperationTypeName()}`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`Período: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
+    doc.text(`${t("progress.period")}: ${format(startDate!, "dd/MM/yyyy")} - ${format(endDate!, "dd/MM/yyyy")}`, 14, 22);
 
     const totalDone = fieldProgressData.reduce((sum, f) => sum + f.hectaresDone, 0);
     const totalArea = fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0);
     const totalRemaining = fieldProgressData.reduce((sum, f) => sum + f.hectaresRemaining, 0);
 
     autoTable(doc, {
-      head: [["Finca", "Campo", "Tipo Operación", "Ha Totales", "Ha Realizadas", "Ha Pendientes", "% Completado", "Insumos"]],
+      head: [[t("progress.th.farm"), t("progress.th.field"), t("progress.th.operationType"), t("progress.th.totalHa"), t("progress.th.doneHa"), t("progress.th.pendingHa"), t("progress.th.pctComplete"), t("progress.th.inputsUsed")]],
       body: fieldProgressData.map((field) => [
         field.farmName,
         field.fieldName,
@@ -410,7 +413,7 @@ export function FieldProgressReport() {
       startY: 28,
       styles: { fontSize: 7 },
       headStyles: { fillColor: [59, 130, 246] },
-      foot: [["TOTALES", "", "", totalArea.toFixed(1), totalDone.toFixed(1), totalRemaining.toFixed(1), totalArea > 0 ? `${((totalDone / totalArea) * 100).toFixed(1)}%` : "0%", ""]],
+      foot: [[t("progress.totals"), "", "", totalArea.toFixed(1), totalDone.toFixed(1), totalRemaining.toFixed(1), totalArea > 0 ? `${((totalDone / totalArea) * 100).toFixed(1)}%` : "0%", ""]],
       footStyles: { fontStyle: "bold" },
     });
 
@@ -422,7 +425,7 @@ export function FieldProgressReport() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Filtros del Reporte</CardTitle>
+          <CardTitle className="text-lg">{t("progress.reportFilters")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-end gap-4">
@@ -432,7 +435,7 @@ export function FieldProgressReport() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd MMM yyyy", { locale: es }) : "Fecha inicio"}
+                    {startDate ? format(startDate, "dd MMM yyyy", { locale: dateFnsLocale }) : t("progress.dateStart")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -440,17 +443,17 @@ export function FieldProgressReport() {
                     mode="single"
                     selected={startDate}
                     onSelect={setStartDate}
-                    locale={es}
+                    locale={dateFnsLocale}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              <span className="text-muted-foreground">a</span>
+              <span className="text-muted-foreground">{t("progress.dateTo")}</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd MMM yyyy", { locale: es }) : "Fecha fin"}
+                    {endDate ? format(endDate, "dd MMM yyyy", { locale: dateFnsLocale }) : t("progress.dateEnd")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -458,7 +461,7 @@ export function FieldProgressReport() {
                     mode="single"
                     selected={endDate}
                     onSelect={setEndDate}
-                    locale={es}
+                    locale={dateFnsLocale}
                     initialFocus
                   />
                 </PopoverContent>
@@ -467,13 +470,13 @@ export function FieldProgressReport() {
 
             {/* Operation Type */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Tipo de Operación</label>
+              <label className="text-sm text-muted-foreground">{t("progress.operationType")}</label>
               <Select value={selectedOperationType} onValueChange={setSelectedOperationType}>
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Seleccionar tipo" />
+                  <SelectValue placeholder={t("progress.selectType")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las Operaciones</SelectItem>
+                  <SelectItem value="all">{t("progress.allOperations")}</SelectItem>
                   {operationTypes?.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
@@ -485,13 +488,13 @@ export function FieldProgressReport() {
 
             {/* Farm Filter */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Finca</label>
+              <label className="text-sm text-muted-foreground">{t("progress.farm")}</label>
               <Select value={selectedFarm} onValueChange={handleFarmChange}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar finca" />
+                  <SelectValue placeholder={t("progress.selectFarm")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las Fincas</SelectItem>
+                  <SelectItem value="all">{t("progress.allFarms")}</SelectItem>
                   {farms?.map((farm) => (
                     <SelectItem key={farm.id} value={farm.id}>
                       {farm.name}
@@ -503,13 +506,13 @@ export function FieldProgressReport() {
 
             {/* Field Filter */}
             <div className="flex flex-col gap-1">
-              <label className="text-sm text-muted-foreground">Campo</label>
+              <label className="text-sm text-muted-foreground">{t("progress.field")}</label>
               <Select value={selectedField} onValueChange={setSelectedField}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar campo" />
+                  <SelectValue placeholder={t("progress.selectField")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los Campos</SelectItem>
+                  <SelectItem value="all">{t("progress.allFields")}</SelectItem>
                   {filteredFields?.map((field) => (
                     <SelectItem key={field.id} value={field.id}>
                       {field.name}
@@ -522,7 +525,7 @@ export function FieldProgressReport() {
             {/* Search Button */}
             <Button onClick={handleSearch} disabled={!startDate || !endDate}>
               <Search className="mr-2 h-4 w-4" />
-              Generar Reporte
+              {t("progress.generateReport")}
             </Button>
 
             {/* Export */}
@@ -531,18 +534,18 @@ export function FieldProgressReport() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
                     <Download className="mr-2 h-4 w-4" />
-                    Exportar
+                    {t("progress.export")}
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-popover">
                   <DropdownMenuItem onClick={exportToExcel} className="text-excel">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Exportar a Excel
+                    {t("progress.exportExcel")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={exportToPDF}>
                     <FileText className="mr-2 h-4 w-4" />
-                    Exportar a PDF
+                    {t("progress.exportPDF")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -556,7 +559,7 @@ export function FieldProgressReport() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {getOperationTypeName()} - Progreso por Campo
+              {getOperationTypeName()} - {t("progress.progressByField")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {startDate && endDate && `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`}
@@ -564,24 +567,24 @@ export function FieldProgressReport() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Cargando datos...</div>
+              <div className="text-center py-8 text-muted-foreground">{t("progress.loadingData")}</div>
             ) : fieldProgressData.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No se encontraron operaciones para los filtros seleccionados.
+                {t("progress.noOperationsFound")}
               </div>
             ) : (
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Finca</TableHead>
-                      <TableHead>Campo</TableHead>
-                      <TableHead>Tipo de Operación</TableHead>
-                      <TableHead className="text-right">Ha Totales</TableHead>
-                      <TableHead className="text-right">Ha Realizadas</TableHead>
-                      <TableHead className="text-right">Ha Pendientes</TableHead>
-                      <TableHead className="text-right">% Completado</TableHead>
-                      <TableHead>Insumos Utilizados</TableHead>
+                      <TableHead>{t("progress.th.farm")}</TableHead>
+                      <TableHead>{t("progress.th.field")}</TableHead>
+                      <TableHead>{t("progress.th.operationType")}</TableHead>
+                      <TableHead className="text-right">{t("progress.th.totalHa")}</TableHead>
+                      <TableHead className="text-right">{t("progress.th.doneHa")}</TableHead>
+                      <TableHead className="text-right">{t("progress.th.pendingHa")}</TableHead>
+                      <TableHead className="text-right">{t("progress.th.pctComplete")}</TableHead>
+                      <TableHead>{t("progress.th.inputsUsed")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -602,7 +605,7 @@ export function FieldProgressReport() {
                                     <AlertTriangle className="h-4 w-4 text-amber-500" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Ha Realizadas excede Ha Totales</p>
+                                    <p>{t("progress.overageTooltip")}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -644,7 +647,7 @@ export function FieldProgressReport() {
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/50 font-bold">
-                      <TableCell colSpan={3}>TOTALES</TableCell>
+                      <TableCell colSpan={3}>{t("progress.totals")}</TableCell>
                       <TableCell className="text-right font-mono">
                         {fieldProgressData.reduce((sum, f) => sum + f.totalHectares, 0).toFixed(2)}
                       </TableCell>

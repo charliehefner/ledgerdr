@@ -15,14 +15,11 @@ import { IR17ReportView } from "@/components/hr/IR17ReportView";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useEntity } from "@/contexts/EntityContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { BankAccountForDGII } from "./dgiiConstants";
 
-const MONTHS = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-];
-
 export function DGIIReportsView() {
+  const { t } = useLanguage();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -33,6 +30,11 @@ export function DGIIReportsView() {
   const [loading, setLoading] = useState(false);
 
   const { selectedEntityId } = useEntity();
+
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: t(`month.${String(i + 1).padStart(2, "0")}`),
+  }));
 
   // Check if the selected entity has RNC configured
   const { data: entityRnc } = useQuery({
@@ -76,7 +78,6 @@ export function DGIIReportsView() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch purchases (606)
       const { data: purchaseData } = await supabase
         .from("transactions")
         .select("id, rnc, document, transaction_date, purchase_date, amount, itbis, itbis_retenido, isr_retenido, pay_method, dgii_tipo_bienes_servicios, name")
@@ -88,7 +89,6 @@ export function DGIIReportsView() {
         .order("transaction_date")
         .limit(10000);
 
-      // Fetch sales (607)
       const { data: salesData } = await supabase
         .from("transactions")
         .select("id, rnc, document, transaction_date, amount, itbis, itbis_retenido, isr_retenido, dgii_tipo_ingreso, name")
@@ -100,7 +100,6 @@ export function DGIIReportsView() {
         .order("transaction_date")
         .limit(10000);
 
-      // Fetch voided (608)
       const { data: voidedData } = await supabase
         .from("transactions")
         .select("id, document, transaction_date, dgii_tipo_anulacion")
@@ -127,36 +126,36 @@ export function DGIIReportsView() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Reportes DGII</CardTitle>
+          <CardTitle>{t("dgii.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {hasNoRnc && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                RNC no configurado para esta entidad. Configúrelo en <strong>Configuración → Entidades</strong> para generar archivos .TXT de DGII.
+                {t("dgii.rncWarning")}
               </AlertDescription>
             </Alert>
           )}
 
           <div className="flex gap-4 items-end">
             <div className="space-y-1">
-              <Label>Mes</Label>
+              <Label>{t("dgii.month")}</Label>
               <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MONTHS.map((m, i) => (
-                    <SelectItem key={i + 1} value={String(i + 1)}>
-                      {m}
+                  {months.map((m) => (
+                    <SelectItem key={m.value} value={String(m.value)}>
+                      {m.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Año</Label>
+              <Label>{t("dgii.year")}</Label>
               <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
                 <SelectTrigger className="w-[100px]">
                   <SelectValue />
@@ -179,12 +178,12 @@ export function DGIIReportsView() {
           ) : (
             <Tabs value={subTab} onValueChange={setSubTab}>
               <TabsList>
-                <TabsTrigger value="606" className="gap-1">606 - Compras ({purchases.length}) <InfoTooltip translationKey="help.dgii606" /></TabsTrigger>
-                <TabsTrigger value="607" className="gap-1">607 - Ventas ({sales.length}) <InfoTooltip translationKey="help.dgii607" /></TabsTrigger>
-                <TabsTrigger value="608" className="gap-1">608 - Anulados ({voided.length}) <InfoTooltip translationKey="help.dgii608" /></TabsTrigger>
-                <TabsTrigger value="it1" className="gap-1">IT-1 - ITBIS <InfoTooltip translationKey="help.it1" /></TabsTrigger>
-                <TabsTrigger value="ir3" className="gap-1">IR-3 - ISR <InfoTooltip translationKey="help.ir3" /></TabsTrigger>
-                <TabsTrigger value="ir17" className="gap-1">IR-17 - Retenciones</TabsTrigger>
+                <TabsTrigger value="606" className="gap-1">{t("dgii.606Purchases")} ({purchases.length}) <InfoTooltip translationKey="help.dgii606" /></TabsTrigger>
+                <TabsTrigger value="607" className="gap-1">{t("dgii.607Sales")} ({sales.length}) <InfoTooltip translationKey="help.dgii607" /></TabsTrigger>
+                <TabsTrigger value="608" className="gap-1">{t("dgii.608Voided")} ({voided.length}) <InfoTooltip translationKey="help.dgii608" /></TabsTrigger>
+                <TabsTrigger value="it1" className="gap-1">{t("dgii.it1Itbis")} <InfoTooltip translationKey="help.it1" /></TabsTrigger>
+                <TabsTrigger value="ir3" className="gap-1">{t("dgii.ir3Isr")} <InfoTooltip translationKey="help.ir3" /></TabsTrigger>
+                <TabsTrigger value="ir17" className="gap-1">{t("dgii.ir17Withholdings")}</TabsTrigger>
               </TabsList>
               <TabsContent value="606">
                 <DGII606Table transactions={purchases} month={month} year={year} bankAccounts={bankAccounts} entityId={selectedEntityId} />

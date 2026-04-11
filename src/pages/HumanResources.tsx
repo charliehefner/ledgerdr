@@ -65,8 +65,8 @@ export default function HumanResources() {
   const canAccessTab = (tab: HrTab) => canAccessHrTab(userRole, tab);
 
   const govReportOptions = [
-    { key: "tss", label: "TSS Autodeterminación", description: "Archivo mensual para la Tesorería de la Seguridad Social" },
-    { key: "ir17", label: "IR-17", description: "Retenciones complementarias y de terceros" },
+    { key: "tss", label: t("hr.govReportOptions.tss"), description: t("hr.govReportOptions.tssDesc") },
+    { key: "ir17", label: t("hr.govReportOptions.ir17"), description: t("hr.govReportOptions.ir17Desc") },
   ];
 
   const renderGovReportContent = () => {
@@ -92,7 +92,7 @@ export default function HumanResources() {
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => setSelectedGovReport(null)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a reportes
+          {t("hr.backToReports")}
         </Button>
         {selectedGovReport === "tss" && <TSSAutodeterminacionView />}
         {selectedGovReport === "ir17" && <IR17ReportView />}
@@ -119,14 +119,14 @@ export default function HumanResources() {
   if (canAccessTab("servicios")) {
     mainTabs.push({
       value: "servicios",
-      label: "Servicios",
+      label: t("hr.services"),
       content: <ServicesView />,
     });
   }
   if (canAccessTab("tss")) {
     mainTabs.push({
       value: "tss",
-      label: "Reportes Gob.",
+      label: t("hr.govReports"),
       content: renderGovReportContent(),
     });
   }
@@ -135,14 +135,14 @@ export default function HumanResources() {
   if (canAccessTab("jornaleros")) {
     rightTabs.push({
       value: "jornaleros",
-      label: "Jornaleros",
+      label: t("hr.jornaleros"),
       content: <JornalerosView />,
     });
   }
   if (canAccessTab("prestadores")) {
     rightTabs.push({
       value: "prestadores",
-      label: "Prestadores",
+      label: t("hr.providers"),
       content: <ServiceProvidersView />,
     });
   }

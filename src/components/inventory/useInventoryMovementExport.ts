@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { functionLabels } from "./constants";
 
-import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
+import { fmtDate } from "@/lib/dateUtils";
 
 interface ReportRow {
   id: string;
@@ -200,7 +200,7 @@ export function useInventoryMovementExport({
         14,
         22
       );
-      pdf.text(`Generado: ${fmtDateTime(new Date())}`, 14, 27);
+      pdf.text(`Generado: ${fmtDate(new Date())}`, 14, 27);
 
       // Headers
       const headers = [

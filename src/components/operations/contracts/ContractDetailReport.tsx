@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ServiceContract, ContractEntry, ContractLineItem } from "../ContractedServicesView";
 import { format } from "date-fns";
-import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { Download, FileText, Pencil, Trash2, Plus, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -369,7 +369,7 @@ export function ContractDetailReport({
       finalY += 15;
       doc.setFontSize(8);
       doc.setFont("helvetica", "italic");
-      doc.text(`${t("common.date")}: ${fmtDateTime(new Date())}`, 14, finalY);
+      doc.text(`${t("common.date")}: ${fmtDate(new Date())}`, 14, finalY);
       
       // Save PDF
       doc.save(`${contract.contract_name.replace(/[^a-zA-Z0-9]/g, '-')}-report-${format(new Date(), "yyyy-MM-dd")}.pdf`);

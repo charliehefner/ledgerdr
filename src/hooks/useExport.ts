@@ -5,7 +5,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
-import { fmtDateTime } from "@/lib/dateUtils";
+import { fmtDate } from "@/lib/dateUtils";
 
 export interface ExportColumn {
   key: string;
@@ -199,7 +199,7 @@ export function useExport() {
       // Generated date
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
-      pdf.text(`Generado: ${fmtDateTime(new Date())}`, 14, startY);
+      pdf.text(`Generado: ${fmtDate(new Date())}`, 14, startY);
       startY += 7;
 
       // Build table data

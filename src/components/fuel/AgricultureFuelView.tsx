@@ -61,7 +61,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TankHistoryView } from "./TankHistoryView";
 import { TractorHistoryView } from "./TractorHistoryView";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 
 type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -638,7 +638,7 @@ export function AgricultureFuelView() {
       ? `Period: ${fmtDate(startDate)} - ${fmtDate(endDate)}`
       : "All dates";
     doc.text(dateRangeText, 14, 28);
-    doc.text(`Generated: ${fmtDateTime(new Date())}`, 14, 34);
+    doc.text(`Generated: ${fmtDate(new Date())}`, 14, 34);
 
     // Table data
     const tableData = sortedTransactions.map((tx) => [

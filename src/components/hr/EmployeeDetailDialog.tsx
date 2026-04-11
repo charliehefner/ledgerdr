@@ -302,7 +302,7 @@ export function EmployeeDetailDialog({
 
   const handleAddVacation = async () => {
     if (!employeeId || !vacationStart || !vacationEnd) {
-      toast.error("Por favor complete las fechas de inicio y fin");
+      toast.error(t("empDetail.completeDates"));
       return;
     }
 
@@ -316,14 +316,14 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Período de vacaciones agregado");
+      toast.success(t("empDetail.vacationAdded"));
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
       setVacationStart("");
       setVacationEnd("");
       setVacationNotes("");
     } catch (error) {
       console.error("Error adding vacation:", error);
-      toast.error("Error al agregar vacaciones");
+      toast.error(t("empDetail.vacationAddError"));
     }
   };
 
@@ -336,17 +336,17 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Vacaciones eliminadas");
+      toast.success(t("empDetail.vacationDeleted"));
       queryClient.invalidateQueries({ queryKey: ["employee-vacations", employeeId] });
     } catch (error) {
       console.error("Error deleting vacation:", error);
-      toast.error("Error al eliminar vacaciones");
+      toast.error(t("empDetail.vacationDeleteError"));
     }
   };
 
   const handleAddIncident = async () => {
     if (!employeeId || !incidentDate || !incidentDesc) {
-      toast.error("Por favor complete la fecha y descripción");
+      toast.error(t("empDetail.completeDateDesc"));
       return;
     }
 
@@ -361,7 +361,7 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Incidente registrado");
+      toast.success(t("empDetail.incidentRecorded"));
       queryClient.invalidateQueries({ queryKey: ["employee-incidents", employeeId] });
       setIncidentDate("");
       setIncidentDesc("");
@@ -369,7 +369,7 @@ export function EmployeeDetailDialog({
       setIncidentResolution("");
     } catch (error) {
       console.error("Error adding incident:", error);
-      toast.error("Error al agregar incidente");
+      toast.error(t("empDetail.incidentError"));
     }
   };
 
@@ -382,11 +382,11 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Incidente eliminado");
+      toast.success(t("empDetail.incidentDeleted"));
       queryClient.invalidateQueries({ queryKey: ["employee-incidents", employeeId] });
     } catch (error) {
       console.error("Error deleting incident:", error);
-      toast.error("Error al eliminar incidente");
+      toast.error(t("empDetail.incidentDeleteError"));
     }
   };
 
@@ -411,11 +411,11 @@ export function EmployeeDetailDialog({
 
       if (dbError) throw dbError;
 
-      toast.success("Documento subido");
+      toast.success(t("empDetail.documentUploaded"));
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
     } catch (error) {
       console.error("Error uploading document:", error);
-      toast.error("Error al subir documento");
+      toast.error(t("empDetail.documentUploadError"));
     }
 
     e.target.value = "";
@@ -432,11 +432,11 @@ export function EmployeeDetailDialog({
 
       if (error) throw error;
 
-      toast.success("Documento eliminado");
+      toast.success(t("empDetail.documentDeleted"));
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
     } catch (error) {
       console.error("Error deleting document:", error);
-      toast.error("Error al eliminar documento");
+      toast.error(t("empDetail.documentDeleteError"));
     }
   };
 

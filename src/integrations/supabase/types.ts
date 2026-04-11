@@ -2409,6 +2409,7 @@ export type Database = {
           created_by: string | null
           date: string | null
           entity_id: string | null
+          estimated_tons: number | null
           finish_hour_meter: number | null
           id: string
           notes: string | null
@@ -2420,6 +2421,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           entity_id?: string | null
+          estimated_tons?: number | null
           finish_hour_meter?: number | null
           id?: string
           notes?: string | null
@@ -2431,6 +2433,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           entity_id?: string | null
+          estimated_tons?: number | null
           finish_hour_meter?: number | null
           id?: string
           notes?: string | null

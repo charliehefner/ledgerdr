@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,23 +55,25 @@ interface EmployeeListProps {
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
 
-const EMPLOYEE_COLUMNS: ColumnConfig[] = [
-  { key: "name", label: "Nombre", defaultVisible: true },
-  { key: "cedula", label: "Cédula", defaultVisible: true },
-  { key: "position", label: "Posición", defaultVisible: true },
-  { key: "date_of_hire", label: "Fecha de Ingreso", defaultVisible: true },
-  { key: "vacations", label: "Vacaciones", defaultVisible: true },
-  { key: "salary", label: "Salario", defaultVisible: true },
-  { key: "bank", label: "Banco", defaultVisible: false },
-  { key: "bank_account_number", label: "Núm. Cuenta", defaultVisible: false },
-  { key: "date_of_birth", label: "Fecha de Nacimiento", defaultVisible: false },
-  { key: "shirt_size", label: "Talla Camisa", defaultVisible: false },
-  { key: "pant_size", label: "Talla Pantalón", defaultVisible: false },
-  { key: "boot_size", label: "Talla Botas", defaultVisible: false },
-  { key: "is_active", label: "Estado", defaultVisible: true },
+const useEmployeeColumns = (t: (key: string) => string): ColumnConfig[] => [
+  { key: "name", label: t("empList.col.name"), defaultVisible: true },
+  { key: "cedula", label: t("empList.col.cedula"), defaultVisible: true },
+  { key: "position", label: t("empList.col.position"), defaultVisible: true },
+  { key: "date_of_hire", label: t("empList.col.hireDate"), defaultVisible: true },
+  { key: "vacations", label: t("empList.col.vacations"), defaultVisible: true },
+  { key: "salary", label: t("empList.col.salary"), defaultVisible: true },
+  { key: "bank", label: t("empList.col.bank"), defaultVisible: false },
+  { key: "bank_account_number", label: t("empList.col.accountNumber"), defaultVisible: false },
+  { key: "date_of_birth", label: t("empList.col.birthDate"), defaultVisible: false },
+  { key: "shirt_size", label: t("empList.col.shirtSize"), defaultVisible: false },
+  { key: "pant_size", label: t("empList.col.pantSize"), defaultVisible: false },
+  { key: "boot_size", label: t("empList.col.bootSize"), defaultVisible: false },
+  { key: "is_active", label: t("empList.col.status"), defaultVisible: true },
 ];
 
 export function EmployeeList({ onEdit }: EmployeeListProps) {
+  const { t } = useLanguage();
+  const EMPLOYEE_COLUMNS = useEmployeeColumns(t);
   const [searchTerm, setSearchTerm] = useState("");
   const [showActive, setShowActive] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);

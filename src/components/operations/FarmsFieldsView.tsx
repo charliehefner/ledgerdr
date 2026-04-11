@@ -5,32 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -38,6 +22,7 @@ import { Plus, Pencil, MapPin, Layers, Upload, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { KMLImportDialog } from "./KMLImportDialog";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Farm {
   id: string;
@@ -56,23 +41,19 @@ interface Field {
 }
 
 export function FarmsFieldsView() {
+  const { t } = useLanguage();
   const [isFarmDialogOpen, setIsFarmDialogOpen] = useState(false);
   const [isFieldDialogOpen, setIsFieldDialogOpen] = useState(false);
   const [isKMLDialogOpen, setIsKMLDialogOpen] = useState(false);
   const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
   const [editingField, setEditingField] = useState<Field | null>(null);
   const [farmForm, setFarmForm] = useState({ name: "" });
-  const [fieldForm, setFieldForm] = useState({
-    name: "",
-    farm_id: "",
-    hectares: "",
-  });
+  const [fieldForm, setFieldForm] = useState({ name: "", farm_id: "", hectares: "" });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
-  // Fetch farms
   const { data: farms, isLoading: farmsLoading } = useQuery({
     queryKey: ["farms", selectedEntityId],
     queryFn: async () => {
@@ -84,7 +65,6 @@ export function FarmsFieldsView() {
     },
   });
 
-  // Fetch fields
   const { data: fields, isLoading: fieldsLoading } = useQuery({
     queryKey: ["fields", selectedEntityId],
     queryFn: async () => {
@@ -96,33 +76,25 @@ export function FarmsFieldsView() {
     },
   });
 
-  // Remove boundary mutation
   const removeBoundaryMutation = useMutation({
     mutationFn: async (fieldId: string) => {
-      const { error } = await supabase
-        .from("fields")
-        .update({ boundary: null } as any)
-        .eq("id", fieldId);
+      const { error } = await supabase.from("fields").update({ boundary: null } as any).eq("id", fieldId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fields"] });
       queryClient.invalidateQueries({ queryKey: ["fields-with-boundaries"] });
-      toast({ title: "Boundary removed", description: "The field boundary has been cleared." });
+      toast({ title: t("farms.boundaryRemoved"), description: t("farms.boundaryRemovedDesc") });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
-  // Farm mutation
   const farmMutation = useMutation({
     mutationFn: async (data: typeof farmForm) => {
       if (editingFarm) {
-        const { error } = await supabase
-          .from("farms")
-          .update({ name: data.name })
-          .eq("id", editingFarm.id);
+        const { error } = await supabase.from("farms").update({ name: data.name }).eq("id", editingFarm.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("farms").insert({ name: data.name });
@@ -133,21 +105,16 @@ export function FarmsFieldsView() {
       queryClient.invalidateQueries({ queryKey: ["farms"] });
       queryClient.invalidateQueries({ queryKey: ["fields"] });
       toast({
-        title: editingFarm ? "Farm updated" : "Farm added",
-        description: `${farmForm.name} has been saved.`,
+        title: editingFarm ? t("farms.farmUpdated") : t("farms.farmAdded"),
+        description: t("farms.farmSavedDesc").replace("{name}", farmForm.name),
       });
       handleCloseFarmDialog();
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
-  // Field mutation
   const fieldMutation = useMutation({
     mutationFn: async (data: typeof fieldForm) => {
       const record = {
@@ -155,12 +122,8 @@ export function FarmsFieldsView() {
         farm_id: data.farm_id,
         hectares: data.hectares ? parseFloat(data.hectares) : null,
       };
-
       if (editingField) {
-        const { error } = await supabase
-          .from("fields")
-          .update(record)
-          .eq("id", editingField.id);
+        const { error } = await supabase.from("fields").update(record).eq("id", editingField.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("fields").insert(record);
@@ -170,17 +133,13 @@ export function FarmsFieldsView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fields"] });
       toast({
-        title: editingField ? "Field updated" : "Field added",
-        description: `${fieldForm.name} has been saved.`,
+        title: editingField ? t("farms.fieldUpdated") : t("farms.fieldAdded"),
+        description: t("farms.farmSavedDesc").replace("{name}", fieldForm.name),
       });
       handleCloseFieldDialog();
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -192,11 +151,7 @@ export function FarmsFieldsView() {
 
   const handleEditField = (field: Field) => {
     setEditingField(field);
-    setFieldForm({
-      name: field.name,
-      farm_id: field.farm_id,
-      hectares: field.hectares?.toString() || "",
-    });
+    setFieldForm({ name: field.name, farm_id: field.farm_id, hectares: field.hectares?.toString() || "" });
     setIsFieldDialogOpen(true);
   };
 
@@ -215,11 +170,7 @@ export function FarmsFieldsView() {
   const handleFarmSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!farmForm.name) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a farm name.",
-        variant: "destructive",
-      });
+      toast({ title: t("farms.validationError"), description: t("farms.enterFarmName"), variant: "destructive" });
       return;
     }
     farmMutation.mutate(farmForm);
@@ -228,60 +179,54 @@ export function FarmsFieldsView() {
   const handleFieldSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fieldForm.name || !fieldForm.farm_id) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
+      toast({ title: t("farms.validationError"), description: t("farms.fillRequired"), variant: "destructive" });
       return;
     }
     fieldMutation.mutate(fieldForm);
   };
 
-  // Group fields by farm
   const fieldsByFarm = farms?.reduce((acc, farm) => {
     acc[farm.id] = fields?.filter((f) => f.farm_id === farm.id) || [];
     return acc;
   }, {} as Record<string, Field[]>);
 
   if (farmsLoading || fieldsLoading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return <div className="text-center py-8">{t("common.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Add buttons */}
       <div className="flex flex-wrap gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={() => setIsKMLDialogOpen(true)}>
           <Upload className="h-4 w-4 mr-2" />
-          Import Boundaries
+          {t("farms.importBoundaries")}
         </Button>
         <Dialog open={isFarmDialogOpen} onOpenChange={setIsFarmDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Add Farm
+              {t("farms.addFarm")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingFarm ? "Edit Farm" : "Add New Farm"}</DialogTitle>
+              <DialogTitle>{editingFarm ? t("farms.editFarm") : t("farms.newFarm")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleFarmSubmit} className="space-y-4">
               <div>
-                <Label>Farm Name *</Label>
+                <Label>{t("farms.farmName")}</Label>
                 <Input
                   value={farmForm.name}
                   onChange={(e) => setFarmForm({ name: e.target.value })}
-                  placeholder="e.g., North Farm"
+                  placeholder={t("farms.farmNamePlaceholder")}
                 />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={handleCloseFarmDialog}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={farmMutation.isPending}>
-                  {farmMutation.isPending ? "Saving..." : editingFarm ? "Update" : "Add Farm"}
+                  {farmMutation.isPending ? t("farms.saving") : editingFarm ? t("farms.update") : t("farms.addFarm")}
                 </Button>
               </div>
             </form>
@@ -292,56 +237,51 @@ export function FarmsFieldsView() {
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Add Field
+              {t("farms.addField")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingField ? "Edit Field" : "Add New Field"}</DialogTitle>
+              <DialogTitle>{editingField ? t("farms.editField") : t("farms.newField")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleFieldSubmit} className="space-y-4">
               <div>
-                <Label>Farm *</Label>
-                <Select
-                  value={fieldForm.farm_id}
-                  onValueChange={(value) => setFieldForm({ ...fieldForm, farm_id: value })}
-                >
+                <Label>{t("progress.farm")} *</Label>
+                <Select value={fieldForm.farm_id} onValueChange={(value) => setFieldForm({ ...fieldForm, farm_id: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select farm" />
+                    <SelectValue placeholder={t("farms.selectFarm")} />
                   </SelectTrigger>
                   <SelectContent>
                     {farms?.map((farm) => (
-                      <SelectItem key={farm.id} value={farm.id}>
-                        {farm.name}
-                      </SelectItem>
+                      <SelectItem key={farm.id} value={farm.id}>{farm.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Field Name *</Label>
+                <Label>{t("farms.fieldName")}</Label>
                 <Input
                   value={fieldForm.name}
                   onChange={(e) => setFieldForm({ ...fieldForm, name: e.target.value })}
-                  placeholder="e.g., Field A-1"
+                  placeholder={t("farms.fieldNamePlaceholder")}
                 />
               </div>
               <div>
-                <Label>Hectares</Label>
+                <Label>{t("farms.hectares")}</Label>
                 <Input
                   type="number"
                   step="0.1"
                   value={fieldForm.hectares}
                   onChange={(e) => setFieldForm({ ...fieldForm, hectares: e.target.value })}
-                  placeholder="Optional"
+                  placeholder={t("farms.optional")}
                 />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={handleCloseFieldDialog}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={fieldMutation.isPending}>
-                  {fieldMutation.isPending ? "Saving..." : editingField ? "Update" : "Add Field"}
+                  {fieldMutation.isPending ? t("farms.saving") : editingField ? t("farms.update") : t("farms.addField")}
                 </Button>
               </div>
             </form>
@@ -349,12 +289,11 @@ export function FarmsFieldsView() {
         </Dialog>
       </div>
 
-      {/* Farms & Fields Accordion */}
       {!farms || farms.length === 0 ? (
         <EmptyState
           icon={MapPin}
-          title="Sin fincas"
-          description="No hay fincas agregadas. Haga clic en 'Add Farm' para comenzar."
+          title={t("farms.noFarms")}
+          description={t("farms.noFarmsDesc")}
         />
       ) : (
         <Accordion type="multiple" className="space-y-2">
@@ -365,16 +304,13 @@ export function FarmsFieldsView() {
                   <MapPin className="h-4 w-4 text-primary" />
                   <span className="font-medium">{farm.name}</span>
                   <Badge variant="secondary" className="ml-2">
-                    {fieldsByFarm?.[farm.id]?.length || 0} fields
+                    {fieldsByFarm?.[farm.id]?.length || 0} {t("farms.fields")}
                   </Badge>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 ml-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditFarm(farm);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); handleEditFarm(farm); }}
                   >
                     <Pencil className="h-3 w-3" />
                   </Button>
@@ -383,16 +319,16 @@ export function FarmsFieldsView() {
               <AccordionContent>
                 {fieldsByFarm?.[farm.id]?.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-2 pl-7">
-                    No fields in this farm yet.
+                    {t("farms.noFieldsYet")}
                   </div>
                 ) : (
                   <Table>
-                     <TableHeader>
+                    <TableHeader>
                       <TableRow>
-                        <TableHead>Field Name</TableHead>
-                        <TableHead>Hectares</TableHead>
-                        <TableHead className="w-[60px]">Edit</TableHead>
-                        <TableHead className="w-[120px]">Boundary</TableHead>
+                        <TableHead>{t("farms.th.fieldName")}</TableHead>
+                        <TableHead>{t("farms.th.hectares")}</TableHead>
+                        <TableHead className="w-[60px]">{t("farms.th.edit")}</TableHead>
+                        <TableHead className="w-[120px]">{t("farms.th.boundary")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -406,12 +342,7 @@ export function FarmsFieldsView() {
                           </TableCell>
                           <TableCell>{field.hectares ? `${field.hectares} ha` : "-"}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => handleEditField(field)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditField(field)}>
                               <Pencil className="h-3 w-3" />
                             </Button>
                           </TableCell>
@@ -425,7 +356,7 @@ export function FarmsFieldsView() {
                                 disabled={removeBoundaryMutation.isPending}
                               >
                                 <Trash2 className="h-3 w-3 mr-1" />
-                                Remove
+                                {t("farms.removeBoundary")}
                               </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
@@ -442,9 +373,8 @@ export function FarmsFieldsView() {
         </Accordion>
       )}
 
-      {/* Summary */}
       <div className="text-sm text-muted-foreground">
-        Total: {farms?.length || 0} farms, {fields?.length || 0} fields
+        {t("farms.totalSummary").replace("{farms}", String(farms?.length || 0)).replace("{fields}", String(fields?.length || 0))}
       </div>
 
       <KMLImportDialog open={isKMLDialogOpen} onOpenChange={setIsKMLDialogOpen} />

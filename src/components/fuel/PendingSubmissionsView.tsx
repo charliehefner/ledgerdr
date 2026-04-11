@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,10 +20,12 @@ import {
 import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es as esLocale, enUS } from "date-fns/locale";
 
 export function PendingSubmissionsView() {
   const { toast } = useToast();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "es" ? esLocale : enUS;
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "management";
@@ -49,8 +52,8 @@ export function PendingSubmissionsView() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Limpieza completada",
-        description: `${data.expired_count} expiradas y ${data.orphan_count} huérfanas eliminadas.`,
+        title: t("pending.cleanupComplete"),
+        description: t("pending.cleanupResult").replace("{expired}", String(data.expired_count)).replace("{orphan}", String(data.orphan_count)),
       });
       queryClient.invalidateQueries({ queryKey: ["pending-fuel-submissions"] });
     },
@@ -82,10 +85,9 @@ export function PendingSubmissionsView() {
       {expiredCount > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Envíos expirados</AlertTitle>
+          <AlertTitle>{t("pending.expiredTitle")}</AlertTitle>
           <AlertDescription>
-            Hay {expiredCount} envío(s) de combustible expirado(s) pendientes de
-            limpieza.
+            {t("pending.expiredDesc").replace("{count}", String(expiredCount))}
           </AlertDescription>
         </Alert>
       )}
@@ -103,25 +105,25 @@ export function PendingSubmissionsView() {
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            Limpiar expirados ({expiredCount})
+            {t("pending.cleanExpired")} ({expiredCount})
           </Button>
         </div>
       )}
 
       {(!submissions || submissions.length === 0) ? (
         <p className="text-center text-muted-foreground py-8">
-          No hay envíos pendientes.
+          {t("pending.noPending")}
         </p>
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Enviado</TableHead>
-                <TableHead>Expira</TableHead>
-                <TableHead>Enviado por</TableHead>
-                <TableHead>Transacción</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>{t("pending.submitted")}</TableHead>
+                <TableHead>{t("pending.expires")}</TableHead>
+                <TableHead>{t("pending.submittedBy")}</TableHead>
+                <TableHead>{t("pending.transaction")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -136,18 +138,18 @@ export function PendingSubmissionsView() {
                     <TableCell>
                       {sub.submitted_at
                         ? format(new Date(sub.submitted_at), "dd/MM/yy HH:mm", {
-                            locale: es,
+                            locale: dateFnsLocale,
                           })
                         : sub.created_at
                         ? format(new Date(sub.created_at), "dd/MM/yy HH:mm", {
-                            locale: es,
+                            locale: dateFnsLocale,
                           })
                         : "—"}
                     </TableCell>
                     <TableCell>
                       {sub.expires_at
                         ? format(new Date(sub.expires_at), "dd/MM/yy HH:mm", {
-                            locale: es,
+                            locale: dateFnsLocale,
                           })
                         : "—"}
                     </TableCell>
@@ -159,13 +161,13 @@ export function PendingSubmissionsView() {
                     <TableCell className="font-mono text-xs">
                       {sub.fuel_transaction_id
                         ? sub.fuel_transaction_id.substring(0, 8) + "…"
-                        : "Sin vincular"}
+                        : t("pending.unlinked")}
                     </TableCell>
                     <TableCell>
                       {isExpired ? (
-                        <Badge variant="destructive">Expirado</Badge>
+                        <Badge variant="destructive">{t("pending.expired")}</Badge>
                       ) : (
-                        <Badge variant="secondary">Pendiente</Badge>
+                        <Badge variant="secondary">{t("pending.pendingStatus")}</Badge>
                       )}
                     </TableCell>
                   </TableRow>

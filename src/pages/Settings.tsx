@@ -100,12 +100,12 @@ export default function Settings() {
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="general">
               <Settings2 className="h-4 w-4 mr-2" />
-              General
+              {t("settings.general")}
             </TabsTrigger>
             {canModifySettings && (
               <TabsTrigger value="users">
                 <Users className="h-4 w-4 mr-2" />
-                Usuarios
+                {t("settings.users")}
               </TabsTrigger>
             )}
             <TabsTrigger value="farms">
@@ -119,19 +119,19 @@ export default function Settings() {
             {canModifySettings && (
               <TabsTrigger value="qr-codes">
                 <QrCode className="h-4 w-4 mr-2" />
-                Códigos QR
+                {t("settings.qrCodes")}
               </TabsTrigger>
             )}
             {canModifySettings && (
               <TabsTrigger value="followups">
                 <Settings2 className="h-4 w-4 mr-2" />
-                Seguimientos
+                {t("settings.followUps")}
               </TabsTrigger>
             )}
             {canModifySettings && (
               <TabsTrigger value="vendor-rules">
                 <Store className="h-4 w-4 mr-2" />
-                Reglas Proveedor
+                {t("settings.vendorRules")}
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -143,13 +143,13 @@ export default function Settings() {
             {canModifySettings && (
               <TabsTrigger value="operators">
                 <Users className="h-4 w-4 mr-2" />
-                Operadores
+                {t("settings.operators")}
               </TabsTrigger>
             )}
             {canModifySettings && (
               <TabsTrigger value="transportation">
                 <Truck className="h-4 w-4 mr-2" />
-                Transporte
+                {t("settings.transportation")}
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -161,13 +161,13 @@ export default function Settings() {
             {canModifySettings && (
               <TabsTrigger value="entities">
                 <Building2 className="h-4 w-4 mr-2" />
-                Entidades
+                {t("settings.entities")}
               </TabsTrigger>
             )}
             {canModifySettings && (
               <TabsTrigger value="approvals">
                 <ClipboardCheck className="h-4 w-4 mr-2" />
-                Aprobaciones
+                {t("settings.approvals")}
               </TabsTrigger>
             )}
             {canModifySettings && (

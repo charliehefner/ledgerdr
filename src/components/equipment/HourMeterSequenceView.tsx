@@ -96,7 +96,7 @@ export function HourMeterSequenceView() {
       <div className="max-w-xs">
         <Select value={selectedTractorId} onValueChange={setSelectedTractorId}>
           <SelectTrigger>
-            <SelectValue placeholder="Seleccionar tractor" />
+            <SelectValue placeholder={t("hourMeter.selectTractor")} />
           </SelectTrigger>
           <SelectContent>
             {tractors.map((tr) => (
@@ -115,7 +115,7 @@ export function HourMeterSequenceView() {
             <CardContent className="flex items-center gap-3 p-4">
               <Gauge className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-sm text-muted-foreground">Horómetro actual</p>
+                <p className="text-sm text-muted-foreground">{t("hourMeter.currentMeter")}</p>
                 <p className="text-2xl font-bold">
                   {selectedTractor?.current_hour_meter?.toLocaleString() ?? "—"}
                 </p>
@@ -126,7 +126,7 @@ export function HourMeterSequenceView() {
             <CardContent className="flex items-center gap-3 p-4">
               <AlertTriangle className="h-8 w-8 text-destructive" />
               <div>
-                <p className="text-sm text-muted-foreground">Brechas encontradas</p>
+                <p className="text-sm text-muted-foreground">{t("hourMeter.gapsFound")}</p>
                 <p className="text-2xl font-bold">{totalGaps}</p>
               </div>
             </CardContent>
@@ -135,7 +135,7 @@ export function HourMeterSequenceView() {
             <CardContent className="flex items-center gap-3 p-4">
               <Clock className="h-8 w-8 text-amber-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Horas de brecha total</p>
+                <p className="text-sm text-muted-foreground">{t("hourMeter.totalGapHours")}</p>
                 <p className="text-2xl font-bold">{totalGapHours.toFixed(1)}</p>
               </div>
             </CardContent>
@@ -148,23 +148,23 @@ export function HourMeterSequenceView() {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <p className="p-4 text-muted-foreground">Cargando...</p>
+              <p className="p-4 text-muted-foreground">{t("common.loading")}</p>
             ) : rows.length === 0 ? (
               <p className="p-4 text-muted-foreground">
-                No hay operaciones con horómetro para este tractor.
+                {t("hourMeter.noOperations")}
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Operación</TableHead>
-                    <TableHead>Campo</TableHead>
-                    <TableHead>Operador</TableHead>
-                    <TableHead className="text-right">Inicio</TableHead>
-                    <TableHead className="text-right">Fin</TableHead>
-                    <TableHead className="text-right">Horas</TableHead>
-                    <TableHead className="text-right">Brecha</TableHead>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>{t("hourMeter.operation")}</TableHead>
+                    <TableHead>{t("hourMeter.field")}</TableHead>
+                    <TableHead>{t("hourMeter.operator")}</TableHead>
+                    <TableHead className="text-right">{t("hourMeter.start")}</TableHead>
+                    <TableHead className="text-right">{t("hourMeter.end")}</TableHead>
+                    <TableHead className="text-right">{t("hourMeter.hours")}</TableHead>
+                    <TableHead className="text-right">{t("hourMeter.gap")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addWeeks, subWeeks, getDay, eachDayOfInterval, isSameDay, parseISO, isWithinInterval } from "date-fns";
+import { format, addWeeks, subWeeks, getDay, eachDayOfInterval, isWithinInterval } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, ClipboardPaste, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -128,7 +127,6 @@ async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> 
     
     if (error) return new Map();
     
-    // Handle both formats: array directly or wrapped in { users: [...] }
     const users = Array.isArray(data) ? data : data?.users;
     if (!users) return new Map();
     
@@ -140,6 +138,26 @@ async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> 
   } catch {
     return new Map();
   }
+}
+
+// Build a lookup key for the entry map
+function entryKey(workerName: string, workerType: string, dayOfWeek: number, timeSlot: string): string {
+  return `${workerName}|${workerType}|${dayOfWeek}|${timeSlot}`;
+}
+
+/**
+ * Determine the highlight type for an entry based on who edited it and when.
+ */
+function getHighlightType(entry?: CronogramaEntry): HighlightType {
+  if (!entry?.updated_by) return null;
+  if (entry.updated_by === INSTRUCTOR_ID) return null;
+  if (entry.updated_by === CEDENOJORD_ID) {
+    const createdAt = new Date(entry.created_at);
+    const updatedAt = new Date(entry.updated_at);
+    const hoursDiff = (updatedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    return hoursDiff >= SELF_EDIT_HIGHLIGHT_HOURS ? "self-edit" : null;
+  }
+  return "other";
 }
 
 export function CronogramaGrid() {
@@ -154,6 +172,9 @@ export function CronogramaGrid() {
   const [copiedTask, setCopiedTask] = useState<string | null>(null);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   
+  // Debounce timer ref for mutations
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const weekEndingDate = formatDateLocal(selectedSaturday);
   const weekStart = getMondayOfWeek(selectedSaturday);
   const weekDays = eachDayOfInterval({ start: weekStart, end: selectedSaturday });
@@ -181,7 +202,6 @@ export function CronogramaGrid() {
         .eq("is_active", true);
       if (error) throw error;
       
-      // Sort by position priority, then by name
       return data.sort((a, b) => {
         const priorityA = positionPriority[a.position] ?? 99;
         const priorityB = positionPriority[b.position] ?? 99;
@@ -236,6 +256,15 @@ export function CronogramaGrid() {
       return data as CronogramaEntry[];
     },
   });
+
+  // O(1) lookup map for entries — replaces all entries.find() calls
+  const entryMap = useMemo(() => {
+    const map = new Map<string, CronogramaEntry>();
+    for (const e of entries) {
+      map.set(entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot), e);
+    }
+    return map;
+  }, [entries]);
 
   // Fetch user emails for displaying in tooltips
   const { data: userEmailMap = new Map<string, string>() } = useQuery({
@@ -318,14 +347,14 @@ export function CronogramaGrid() {
         weekId = newWeek.id;
       }
       
-      // Find existing entry
-      const existing = entries.find(
-        e => e.worker_type === entry.worker_type &&
-             e.worker_id === ((entry as Partial<CronogramaEntry>).worker_id ?? null) &&
-             e.worker_name === entry.worker_name && 
-             e.day_of_week === entry.day_of_week && 
-             e.time_slot === entry.time_slot
+      // Find existing entry using the map (O(1))
+      const lookupKey = entryKey(
+        entry.worker_name,
+        entry.worker_type,
+        entry.day_of_week,
+        entry.time_slot
       );
+      const existing = entryMap.get(lookupKey);
 
       if (existing) {
         const { error } = await supabase
@@ -402,23 +431,17 @@ export function CronogramaGrid() {
     setAdditionalRows([]);
   };
 
-  const isEmployeeOnVacation = (employeeId: string, date: Date): boolean => {
+  const isEmployeeOnVacation = useCallback((employeeId: string, date: Date): boolean => {
     return vacations.some(v => {
       if (v.employee_id !== employeeId) return false;
       const start = parseDateLocal(v.start_date);
       const end = parseDateLocal(v.end_date);
       return isWithinInterval(date, { start, end });
     });
-  };
+  }, [vacations]);
 
-  const getCellValue = (workerName: string, dayOfWeek: number, timeSlot: "morning" | "afternoon"): string => {
-    const entry = entries.find(
-      e => e.worker_name === workerName && e.day_of_week === dayOfWeek && e.time_slot === timeSlot
-    );
-    return entry?.task || "";
-  };
-
-  const handleCellChange = (
+  // Optimistic + debounced cell change handler
+  const handleCellChange = useCallback((
     worker: WorkerRow,
     dayOfWeek: number,
     timeSlot: "morning" | "afternoon",
@@ -426,7 +449,7 @@ export function CronogramaGrid() {
   ) => {
     if (isWeekClosed) return;
     
-    upsertMutation.mutate({
+    const mutationPayload = {
       week_ending_date: weekEndingDate,
       worker_type: worker.type,
       worker_id: worker.id,
@@ -436,19 +459,39 @@ export function CronogramaGrid() {
       task: value || null,
       is_vacation: false,
       is_holiday: false,
-    });
-  };
+    };
 
-  const handleCopy = (value: string) => {
+    // Optimistic update: patch the query cache immediately
+    const queryKey = ["cronograma-entries", weekEndingDate, selectedEntityId];
+    queryClient.setQueryData<CronogramaEntry[]>(queryKey, (old) => {
+      if (!old) return old;
+      const key = entryKey(worker.name, worker.type, dayOfWeek, timeSlot);
+      const idx = old.findIndex(e => entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === key);
+      if (idx >= 0) {
+        const updated = [...old];
+        updated[idx] = { ...updated[idx], task: value || null, updated_at: new Date().toISOString() };
+        return updated;
+      }
+      return old;
+    });
+
+    // Debounce the actual network mutation (300ms)
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      upsertMutation.mutate(mutationPayload);
+    }, 300);
+  }, [isWeekClosed, weekEndingDate, selectedEntityId, queryClient, upsertMutation]);
+
+  const handleCopy = useCallback((value: string) => {
     setCopiedTask(value);
     toast.success(t("cronograma.taskCopied"));
-  };
+  }, [t]);
 
-  const handlePaste = (worker: WorkerRow, dayOfWeek: number, timeSlot: "morning" | "afternoon") => {
+  const handlePaste = useCallback((worker: WorkerRow, dayOfWeek: number, timeSlot: "morning" | "afternoon") => {
     if (copiedTask && !isWeekClosed) {
       handleCellChange(worker, dayOfWeek, timeSlot, copiedTask);
     }
-  };
+  }, [copiedTask, isWeekClosed, handleCellChange]);
 
   const addJornaleroRow = () => {
     setAdditionalRows(prev => [...prev, { type: "jornalero", id: null, name: "", isTemp: true }]);
@@ -470,10 +513,10 @@ export function CronogramaGrid() {
   };
 
   // Build worker rows: employees first, then additional jornaleros
-  const allWorkerRows: WorkerRow[] = [
+  const allWorkerRows: WorkerRow[] = useMemo(() => [
     ...employees.map(e => ({ type: "employee" as const, id: e.id, name: e.name })),
     ...additionalRows,
-  ];
+  ], [employees, additionalRows]);
 
   const dayLabels = language === "es" 
     ? ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
@@ -488,7 +531,6 @@ export function CronogramaGrid() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(language === "es" ? "Cronograma" : "Schedule");
 
-    // Title row
     const titleText = language === "es" 
       ? `Cronograma - Semana ${format(weekStart, "d/M")} al ${format(selectedSaturday, "d/M/yyyy")}`
       : `Schedule - Week ${format(weekStart, "M/d")} to ${format(selectedSaturday, "M/d/yyyy")}`;
@@ -499,24 +541,20 @@ export function CronogramaGrid() {
     titleRow.height = 24;
     titleRow.alignment = { vertical: "middle" };
 
-    // Empty row
     worksheet.addRow([]);
 
-    // Header row 1 - Day names
     const headerRow1 = [language === "es" ? "Trabajador" : "Worker"];
     weekDays.forEach((day, idx) => {
       headerRow1.push(`${fullDayLabels[idx]} ${format(day, "d/M")}`);
-      headerRow1.push(""); // Will be merged
+      headerRow1.push("");
     });
     worksheet.addRow(headerRow1);
 
-    // Merge day header cells
     for (let i = 0; i < 6; i++) {
       const startCol = 2 + (i * 2);
       worksheet.mergeCells(3, startCol, 3, startCol + 1);
     }
 
-    // Header row 2 - AM/PM
     const headerRow2 = [""];
     weekDays.forEach(() => {
       headerRow2.push("AM");
@@ -524,15 +562,13 @@ export function CronogramaGrid() {
     });
     worksheet.addRow(headerRow2);
 
-    // Style headers
-    const dayColors = ["FFD6E3F0", "FFE8EDF3"]; // Light blue alternating
+    const dayColors = ["FFD6E3F0", "FFE8EDF3"];
     [3, 4].forEach((rowNum) => {
       const row = worksheet.getRow(rowNum);
       row.font = { bold: true };
       row.alignment = { horizontal: "center", vertical: "middle" };
       row.height = 20;
       
-      // Worker column
       row.getCell(1).fill = {
         type: "pattern",
         pattern: "solid",
@@ -540,7 +576,6 @@ export function CronogramaGrid() {
       };
       row.getCell(1).border = { bottom: { style: "medium" }, right: { style: "thin" }, left: { style: "thin" }, top: { style: "thin" } };
       
-      // Day columns with alternating colors
       for (let i = 0; i < 6; i++) {
         const color = dayColors[i % 2];
         const col1 = 2 + (i * 2);
@@ -556,7 +591,6 @@ export function CronogramaGrid() {
       }
     });
 
-    // Data rows
     let dataRowNum = 5;
     allWorkerRows.forEach((worker) => {
       if (worker.isTemp && !worker.id) return;
@@ -564,19 +598,17 @@ export function CronogramaGrid() {
       const rowData = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
-        const amEntry = getEntryForCell(worker, dayNum, "morning");
-        const pmEntry = getEntryForCell(worker, dayNum, "afternoon");
+        const amEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
+        const pmEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
         rowData.push(amEntry?.task || "");
         rowData.push(pmEntry?.task || "");
       });
       worksheet.addRow(rowData);
       
-      // Style data row
       const row = worksheet.getRow(dataRowNum);
       row.alignment = { vertical: "top", wrapText: true };
       row.height = 28;
       
-      // Worker name column
       row.getCell(1).font = { bold: true };
       row.getCell(1).fill = {
         type: "pattern",
@@ -585,9 +617,8 @@ export function CronogramaGrid() {
       };
       row.getCell(1).border = { bottom: { style: "thin" }, right: { style: "thin" }, left: { style: "thin" } };
       
-      // Day columns with alternating colors
       for (let i = 0; i < 6; i++) {
-        const color = i % 2 === 0 ? "FFE8F0F8" : "FFFFFFFF"; // Light blue / white
+        const color = i % 2 === 0 ? "FFE8F0F8" : "FFFFFFFF";
         const col1 = 2 + (i * 2);
         const col2 = col1 + 1;
         [col1, col2].forEach((c) => {
@@ -603,13 +634,11 @@ export function CronogramaGrid() {
       dataRowNum++;
     });
 
-    // Column widths
     worksheet.getColumn(1).width = 22;
     for (let i = 2; i <= 13; i++) {
       worksheet.getColumn(i).width = 16;
     }
 
-    // Generate file
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
@@ -625,21 +654,18 @@ export function CronogramaGrid() {
   const handleExportPDF = () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     
-    // Title
     const title = language === "es" 
       ? `Cronograma - Semana ${format(weekStart, "d/M")} al ${format(selectedSaturday, "d/M/yyyy")}`
       : `Schedule - Week ${format(weekStart, "M/d")} to ${format(selectedSaturday, "M/d/yyyy")}`;
     doc.setFontSize(14);
     doc.text(title, 14, 15);
 
-    // Table headers
     const headers = [[language === "es" ? "Trabajador" : "Worker"]];
     weekDays.forEach((day, idx) => {
       headers[0].push(`${dayLabels[idx]} ${format(day, "d/M")} AM`);
       headers[0].push(`${dayLabels[idx]} ${format(day, "d/M")} PM`);
     });
 
-    // Table data
     const data: string[][] = [];
     allWorkerRows.forEach((worker) => {
       if (worker.isTemp && !worker.id) return;
@@ -647,15 +673,14 @@ export function CronogramaGrid() {
       const row = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
-        const amEntry = getEntryForCell(worker, dayNum, "morning");
-        const pmEntry = getEntryForCell(worker, dayNum, "afternoon");
+        const amEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
+        const pmEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
         row.push(amEntry?.task || "");
         row.push(pmEntry?.task || "");
       });
       data.push(row);
     });
 
-    // Alternating day colors for PDF
     const lightBlue: [number, number, number] = [232, 240, 248];
     const white: [number, number, number] = [255, 255, 255];
 
@@ -670,7 +695,6 @@ export function CronogramaGrid() {
       },
       theme: "grid",
       didParseCell: (hookData) => {
-        // Apply alternating column colors
         if (hookData.section === "body" && hookData.column.index > 0) {
           const dayIndex = Math.floor((hookData.column.index - 1) / 2);
           hookData.cell.styles.fillColor = dayIndex % 2 === 0 ? lightBlue : white;
@@ -680,17 +704,6 @@ export function CronogramaGrid() {
 
     doc.save(`cronograma_${format(selectedSaturday, "yyyy-MM-dd")}.pdf`);
     toast.success(language === "es" ? "PDF exportado" : "PDF exported");
-  };
-
-  // Get entry for a cell
-  const getEntryForCell = (worker: WorkerRow, dayOfWeek: number, timeSlot: "morning" | "afternoon") => {
-    return entries.find(
-      (e) =>
-        e.worker_name === worker.name &&
-        e.worker_type === worker.type &&
-        e.day_of_week === dayOfWeek &&
-        e.time_slot === timeSlot
-    );
   };
 
   return (
@@ -770,173 +783,172 @@ export function CronogramaGrid() {
       )}
 
       {/* Schedule Grid */}
-      <ScrollArea className="w-full">
-        <div className="min-w-[900px]">
-          <table className="w-full border-collapse text-sm" style={{ borderSpacing: 0 }}>
-            <thead className="border-b-[4px] border-foreground/40">
-              <tr>
-                <th className="border-2 border-border bg-muted/50 p-2 text-left font-medium sticky left-0 z-10 min-w-[150px]">
-                  {t("cronograma.worker")}
-                </th>
-                {weekDays.map((day, idx) => {
-                  const dateStr = formatDateLocal(day);
-                  const isHol = isHoliday(dateStr);
-                  const dayNum = idx + 1; // 1-6 for Mon-Sat
-                  
-                  return (
-                    <th 
-                      key={idx} 
-                      colSpan={2}
-                      className={cn(
-                        "border-2 border-border p-2 text-center font-medium",
-                        idx % 2 === 0 ? "bg-secondary" : "bg-muted",
-                        isHol && "bg-amber-100 dark:bg-amber-900/30"
-                      )}
-                    >
-                      <div>{dayLabels[idx]}</div>
-                      <div className="text-xs font-normal text-muted-foreground">
-                        {format(day, "d/M")}
-                      </div>
-                      {isHol && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 font-normal">
-                          {t("cronograma.holiday")}
+      <TooltipProvider delayDuration={300}>
+        <ScrollArea className="w-full">
+          <div className="min-w-[900px]">
+            <table className="w-full border-collapse text-sm" style={{ borderSpacing: 0 }}>
+              <thead className="border-b-[4px] border-foreground/40 sticky top-0 z-20">
+                <tr>
+                  <th className="border-2 border-border bg-muted/50 p-2 text-left font-medium sticky left-0 z-30 min-w-[150px]">
+                    {t("cronograma.worker")}
+                  </th>
+                  {weekDays.map((day, idx) => {
+                    const dateStr = formatDateLocal(day);
+                    const isHol = isHoliday(dateStr);
+                    
+                    return (
+                      <th 
+                        key={idx} 
+                        colSpan={2}
+                        className={cn(
+                          "border-2 border-border p-2 text-center font-medium",
+                          idx % 2 === 0 ? "bg-secondary" : "bg-muted",
+                          isHol && "bg-amber-100 dark:bg-amber-900/30"
+                        )}
+                      >
+                        <div>{dayLabels[idx]}</div>
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {format(day, "d/M")}
                         </div>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-              <tr>
-                <th className="border-2 border-border bg-muted/50 p-1 text-xs sticky left-0 z-10"></th>
-                {weekDays.map((_, idx) => (
-                  <>
-                    <th key={`am-${idx}`} className={cn(
-                      "border border-border p-1 text-xs font-normal",
-                      idx % 2 === 0 ? "bg-secondary" : "bg-muted"
-                    )}>
-                      {t("cronograma.morning")}
-                    </th>
-                    <th key={`pm-${idx}`} className={cn(
-                      "border border-border border-r-[3px] p-1 text-xs font-normal",
-                      idx % 2 === 0 ? "bg-secondary" : "bg-muted"
-                    )}>
-                      {t("cronograma.afternoon")}
-                    </th>
-                  </>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {allWorkerRows.map((worker, rowIdx) => {
-                const isJornaleroTemp = worker.type === "jornalero" && worker.isTemp;
-                const jornaleroIndex = additionalRows.findIndex(r => r === worker);
+                        {isHol && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400 font-normal">
+                            {t("cronograma.holiday")}
+                          </div>
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <th className="border-2 border-border bg-muted/50 p-1 text-xs sticky left-0 z-30"></th>
+                  {weekDays.map((_, idx) => (
+                    <>
+                      <th key={`am-${idx}`} className={cn(
+                        "border border-border p-1 text-xs font-normal",
+                        idx % 2 === 0 ? "bg-secondary" : "bg-muted"
+                      )}>
+                        {t("cronograma.morning")}
+                      </th>
+                      <th key={`pm-${idx}`} className={cn(
+                        "border border-border border-r-[3px] p-1 text-xs font-normal",
+                        idx % 2 === 0 ? "bg-secondary" : "bg-muted"
+                      )}>
+                        {t("cronograma.afternoon")}
+                      </th>
+                    </>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allWorkerRows.map((worker, rowIdx) => {
+                  const isJornaleroTemp = worker.type === "jornalero" && worker.isTemp;
+                  const jornaleroIndex = additionalRows.findIndex(r => r === worker);
 
-                return (
-                  <tr key={`${worker.type}-${worker.id || rowIdx}`} className="border-b-[3px] border-border">
-                    <td className="border-2 border-border p-2 font-medium sticky left-0 bg-background z-10 min-w-[150px]">
-                      <div className="flex items-center gap-2">
-                        {isJornaleroTemp ? (
-                          <>
-                            <Select onValueChange={(val) => updateJornaleroRow(jornaleroIndex, val)}>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder={t("cronograma.selectJornalero")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {jornaleros.map(j => (
-                                  <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 text-destructive"
-                              onClick={() => removeJornaleroRow(jornaleroIndex)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="truncate">{worker.name}</span>
-                            {worker.type === "jornalero" && jornaleroIndex >= 0 && (
+                  return (
+                    <tr key={`${worker.type}-${worker.id || rowIdx}`} className="border-b-[3px] border-border">
+                      <td className="border-2 border-border p-2 font-medium sticky left-0 bg-background z-10 min-w-[150px]">
+                        <div className="flex items-center gap-2">
+                          {isJornaleroTemp ? (
+                            <>
+                              <Select onValueChange={(val) => updateJornaleroRow(jornaleroIndex, val)}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder={t("cronograma.selectJornalero")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {jornaleros.map(j => (
+                                    <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-6 w-6 text-destructive shrink-0"
+                                className="h-6 w-6 text-destructive"
                                 onClick={() => removeJornaleroRow(jornaleroIndex)}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
-                            )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="truncate">{worker.name}</span>
+                              {worker.type === "jornalero" && jornaleroIndex >= 0 && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 text-destructive shrink-0"
+                                  onClick={() => removeJornaleroRow(jornaleroIndex)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      {weekDays.map((day, dayIdx) => {
+                        const dateStr = formatDateLocal(day);
+                        const isHol = isHoliday(dateStr);
+                        const dayNum = dayIdx + 1;
+                        const isOnVacation = worker.type === "employee" && worker.id ? isEmployeeOnVacation(worker.id, day) : false;
+
+                        const morningEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
+                        const afternoonEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+
+                        return (
+                          <>
+                            <CronogramaCellMemo
+                              key={`${rowIdx}-${dayIdx}-am`}
+                              worker={worker}
+                              dayOfWeek={dayNum}
+                              timeSlot="morning"
+                              value={morningEntry?.task || ""}
+                              onChange={(val) => handleCellChange(worker, dayNum, "morning", val)}
+                              onCopy={handleCopy}
+                              onPaste={() => handlePaste(worker, dayNum, "morning")}
+                              hasCopied={!!copiedTask}
+                              isHoliday={isHol}
+                              isVacation={isOnVacation}
+                              isDisabled={isWeekClosed || !!isJornaleroTemp}
+                              dayShade={dayIdx % 2 === 0}
+                              isLastOfDay={false}
+                              t={t}
+                              entry={morningEntry}
+                              userEmailMap={userEmailMap}
+                              language={language}
+                            />
+                            <CronogramaCellMemo
+                              key={`${rowIdx}-${dayIdx}-pm`}
+                              worker={worker}
+                              dayOfWeek={dayNum}
+                              timeSlot="afternoon"
+                              value={afternoonEntry?.task || ""}
+                              onChange={(val) => handleCellChange(worker, dayNum, "afternoon", val)}
+                              onCopy={handleCopy}
+                              onPaste={() => handlePaste(worker, dayNum, "afternoon")}
+                              hasCopied={!!copiedTask}
+                              isHoliday={isHol}
+                              isVacation={isOnVacation}
+                              isDisabled={isWeekClosed || !!isJornaleroTemp}
+                              dayShade={dayIdx % 2 === 0}
+                              isLastOfDay={true}
+                              t={t}
+                              entry={afternoonEntry}
+                              userEmailMap={userEmailMap}
+                              language={language}
+                            />
                           </>
-                        )}
-                      </div>
-                    </td>
-                    {weekDays.map((day, dayIdx) => {
-                      const dateStr = formatDateLocal(day);
-                      const isHol = isHoliday(dateStr);
-                      const dayNum = dayIdx + 1;
-                      const isOnVacation = worker.type === "employee" && worker.id && isEmployeeOnVacation(worker.id, day);
-
-                      const morningEntry = getEntryForCell(worker, dayNum, "morning");
-                      const afternoonEntry = getEntryForCell(worker, dayNum, "afternoon");
-
-                      return (
-                        <>
-                          {/* Morning cell */}
-                          <CronogramaCell
-                            key={`${rowIdx}-${dayIdx}-am`}
-                            worker={worker}
-                            dayOfWeek={dayNum}
-                            timeSlot="morning"
-                            value={getCellValue(worker.name, dayNum, "morning")}
-                            onChange={(val) => handleCellChange(worker, dayNum, "morning", val)}
-                            onCopy={handleCopy}
-                            onPaste={() => handlePaste(worker, dayNum, "morning")}
-                            hasCopied={!!copiedTask}
-                            isHoliday={isHol}
-                            isVacation={isOnVacation}
-                            isDisabled={isWeekClosed || isJornaleroTemp}
-                            dayShade={dayIdx % 2 === 0}
-                            isLastOfDay={false}
-                            t={t}
-                            entry={morningEntry}
-                            userEmailMap={userEmailMap}
-                            language={language}
-                          />
-                          {/* Afternoon cell */}
-                          <CronogramaCell
-                            key={`${rowIdx}-${dayIdx}-pm`}
-                            worker={worker}
-                            dayOfWeek={dayNum}
-                            timeSlot="afternoon"
-                            value={getCellValue(worker.name, dayNum, "afternoon")}
-                            onChange={(val) => handleCellChange(worker, dayNum, "afternoon", val)}
-                            onCopy={handleCopy}
-                            onPaste={() => handlePaste(worker, dayNum, "afternoon")}
-                            hasCopied={!!copiedTask}
-                            isHoliday={isHol}
-                            isVacation={isOnVacation}
-                            isDisabled={isWeekClosed || isJornaleroTemp}
-                            dayShade={dayIdx % 2 === 0}
-                            isLastOfDay={true}
-                            t={t}
-                            entry={afternoonEntry}
-                            userEmailMap={userEmailMap}
-                            language={language}
-                          />
-                        </>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </TooltipProvider>
 
       {/* Close Week Confirmation */}
       <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
@@ -959,52 +971,8 @@ export function CronogramaGrid() {
   );
 }
 
-/**
- * Determine the highlight type for an entry based on who edited it and when.
- * - null: No highlight (instructor edits, or cedenojord edits within 8 hours)
- * - "other": Orange highlight (edits by anyone other than cedenojord/instructor)
- * - "self-edit": Blue highlight (cedenojord edits 8+ hours after creation)
- */
-function getHighlightType(entry?: CronogramaEntry): HighlightType {
-  if (!entry?.updated_by) return null; // No update info means no highlight
-  
-  // Instructor edits are never highlighted
-  if (entry.updated_by === INSTRUCTOR_ID) return null;
-  
-  // cedenojord edits: check time threshold
-  if (entry.updated_by === CEDENOJORD_ID) {
-    const createdAt = new Date(entry.created_at);
-    const updatedAt = new Date(entry.updated_at);
-    const hoursDiff = (updatedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    
-    // Only highlight if edit occurred 8+ hours after creation
-    return hoursDiff >= SELF_EDIT_HIGHLIGHT_HOURS ? "self-edit" : null;
-  }
-  
-  // Any other user's edits get highlighted
-  return "other";
-}
-
-// Individual cell component
-function CronogramaCell({
-  worker,
-  dayOfWeek,
-  timeSlot,
-  value,
-  onChange,
-  onCopy,
-  onPaste,
-  hasCopied,
-  isHoliday,
-  isVacation,
-  isDisabled,
-  dayShade,
-  isLastOfDay,
-  t,
-  entry,
-  userEmailMap,
-  language,
-}: {
+// Props type for the cell component
+type CronogramaCellProps = {
   worker: WorkerRow;
   dayOfWeek: number;
   timeSlot: "morning" | "afternoon";
@@ -1022,18 +990,37 @@ function CronogramaCell({
   entry?: CronogramaEntry;
   userEmailMap: Map<string, string>;
   language: string;
-}) {
+};
+
+// Memoized cell component — only re-renders when its specific props change
+const CronogramaCellMemo = memo(function CronogramaCell({
+  worker,
+  dayOfWeek,
+  timeSlot,
+  value,
+  onChange,
+  onCopy,
+  onPaste,
+  hasCopied,
+  isHoliday: isHol,
+  isVacation,
+  isDisabled,
+  dayShade,
+  isLastOfDay,
+  t,
+  entry,
+  userEmailMap,
+  language,
+}: CronogramaCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Determine the highlight type for this cell
   const highlightType = getHighlightType(entry);
   const isHighlighted = highlightType !== null;
   const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
   const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
 
-  // Ring/dot colors based on highlight type
   const ringClass = highlightType === "self-edit" 
     ? "ring-2 ring-inset ring-blue-400 dark:ring-blue-500" 
     : "ring-2 ring-inset ring-orange-400 dark:ring-orange-500";
@@ -1041,7 +1028,6 @@ function CronogramaCell({
     ? "bg-blue-400" 
     : "bg-orange-400";
 
-  // Auto-resize textarea on initial load and when value changes
   const autoResize = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -1055,7 +1041,6 @@ function CronogramaCell({
     }
   }, [value, isFocused]);
 
-  // Resize on initial render and when localValue changes
   useEffect(() => {
     autoResize();
   }, [localValue, autoResize]);
@@ -1071,25 +1056,21 @@ function CronogramaCell({
     if (e.key === "Enter") {
       (e.target as HTMLInputElement).blur();
     }
-    // Copy with Ctrl+C when cell is focused
     if (e.ctrlKey && e.key === "c" && localValue) {
       onCopy(localValue);
     }
-    // Paste with Ctrl+V
     if (e.ctrlKey && e.key === "v" && hasCopied) {
       e.preventDefault();
       onPaste();
     }
   };
 
-  // Format tooltip text
   const getTooltipContent = () => {
     if (!isHighlighted || !modifiedAt) return null;
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
     const userDisplay = modifierEmail || (language === "es" ? "Usuario desconocido" : "Unknown user");
     
-    // Add context about the type of modification
     const modTypeLabel = highlightType === "self-edit"
       ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")
       : "";
@@ -1129,7 +1110,7 @@ function CronogramaCell({
     />
   );
 
-  if (isHoliday) {
+  if (isHol) {
     return (
       <td className={cn(
         "border border-border p-1 text-center min-w-[120px] align-top",
@@ -1138,19 +1119,17 @@ function CronogramaCell({
         isHighlighted && ringClass
       )}>
         {isHighlighted ? (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="relative">
-                  {cellContent}
-                  <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="whitespace-pre-line text-xs">
-                {getTooltipContent()}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="relative">
+                {cellContent}
+                <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="whitespace-pre-line text-xs">
+              {getTooltipContent()}
+            </TooltipContent>
+          </Tooltip>
         ) : (
           cellContent
         )}
@@ -1166,22 +1145,35 @@ function CronogramaCell({
       isHighlighted && ringClass
     )}>
       {isHighlighted ? (
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="relative">
-                {cellContent}
-                <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="whitespace-pre-line text-xs">
-              {getTooltipContent()}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative">
+              {cellContent}
+              <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="whitespace-pre-line text-xs">
+            {getTooltipContent()}
+          </TooltipContent>
+        </Tooltip>
       ) : (
         cellContent
       )}
     </td>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparator: only re-render when meaningful props change
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.isDisabled === nextProps.isDisabled &&
+    prevProps.isHoliday === nextProps.isHoliday &&
+    prevProps.isVacation === nextProps.isVacation &&
+    prevProps.hasCopied === nextProps.hasCopied &&
+    prevProps.dayShade === nextProps.dayShade &&
+    prevProps.isLastOfDay === nextProps.isLastOfDay &&
+    prevProps.language === nextProps.language &&
+    prevProps.entry?.updated_by === nextProps.entry?.updated_by &&
+    prevProps.entry?.updated_at === nextProps.entry?.updated_at &&
+    prevProps.entry?.task === nextProps.entry?.task
+  );
+});

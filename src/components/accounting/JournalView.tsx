@@ -26,6 +26,8 @@ import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useExport } from "@/hooks/useExport";
 
+import { fmtDate } from "@/lib/dateUtils";
+
 type JournalLine = {
   id: string;
   debit: number | null;
@@ -152,7 +154,7 @@ export function JournalView() {
         exportRows.push({
           numero: j.journal_number || "—",
           tipo: (j as any).journal_type || "GJ",
-          fecha: format(new Date(j.journal_date), "dd/MM/yyyy"),
+          fecha: fmtDate(new Date(j.journal_date)),
           descripcion: j.description || "",
           cuenta: line.chart_of_accounts?.account_code || "",
           nombre_cuenta: line.chart_of_accounts?.account_name || "",
@@ -186,7 +188,7 @@ export function JournalView() {
     const config = {
       filename: `diario_contable_${dateFrom}_${dateTo}`,
       title: t("accounting.export.title"),
-      subtitle: t("accounting.export.period").replace("{start}", format(new Date(dateFrom), "dd/MM/yyyy")).replace("{end}", format(new Date(dateTo), "dd/MM/yyyy")),
+      subtitle: t("accounting.export.period").replace("{start}", fmtDate(new Date(dateFrom))).replace("{end}", fmtDate(new Date(dateTo))),
       orientation: "landscape" as const,
       fontSize: 7,
     };
@@ -348,7 +350,7 @@ export function JournalView() {
                       <TableCell>
                         <Badge variant="secondary" className="text-[10px] px-1.5">{(j as any).journal_type || "GJ"}</Badge>
                       </TableCell>
-                      <TableCell>{format(new Date(j.journal_date), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{fmtDate(new Date(j.journal_date))}</TableCell>
                       <TableCell>{j.description || "—"}</TableCell>
                       <TableCell className="text-xs">{projectCodes || "—"}</TableCell>
                       <TableCell className="text-xs">{cbsCodes || "—"}</TableCell>

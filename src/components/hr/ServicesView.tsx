@@ -16,7 +16,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
-import { formatDateLocal } from "@/lib/dateUtils";
+import { formatDateLocal, fmtDate } from "@/lib/dateUtils";
 import { numberToSpanishWords } from "@/lib/numberToWords";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
@@ -175,7 +175,7 @@ export function ServicesView() {
     const finalPayment = payments[payments.length - 1];
     const receiptDate = finalPayment?.payment_date || entry.service_date;
     const paidTotal = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    const dateStr = format(new Date(receiptDate + "T12:00:00"), "dd/MM/yyyy");
+    const dateStr = fmtDate(new Date(receiptDate + "T12:00:00"));
     const formatCurrency = (val: number) =>
       new Intl.NumberFormat("es-DO", { style: "currency", currency: entry.currency, minimumFractionDigits: 2 }).format(val);
 
@@ -236,7 +236,7 @@ export function ServicesView() {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         payments.forEach((payment) => {
-          const paymentLine = `${format(new Date(payment.payment_date + "T12:00:00"), "dd/MM/yyyy")} · ${formatCurrency(payment.amount)}${payment.ncf ? ` · ${payment.ncf}` : ""}`;
+          const paymentLine = `${fmtDate(new Date(payment.payment_date + "T12:00:00"))} · ${formatCurrency(payment.amount)}${payment.ncf ? ` · ${payment.ncf}` : ""}`;
           doc.text(paymentLine, 24, y);
           y += 4;
         });
@@ -424,7 +424,7 @@ export function ServicesView() {
                         {incomplete && <AlertTriangle className="h-4 w-4 text-warning" />}
                       </TableCell>
                       <TableCell className="font-medium">{entry.service_providers?.name}</TableCell>
-                      <TableCell>{format(new Date(entry.service_date + "T12:00:00"), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{fmtDate(new Date(entry.service_date + "T12:00:00"))}</TableCell>
                       <TableCell className="font-mono">{entry.master_acct_code || "—"}</TableCell>
                       <TableCell className="max-w-48 truncate">{entry.description || "—"}</TableCell>
                       <TableCell className="text-right font-mono">

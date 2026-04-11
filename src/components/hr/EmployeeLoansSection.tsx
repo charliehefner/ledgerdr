@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -221,7 +221,7 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
                     <TableBody>
                       {activeLoans.map((loan) => (
                         <TableRow key={loan.id}>
-                          <TableCell>{format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{fmtDate(parseDateLocal(loan.loan_date))}</TableCell>
                           <TableCell className="text-right font-mono">{formatCurrency(loan.loan_amount)}</TableCell>
                           <TableCell className="text-right font-mono text-primary font-medium">{formatCurrency(loan.payment_amount)}</TableCell>
                           <TableCell className="text-center">
@@ -258,7 +258,7 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
                     <TableBody>
                       {inactiveLoans.map((loan) => (
                         <TableRow key={loan.id}>
-                          <TableCell>{format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{fmtDate(parseDateLocal(loan.loan_date))}</TableCell>
                           <TableCell className="text-right font-mono">{formatCurrency(loan.loan_amount)}</TableCell>
                           <TableCell className="text-right font-mono">{formatCurrency(loan.payment_amount)}</TableCell>
                           <TableCell className="text-center">

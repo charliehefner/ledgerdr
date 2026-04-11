@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ServiceContract, ContractEntry, ContractLineItem } from "../ContractedServicesView";
 import { format } from "date-fns";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import { Download, FileText, Pencil, Trash2, Plus, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -271,7 +271,7 @@ export function ContractDetailReport({
           amount < 0 ? `($${Math.abs(amount).toLocaleString()})` : `$${amount.toLocaleString()}`;
         
         return [
-          format(parseDateLocal(entry.entry_date), "dd/MM/yyyy"),
+          fmtDate(parseDateLocal(entry.entry_date)),
           entry.description,
           `${entry.units_charged.toLocaleString()} ${unitLabel}`,
           `$${baseCost.toLocaleString()}`,
@@ -324,7 +324,7 @@ export function ContractDetailReport({
         finalY += 5;
 
         const paymentData = filteredPayments.map((payment) => [
-          format(parseDateLocal(payment.payment_date), "dd/MM/yyyy"),
+          fmtDate(parseDateLocal(payment.payment_date)),
           payment.transaction_id,
           `$${Number(payment.amount).toLocaleString()}`,
           payment.notes || "",
@@ -369,7 +369,7 @@ export function ContractDetailReport({
       finalY += 15;
       doc.setFontSize(8);
       doc.setFont("helvetica", "italic");
-      doc.text(`${t("common.date")}: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, finalY);
+      doc.text(`${t("common.date")}: ${fmtDateTime(new Date())}`, 14, finalY);
       
       // Save PDF
       doc.save(`${contract.contract_name.replace(/[^a-zA-Z0-9]/g, '-')}-report-${format(new Date(), "yyyy-MM-dd")}.pdf`);
@@ -503,7 +503,7 @@ export function ContractDetailReport({
 
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell>{format(parseDateLocal(entry.entry_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{fmtDate(parseDateLocal(entry.entry_date))}</TableCell>
                         <TableCell>
                           <div className="max-w-xs">
                             {entry.description}
@@ -635,7 +635,7 @@ export function ContractDetailReport({
                   <>
                     {filteredPayments.map((payment) => (
                       <TableRow key={payment.id}>
-                        <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{fmtDate(parseDateLocal(payment.payment_date))}</TableCell>
                         <TableCell className="font-mono">{payment.transaction_id}</TableCell>
                         <TableCell className="text-right font-mono text-green-600 font-semibold">
                           ${Number(payment.amount).toLocaleString()}

@@ -45,7 +45,7 @@ import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { getDescription } from "@/lib/getDescription";
@@ -418,8 +418,8 @@ export default function Reports() {
     let yPos = 36;
     // Show active filters
     const filterParts: string[] = [];
-    if (startDate) filterParts.push(`From: ${format(startDate, "dd/MM/yyyy")}`);
-    if (endDate) filterParts.push(`To: ${format(endDate, "dd/MM/yyyy")}`);
+    if (startDate) filterParts.push(`From: ${fmtDate(startDate)}`);
+    if (endDate) filterParts.push(`To: ${fmtDate(endDate)}`);
     if (accountFilter !== "all") filterParts.push(`Account: ${accountFilter}`);
     if (currencyFilter !== "all") filterParts.push(`Currency: ${currencyFilter}`);
     if (payMethodFilter !== "all") filterParts.push(`Pay Method: ${payMethodFilter}`);
@@ -557,7 +557,7 @@ export default function Reports() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yyyy") : "Desde"}
+                    {startDate ? fmtDate(startDate) : "Desde"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -574,7 +574,7 @@ export default function Reports() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yyyy") : "Hasta"}
+                    {endDate ? fmtDate(endDate) : "Hasta"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

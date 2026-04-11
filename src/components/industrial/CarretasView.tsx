@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Download, FileSpreadsheet, FileText, ChevronDown, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -26,7 +25,9 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const fmtDt = (v: string | null) => v ? format(new Date(v), "dd/MM/yyyy HH:mm") : "—";
+import { fmtDateTime } from "@/lib/dateUtils";
+
+const fmtDt = (v: string | null) => v ? fmtDateTime(new Date(v)) : "—";
 
 export function CarretasView() {
   const [open, setOpen] = useState(false);

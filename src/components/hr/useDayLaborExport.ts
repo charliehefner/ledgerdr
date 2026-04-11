@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { DayLaborEntry, WorkerSummary } from "./types";
 import { formatDOP } from "./dayLaborUtils";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 
 interface UseDayLaborExportParams {
   selectedFriday: Date;
@@ -72,14 +72,14 @@ export function useDayLaborExport({
   
   const generatePDF = useCallback(async () => {
     const doc = new jsPDF();
-    const fridayStr = format(selectedFriday, "dd/MM/yyyy");
+    const fridayStr = fmtDate(selectedFriday);
 
     doc.setFontSize(18);
     doc.text(`Resumen Jornal - Semana ${fridayStr}`, 14, 20);
 
     doc.setFontSize(11);
     doc.text(
-      `Período: ${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`,
+      `Período: ${fmtDate(weekStart)} - ${fmtDate(weekEnd)}`,
       14,
       30
     );
@@ -89,7 +89,7 @@ export function useDayLaborExport({
     summaryByWorker.forEach((group) => {
       group.entries.forEach((entry, idx) => {
         tableData.push([
-          format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
+          fmtDate(parseDateLocal(entry.work_date)),
           entry.operation_description,
           idx === 0 ? group.name : "",
           formatDOP(Number(entry.amount)),

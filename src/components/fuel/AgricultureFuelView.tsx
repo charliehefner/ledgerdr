@@ -61,7 +61,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TankHistoryView } from "./TankHistoryView";
 import { TractorHistoryView } from "./TractorHistoryView";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
 
 type SortField = "transaction_date" | "tank" | "tractor" | "hour_meter" | "pump_start" | "pump_end" | "gallons" | null;
 type SortDirection = "asc" | "desc";
@@ -567,7 +567,7 @@ export function AgricultureFuelView() {
     worksheet.mergeCells("A2:H2");
     const dateRangeCell = worksheet.getCell("A2");
     const dateRangeText = startDate && endDate 
-      ? `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
+      ? `Period: ${fmtDate(startDate)} - ${fmtDate(endDate)}`
       : "All dates";
     dateRangeCell.value = dateRangeText;
     dateRangeCell.alignment = { horizontal: "center" };
@@ -588,7 +588,7 @@ export function AgricultureFuelView() {
     // Add data
     sortedTransactions.forEach((tx) => {
       worksheet.addRow([
-        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(tx.transaction_date)),
         tx.fuel_tanks.name,
         tx.fuel_equipment?.name || "-",
         tx.hour_meter_reading ?? "-",
@@ -635,14 +635,14 @@ export function AgricultureFuelView() {
     // Date range
     doc.setFontSize(10);
     const dateRangeText = startDate && endDate 
-      ? `Period: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
+      ? `Period: ${fmtDate(startDate)} - ${fmtDate(endDate)}`
       : "All dates";
     doc.text(dateRangeText, 14, 28);
-    doc.text(`Generated: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 34);
+    doc.text(`Generated: ${fmtDateTime(new Date())}`, 14, 34);
 
     // Table data
     const tableData = sortedTransactions.map((tx) => [
-      format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+      fmtDate(parseDateLocal(tx.transaction_date)),
       tx.fuel_tanks.name,
       tx.fuel_equipment?.name || "-",
       tx.hour_meter_reading?.toString() || "-",
@@ -722,7 +722,7 @@ export function AgricultureFuelView() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "dd/MM/yyyy") : t("fuel.startDate")}
+                {startDate ? fmtDate(startDate) : t("fuel.startDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -740,7 +740,7 @@ export function AgricultureFuelView() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "dd/MM/yyyy") : t("fuel.endDate")}
+                {endDate ? fmtDate(endDate) : t("fuel.endDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">

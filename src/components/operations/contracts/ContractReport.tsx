@@ -38,7 +38,7 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContractEntry, ServiceContract } from "../ContractedServicesView";
 import { format } from "date-fns";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import { FileText, DollarSign, Pencil, Trash2, Plus } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -204,7 +204,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     yPos += 6;
     
     if (startDate || endDate) {
-      const dateRange = `Período: ${startDate ? format(parseDateLocal(startDate), "dd/MM/yyyy") : "Inicio"} - ${endDate ? format(parseDateLocal(endDate), "dd/MM/yyyy") : "Presente"}`;
+      const dateRange = `Período: ${startDate ? fmtDate(parseDateLocal(startDate)) : "Inicio"} - ${endDate ? fmtDate(parseDateLocal(endDate)) : "Presente"}`;
       doc.text(dateRange, 14, yPos);
       yPos += 6;
     }
@@ -224,7 +224,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
       
       // Main entry row
       tableData.push([
-        format(parseDateLocal(entry.entry_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(entry.entry_date)),
         entry.description,
         `${entry.units_charged.toLocaleString()} ${UNIT_LABELS[selectedContract.unit_type]}`,
         `$${baseCost.toLocaleString()}`,
@@ -307,7 +307,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
       finalY += 5;
 
       const paymentData = filteredPayments.map((payment) => [
-        format(parseDateLocal(payment.payment_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(payment.payment_date)),
         payment.transaction_id,
         `$${Number(payment.amount).toLocaleString()}`,
         payment.notes || "",
@@ -369,7 +369,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     finalY += 15;
     doc.setFontSize(9);
     doc.setTextColor(128, 128, 128);
-    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, finalY);
+    doc.text(`Generado: ${fmtDateTime(new Date())}`, 14, finalY);
 
     doc.save(`reporte-contrato-${selectedContract.contract_name.replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
   };
@@ -502,7 +502,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
 
                       return (
                         <TableRow key={entry.id}>
-                          <TableCell>{format(parseDateLocal(entry.entry_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{fmtDate(parseDateLocal(entry.entry_date))}</TableCell>
                           <TableCell>
                             <div className="max-w-xs">
                               {entry.description}
@@ -609,7 +609,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
                     <>
                       {filteredPayments.map((payment) => (
                         <TableRow key={payment.id}>
-                          <TableCell>{format(parseDateLocal(payment.payment_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{fmtDate(parseDateLocal(payment.payment_date))}</TableCell>
                           <TableCell className="font-mono">{payment.transaction_id}</TableCell>
                           <TableCell className="text-right font-mono text-emerald-600 font-semibold">
                             ${formatMoney(Number(payment.amount))}

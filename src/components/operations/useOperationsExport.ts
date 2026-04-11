@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
 import { Operation } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -64,7 +64,7 @@ export function useOperationsExport({
         .join(", ");
 
       const row: Record<string, string | number> = {};
-      if (isVisible("date")) row.date = format(parseDateLocal(op.operation_date), "dd/MM/yyyy");
+      if (isVisible("date")) row.date = fmtDate(parseDateLocal(op.operation_date));
       if (isVisible("field")) row.field = op.fields?.name || "";
       if (isVisible("farm")) row.farm = op.fields?.farms?.name || "";
       if (isVisible("operation")) row.operation = op.operation_types?.name || "";
@@ -137,10 +137,10 @@ export function useOperationsExport({
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
     const dateRangeText = startDate && endDate 
-      ? `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
+      ? `Período: ${fmtDate(startDate)} - ${fmtDate(endDate)}`
       : "Todas las fechas";
     pdf.text(dateRangeText, 14, 22);
-    pdf.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 27);
+    pdf.text(`Generado: ${fmtDateTime(new Date())}`, 14, 27);
 
     // Build column headers based on visibility
     const headers: string[] = [];
@@ -167,7 +167,7 @@ export function useOperationsExport({
         .join("; ");
 
       const row: string[] = [];
-      if (isVisible("date")) row.push(format(parseDateLocal(op.operation_date), "dd/MM/yyyy"));
+      if (isVisible("date")) row.push(fmtDate(parseDateLocal(op.operation_date)));
       if (isVisible("field")) row.push(op.fields?.name || "");
       if (isVisible("farm")) row.push(op.fields?.farms?.name || "");
       if (isVisible("operation")) row.push(op.operation_types?.name || "");

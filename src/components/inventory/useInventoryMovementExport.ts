@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { functionLabels } from "./constants";
 
+import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
+
 interface ReportRow {
   id: string;
   commercial_name: string;
@@ -72,7 +74,7 @@ export function useInventoryMovementExport({
       // Date range row
       sheet.mergeCells("A2:I2");
       const dateCell = sheet.getCell("A2");
-      dateCell.value = `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`;
+      dateCell.value = `Período: ${fmtDate(startDate)} - ${fmtDate(endDate)}`;
       dateCell.font = { size: 11 };
       dateCell.alignment = { horizontal: "center" };
 
@@ -194,11 +196,11 @@ export function useInventoryMovementExport({
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
       pdf.text(
-        `Período: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`,
+        `Período: ${fmtDate(startDate)} - ${fmtDate(endDate)}`,
         14,
         22
       );
-      pdf.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 27);
+      pdf.text(`Generado: ${fmtDateTime(new Date())}`, 14, 27);
 
       // Headers
       const headers = [

@@ -22,7 +22,7 @@ import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { parseDateLocal, formatDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, formatDateLocal, fmtDate } from "@/lib/dateUtils";
 import { DayLaborAttachment } from "./DayLaborAttachment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { generateDayLaborReceiptsZip } from "@/lib/dayLaborReceipts";
@@ -215,20 +215,20 @@ export function DayLaborView() {
   // Generate PDF - Summary by Worker (Resumen Jornal)
   const generatePDF = () => {
     const doc = new jsPDF();
-    const fridayStr = format(selectedFriday, "dd/MM/yyyy");
+    const fridayStr = fmtDate(selectedFriday);
     
     doc.setFontSize(18);
     doc.text(`Resumen Jornal - Semana ${fridayStr}`, 14, 20);
     
     doc.setFontSize(11);
-    doc.text(`Período: ${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`, 14, 30);
+    doc.text(`Período: ${fmtDate(weekStart)} - ${fmtDate(weekEnd)}`, 14, 30);
     
     const tableData: (string | { content: string; colSpan?: number; styles?: object })[][] = [];
     
     summaryByWorker.forEach((group) => {
       group.entries.forEach((entry, idx) => {
         tableData.push([
-          format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
+          fmtDate(parseDateLocal(entry.work_date)),
           entry.operation_description,
           idx === 0 ? group.name : "",
           `RD$ ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
@@ -262,13 +262,13 @@ export function DayLaborView() {
   const generateExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Resumen Jornal");
-    const fridayStr = format(selectedFriday, "dd/MM/yyyy");
+    const fridayStr = fmtDate(selectedFriday);
 
     worksheet.mergeCells("A1:D1");
     worksheet.getCell("A1").value = `Resumen Jornal - Semana ${fridayStr}`;
     worksheet.getCell("A1").font = { bold: true, size: 14 };
     worksheet.mergeCells("A2:D2");
-    worksheet.getCell("A2").value = `Período: ${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`;
+    worksheet.getCell("A2").value = `Período: ${fmtDate(weekStart)} - ${fmtDate(weekEnd)}`;
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow(["Fecha", "Descripción", "Nombre", "Monto"]);
@@ -280,7 +280,7 @@ export function DayLaborView() {
     summaryByWorker.forEach((group) => {
       group.entries.forEach((entry, idx) => {
         worksheet.addRow([
-          format(parseDateLocal(entry.work_date), "dd/MM/yyyy"),
+          fmtDate(parseDateLocal(entry.work_date)),
           entry.operation_description,
           idx === 0 ? group.name : "",
           Number(entry.amount),
@@ -437,7 +437,7 @@ export function DayLaborView() {
               <div className="text-center">
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-lg">
-                    {t("dayLabor.title").replace("{date}", format(selectedFriday, "dd/MM/yyyy"))}
+                    {t("dayLabor.title").replace("{date}", fmtDate(selectedFriday))}
                   </CardTitle>
                   <DayLaborAttachment weekEndingDate={formatDateLocal(selectedFriday)} />
                 </div>
@@ -720,7 +720,7 @@ export function DayLaborView() {
                   <React.Fragment key={group.name}>
                     {group.entries.map((entry, idx) => (
                       <TableRow key={entry.id}>
-                        <TableCell>{format(parseDateLocal(entry.work_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{fmtDate(parseDateLocal(entry.work_date))}</TableCell>
                         <TableCell>{entry.operation_description}</TableCell>
                         <TableCell>{idx === 0 ? group.name : ""}</TableCell>
                         <TableCell className="text-right font-mono">

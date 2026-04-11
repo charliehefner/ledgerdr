@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import JSZip from "jszip";
 import { format } from "date-fns";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 
 interface DayLaborEntry {
   work_date: string;
@@ -83,8 +83,8 @@ function generateWorkerReceipt(
 ): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const periodStr = `${format(weekStart, "dd/MM/yyyy")} - ${format(weekEnd, "dd/MM/yyyy")}`;
-  const fridayStr = format(weekFriday, "dd/MM/yyyy");
+  const periodStr = `${fmtDate(weekStart)} - ${fmtDate(weekEnd)}`;
+  const fridayStr = fmtDate(weekFriday);
 
   const generateCopy = (yOffset: number) => {
     let y = yOffset + 8;

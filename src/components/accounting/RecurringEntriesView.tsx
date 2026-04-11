@@ -17,7 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Plus, Play, Loader2, RefreshCw, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 type Template = {
   id: string;
@@ -220,7 +221,7 @@ export function RecurringEntriesView() {
                   <TableCell className="font-medium">{tmpl.template_name}</TableCell>
                   <TableCell>{tmpl.frequency === "biweekly" ? t("accounting.recur.biweekly") : t("accounting.recur.monthly")}</TableCell>
                   <TableCell className={tmpl.next_run_date <= today ? "text-destructive font-medium" : ""}>
-                    {format(new Date(tmpl.next_run_date + "T00:00:00"), "dd/MM/yyyy")}
+                    {fmtDate(new Date(tmpl.next_run_date + "T00:00:00"))}
                     {tmpl.next_run_date <= today && <Badge variant="destructive" className="ml-2 text-[10px]">{t("accounting.recur.overdue")}</Badge>}
                   </TableCell>
                   <TableCell>{tmpl.currency || "DOP"}</TableCell>

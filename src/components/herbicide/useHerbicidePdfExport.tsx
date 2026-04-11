@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { CalculationResult } from "./types";
 
+import { fmtDateTime } from "@/lib/dateUtils";
+
 export function useHerbicidePdfExport() {
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -30,7 +32,7 @@ export function useHerbicidePdfExport() {
         pdf.setFontSize(10);
         pdf.setFont("helvetica", "normal");
         pdf.text(
-          `${t("herbicide.generated")}: ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
+          `${t("herbicide.generated")}: ${fmtDateTime(new Date())}`,
           14,
           22
         );

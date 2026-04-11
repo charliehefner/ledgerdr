@@ -17,10 +17,11 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
-import { format } from "date-fns";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+
+import { fmtDate } from "@/lib/dateUtils";
 
 type PettyCashAccount = {
   id: string;
@@ -324,7 +325,7 @@ export function PettyCashView() {
                 {txWithBalance.map(tx => (
                   <TableRow key={tx.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id ?? "—"}</TableCell>
-                    <TableCell>{format(new Date(tx.transaction_date + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>{fmtDate(new Date(tx.transaction_date + "T00:00:00"))}</TableCell>
                     <TableCell>
                       <Badge variant={isRecharge(tx) ? "default" : "outline"}>
                         {isRecharge(tx) ? t("treasury.pc.recharge") : t("treasury.pc.expense")}

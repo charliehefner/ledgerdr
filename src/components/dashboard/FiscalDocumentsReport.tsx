@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { FileText, Download, Calendar, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, FileSpreadsheet } from "lucide-react";
 import {
   DropdownMenu,
@@ -159,7 +159,7 @@ export function FiscalDocumentsReport() {
 
     // Header
     worksheet.addRow([
-      `Comprobantes Fiscales (E31/B01) - ${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`
+      `Comprobantes Fiscales (E31/B01) - ${fmtDate(startDate)} a ${fmtDate(endDate)}`
     ]);
     worksheet.mergeCells("A1:I1");
     worksheet.getRow(1).font = { bold: true, size: 14 };
@@ -178,7 +178,7 @@ export function FiscalDocumentsReport() {
     fiscalTransactions.forEach((tx) => {
       worksheet.addRow([
         tx.legacy_id || "-",
-        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(tx.transaction_date)),
         tx.currency,
         tx.amount,
         tx.itbis || 0,
@@ -222,13 +222,13 @@ export function FiscalDocumentsReport() {
     }
     const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(14);
-    doc.text(`Comprobantes Fiscales (E31/B01) - ${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`, 14, 15);
+    doc.text(`Comprobantes Fiscales (E31/B01) - ${fmtDate(startDate)} a ${fmtDate(endDate)}`, 14, 15);
 
     autoTable(doc, {
       head: [["ID", "Fecha", "Moneda", "Monto", "ITBIS", "Método Pago", "Documento", "Nombre", "RNC"]],
       body: fiscalTransactions.map((tx) => [
         tx.legacy_id || "-",
-        format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy"),
+        fmtDate(parseDateLocal(tx.transaction_date)),
         tx.currency,
         tx.amount.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         (tx.itbis || 0).toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -282,7 +282,7 @@ export function FiscalDocumentsReport() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-[140px] justify-start text-left font-normal bg-card">
                       <Calendar className="mr-2 h-4 w-4" />
-                      {format(startDate, "dd/MM/yyyy")}
+                      {fmtDate(startDate)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -302,7 +302,7 @@ export function FiscalDocumentsReport() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-[140px] justify-start text-left font-normal bg-card">
                       <Calendar className="mr-2 h-4 w-4" />
-                      {format(endDate, "dd/MM/yyyy")}
+                      {fmtDate(endDate)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">

@@ -127,8 +127,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setSession(currentSession);
         
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        
         if (currentSession?.user) {
-          // Defer role fetch - fire and forget, don't force logout on failure
+          // If same user (token refresh), keep existing user state — no flicker
+          setUser(prev => {
+            if (prev && prev.id === currentSession.user.id) return prev;
+            return prev; // keep whatever we have until role fetch completes
+          });
+
+          // Only fetch role if user changed or on initial sign-in
           setTimeout(async () => {
             if (!isMounted) return;
             try {
@@ -139,17 +151,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   email: currentSession.user.email || '',
                   role,
                 });
-
-                // MFA enforcement disabled
                 setMfaRequired(false);
               }
             } catch (err) {
               console.error('[Auth] onAuthStateChange role fetch error (non-fatal):', err);
             }
           }, 0);
-        } else {
-          setUser(null);
-          setIsLoading(false);
         }
       }
     );

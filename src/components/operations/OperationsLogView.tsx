@@ -390,8 +390,8 @@ export function OperationsLogView() {
   const addInput = () => {
     if (!newInput.inventory_item_id || !newInput.quantity_used) {
       toast({
-        title: "Error de Validación",
-        description: "Seleccione un artículo e ingrese la cantidad.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.selectItemAndQty"),
         variant: "destructive",
       });
       return;
@@ -400,8 +400,8 @@ export function OperationsLogView() {
     // Check if item already added
     if (inputs.some(i => i.inventory_item_id === newInput.inventory_item_id)) {
       toast({
-        title: "Artículo Duplicado",
-        description: "Este artículo ya está agregado. Actualice la cantidad.",
+        title: t("operations.toast.duplicateItem"),
+        description: t("operations.toast.duplicateItemDesc"),
         variant: "destructive",
       });
       return;
@@ -412,8 +412,8 @@ export function OperationsLogView() {
     
     if (item && qty > item.current_quantity) {
       toast({
-        title: "Stock Insuficiente",
-        description: `Solo ${item.current_quantity} ${item.use_unit} disponibles.`,
+        title: t("operations.toast.insufficientStock"),
+        description: t("operations.toast.onlyAvailable").replace("{qty}", String(item.current_quantity)).replace("{unit}", item.use_unit),
         variant: "destructive",
       });
       return;
@@ -530,13 +530,13 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
-        title: "Operación registrada",
-        description: "La operación de campo ha sido registrada y el inventario actualizado.",
+        title: t("operations.toast.operationRecorded"),
+        description: t("operations.toast.operationRecordedDesc"),
       });
       if (result?.followUpMessage) {
         setTimeout(() => {
           toast({
-            title: "📅 Seguimiento programado",
+            title: t("operations.toast.followUpScheduled"),
             description: result.followUpMessage,
           });
         }, 500);
@@ -546,8 +546,8 @@ export function OperationsLogView() {
     onError: (error) => {
       console.error("[Operations] Create mutation error:", error);
       toast({
-        title: "Error al registrar operación",
-        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
+        title: t("operations.toast.errorRecording"),
+        description: error.message || t("operations.toast.unknownError"),
         variant: "destructive",
       });
     },
@@ -643,16 +643,16 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
-        title: "Operación actualizada",
-        description: "La operación ha sido actualizada y el inventario ajustado.",
+        title: t("operations.toast.operationUpdated"),
+        description: t("operations.toast.operationUpdatedDesc"),
       });
       handleCloseDialog();
     },
     onError: (error) => {
       console.error("[Operations] Update mutation error:", error);
       toast({
-        title: "Error al actualizar operación",
-        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
+        title: t("operations.toast.errorUpdating"),
+        description: error.message || t("operations.toast.unknownError"),
         variant: "destructive",
       });
     },
@@ -707,16 +707,16 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
-        title: "Operación eliminada",
-        description: "La operación ha sido eliminada y el inventario restaurado.",
+        title: t("operations.toast.operationDeleted"),
+        description: t("operations.toast.operationDeletedDesc"),
       });
       setDeleteOperationId(null);
     },
     onError: (error) => {
       console.error("[Operations] Delete mutation error:", error);
       toast({
-        title: "Error al eliminar operación",
-        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
+        title: t("operations.toast.errorDeleting"),
+        description: error.message || t("operations.toast.unknownError"),
         variant: "destructive",
       });
     },
@@ -752,8 +752,8 @@ export function OperationsLogView() {
     
     if (!form.field_id || !form.operation_type_id) {
       toast({
-        title: "Error de Validación",
-        description: "Campo y tipo de operación son requeridos.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.fieldAndTypeRequired"),
         variant: "destructive",
       });
       return;
@@ -764,8 +764,8 @@ export function OperationsLogView() {
       const hectares = parseFloat(form.hectares_done);
       if (isNaN(hectares) || hectares < 0) {
         toast({
-          title: "Error de Validación",
-          description: "Las hectáreas trabajadas no pueden ser negativas.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.negativeHectares"),
           variant: "destructive",
         });
         return;
@@ -774,8 +774,8 @@ export function OperationsLogView() {
 
     if (isMechanical && (!form.tractor_id || !form.implement_id)) {
       toast({
-        title: "Error de Validación",
-        description: "Las operaciones mecánicas requieren tractor e implemento.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.mechanicalRequires"),
         variant: "destructive",
       });
       return;
@@ -788,8 +788,8 @@ export function OperationsLogView() {
       
       if (startHours >= endHours) {
         toast({
-          title: "Error de Validación",
-          description: "El horómetro inicio debe ser menor que el horómetro fin.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.hourMeterStartLess"),
           variant: "destructive",
         });
         return;
@@ -809,8 +809,8 @@ export function OperationsLogView() {
 
         if (gap > 100) {
           toast({
-            title: "🚫 Horómetro Bloqueado",
-            description: `Salto de ${gap.toFixed(1)} horas es demasiado grande (máx 100h). Verifique el tractor seleccionado.`,
+            title: t("operations.toast.hourMeterBlocked"),
+            description: t("operations.toast.hourMeterBlockedDesc").replace("{gap}", gap.toFixed(1)),
             variant: "destructive",
             duration: 10000,
           });
@@ -819,7 +819,7 @@ export function OperationsLogView() {
 
         // Small gap: just warn
         toast({
-          title: "⚠️ Alerta de Horómetro",
+          title: t("operations.toast.hourMeterAlert"),
           description: gapWarning,
           variant: "default",
           duration: 8000,
@@ -833,8 +833,8 @@ export function OperationsLogView() {
       if (maintenanceStatus?.isOverdue) {
         const tractorName = tractors?.find(t => t.id === form.tractor_id)?.name || "Tractor";
         toast({
-          title: "🔧 ¡Mantenimiento Vencido!",
-          description: `${tractorName} tiene el mantenimiento vencido por ${maintenanceStatus.hoursOverdue} horas. Se recomienda realizar mantenimiento antes de continuar.`,
+          title: t("operations.toast.maintenanceOverdue"),
+          description: t("operations.toast.maintenanceOverdueDesc").replace("{tractor}", tractorName).replace("{hours}", String(maintenanceStatus.hoursOverdue)),
           variant: "destructive",
           duration: 10000,
         });
@@ -843,8 +843,8 @@ export function OperationsLogView() {
 
     if (!isMechanical && !form.workers_count) {
       toast({
-        title: "Error de Validación",
-        description: "Las operaciones manuales requieren cantidad de obreros.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.manualRequiresWorkers"),
         variant: "destructive",
       });
       return;
@@ -855,8 +855,8 @@ export function OperationsLogView() {
       const workers = parseInt(form.workers_count);
       if (isNaN(workers) || workers <= 0) {
         toast({
-          title: "Error de Validación",
-          description: "La cantidad de obreros debe ser un número positivo.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.positiveWorkers"),
           variant: "destructive",
         });
         return;
@@ -868,8 +868,8 @@ export function OperationsLogView() {
     if (newInput.inventory_item_id || newInput.quantity_used) {
       if (!newInput.inventory_item_id || !newInput.quantity_used) {
         toast({
-          title: "Error de Validación",
-          description: "Complete artículo y cantidad del insumo pendiente o limpie ambos campos.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.completePendingInput"),
           variant: "destructive",
         });
         return;
@@ -878,8 +878,8 @@ export function OperationsLogView() {
       const pendingQty = parseFloat(newInput.quantity_used);
       if (isNaN(pendingQty) || pendingQty <= 0) {
         toast({
-          title: "Error de Validación",
-          description: "La cantidad del insumo debe ser mayor que cero.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.inputQtyPositive"),
           variant: "destructive",
         });
         return;
@@ -888,8 +888,8 @@ export function OperationsLogView() {
       const pendingItem = inventoryItems?.find(i => i.id === newInput.inventory_item_id);
       if (!pendingItem) {
         toast({
-          title: "Error de Validación",
-          description: "El insumo seleccionado no está disponible.",
+          title: t("operations.toast.validationError"),
+          description: t("operations.toast.inputNotAvailable"),
           variant: "destructive",
         });
         return;
@@ -901,8 +901,8 @@ export function OperationsLogView() {
 
       if (pendingQty > maxAllowed) {
         toast({
-          title: "Stock Insuficiente",
-          description: `Solo ${maxAllowed} ${pendingItem.use_unit} disponibles para guardar este cambio.`,
+          title: t("operations.toast.insufficientStock"),
+          description: t("operations.toast.onlyAvailableForSave").replace("{qty}", String(maxAllowed)).replace("{unit}", pendingItem.use_unit),
           variant: "destructive",
         });
         return;
@@ -974,19 +974,19 @@ export function OperationsLogView() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Top 5 Operaciones por Hectáreas
+              {t("operations.top5Title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {top5Operations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay operaciones en este período</p>
+              <p className="text-sm text-muted-foreground">{t("operations.top5NoData")}</p>
             ) : (
               <Table className="w-auto">
                 <TableBody>
                   {top5Operations.map((op) => (
                     <TableRow key={op.name}>
                       <TableCell className="font-medium py-2 whitespace-nowrap">
-                        Hectáreas {op.name}:
+                        {t("operations.hectaresPrefix")} {op.name}:
                       </TableCell>
                       <TableCell className="text-right font-mono py-2 whitespace-nowrap">
                         {op.hectares.toFixed(1)} ha
@@ -1086,7 +1086,7 @@ export function OperationsLogView() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "MMM d, yyyy") : "Fecha inicio"}
+                {startDate ? format(startDate, "MMM d, yyyy") : t("operations.startDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -1098,12 +1098,12 @@ export function OperationsLogView() {
               />
             </PopoverContent>
           </Popover>
-          <span className="text-muted-foreground">a</span>
+          <span className="text-muted-foreground">{t("operations.dateTo")}</span>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "MMM d, yyyy") : "Fecha fin"}
+                {endDate ? format(endDate, "MMM d, yyyy") : t("operations.endDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -1123,7 +1123,7 @@ export function OperationsLogView() {
               <DropdownMenuTrigger asChild>
                 <Button variant="excel">
                   <Download className="mr-2 h-4 w-4" />
-                  Exportar Reporte
+                  {t("operations.exportReport")}
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1451,7 +1451,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("date")}
                 >
                   <div className="flex items-center">
-                    Fecha
+                    {t("operations.th.date")}
                     {getSortIcon("date")}
                   </div>
                 </TableHead>
@@ -1462,7 +1462,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("field")}
                 >
                   <div className="flex items-center">
-                    Campo
+                    {t("operations.th.field")}
                     {getSortIcon("field")}
                   </div>
                 </TableHead>
@@ -1473,7 +1473,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("farm")}
                 >
                   <div className="flex items-center">
-                    Finca
+                    {t("operations.th.farm")}
                     {getSortIcon("farm")}
                   </div>
                 </TableHead>
@@ -1484,7 +1484,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("operation")}
                 >
                   <div className="flex items-center">
-                    Operación
+                    {t("operations.th.operation")}
                     {getSortIcon("operation")}
                   </div>
                 </TableHead>
@@ -1495,7 +1495,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("tractor")}
                 >
                   <div className="flex items-center">
-                    Tractor/Obreros
+                    {t("operations.th.tractorWorkers")}
                     {getSortIcon("tractor")}
                   </div>
                 </TableHead>
@@ -1506,7 +1506,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("driver")}
                 >
                   <div className="flex items-center">
-                    Operador
+                    {t("operations.th.operator")}
                     {getSortIcon("driver")}
                   </div>
                 </TableHead>
@@ -1517,7 +1517,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("implement")}
                 >
                   <div className="flex items-center">
-                    Implemento
+                    {t("operations.th.implement")}
                     {getSortIcon("implement")}
                   </div>
                 </TableHead>
@@ -1528,7 +1528,7 @@ export function OperationsLogView() {
                   onClick={() => handleSort("hours")}
                 >
                   <div className="flex items-center">
-                    Horas
+                    {t("operations.th.hours")}
                     {getSortIcon("hours")}
                   </div>
                 </TableHead>
@@ -1539,14 +1539,14 @@ export function OperationsLogView() {
                   onClick={() => handleSort("hectares")}
                 >
                   <div className="flex items-center">
-                    Hectáreas
+                    {t("operations.th.hectares")}
                     {getSortIcon("hectares")}
                   </div>
                 </TableHead>
               )}
-              {isVisible("inputs") && <TableHead>Insumos</TableHead>}
-              {isVisible("notes") && <TableHead>Notas</TableHead>}
-              {canEdit && <TableHead className="w-[70px] text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Acciones</TableHead>}
+              {isVisible("inputs") && <TableHead>{t("operations.th.inputs")}</TableHead>}
+              {isVisible("notes") && <TableHead>{t("operations.th.notes")}</TableHead>}
+              {canEdit && <TableHead className="w-[70px] text-right sticky right-0 bg-background shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">{t("operations.th.actions")}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1558,7 +1558,7 @@ export function OperationsLogView() {
                   {isVisible("date") && (
                     <TableCell className="flex items-center gap-2">
                       {missingClosingData && (
-                        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label="Falta datos de cierre" />
+                        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label={t("operations.missingClosingData")} />
                       )}
                       {format(parseDateLocal(op.operation_date), "MMM d, yyyy")}
                     </TableCell>
@@ -1576,7 +1576,7 @@ export function OperationsLogView() {
                     <TableCell>
                       {op.operation_types?.is_mechanical
                         ? op.fuel_equipment?.name || "-"
-                        : `${op.workers_count ?? 0} obreros`}
+                        : `${op.workers_count ?? 0} ${t("operations.workers")}`}
                     </TableCell>
                   )}
                   {isVisible("driver") && <TableCell>{op.driver || "-"}</TableCell>}
@@ -1652,7 +1652,7 @@ export function OperationsLogView() {
                             onClick={() => setDeleteOperationId(op.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
+                            {t("common.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1693,16 +1693,16 @@ export function OperationsLogView() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Operación Duplicada
+              {t("operations.duplicateTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe una operación idéntica (mismo campo, tipo de operación, fecha e insumos) registrada para este día. ¿Desea guardarla de todos modos?
+              {t("operations.duplicateDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDuplicateSave}>
-              Guardar de todos modos
+              {t("operations.saveAnyway")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

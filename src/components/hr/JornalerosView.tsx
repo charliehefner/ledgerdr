@@ -35,7 +35,6 @@ export function JornalerosView() {
   const [editingJornalero, setEditingJornalero] = useState<Jornalero | null>(null);
   const [formData, setFormData] = useState({ name: "", cedula: "" });
 
-  // Fetch jornaleros
   const { data: jornaleros = [], isLoading } = useQuery({
     queryKey: ["jornaleros", showInactive],
     queryFn: async () => {
@@ -43,18 +42,15 @@ export function JornalerosView() {
         .from("jornaleros")
         .select("*")
         .order("name", { ascending: true });
-
       if (!showInactive) {
         query = query.eq("is_active", true);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data as Jornalero[];
     },
   });
 
-  // Add/Update jornalero mutation
   const saveMutation = useMutation({
     mutationFn: async (data: { name: string; cedula: string; id?: string }) => {
       if (data.id) {
@@ -65,7 +61,7 @@ export function JornalerosView() {
         if (error) throw error;
       } else {
         const entityId = requireEntity();
-        if (!entityId) throw new Error("Seleccione una entidad antes de registrar un jornalero.");
+        if (!entityId) throw new Error(t("jornaleros.entityRequired"));
         const { error } = await supabase
           .from("jornaleros")
           .insert({ name: data.name, cedula: data.cedula, entity_id: entityId });
@@ -77,18 +73,17 @@ export function JornalerosView() {
       setIsDialogOpen(false);
       setEditingJornalero(null);
       setFormData({ name: "", cedula: "" });
-      toast({ title: editingJornalero ? "Jornalero actualizado" : "Jornalero agregado" });
+      toast({ title: editingJornalero ? t("jornaleros.updated") : t("jornaleros.added") });
     },
     onError: (error: any) => {
       if (error.message?.includes("duplicate key") || error.message?.includes("jornaleros_cedula_key")) {
-        toast({ title: "Error", description: "Ya existe un jornalero con esta cédula.", variant: "destructive" });
+        toast({ title: t("common.delete"), description: t("jornaleros.duplicateError"), variant: "destructive" });
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
     },
   });
 
-  // Toggle active status mutation
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase
@@ -99,7 +94,7 @@ export function JornalerosView() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["jornaleros"] });
-      toast({ title: variables.is_active ? "Jornalero activado" : "Jornalero desactivado" });
+      toast({ title: variables.is_active ? t("jornaleros.activated") : t("jornaleros.deactivated") });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -125,7 +120,7 @@ export function JornalerosView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.cedula.trim()) {
-      toast({ title: "Complete todos los campos", variant: "destructive" });
+      toast({ title: t("jornaleros.completeFields"), variant: "destructive" });
       return;
     }
     saveMutation.mutate({
@@ -140,16 +135,16 @@ export function JornalerosView() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Users className="h-6 w-6 text-primary" />
               <div>
-                <CardTitle className="text-lg">Registro de Jornaleros</CardTitle>
+                <CardTitle className="text-lg">{t("jornaleros.title")}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {activeCount} activos{inactiveCount > 0 && `, ${inactiveCount} inactivos`}
+                  {t("jornaleros.activeCount").replace("{active}", String(activeCount))}
+                  {inactiveCount > 0 && t("jornaleros.inactiveCount").replace("{inactive}", String(inactiveCount))}
                 </p>
               </div>
             </div>
@@ -159,12 +154,12 @@ export function JornalerosView() {
                 size="sm"
                 onClick={() => setShowInactive(!showInactive)}
               >
-                {showInactive ? "Ocultar Inactivos" : "Mostrar Inactivos"}
+                {showInactive ? t("jornaleros.hideInactive") : t("jornaleros.showInactive")}
               </Button>
               {canWrite && (
                 <Button onClick={() => handleOpenDialog()}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Agregar Jornalero
+                  {t("jornaleros.addButton")}
                 </Button>
               )}
             </div>
@@ -172,34 +167,32 @@ export function JornalerosView() {
         </CardHeader>
       </Card>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nombre o cédula..."
+          placeholder={t("jornaleros.searchPlaceholder")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-9"
         />
       </div>
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Cédula</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
-                {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("common.cedula")}</TableHead>
+                <TableHead className="text-center">{t("common.status")}</TableHead>
+                {canWrite && <TableHead className="w-24 text-center">{t("common.actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    Cargando...
+                    {t("common.loading")}
                   </TableCell>
                 </TableRow>
               ) : filteredJornaleros.length === 0 ? (
@@ -257,7 +250,6 @@ export function JornalerosView() {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>

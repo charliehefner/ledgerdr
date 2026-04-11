@@ -374,6 +374,39 @@ export type Database = {
           },
         ]
       }
+      app_error_log: {
+        Row: {
+          component_name: string | null
+          created_at: string
+          error_message: string
+          id: string
+          page_url: string | null
+          stack_trace: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component_name?: string | null
+          created_at?: string
+          error_message: string
+          id?: string
+          page_url?: string | null
+          stack_trace?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component_name?: string | null
+          created_at?: string
+          error_message?: string
+          id?: string
+          page_url?: string | null
+          stack_trace?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       approval_policies: {
         Row: {
           amount_threshold: number

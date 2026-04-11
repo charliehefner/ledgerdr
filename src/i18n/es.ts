@@ -2434,4 +2434,50 @@ export const es = {
   "quickEntry.created": "Entrada creada y línea conciliada",
   "quickEntry.create": "Crear Entrada",
   "quickEntry.creating": "Creando...",
+
+  // Fuel - Pending Submissions
+  "fuel.pendingSubmissions": "Envíos Pendientes",
+  "pending.cleanupComplete": "Limpieza completada",
+  "pending.cleanupResult": "{expired} expiradas y {orphan} huérfanas eliminadas.",
+  "pending.expiredTitle": "Envíos expirados",
+  "pending.expiredDesc": "Hay {count} envío(s) de combustible expirado(s) pendientes de limpieza.",
+  "pending.cleanExpired": "Limpiar expirados",
+  "pending.noPending": "No hay envíos pendientes.",
+  "pending.submitted": "Enviado",
+  "pending.expires": "Expira",
+  "pending.submittedBy": "Enviado por",
+  "pending.transaction": "Transacción",
+  "pending.unlinked": "Sin vincular",
+  "pending.expired": "Expirado",
+  "pending.pendingStatus": "Pendiente",
+
+  // Equipment - Hour Meter
+  "equipment.hourMeter": "Horómetro",
+  "hourMeter.selectTractor": "Seleccionar tractor",
+  "hourMeter.currentMeter": "Horómetro actual",
+  "hourMeter.gapsFound": "Brechas encontradas",
+  "hourMeter.totalGapHours": "Horas de brecha total",
+  "hourMeter.noOperations": "No hay operaciones con horómetro para este tractor.",
+  "hourMeter.operation": "Operación",
+  "hourMeter.field": "Campo",
+  "hourMeter.operator": "Operador",
+  "hourMeter.start": "Inicio",
+  "hourMeter.end": "Fin",
+  "hourMeter.hours": "Horas",
+  "hourMeter.gap": "Brecha",
+
+  // Inventory tabs
+  "inventory.inventory": "Inventario",
+  "inventory.physicalCount": "Conteo Físico",
+
+  // Settings tabs
+  "settings.general": "General",
+  "settings.users": "Usuarios",
+  "settings.qrCodes": "Códigos QR",
+  "settings.followUps": "Seguimientos",
+  "settings.vendorRules": "Reglas Proveedor",
+  "settings.operators": "Operadores",
+  "settings.transportation": "Transporte",
+  "settings.entities": "Entidades",
+  "settings.approvals": "Aprobaciones",
 };

@@ -31,7 +31,8 @@ import {
   Truck,
   Building2,
   ClipboardCheck,
-  MessageCircle
+  MessageCircle,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";

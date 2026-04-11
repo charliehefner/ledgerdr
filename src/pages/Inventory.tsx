@@ -67,11 +67,11 @@ export default function Inventory() {
           <TabsList>
             <TabsTrigger value="inventory">
               <Package className="h-4 w-4 mr-1" />
-              Inventario
+              {t("inventory.inventory")}
             </TabsTrigger>
             <TabsTrigger value="physical-count">
               <ClipboardCheck className="h-4 w-4 mr-1" />
-              Conteo Físico
+              {t("inventory.physicalCount")}
             </TabsTrigger>
           </TabsList>
 

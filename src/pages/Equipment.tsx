@@ -31,7 +31,7 @@ export default function Equipment() {
             },
             {
               value: "horometer",
-              label: "Horómetro",
+              label: t("equipment.hourMeter"),
               content: <HourMeterSequenceView />,
             },
           ],

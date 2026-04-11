@@ -37,7 +37,7 @@ export default function Fuel() {
             },
             {
               value: "pending",
-              label: "Envíos Pendientes",
+              label: t("fuel.pendingSubmissions"),
               content: <PendingSubmissionsView />,
             },
           ],

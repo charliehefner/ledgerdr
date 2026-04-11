@@ -193,7 +193,7 @@ export function AuditLogView() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs whitespace-nowrap">
-                      {entry.created_at ? format(new Date(entry.created_at), "dd/MM/yyyy HH:mm:ss") : "—"}
+                      {entry.created_at ? fmtDateTime(new Date(entry.created_at)) : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={ACTION_COLORS[entry.action] || ""}>

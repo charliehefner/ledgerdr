@@ -47,7 +47,6 @@ interface DayLaborEntry {
   is_closed: boolean;
 }
 
-// Get the Friday of the week for a given date
 function getFridayOfWeek(date: Date): Date {
   const dayOfWeek = getDay(date);
   const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
@@ -56,7 +55,6 @@ function getFridayOfWeek(date: Date): Date {
   return friday;
 }
 
-// Get the Sunday (start) of the week for a given date (Sunday-Saturday week)
 function getSundayOfWeek(date: Date): Date {
   const dayOfWeek = getDay(date);
   const sunday = new Date(date);
@@ -64,7 +62,6 @@ function getSundayOfWeek(date: Date): Date {
   return sunday;
 }
 
-// Get the Saturday (end) of the week for a given date (Sunday-Saturday week)
 function getSaturdayOfWeek(date: Date): Date {
   const dayOfWeek = getDay(date);
   const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
@@ -76,6 +73,8 @@ function getSaturdayOfWeek(date: Date): Date {
 export function DayLaborView() {
   const queryClient = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "en" ? enUS : es;
   const [selectedFriday, setSelectedFriday] = useState(() => getFridayOfWeek(new Date()));
   const [editingEntry, setEditingEntry] = useState<DayLaborEntry | null>(null);
   const [newEntry, setNewEntry] = useState({
@@ -87,18 +86,15 @@ export function DayLaborView() {
     amount: "",
   });
 
-  // Week runs Sunday to Saturday, but we keep Friday as the reference for continuity
   const weekStart = getSundayOfWeek(selectedFriday);
   const weekEnd = getSaturdayOfWeek(selectedFriday);
 
-  // Check if close button should be enabled (Friday morning or later)
   const today = new Date();
   const canClose = useMemo(() => {
     const fridayStart = startOfDay(selectedFriday);
     return isAfter(today, fridayStart) || today.toDateString() === fridayStart.toDateString();
   }, [selectedFriday, today]);
 
-  // Fetch active jornaleros for dropdown
   const { data: jornaleros = [] } = useQuery({
     queryKey: ["jornaleros-active"],
     queryFn: async () => {
@@ -107,13 +103,11 @@ export function DayLaborView() {
         .select("*")
         .eq("is_active", true)
         .order("name", { ascending: true });
-
       if (error) throw error;
       return data as Jornalero[];
     },
   });
 
-  // Fetch entries for the selected week
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["day-labor", formatDateLocal(selectedFriday), selectedEntityId],
     queryFn: async () => {
@@ -132,12 +126,10 @@ export function DayLaborView() {
 
   const isWeekClosed = entries.some(e => e.is_closed);
 
-  // Calculate weekly total
   const weeklyTotal = useMemo(() => {
     return entries.reduce((sum, entry) => sum + Number(entry.amount), 0);
   }, [entries]);
 
-  // Add entry mutation
   const addEntry = useMutation({
     mutationFn: async (entry: typeof newEntry) => {
       const { error } = await supabase.from("day_labor_entries").insert({
@@ -161,14 +153,13 @@ export function DayLaborView() {
         field_name: "",
         amount: "",
       });
-      toast({ title: "Entrada agregada" });
+      toast({ title: t("dayLabor.entryAdded") });
     },
     onError: (error) => {
-      toast({ title: "Error al agregar entrada", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
 
-  // Delete entry mutation
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("day_labor_entries").delete().eq("id", id);
@@ -176,14 +167,13 @@ export function DayLaborView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
-      toast({ title: "Entrada eliminada" });
+      toast({ title: t("dayLabor.entryDeleted") });
     },
     onError: (error) => {
-      toast({ title: "Error al eliminar entrada", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
 
-  // Update entry mutation
   const updateEntry = useMutation({
     mutationFn: async (entry: DayLaborEntry) => {
       const { error } = await supabase
@@ -202,10 +192,10 @@ export function DayLaborView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
       setEditingEntry(null);
-      toast({ title: "Entrada actualizada" });
+      toast({ title: t("dayLabor.entryUpdated") });
     },
     onError: (error) => {
-      toast({ title: "Error al actualizar entrada", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -216,7 +206,7 @@ export function DayLaborView() {
   const handleSaveEdit = () => {
     if (!editingEntry) return;
     if (!editingEntry.operation_description || !editingEntry.worker_name || !editingEntry.amount) {
-      toast({ title: "Por favor complete los campos requeridos", variant: "destructive" });
+      toast({ title: t("dayLabor.completeRequired"), variant: "destructive" });
       return;
     }
     updateEntry.mutate(editingEntry);
@@ -244,7 +234,6 @@ export function DayLaborView() {
           `RD$ ${Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`,
         ]);
       });
-      // Subtotal row
       tableData.push([
         { content: "", colSpan: 2 },
         { content: `Subtotal ${group.name}:`, styles: { fontStyle: "bold", halign: "right" } },
@@ -252,7 +241,6 @@ export function DayLaborView() {
       ] as any);
     });
     
-    // Grand total row
     tableData.push([
       { content: "", colSpan: 2 },
       { content: "TOTAL:", styles: { fontStyle: "bold", halign: "right" } },
@@ -319,27 +307,22 @@ export function DayLaborView() {
     URL.revokeObjectURL(url);
   };
 
-  // Close week mutation — uses backend RPC (SECURITY DEFINER) so supervisors
-  // can close weeks without needing direct INSERT on transactions table
   const closeWeek = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.rpc("close_day_labor_week" as any, {
         p_week_ending: formatDateLocal(selectedFriday),
       });
-
       if (error) throw error;
-
-      // Generate PDF + Receipts (client-side, no DB writes)
       generatePDF();
       await generateDayLaborReceiptsZip(summaryByWorker, jornaleros, selectedFriday, weekStart, weekEnd);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      toast({ title: "Semana cerrada exitosamente", description: "Transacción creada y PDF descargado." });
+      toast({ title: t("dayLabor.weekClosed"), description: t("dayLabor.weekClosedDesc") });
     },
     onError: (error) => {
-      toast({ title: "Error al cerrar semana", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -369,15 +352,12 @@ export function DayLaborView() {
     const maxLen = Math.max(na.length, nb.length);
     if (maxLen === 0) return true;
     const dist = levenshtein(na, nb);
-    // Allow up to ~30% edit distance, minimum 2 edits
     return dist <= Math.max(2, Math.floor(maxLen * 0.3));
   };
 
-  // Detect duplicate entries (same worker + same/similar operation + same date)
   const duplicates = useMemo(() => {
     const dupes: { worker: string; operations: string[]; date: string; ids: string[] }[] = [];
     const matched = new Set<string>();
-
     for (let i = 0; i < entries.length; i++) {
       if (matched.has(entries[i].id)) continue;
       const group = [entries[i]];
@@ -408,17 +388,13 @@ export function DayLaborView() {
 
   const duplicateIds = useMemo(() => new Set(duplicates.flatMap(d => d.ids)), [duplicates]);
 
-  // Calculate summary grouped by worker name
   const summaryByWorker = useMemo(() => {
     const grouped: Record<string, { entries: DayLaborEntry[]; subtotal: number }> = {};
-    
-    // Sort entries by worker name first, then by date
     const sortedEntries = [...entries].sort((a, b) => {
       const nameCompare = a.worker_name.localeCompare(b.worker_name);
       if (nameCompare !== 0) return nameCompare;
       return a.work_date.localeCompare(b.work_date);
     });
-    
     sortedEntries.forEach((entry) => {
       const name = entry.worker_name || "Sin Nombre";
       if (!grouped[name]) {
@@ -427,8 +403,6 @@ export function DayLaborView() {
       grouped[name].entries.push(entry);
       grouped[name].subtotal += Number(entry.amount);
     });
-    
-    // Sort worker names alphabetically
     const sortedNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
     return sortedNames.map((name) => ({ name, ...grouped[name] }));
   }, [entries]);
@@ -436,7 +410,7 @@ export function DayLaborView() {
   const handleAddEntry = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEntry.operation_description || !newEntry.workers_count || !newEntry.amount || !newEntry.worker_name.trim()) {
-      toast({ title: "Por favor complete los campos requeridos (Operación, # Trabajadores, Nombre, Monto)", variant: "destructive" });
+      toast({ title: t("dayLabor.completeRequired"), variant: "destructive" });
       return;
     }
     addEntry.mutate(newEntry);
@@ -448,7 +422,6 @@ export function DayLaborView() {
     );
   };
 
-  // Get days of the week for the date picker constraint
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   return (
@@ -464,12 +437,12 @@ export function DayLaborView() {
               <div className="text-center">
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-lg">
-                    Jornales - Semana {format(selectedFriday, "dd/MM/yyyy")}
+                    {t("dayLabor.title").replace("{date}", format(selectedFriday, "dd/MM/yyyy"))}
                   </CardTitle>
                   <DayLaborAttachment weekEndingDate={formatDateLocal(selectedFriday)} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {format(weekStart, "d MMM", { locale: es })} - {format(weekEnd, "d MMM, yyyy", { locale: es })}
+                  {format(weekStart, "d MMM", { locale: dateFnsLocale })} - {format(weekEnd, "d MMM, yyyy", { locale: dateFnsLocale })}
                 </p>
               </div>
               <Button variant="outline" size="icon" onClick={() => navigateWeek("next")}>
@@ -480,7 +453,7 @@ export function DayLaborView() {
               {isWeekClosed && (
                 <span className="flex items-center gap-1 text-sm text-warning bg-warning/10 px-3 py-1 rounded-full">
                   <Lock className="h-3 w-3" />
-                  Cerrada
+                  {t("dayLabor.closed")}
                 </span>
               )}
               <AlertDialog>
@@ -490,28 +463,28 @@ export function DayLaborView() {
                     variant="default"
                   >
                     <Lock className="h-4 w-4 mr-2" />
-                    Cerrar Semana
+                    {t("dayLabor.closeWeek")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Cerrar Semana?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("dayLabor.closeWeekConfirm")}</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                       <div>
-                        <p>Esto hará lo siguiente:</p>
+                        <p>{t("dayLabor.closeWeekDesc")}</p>
                         <ul className="list-disc list-inside mt-2 space-y-1">
-                          <li>Bloquear todas las entradas de esta semana</li>
-                          <li>Crear una transacción por RD$ {weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</li>
-                          <li>Descargar un resumen en PDF</li>
+                          <li>{t("dayLabor.closeWeekAction1")}</li>
+                          <li>{t("dayLabor.closeWeekAction2").replace("{amount}", weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 }))}</li>
+                          <li>{t("dayLabor.closeWeekAction3")}</li>
                         </ul>
-                        <p className="mt-3 font-medium">Esta acción no se puede deshacer.</p>
+                        <p className="mt-3 font-medium">{t("dayLabor.closeWeekWarning")}</p>
                       </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                     <AlertDialogAction onClick={() => closeWeek.mutate()}>
-                      Cerrar Semana
+                      {t("dayLabor.closeWeek")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -520,22 +493,22 @@ export function DayLaborView() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" disabled={entries.length === 0}>
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    {t("dayLabor.export")}
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-popover">
                   <DropdownMenuItem onClick={generateExcel} className="text-excel">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Exportar a Excel
+                    {t("dayLabor.exportExcel")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={generatePDF}>
                     <FileText className="mr-2 h-4 w-4" />
-                    Exportar a PDF
+                    {t("dayLabor.exportPdf")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => generateDayLaborReceiptsZip(summaryByWorker, jornaleros, selectedFriday, weekStart, weekEnd)}>
                     <FileDown className="mr-2 h-4 w-4" />
-                    Descargar Recibos
+                    {t("dayLabor.downloadReceipts")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -548,12 +521,12 @@ export function DayLaborView() {
       {!isWeekClosed && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Agregar Entrada</CardTitle>
+            <CardTitle className="text-base">{t("dayLabor.addEntry")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddEntry} className="flex gap-3 items-end flex-wrap">
               <div className="space-y-1">
-                <label className="text-sm font-medium">Fecha</label>
+                <label className="text-sm font-medium">{t("dayLabor.date")}</label>
                 <Input
                   type="date"
                   value={newEntry.work_date}
@@ -564,15 +537,15 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1 flex-1 min-w-[200px]">
-                <label className="text-sm font-medium">Operación *</label>
+                <label className="text-sm font-medium">{t("dayLabor.operation")}</label>
                 <Input
                   value={newEntry.operation_description}
                   onChange={(e) => setNewEntry({ ...newEntry, operation_description: e.target.value })}
-                  placeholder="Descripción del trabajo..."
+                  placeholder={t("dayLabor.workDesc")}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium"># Trabajadores *</label>
+                <label className="text-sm font-medium">{t("dayLabor.workersCount")}</label>
                 <Input
                   type="number"
                   min="1"
@@ -583,13 +556,13 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1 min-w-[180px]">
-                <label className="text-sm font-medium">Jornalero *</label>
+                <label className="text-sm font-medium">{t("dayLabor.jornalero")}</label>
                 <select
                   value={newEntry.worker_name}
                   onChange={(e) => setNewEntry({ ...newEntry, worker_name: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Seleccionar jornalero...</option>
+                  <option value="">{t("dayLabor.selectJornalero")}</option>
                   {jornaleros.map((j) => (
                     <option key={j.id} value={j.name}>
                       {j.name}
@@ -598,15 +571,15 @@ export function DayLaborView() {
                 </select>
               </div>
               <div className="space-y-1 min-w-[140px]">
-                <label className="text-sm font-medium">Campo (opcional)</label>
+                <label className="text-sm font-medium">{t("dayLabor.fieldOptional")}</label>
                 <Input
                   value={newEntry.field_name}
                   onChange={(e) => setNewEntry({ ...newEntry, field_name: e.target.value })}
-                  placeholder="Campo..."
+                  placeholder={t("dayLabor.fieldOptional")}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Monto (RD$) *</label>
+                <label className="text-sm font-medium">{t("dayLabor.amountRd")}</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -618,7 +591,7 @@ export function DayLaborView() {
               </div>
               <Button type="submit" disabled={addEntry.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
-                Agregar
+                {t("dayLabor.add")}
               </Button>
             </form>
           </CardContent>
@@ -629,13 +602,13 @@ export function DayLaborView() {
       {duplicates.length > 0 && (
         <Alert variant="destructive" className="border-warning/50 bg-warning/10 text-warning-foreground">
           <TriangleAlert className="h-4 w-4 !text-warning" />
-          <AlertTitle className="text-warning">Entradas duplicadas detectadas</AlertTitle>
+          <AlertTitle className="text-warning">{t("dayLabor.duplicatesDetected")}</AlertTitle>
           <AlertDescription className="text-warning/80">
             <ul className="list-disc list-inside mt-1 space-y-0.5">
               {duplicates.map((d, i) => (
                 <li key={i}>
                   <strong>{d.worker}</strong> — "{d.operations.join('" / "')}" el{" "}
-                  {format(parseDateLocal(d.date), "dd MMM", { locale: es })} ({d.ids.length} entradas)
+                  {format(parseDateLocal(d.date), "dd MMM", { locale: dateFnsLocale })} ({t("dayLabor.entriesInDate").replace("{count}", String(d.ids.length))})
                 </li>
               ))}
             </ul>
@@ -649,12 +622,12 @@ export function DayLaborView() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Operación</TableHead>
-                <TableHead className="text-center"># Trab.</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Campo</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
+                <TableHead>{t("dayLabor.date")}</TableHead>
+                <TableHead>{t("dayLabor.operationCol")}</TableHead>
+                <TableHead className="text-center">{t("dayLabor.workersCol")}</TableHead>
+                <TableHead>{t("dayLabor.nameCol")}</TableHead>
+                <TableHead>{t("dayLabor.fieldCol")}</TableHead>
+                <TableHead className="text-right">{t("dayLabor.amountCol")}</TableHead>
                 {!isWeekClosed && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -662,14 +635,14 @@ export function DayLaborView() {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Cargando...
+                    {t("dayLabor.loading")}
                   </TableCell>
                 </TableRow>
               ) : entries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    No hay entradas para esta semana
+                    {t("dayLabor.noEntries")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -677,7 +650,7 @@ export function DayLaborView() {
                   {entries.map((entry) => (
                     <TableRow key={entry.id} className={duplicateIds.has(entry.id) ? "bg-warning/10" : ""}>
                       <TableCell className="font-medium">
-                        {format(parseDateLocal(entry.work_date), "EEE dd/MM", { locale: es })}
+                        {format(parseDateLocal(entry.work_date), "EEE dd/MM", { locale: dateFnsLocale })}
                       </TableCell>
                       <TableCell>{entry.operation_description}</TableCell>
                       <TableCell className="text-center">{entry.workers_count}</TableCell>
@@ -712,7 +685,7 @@ export function DayLaborView() {
                   {/* Total Row */}
                   <TableRow className="bg-muted/50 font-bold">
                     <TableCell colSpan={5} className="text-right">
-                      Total Semanal:
+                      {t("dayLabor.weeklyTotal")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       RD$ {weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
@@ -730,16 +703,16 @@ export function DayLaborView() {
       {entries.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Resumen Jornal</CardTitle>
+            <CardTitle className="text-base">{t("dayLabor.summaryTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>{t("dayLabor.date")}</TableHead>
+                  <TableHead>{t("common.description")}</TableHead>
+                  <TableHead>{t("dayLabor.nameCol")}</TableHead>
+                  <TableHead className="text-right">{t("dayLabor.amountCol")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -757,7 +730,7 @@ export function DayLaborView() {
                     ))}
                     <TableRow className="bg-muted/30">
                       <TableCell colSpan={2}></TableCell>
-                      <TableCell className="font-semibold text-right">Subtotal {group.name}:</TableCell>
+                      <TableCell className="font-semibold text-right">{t("dayLabor.subtotal").replace("{name}", group.name)}</TableCell>
                       <TableCell className="text-right font-mono font-semibold">
                         RD$ {group.subtotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                       </TableCell>
@@ -766,7 +739,7 @@ export function DayLaborView() {
                 ))}
                 <TableRow className="bg-muted/50 font-bold">
                   <TableCell colSpan={2}></TableCell>
-                  <TableCell className="text-right">TOTAL:</TableCell>
+                  <TableCell className="text-right">{t("dayLabor.total")}</TableCell>
                   <TableCell className="text-right font-mono">
                     RD$ {weeklyTotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                   </TableCell>
@@ -780,7 +753,7 @@ export function DayLaborView() {
       {/* Info about closing */}
       {!isWeekClosed && !canClose && (
         <p className="text-sm text-muted-foreground text-center">
-          El botón de cerrar estará disponible el viernes ({format(selectedFriday, "d MMM", { locale: es })})
+          {t("dayLabor.closeAvailableFriday").replace("{date}", format(selectedFriday, "d MMM", { locale: dateFnsLocale }))}
         </p>
       )}
 
@@ -789,11 +762,11 @@ export function DayLaborView() {
         <Dialog open={true} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Entrada</DialogTitle>
+              <DialogTitle>{t("dayLabor.editEntry")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium">Fecha</label>
+                <label className="text-sm font-medium">{t("dayLabor.date")}</label>
                 <Input
                   type="date"
                   value={editingEntry.work_date}
@@ -803,15 +776,15 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Operación *</label>
+                <label className="text-sm font-medium">{t("dayLabor.operation")}</label>
                 <Input
                   value={editingEntry.operation_description}
                   onChange={(e) => setEditingEntry({ ...editingEntry, operation_description: e.target.value })}
-                  placeholder="Descripción del trabajo..."
+                  placeholder={t("dayLabor.workDesc")}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium"># Trabajadores *</label>
+                <label className="text-sm font-medium">{t("dayLabor.workersCount")}</label>
                 <Input
                   type="number"
                   min="1"
@@ -820,13 +793,13 @@ export function DayLaborView() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Jornalero *</label>
+                <label className="text-sm font-medium">{t("dayLabor.jornalero")}</label>
                 <select
                   value={editingEntry.worker_name}
                   onChange={(e) => setEditingEntry({ ...editingEntry, worker_name: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Seleccionar jornalero...</option>
+                  <option value="">{t("dayLabor.selectJornalero")}</option>
                   {jornaleros.map((j) => (
                     <option key={j.id} value={j.name}>
                       {j.name}
@@ -835,15 +808,15 @@ export function DayLaborView() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Campo (opcional)</label>
+                <label className="text-sm font-medium">{t("dayLabor.fieldOptional")}</label>
                 <Input
                   value={editingEntry.field_name || ""}
                   onChange={(e) => setEditingEntry({ ...editingEntry, field_name: e.target.value })}
-                  placeholder="Campo..."
+                  placeholder={t("dayLabor.fieldOptional")}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Monto (RD$) *</label>
+                <label className="text-sm font-medium">{t("dayLabor.amountRd")}</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -854,10 +827,10 @@ export function DayLaborView() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingEntry(null)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleSaveEdit} disabled={updateEntry.isPending}>
-                Guardar
+                {t("dayLabor.saveChanges")}
               </Button>
             </DialogFooter>
           </DialogContent>

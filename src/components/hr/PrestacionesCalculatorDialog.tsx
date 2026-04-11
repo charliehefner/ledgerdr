@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { Calculator, Printer, Save } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,8 @@ export function PrestacionesCalculatorDialog({
   userId,
 }: PrestacionesCalculatorDialogProps) {
   const queryClient = useQueryClient();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "en" ? enUS : es;
   const [scenario, setScenario] = useState<PrestacionesScenario>("desahucio");
   const [terminationDate, setTerminationDate] = useState(employee.date_of_termination || format(new Date(), "yyyy-MM-dd"));
   const [workedNotice, setWorkedNotice] = useState(false);
@@ -143,11 +146,11 @@ export function PrestacionesCalculatorDialog({
     },
     onSuccess: (data) => {
       setResult(data);
-      toast.success("Prestaciones calculadas");
+      toast.success(t("prestaciones.calculated"));
     },
     onError: (error) => {
       console.error("Error calculating prestaciones:", error);
-      toast.error("No se pudo calcular las prestaciones");
+      toast.error(t("prestaciones.calcError"));
     },
   });
 
@@ -186,12 +189,12 @@ export function PrestacionesCalculatorDialog({
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Caso de prestaciones guardado");
+      toast.success(t("prestaciones.saved"));
       queryClient.invalidateQueries({ queryKey: ["employee-liquidation-cases", employee.id] });
     },
     onError: (error) => {
       console.error("Error saving liquidation case:", error);
-      toast.error("No se pudo guardar el caso");
+      toast.error(t("prestaciones.saveError"));
     },
   });
 
@@ -260,37 +263,37 @@ export function PrestacionesCalculatorDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            Calcular Prestaciones — {employee.name}
+            {t("prestaciones.title").replace("{name}", employee.name)}
           </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Entradas del cálculo</CardTitle>
+              <CardTitle className="text-base">{t("prestaciones.inputs")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Escenario</Label>
+                  <Label>{t("prestaciones.scenario")}</Label>
                   <Select value={scenario} onValueChange={(value: PrestacionesScenario) => setScenario(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="desahucio">Desahucio</SelectItem>
-                      <SelectItem value="dimision">Dimisión</SelectItem>
+                      <SelectItem value="desahucio">{t("prestaciones.desahucio")}</SelectItem>
+                      <SelectItem value="dimision">{t("prestaciones.dimision")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Fecha efectiva de salida</Label>
+                  <Label>{t("prestaciones.effectiveDate")}</Label>
                   <Input type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Vacaciones pendientes (opcional)</Label>
+                  <Label>{t("prestaciones.pendingVacation")}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -302,12 +305,12 @@ export function PrestacionesCalculatorDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Ajustes manuales</Label>
+                  <Label>{t("prestaciones.manualAdjustments")}</Label>
                   <Input type="number" step="0.01" value={manualAdjustments} onChange={(e) => setManualAdjustments(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Otras deducciones</Label>
+                  <Label>{t("prestaciones.otherDeductions")}</Label>
                   <Input type="number" step="0.01" value={manualDeductions} onChange={(e) => setManualDeductions(e.target.value)} />
                 </div>
               </div>
@@ -315,62 +318,62 @@ export function PrestacionesCalculatorDialog({
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="flex items-center gap-3 rounded-lg border border-border p-3 text-sm">
                   <Checkbox checked={workedNotice} onCheckedChange={(checked) => setWorkedNotice(checked === true)} />
-                  Preaviso trabajado / no pagadero
+                  {t("prestaciones.workedNotice")}
                 </label>
                 <label className="flex items-center gap-3 rounded-lg border border-border p-3 text-sm">
                   <Checkbox checked={includeLoans} onCheckedChange={(checked) => setIncludeLoans(checked === true)} />
-                  Incluir préstamos activos como deducción
+                  {t("prestaciones.includeLoans")}
                 </label>
               </div>
 
               <div className="space-y-2">
-                <Label>Notas del caso</Label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observaciones o criterio aplicado" />
+                <Label>{t("prestaciones.caseNotes")}</Label>
+                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("prestaciones.notesPlaceholder")} />
               </div>
 
               <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm space-y-1">
-                <p className="font-medium">Base salarial promedio estimada</p>
-                <p className="text-muted-foreground">Vista previa con historial salarial registrado.</p>
+                <p className="font-medium">{t("prestaciones.avgSalaryPreview")}</p>
+                <p className="text-muted-foreground">{t("prestaciones.avgSalaryDesc")}</p>
                 <p className="text-lg font-semibold">{formatCurrency(averageSalaryPreview)}</p>
               </div>
 
               <Button onClick={() => calculateMutation.mutate()} disabled={calculateMutation.isPending || !terminationDate}>
                 <Calculator className="mr-2 h-4 w-4" />
-                {calculateMutation.isPending ? "Calculando..." : "Calcular prestaciones"}
+                {calculateMutation.isPending ? t("prestaciones.calculating") : t("prestaciones.calculateBtn")}
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Desglose oficial</CardTitle>
+              <CardTitle className="text-base">{t("prestaciones.breakdown")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!result ? (
                 <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-                  Calcula primero para ver el desglose de cesantía, preaviso, vacaciones y regalía proporcional.
+                  {t("prestaciones.emptyState")}
                 </div>
               ) : (
                 <>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{result.service_time.total_months.toFixed(2)} meses</Badge>
-                    <Badge variant="secondary">Salario diario {formatCurrency(result.salary_basis.daily_salary)}</Badge>
+                    <Badge variant="outline">{result.service_time.total_months.toFixed(2)} {t("prestaciones.months")}</Badge>
+                    <Badge variant="secondary">{t("prestaciones.dailySalary")} {formatCurrency(result.salary_basis.daily_salary)}</Badge>
                   </div>
 
                   <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between"><span>Preaviso</span><span className="font-medium">{formatCurrency(result.line_items.preaviso_amount)}</span></div>
-                    <div className="flex items-center justify-between"><span>Cesantía</span><span className="font-medium">{formatCurrency(result.line_items.cesantia_amount)}</span></div>
-                    <div className="flex items-center justify-between"><span>Vacaciones pendientes</span><span className="font-medium">{formatCurrency(result.line_items.vacation_amount)}</span></div>
-                    <div className="flex items-center justify-between"><span>Regalía proporcional</span><span className="font-medium">{formatCurrency(result.line_items.regalia_amount)}</span></div>
-                    <div className="flex items-center justify-between"><span>Ajustes</span><span className="font-medium">{formatCurrency(result.line_items.manual_adjustments)}</span></div>
-                    <div className="flex items-center justify-between"><span>Préstamos</span><span className="font-medium">-{formatCurrency(result.line_items.loan_deductions)}</span></div>
-                    <div className="flex items-center justify-between"><span>Otras deducciones</span><span className="font-medium">-{formatCurrency(result.line_items.manual_deductions)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.preaviso")}</span><span className="font-medium">{formatCurrency(result.line_items.preaviso_amount)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.cesantia")}</span><span className="font-medium">{formatCurrency(result.line_items.cesantia_amount)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.pendingVacations")}</span><span className="font-medium">{formatCurrency(result.line_items.vacation_amount)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.regalía")}</span><span className="font-medium">{formatCurrency(result.line_items.regalia_amount)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.adjustments")}</span><span className="font-medium">{formatCurrency(result.line_items.manual_adjustments)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.loansDed")}</span><span className="font-medium">-{formatCurrency(result.line_items.loan_deductions)}</span></div>
+                    <div className="flex items-center justify-between"><span>{t("prestaciones.otherDed")}</span><span className="font-medium">-{formatCurrency(result.line_items.manual_deductions)}</span></div>
                   </div>
 
                   <Separator />
 
                   <div className="flex items-center justify-between text-base font-semibold">
-                    <span>Total estimado</span>
+                    <span>{t("prestaciones.totalEstimated")}</span>
                     <span>{formatCurrency(result.line_items.total_amount)}</span>
                   </div>
 
@@ -378,12 +381,12 @@ export function PrestacionesCalculatorDialog({
                     {canSave && (
                       <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                         <Save className="mr-2 h-4 w-4" />
-                        Guardar caso
+                        {t("prestaciones.saveCase")}
                       </Button>
                     )}
                     <Button variant="outline" onClick={handlePrint}>
                       <Printer className="mr-2 h-4 w-4" />
-                      Descargar PDF
+                      {t("prestaciones.downloadPdf")}
                     </Button>
                   </div>
                 </>
@@ -395,7 +398,7 @@ export function PrestacionesCalculatorDialog({
         {salarySegments.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Tramos salariales usados como base</CardTitle>
+              <CardTitle className="text-base">{t("prestaciones.salarySegments")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -403,7 +406,7 @@ export function PrestacionesCalculatorDialog({
                   <div key={`${segment.startDate}-${segment.endDate}-${index}`} className="flex flex-col gap-1 rounded-lg border border-border p-3 text-sm md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-medium">
-                        {format(new Date(`${segment.startDate}T00:00:00`), "d MMM yyyy", { locale: es })} — {format(new Date(`${segment.endDate}T00:00:00`), "d MMM yyyy", { locale: es })}
+                        {format(new Date(`${segment.startDate}T00:00:00`), "d MMM yyyy", { locale: dateFnsLocale })} — {format(new Date(`${segment.endDate}T00:00:00`), "d MMM yyyy", { locale: dateFnsLocale })}
                       </p>
                       <p className="text-muted-foreground">{segment.days} días · {segment.months.toFixed(2)} meses</p>
                     </div>

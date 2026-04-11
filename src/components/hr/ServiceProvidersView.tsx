@@ -104,7 +104,7 @@ export function ServiceProvidersView() {
         if (error) throw error;
       } else {
         const entityId = requireEntity();
-        if (!entityId) throw new Error("Seleccione una entidad antes de crear un prestador");
+        if (!entityId) throw new Error(t("providers.entityRequired"));
         payload.entity_id = entityId;
         const { error } = await supabase.from("service_providers").insert(payload as any);
         if (error) throw error;
@@ -115,13 +115,13 @@ export function ServiceProvidersView() {
       setIsDialogOpen(false);
       setEditingProvider(null);
       setFormData(emptyForm);
-      toast({ title: editingProvider ? "Prestador actualizado" : "Prestador agregado" });
+      toast({ title: editingProvider ? t("providers.updated") : t("providers.added") });
     },
     onError: (error: any) => {
       if (error.message?.includes("duplicate key") || error.message?.includes("service_providers_cedula_key")) {
-        toast({ title: "Error", description: "Ya existe un prestador con esta cédula.", variant: "destructive" });
+        toast({ title: t("common.error"), description: t("providers.duplicateError"), variant: "destructive" });
       } else {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: t("common.error"), description: error.message, variant: "destructive" });
       }
     },
   });
@@ -133,9 +133,9 @@ export function ServiceProvidersView() {
     },
     onSuccess: (_, v) => {
       queryClient.invalidateQueries({ queryKey: ["service-providers"] });
-      toast({ title: v.is_active ? "Prestador activado" : "Prestador desactivado" });
+      toast({ title: v.is_active ? t("providers.activated") : t("providers.deactivated") });
     },
-    onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
+    onError: (error) => toast({ title: t("common.error"), description: error.message, variant: "destructive" }),
   });
 
   const filtered = providers.filter((p) =>
@@ -160,7 +160,7 @@ export function ServiceProvidersView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.cedula.trim()) {
-      toast({ title: "Nombre y cédula son requeridos", variant: "destructive" });
+      toast({ title: t("providers.nameRequired"), variant: "destructive" });
       return;
     }
     saveMutation.mutate({ ...formData, id: editingProvider?.id });
@@ -177,20 +177,20 @@ export function ServiceProvidersView() {
             <div className="flex items-center gap-3">
               <Wrench className="h-6 w-6 text-primary" />
               <div>
-                <CardTitle className="text-lg">Registro de Prestadores</CardTitle>
+                <CardTitle className="text-lg">{t("providers.title")}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {activeCount} activos{inactiveCount > 0 && `, ${inactiveCount} inactivos`}
+                  {t("providers.activeCount").replace("{active}", String(activeCount))}{inactiveCount > 0 && t("providers.inactiveCount").replace("{inactive}", String(inactiveCount))}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant={showInactive ? "secondary" : "outline"} size="sm"
                 onClick={() => setShowInactive(!showInactive)}>
-                {showInactive ? "Ocultar Inactivos" : "Mostrar Inactivos"}
+                {showInactive ? t("providers.hideInactive") : t("providers.showInactive")}
               </Button>
               {canWrite && (
                 <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />Agregar Prestador
+                  <Plus className="h-4 w-4 mr-2" />{t("providers.addBtn")}
                 </Button>
               )}
             </div>
@@ -200,7 +200,7 @@ export function ServiceProvidersView() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar por nombre o cédula..." value={searchTerm}
+        <Input placeholder={t("providers.searchPlaceholder")} value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
       </div>
 
@@ -209,22 +209,22 @@ export function ServiceProvidersView() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Cédula</TableHead>
-                <TableHead>Banco</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Moneda</TableHead>
-                <TableHead>Cuenta</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
-                {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
+                <TableHead>{t("providers.nameCol")}</TableHead>
+                <TableHead>{t("providers.cedulaCol")}</TableHead>
+                <TableHead>{t("providers.bankCol")}</TableHead>
+                <TableHead>{t("providers.typeCol")}</TableHead>
+                <TableHead>{t("providers.currencyCol")}</TableHead>
+                <TableHead>{t("providers.accountCol")}</TableHead>
+                <TableHead className="text-center">{t("providers.statusCol")}</TableHead>
+                {canWrite && <TableHead className="w-24 text-center">{t("services.actionsCol")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? "No se encontraron prestadores" : "No hay prestadores registrados"}
+                  {searchTerm ? t("providers.noFound") : t("providers.noRegistered")}
                 </TableCell></TableRow>
               ) : (
                 filtered.map((p) => (

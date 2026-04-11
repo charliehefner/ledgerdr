@@ -12,31 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 
@@ -59,17 +41,16 @@ interface EmployeeLoansSectionProps {
 
 export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
-  // Form state
   const [loanDate, setLoanDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [loanAmount, setLoanAmount] = useState("");
   const [numberOfPayments, setNumberOfPayments] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch loans for this employee
   const { data: loans = [], isLoading } = useQuery({
     queryKey: ["employee-loans", employeeId],
     queryFn: async () => {
@@ -100,20 +81,16 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
 
   const handleAddLoan = async () => {
     if (!loanAmount || !numberOfPayments) {
-      toast.error("Por favor complete todos los campos requeridos");
+      toast.error(t("loans.completeRequired"));
       return;
     }
-
     const amount = parseFloat(loanAmount);
     const payments = parseInt(numberOfPayments, 10);
-
     if (amount <= 0 || payments <= 0) {
-      toast.error("El monto y número de pagos deben ser mayores a 0");
+      toast.error(t("loans.mustBePositive"));
       return;
     }
-
     const paymentAmount = Math.round((amount / payments) * 100) / 100;
-
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("employee_loans").insert({
@@ -126,16 +103,14 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
         notes: notes || null,
         is_active: true,
       });
-
       if (error) throw error;
-
-      toast.success("Préstamo registrado exitosamente");
+      toast.success(t("loans.registeredSuccess"));
       queryClient.invalidateQueries({ queryKey: ["employee-loans", employeeId] });
       setIsAddDialogOpen(false);
       resetForm();
     } catch (error) {
       console.error("Error adding loan:", error);
-      toast.error("Error al registrar préstamo");
+      toast.error(t("loans.registerError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -147,14 +122,12 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
         .from("employee_loans")
         .delete()
         .eq("id", loanId);
-
       if (error) throw error;
-
-      toast.success("Préstamo eliminado");
+      toast.success(t("loans.deletedSuccess"));
       queryClient.invalidateQueries({ queryKey: ["employee-loans", employeeId] });
     } catch (error) {
       console.error("Error deleting loan:", error);
-      toast.error("Error al eliminar préstamo");
+      toast.error(t("loans.deleteError"));
     } finally {
       setDeleteConfirmId(null);
     }
@@ -169,60 +142,38 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Préstamos</CardTitle>
+            <CardTitle className="text-base">{t("empDetail.loans")}</CardTitle>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
                 <Plus className="h-4 w-4 mr-1" />
-                Nuevo Préstamo
+                {t("loans.registerNewLoan")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Registrar Nuevo Préstamo</DialogTitle>
-                <DialogDescription>
-                  Ingrese los detalles del préstamo. El monto por cuota se calculará automáticamente.
-                </DialogDescription>
+                <DialogTitle>{t("loans.registerNewLoan")}</DialogTitle>
+                <DialogDescription>{t("loans.registerNewLoanDesc")}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="loan-date">Fecha del Préstamo *</Label>
-                    <Input
-                      id="loan-date"
-                      type="date"
-                      value={loanDate}
-                      onChange={(e) => setLoanDate(e.target.value)}
-                    />
+                    <Label htmlFor="loan-date">{t("loans.dateCol")} *</Label>
+                    <Input id="loan-date" type="date" value={loanDate} onChange={(e) => setLoanDate(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="loan-amount">Monto (DOP) *</Label>
-                    <Input
-                      id="loan-amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={loanAmount}
-                      onChange={(e) => setLoanAmount(e.target.value)}
-                    />
+                    <Label htmlFor="loan-amount">{t("loans.amountDop")}</Label>
+                    <Input id="loan-amount" type="number" step="0.01" min="0" placeholder="0.00" value={loanAmount} onChange={(e) => setLoanAmount(e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="num-payments">Número de Cuotas *</Label>
-                    <Input
-                      id="num-payments"
-                      type="number"
-                      min="1"
-                      placeholder="Ej: 6"
-                      value={numberOfPayments}
-                      onChange={(e) => setNumberOfPayments(e.target.value)}
-                    />
+                    <Label htmlFor="num-payments">{t("loans.installments")}</Label>
+                    <Input id="num-payments" type="number" min="1" placeholder="Ej: 6" value={numberOfPayments} onChange={(e) => setNumberOfPayments(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Monto por Cuota</Label>
+                    <Label>{t("loans.installmentAmount")}</Label>
                     <div className="h-10 flex items-center px-3 rounded-md border bg-muted/50 font-mono">
                       {loanAmount && numberOfPayments && parseInt(numberOfPayments) > 0
                         ? formatCurrency(parseFloat(loanAmount) / parseInt(numberOfPayments))
@@ -231,21 +182,14 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notas (opcional)</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Motivo del préstamo, etc."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
+                  <Label htmlFor="notes">{t("loans.notesOptional")}</Label>
+                  <Textarea id="notes" placeholder={t("loans.notesPlaceholder")} value={notes} onChange={(e) => setNotes(e.target.value)} />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancelar
-                </Button>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>{t("common.cancel")}</Button>
                 <Button onClick={handleAddLoan} disabled={isSubmitting}>
-                  {isSubmitting ? "Guardando..." : "Registrar Préstamo"}
+                  {isSubmitting ? t("common.saving") : t("loans.registerBtn")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -254,55 +198,38 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-muted-foreground text-sm">Cargando...</p>
+          <p className="text-muted-foreground text-sm">{t("loans.loadingLoans")}</p>
         ) : loans.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No hay préstamos registrados.</p>
+          <p className="text-muted-foreground text-sm">{t("loans.noLoansRegistered")}</p>
         ) : (
           <div className="space-y-4">
             {activeLoans.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                  Préstamos Activos
-                </h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("loans.activeLoans")}</h4>
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead className="text-right">Monto</TableHead>
-                        <TableHead className="text-right">Cuota</TableHead>
-                        <TableHead className="text-center">Restantes</TableHead>
-                        <TableHead className="text-right">Saldo</TableHead>
+                        <TableHead>{t("loans.dateCol")}</TableHead>
+                        <TableHead className="text-right">{t("loans.amountCol")}</TableHead>
+                        <TableHead className="text-right">{t("loans.installmentCol")}</TableHead>
+                        <TableHead className="text-center">{t("loans.remaining")}</TableHead>
+                        <TableHead className="text-right">{t("loans.balance")}</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {activeLoans.map((loan) => (
                         <TableRow key={loan.id}>
-                          <TableCell>
-                            {format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(loan.loan_amount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-primary font-medium">
-                            {formatCurrency(loan.payment_amount)}
-                          </TableCell>
+                          <TableCell>{format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(loan.loan_amount)}</TableCell>
+                          <TableCell className="text-right font-mono text-primary font-medium">{formatCurrency(loan.payment_amount)}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="secondary">
-                              {loan.remaining_payments}/{loan.number_of_payments}
-                            </Badge>
+                            <Badge variant="secondary">{loan.remaining_payments}/{loan.number_of_payments}</Badge>
                           </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(loan.payment_amount * loan.remaining_payments)}
-                          </TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(loan.payment_amount * loan.remaining_payments)}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setDeleteConfirmId(loan.id)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(loan.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -316,42 +243,29 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
 
             {inactiveLoans.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                  Préstamos Saldados
-                </h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("loans.paidLoans")}</h4>
                 <div className="border rounded-lg overflow-hidden opacity-60">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead className="text-right">Monto</TableHead>
-                        <TableHead className="text-right">Cuota</TableHead>
-                        <TableHead className="text-center">Estado</TableHead>
+                        <TableHead>{t("loans.dateCol")}</TableHead>
+                        <TableHead className="text-right">{t("loans.amountCol")}</TableHead>
+                        <TableHead className="text-right">{t("loans.installmentCol")}</TableHead>
+                        <TableHead className="text-center">{t("loans.statusCol")}</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {inactiveLoans.map((loan) => (
                         <TableRow key={loan.id}>
-                          <TableCell>
-                            {format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(loan.loan_amount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(loan.payment_amount)}
-                          </TableCell>
+                          <TableCell>{format(parseDateLocal(loan.loan_date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(loan.loan_amount)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(loan.payment_amount)}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="outline">Pagado</Badge>
+                            <Badge variant="outline">{t("common.paid")}</Badge>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setDeleteConfirmId(loan.id)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(loan.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -365,36 +279,28 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
           </div>
         )}
 
-        {/* Warning for active loans */}
         {activeLoans.length > 0 && (
           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
             <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Total descuento por cuota:{" "}
-              <span className="font-semibold">
-                {formatCurrency(activeLoans.reduce((sum, l) => sum + l.payment_amount, 0))}
-              </span>{" "}
-              se aplicará automáticamente en la nómina.
+              {t("loans.autoDeductionWarning").replace("{amount}", formatCurrency(activeLoans.reduce((sum, l) => sum + l.payment_amount, 0)))}
             </p>
           </div>
         )}
 
-        {/* Delete confirmation dialog */}
         <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar préstamo?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción eliminará el préstamo y su historial de pagos. Esta acción no se puede deshacer.
-              </AlertDialogDescription>
+              <AlertDialogTitle>{t("loans.deleteConfirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("loans.deleteConfirmDesc")}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteConfirmId && handleDeleteLoan(deleteConfirmId)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Eliminar
+                {t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -151,7 +151,7 @@ export function ServicesView() {
         if (error) throw error;
       } else {
         const entityId = requireEntity();
-        if (!entityId) throw new Error("Seleccione una entidad antes de crear un servicio");
+        if (!entityId) throw new Error(t("services.selectEntity"));
         payload.entity_id = entityId;
         const { error } = await supabase.from("service_entries").insert(payload as any);
         if (error) throw error;
@@ -163,9 +163,9 @@ export function ServicesView() {
       setIsDialogOpen(false);
       setEditingEntry(null);
       setFormData(emptyForm);
-      toast({ title: editingEntry ? "Servicio actualizado" : "Servicio agregado" });
+      toast({ title: editingEntry ? t("services.serviceUpdated") : t("services.serviceAdded") });
     },
-    onError: (error) => toast({ title: "Error", description: error.message, variant: "destructive" }),
+    onError: (error) => toast({ title: t("common.error"), description: error.message, variant: "destructive" }),
   });
 
   const generateReceipt = (entry: ServiceEntry, payments: ServicePaymentRecord[] = []) => {
@@ -340,7 +340,7 @@ export function ServicesView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.provider_id) {
-      toast({ title: "Seleccione un prestador", variant: "destructive" });
+      toast({ title: t("services.selectProvider2"), variant: "destructive" });
       return;
     }
     saveMutation.mutate({ ...formData, id: editingEntry?.id });
@@ -348,7 +348,7 @@ export function ServicesView() {
 
   const handleRegisterPayment = (entry: ServiceEntry) => {
     if (isIncomplete(entry)) {
-      toast({ title: "Servicio incompleto", description: "Complete cuenta, descripción y monto total antes de registrar cuotas.", variant: "destructive" });
+      toast({ title: t("services.incompleteService"), description: t("services.incompleteServiceDesc"), variant: "destructive" });
       return;
     }
     setPaymentEntry(entry);
@@ -371,18 +371,18 @@ export function ServicesView() {
             <div className="flex items-center gap-3">
               <Briefcase className="h-6 w-6 text-primary" />
               <div>
-                <CardTitle className="text-lg">Servicios</CardTitle>
-                 <p className="text-sm text-muted-foreground">{openCount} servicios pendientes</p>
+                <CardTitle className="text-lg">{t("services.title")}</CardTitle>
+                 <p className="text-sm text-muted-foreground">{t("services.pendingCount").replace("{count}", String(openCount))}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <Switch checked={showClosed} onCheckedChange={setShowClosed} id="show-closed" />
-                <Label htmlFor="show-closed" className="text-sm">Mostrar Cerrados</Label>
+                <Label htmlFor="show-closed" className="text-sm">{t("services.showClosed")}</Label>
               </div>
               {canWrite && (
                 <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />Agregar Servicio
+                  <Plus className="h-4 w-4 mr-2" />{t("services.addServiceBtn")}
                 </Button>
               )}
             </div>
@@ -396,22 +396,22 @@ export function ServicesView() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
-                <TableHead>Prestador</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Cuenta</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
-                {showClosed && <TableHead className="text-center">Trans. #</TableHead>}
-                {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
+                <TableHead>{t("services.providerCol")}</TableHead>
+                <TableHead>{t("services.dateCol")}</TableHead>
+                <TableHead>{t("services.accountCol")}</TableHead>
+                <TableHead>{t("services.descCol")}</TableHead>
+                <TableHead className="text-right">{t("services.amountCol")}</TableHead>
+                <TableHead className="text-center">{t("services.statusCol")}</TableHead>
+                {showClosed && <TableHead className="text-center">{t("services.transCol")}</TableHead>}
+                {canWrite && <TableHead className="w-24 text-center">{t("services.actionsCol")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : entries.length === 0 ? (
                 <TableRow><TableCell colSpan={showClosed ? 9 : 8} className="text-center py-8 text-muted-foreground">
-                  No hay servicios {showClosed ? "" : "abiertos"}
+                  {showClosed ? t("services.noServices") : t("services.noServicesOpen")}
                 </TableCell></TableRow>
               ) : (
                  entries.map((entry) => {
@@ -434,7 +434,7 @@ export function ServicesView() {
                       </TableCell>
                       <TableCell className="text-center">
                          <Badge variant={entry.is_closed ? "default" : remainingAmount > 0 && Number(entry.paid_amount || 0) > 0 ? "outline" : "secondary"}>
-                           {entry.is_closed ? "Pagado" : remainingAmount > 0 && Number(entry.paid_amount || 0) > 0 ? `Parcial · ${entry.currency === "USD" ? "US$" : "RD$"} ${remainingAmount.toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : "Abierto"}
+                           {entry.is_closed ? t("services.paid") : remainingAmount > 0 && Number(entry.paid_amount || 0) > 0 ? `${t("services.partial")} · ${entry.currency === "USD" ? "US$" : "RD$"} ${remainingAmount.toLocaleString("es-DO", { minimumFractionDigits: 2 })}` : t("services.openStatus")}
                         </Badge>
                       </TableCell>
                       {showClosed && (
@@ -450,7 +450,7 @@ export function ServicesView() {
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(entry)} title={t("common.edit")}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                 <Button variant="ghost" size="icon" onClick={() => handleRegisterPayment(entry)} title="Registrar pago">
+                                 <Button variant="ghost" size="icon" onClick={() => handleRegisterPayment(entry)} title={t("services.registerPayment")}>
                                    <Receipt className="h-4 w-4" />
                                 </Button>
                               </>
@@ -475,9 +475,9 @@ export function ServicesView() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Prestador *</Label>
+              <Label>{t("services.provider")}</Label>
               <Select value={formData.provider_id || undefined} onValueChange={(v) => setFormData({ ...formData, provider_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar prestador" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("services.selectProvider2")} /></SelectTrigger>
                 <SelectContent>
                   {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
@@ -485,12 +485,12 @@ export function ServicesView() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Fecha</Label>
+                <Label>{t("common.date")}</Label>
                 <Input type="date" value={formData.service_date}
                   onChange={(e) => setFormData({ ...formData, service_date: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Moneda</Label>
+                <Label>{t("common.currency")}</Label>
                 <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -502,31 +502,31 @@ export function ServicesView() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Cuenta Maestra</Label>
+              <Label>{t("services.masterAcct")}</Label>
               <Select value={formData.master_acct_code || undefined}
                 onValueChange={(v) => setFormData({ ...formData, master_acct_code: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("svcPayment.selectAccount")} /></SelectTrigger>
                 <SelectContent>
                   {accounts.map((a) => <SelectItem key={a.code} value={a.code}>{a.code} - {a.spanish_description}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Descripción del Servicio</Label>
+              <Label>{t("services.serviceDesc")}</Label>
               <Input value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Ej: Soldadura de portón principal" />
+                placeholder={t("services.serviceDescPlaceholder")} />
             </div>
             <div className="space-y-2">
-              <Label>Monto</Label>
+              <Label>{t("common.amount")}</Label>
               <Input type="number" step="0.01" min="0" value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="0.00" />
             </div>
             <div className="space-y-2">
-              <Label>Pagado desde *</Label>
+              <Label>{t("services.paidFrom")}</Label>
               <Select value={formData.pay_method || undefined} onValueChange={(v) => setFormData({ ...formData, pay_method: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("svcPayment.selectAccount")} /></SelectTrigger>
                 <SelectContent>
                   {bankAccounts.map((ba) => (
                     <SelectItem key={ba.id} value={ba.id}>{ba.account_name}</SelectItem>
@@ -535,10 +535,10 @@ export function ServicesView() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Comentarios</Label>
+              <Label>{t("services.comments")}</Label>
               <Textarea value={formData.comments}
                 onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
-                placeholder="Comentarios adicionales (opcional)" rows={2} />
+                placeholder={t("services.commentsPlaceholder")} rows={2} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>

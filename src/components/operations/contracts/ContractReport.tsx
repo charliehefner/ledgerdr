@@ -38,7 +38,7 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContractEntry, ServiceContract } from "../ContractedServicesView";
 import { format } from "date-fns";
-import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { FileText, DollarSign, Pencil, Trash2, Plus } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -369,7 +369,7 @@ export function ContractReport({ open, onOpenChange, contracts, entries }: Contr
     finalY += 15;
     doc.setFontSize(9);
     doc.setTextColor(128, 128, 128);
-    doc.text(`Generado: ${fmtDateTime(new Date())}`, 14, finalY);
+    doc.text(`Generado: ${fmtDate(new Date())}`, 14, finalY);
 
     doc.save(`reporte-contrato-${selectedContract.contract_name.replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
   };

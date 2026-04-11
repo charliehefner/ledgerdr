@@ -15,7 +15,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChevronDown, ChevronRight, Shield, Filter } from "lucide-react";
 import { format } from "date-fns";
-import { fmtDateTime } from "@/lib/dateUtils";
+import { fmtDate } from "@/lib/dateUtils";
 
 interface AuditEntry {
   id: string;
@@ -194,7 +194,7 @@ export function AuditLogView() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs whitespace-nowrap">
-                      {entry.created_at ? fmtDateTime(new Date(entry.created_at)) : "—"}
+                      {entry.created_at ? fmtDate(new Date(entry.created_at)) : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={ACTION_COLORS[entry.action] || ""}>

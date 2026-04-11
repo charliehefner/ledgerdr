@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import { parseDateLocal, fmtDate, fmtDateTime } from "@/lib/dateUtils";
+import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { Operation } from "./types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -140,7 +140,7 @@ export function useOperationsExport({
       ? `Período: ${fmtDate(startDate)} - ${fmtDate(endDate)}`
       : "Todas las fechas";
     pdf.text(dateRangeText, 14, 22);
-    pdf.text(`Generado: ${fmtDateTime(new Date())}`, 14, 27);
+    pdf.text(`Generado: ${fmtDate(new Date())}`, 14, 27);
 
     // Build column headers based on visibility
     const headers: string[] = [];

@@ -13,7 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX, CheckCircle2 } from "lucide-react";
 
-import { fmtDate, fmtDateTime } from "@/lib/dateUtils";
+import { fmtDate } from "@/lib/dateUtils";
 
 type JournalLine = {
   id: string;
@@ -326,7 +326,7 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
             {journal.posted && journal.posted_at && (
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Lock className="h-3 w-3" />
-                {t("accounting.postedOn")} {fmtDateTime(new Date(journal.posted_at))}
+                {t("accounting.postedOn")} {fmtDate(new Date(journal.posted_at))}
               </span>
             )}
           </DialogDescription>

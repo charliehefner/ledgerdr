@@ -974,19 +974,19 @@ export function OperationsLogView() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Top 5 Operaciones por Hectáreas
+              {t("operations.top5Title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {top5Operations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay operaciones en este período</p>
+              <p className="text-sm text-muted-foreground">{t("operations.top5NoData")}</p>
             ) : (
               <Table className="w-auto">
                 <TableBody>
                   {top5Operations.map((op) => (
                     <TableRow key={op.name}>
                       <TableCell className="font-medium py-2 whitespace-nowrap">
-                        Hectáreas {op.name}:
+                        {t("operations.hectaresPrefix")} {op.name}:
                       </TableCell>
                       <TableCell className="text-right font-mono py-2 whitespace-nowrap">
                         {op.hectares.toFixed(1)} ha

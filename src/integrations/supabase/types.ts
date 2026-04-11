@@ -5475,6 +5475,7 @@ export type Database = {
               account_name: string
               account_type: string
               balance: number
+              balance_dop: number
               currency: string
               total_credit: number
               total_debit: number
@@ -5596,6 +5597,38 @@ export type Database = {
           p_reversal_date: string
         }
         Returns: string
+      }
+      create_transaction_with_ap_ar: {
+        Args: {
+          p_amount?: number
+          p_cbs_code?: string
+          p_comments?: string
+          p_cost_center?: string
+          p_currency?: string
+          p_description: string
+          p_destination_acct_code?: string
+          p_destination_amount?: number
+          p_dgii_tipo_bienes_servicios?: string
+          p_dgii_tipo_ingreso?: string
+          p_document?: string
+          p_due_date?: string
+          p_entity_id?: string
+          p_exchange_rate?: number
+          p_is_internal?: boolean
+          p_isr_retenido?: number
+          p_itbis?: number
+          p_itbis_override_reason?: string
+          p_itbis_retenido?: number
+          p_master_acct_code: string
+          p_name?: string
+          p_pay_method?: string
+          p_project_code?: string
+          p_purchase_date?: string
+          p_rnc?: string
+          p_transaction_date: string
+          p_transaction_direction?: string
+        }
+        Returns: Json
       }
       current_user_entity_id: { Args: never; Returns: string }
       dgii_507_report: {

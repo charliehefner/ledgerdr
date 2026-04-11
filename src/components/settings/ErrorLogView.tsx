@@ -20,7 +20,8 @@ interface ErrorLogEntry {
 }
 
 export function ErrorLogView() {
-  const { userRole } = useAuth();
+  const { user } = useAuth();
+  const userRole = user?.role;
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

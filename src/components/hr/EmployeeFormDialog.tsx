@@ -32,20 +32,21 @@ import {
 import { UserPlus, Save } from "lucide-react";
 import { EmployeeLoansSection } from "./EmployeeLoansSection";
 import { ScanCedulaButton, CedulaOcrResult } from "./ScanCedulaButton";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
 const employeeSchema = z.object({
-  name: z.string().min(1, "El nombre es requerido").max(200),
-  cedula: z.string().min(1, "La cédula es requerida").max(20),
+  name: z.string().min(1, "required").max(200),
+  cedula: z.string().min(1, "required").max(20),
   position: z.enum(POSITIONS).default("Servicios Generales"),
   sex: z.string().optional(),
   bank: z.string().optional(),
   bank_account_number: z.string().optional(),
   date_of_birth: z.string().optional(),
-  date_of_hire: z.string().min(1, "La fecha de ingreso es requerida"),
+  date_of_hire: z.string().min(1, "required"),
   date_of_termination: z.string().optional(),
-  salary: z.coerce.number().min(0, "El salario debe ser positivo"),
+  salary: z.coerce.number().min(0, "positive"),
   boot_size: z.string().optional(),
   pant_size: z.string().optional(),
   shirt_size: z.string().optional(),
@@ -79,6 +80,7 @@ const BANKS = [
 
 export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeFormDialogProps) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const isEditing = !!employeeId;
 
   const form = useForm<EmployeeFormData>({
@@ -200,7 +202,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
             .eq("is_active", true);
         }
 
-        toast.success("Empleado actualizado exitosamente");
+        toast.success(t("empForm.employeeUpdated"));
       } else {
         const { data: newEmployee, error } = await supabase
           .from("employees")
@@ -210,7 +212,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
         if (error) {
           if (error.code === "23505") {
-            toast.error("Ya existe un empleado con esta cédula");
+            toast.error(t("empForm.duplicateCedula"));
             return;
           }
           throw error;
@@ -223,7 +225,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
           notes: "Salario inicial",
         });
 
-        toast.success("Empleado creado exitosamente");
+        toast.success(t("empForm.employeeCreated"));
       }
 
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -231,7 +233,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving employee:", error);
-      toast.error("Error al guardar empleado");
+      toast.error(t("empForm.saveError"));
     }
   };
 
@@ -249,7 +251,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
           <div className="flex items-center justify-between gap-4">
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5 text-primary" />
-              {isEditing ? "Editar Empleado" : "Agregar Nuevo Empleado"}
+              {isEditing ? t("empForm.editEmployee") : t("empForm.addNewEmployee")}
             </DialogTitle>
             {!isEditing && <ScanCedulaButton onResult={handleCedulaScan} />}
           </div>
@@ -260,7 +262,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Información Personal
+                {t("empForm.personalInfo")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
@@ -268,7 +270,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre Completo *</FormLabel>
+                      <FormLabel>{t("empForm.fullName")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Juan Pérez" {...field} />
                       </FormControl>
@@ -282,7 +284,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="cedula"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cédula *</FormLabel>
+                      <FormLabel>{t("empForm.cedula")}</FormLabel>
                       <FormControl>
                         <Input placeholder="001-0000000-0" {...field} />
                       </FormControl>
@@ -296,7 +298,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="date_of_birth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de Nacimiento</FormLabel>
+                      <FormLabel>{t("empForm.dateOfBirth")}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -310,16 +312,16 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="sex"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sexo</FormLabel>
+                      <FormLabel>{t("empForm.sex")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
+                            <SelectValue placeholder={t("empForm.selectSex")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="M">Masculino</SelectItem>
-                          <SelectItem value="F">Femenino</SelectItem>
+                          <SelectItem value="M">{t("empForm.male")}</SelectItem>
+                          <SelectItem value="F">{t("empForm.female")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -332,7 +334,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
             {/* Employment Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Información Laboral
+                {t("empForm.employmentInfo")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField
@@ -340,11 +342,11 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="position"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Posición *</FormLabel>
+                      <FormLabel>{t("empForm.position")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar posición" />
+                            <SelectValue placeholder={t("empForm.selectPosition")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -365,7 +367,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="date_of_hire"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de Ingreso *</FormLabel>
+                      <FormLabel>{t("empForm.dateOfHire")}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -379,7 +381,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="salary"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Salario Mensual (DOP) *</FormLabel>
+                      <FormLabel>{t("empForm.monthlySalary")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -412,7 +414,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                           }}
                         />
                       </FormControl>
-                      <FormLabel className="font-normal">Empleado Activo</FormLabel>
+                      <FormLabel className="font-normal">{t("empForm.activeEmployee")}</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -423,7 +425,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                     name="date_of_termination"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Fecha de Desvinculación</FormLabel>
+                        <FormLabel>{t("empForm.terminationDate")}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
                         </FormControl>
@@ -438,7 +440,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
             {/* Banking Information */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Información Bancaria
+                {t("empForm.bankingInfo")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -446,11 +448,11 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="bank"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Banco</FormLabel>
+                      <FormLabel>{t("common.bank")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar banco" />
+                            <SelectValue placeholder={t("empForm.selectBank")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -471,9 +473,9 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="bank_account_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Número de Cuenta</FormLabel>
+                      <FormLabel>{t("empForm.accountNumber")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Número de cuenta" {...field} />
+                        <Input placeholder={t("empForm.accountNumber")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -485,7 +487,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
             {/* Uniform Sizes */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Tallas de Uniforme
+                {t("empForm.uniformSizes")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
@@ -493,11 +495,11 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="shirt_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Talla de Camisa</FormLabel>
+                      <FormLabel>{t("empForm.shirtSize")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar talla" />
+                            <SelectValue placeholder={t("empForm.selectSize")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -518,11 +520,11 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="pant_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Talla de Pantalón</FormLabel>
+                      <FormLabel>{t("empForm.pantSize")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar talla" />
+                            <SelectValue placeholder={t("empForm.selectSize")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -543,11 +545,11 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                   name="boot_size"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Talla de Botas</FormLabel>
+                      <FormLabel>{t("empForm.bootSize")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar talla" />
+                            <SelectValue placeholder={t("empForm.selectSize")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -567,11 +569,11 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit">
                 <Save className="h-4 w-4 mr-2" />
-                {isEditing ? "Actualizar Empleado" : "Guardar Empleado"}
+                {isEditing ? t("empForm.updateEmployee") : t("empForm.saveEmployee")}
               </Button>
             </div>
           </form>

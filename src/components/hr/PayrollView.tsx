@@ -12,6 +12,7 @@ import { PayrollPeriodSelector } from "./PayrollPeriodSelector";
 import { PayrollTimeGrid } from "./PayrollTimeGrid";
 import { PayrollSummary } from "./PayrollSummary";
 import { EmployeeDetailDialog } from "./EmployeeDetailDialog";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PayrollPeriod {
   id: string;
@@ -22,23 +23,14 @@ interface PayrollPeriod {
 }
 
 // Calculate Nomina number: Jan 16-31, 2026 = Nomina 90
-// Each month has 2 nominas (1-15 and 16-31)
 function calculateNominaNumber(startDate: Date): number {
-  const referenceDate = new Date(2026, 0, 16); // Jan 16, 2026
+  const referenceDate = new Date(2026, 0, 16);
   const referenceNomina = 90;
-  
-  // Calculate months difference from reference
   const monthsDiff = differenceInMonths(startOfMonth(startDate), startOfMonth(referenceDate));
-  
-  // Each month has 2 nominas
   const nominasFromMonths = monthsDiff * 2;
-  
-  // Adjust for which half of month (1-15 = first, 16+ = second)
   const isSecondHalf = startDate.getDate() >= 16;
-  const referenceIsSecondHalf = true; // Jan 16 is second half
-  
+  const referenceIsSecondHalf = true;
   const halfAdjustment = (isSecondHalf ? 1 : 0) - (referenceIsSecondHalf ? 1 : 0);
-  
   return referenceNomina + nominasFromMonths + halfAdjustment;
 }
 
@@ -48,27 +40,21 @@ function getCurrentPeriod(): { startDate: Date; endDate: Date } {
   const monthStart = startOfMonth(today);
 
   if (dayOfMonth <= 15) {
-    return {
-      startDate: setDate(monthStart, 1),
-      endDate: setDate(monthStart, 15),
-    };
+    return { startDate: setDate(monthStart, 1), endDate: setDate(monthStart, 15) };
   } else {
-    return {
-      startDate: setDate(monthStart, 16),
-      endDate: endOfMonth(today),
-    };
+    return { startDate: setDate(monthStart, 16), endDate: endOfMonth(today) };
   }
 }
 
 export function PayrollView() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("timesheet");
 
-  // Fetch or create period
   const { data: periodData, isLoading: periodLoading } = useQuery({
     queryKey: [
       "payroll-period",
@@ -79,7 +65,6 @@ export function PayrollView() {
     queryFn: async () => {
       const startStr = format(selectedPeriod.startDate, "yyyy-MM-dd");
       const endStr = format(selectedPeriod.endDate, "yyyy-MM-dd");
-
       let query: any = supabase
         .from("payroll_periods")
         .select("*")
@@ -87,40 +72,30 @@ export function PayrollView() {
         .eq("end_date", endStr);
       query = applyEntityFilter(query);
       const { data, error } = await query.maybeSingle();
-
       if (error) throw error;
       return data as PayrollPeriod | null;
     },
   });
 
-  // Create period mutation
   const createPeriod = useMutation({
     mutationFn: async () => {
-      if (!selectedEntityId) throw new Error("Debe seleccionar una entidad antes de crear un período.");
+      if (!selectedEntityId) throw new Error(t("payroll.entityRequired"));
       const startStr = format(selectedPeriod.startDate, "yyyy-MM-dd");
       const endStr = format(selectedPeriod.endDate, "yyyy-MM-dd");
-
       const { data, error } = await supabase
         .from("payroll_periods")
-        .insert({
-          start_date: startStr,
-          end_date: endStr,
-          status: "open",
-          is_current: true,
-          entity_id: selectedEntityId,
-        })
+        .insert({ start_date: startStr, end_date: endStr, status: "open", is_current: true, entity_id: selectedEntityId })
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
-      toast.success("Período de nómina creado");
+      toast.success(t("payroll.periodCreated"));
     },
     onError: (error) => {
-      toast.error("Error al crear período: " + error.message);
+      toast.error(t("payroll.periodCreateError") + error.message);
     },
   });
 
@@ -135,7 +110,7 @@ export function PayrollView() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Hoja de Tiempo Nómina {nominaNumber}</CardTitle>
+          <CardTitle>{t("payroll.timesheetTitle").replace("{number}", String(nominaNumber))}</CardTitle>
           <div className="flex items-center gap-4">
             <PayrollPeriodSelector
               selectedPeriod={selectedPeriod}
@@ -144,7 +119,7 @@ export function PayrollView() {
             {!periodData && !periodLoading && (
               <Button onClick={() => createPeriod.mutate()} disabled={createPeriod.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
-                Crear Período
+                {t("payroll.createPeriod")}
               </Button>
             )}
           </div>
@@ -152,16 +127,16 @@ export function PayrollView() {
         <CardContent>
           {periodLoading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Cargando período...
+              {t("payroll.loadingPeriod")}
             </div>
           ) : !periodData ? (
             <div className="text-center py-8 text-muted-foreground">
-              No existe un período para este rango de fechas. Haga clic en "Crear Período" para comenzar.
+              {t("payroll.noPeriod")}
             </div>
           ) : (
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Estado:</span>
+                <span>{t("payroll.statusLabel")}</span>
                 <span
                   className={`font-medium ${
                     periodData.status === "open"
@@ -171,14 +146,14 @@ export function PayrollView() {
                       : "text-blue-600"
                   }`}
                 >
-                  {periodData.status === "open" ? "ABIERTO" : periodData.status === "closed" ? "CERRADO" : periodData.status.toUpperCase()}
+                  {periodData.status === "open" ? t("payroll.statusOpen") : periodData.status === "closed" ? t("payroll.statusClosed") : periodData.status.toUpperCase()}
                 </span>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="w-full justify-between">
-                  <TabsTrigger value="timesheet">Hoja de Tiempo</TabsTrigger>
-                  <TabsTrigger value="summary">Resumen y Cierre</TabsTrigger>
+                  <TabsTrigger value="timesheet">{t("payroll.timesheet")}</TabsTrigger>
+                  <TabsTrigger value="summary">{t("payroll.summaryAndClose")}</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="timesheet" className="mt-4">

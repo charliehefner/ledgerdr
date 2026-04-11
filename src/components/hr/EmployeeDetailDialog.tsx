@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,7 @@ export function EmployeeDetailDialog({
 }: EmployeeDetailDialogProps) {
   const queryClient = useQueryClient();
   const { canModifySettings, canWriteSection, user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("info");
   const [prestacionesOpen, setPrestacionesOpen] = useState(false);
   const [letterDialogOpen, setLetterDialogOpen] = useState(false);

@@ -809,7 +809,7 @@ export function PayrollTimeGrid({
                 ? "bg-red-500 hover:bg-red-600"
                 : "bg-green-500 hover:bg-green-600 opacity-40 hover:opacity-100"
             )}
-            title={hasNote ? "Ver nota" : "Agregar nota"}
+            title={hasNote ? t("timeGrid.viewNote") : t("timeGrid.addNote")}
           />
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2" side="top" align="end">
@@ -818,7 +818,7 @@ export function PayrollTimeGrid({
             onChange={(e) => setNoteText(e.target.value)}
             rows={3}
             className="text-xs min-h-[60px] resize-none"
-            placeholder="Nota del día..."
+            placeholder={t("timeGrid.dayNote")}
           />
           <Button
             size="sm"
@@ -828,7 +828,7 @@ export function PayrollTimeGrid({
               setOpen(false);
             }}
           >
-            Guardar
+            {t("timeGrid.save")}
           </Button>
         </PopoverContent>
       </Popover>
@@ -838,7 +838,7 @@ export function PayrollTimeGrid({
   if (!periodId) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Seleccione o cree un período de nómina para comenzar
+        {t("timeGrid.selectPeriod")}
       </div>
     );
   }
@@ -857,7 +857,7 @@ export function PayrollTimeGrid({
             onClick={autoFillSalariedEmployees}
           >
             <Wand2 className="h-4 w-4 mr-2" />
-            Auto-llenar Asalariados
+            {t("timeGrid.autoFill")}
           </Button>
         </div>
       )}
@@ -866,7 +866,7 @@ export function PayrollTimeGrid({
         <thead className="sticky top-0 z-20 bg-background shadow-sm border-b">
           <tr>
             <th className="sticky left-0 bg-background z-30 min-w-[140px] h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
-              Empleado
+              {t("timeGrid.employee")}
             </th>
             {days.map((day, index) => {
               const isHoliday = isDayHoliday(day);
@@ -881,7 +881,7 @@ export function PayrollTimeGrid({
                     !isSunday(day) && !isHoliday && index % 2 === 0 && "bg-background"
                   )}
                 >
-                  <div className="text-xs">{format(day, "EEE", { locale: es })}</div>
+                  <div className="text-xs">{format(day, "EEE", { locale: dateLocale })}</div>
                   <div className="font-mono">{format(day, "d")}</div>
                   {!isSunday(day) && (
                     <div className="flex items-center justify-center gap-1 mt-1">
@@ -898,17 +898,17 @@ export function PayrollTimeGrid({
                           isHoliday && "text-amber-600 font-medium"
                         )}
                       >
-                        Feriado
+                        {t("timeGrid.holiday")}
                       </label>
                     </div>
                   )}
                 </th>
               );
             })}
-            <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">Hrs</th>
-            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Extra</th>
-            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Fer</th>
-            <th className="text-center min-w-[60px] text-emerald-700 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Dom</th>
+            <th className="text-center min-w-[60px] bg-background h-12 px-4 align-middle font-medium text-muted-foreground whitespace-nowrap">{t("timeGrid.hrs")}</th>
+            <th className="text-center min-w-[60px] text-orange-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.overtime")}</th>
+            <th className="text-center min-w-[60px] text-amber-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.holidayShort")}</th>
+            <th className="text-center min-w-[60px] text-emerald-700 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.sundayShort")}</th>
             {BENEFIT_TYPES.map((type) => (
               <th key={type} className="text-center min-w-[80px] text-green-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">
                 {type}
@@ -916,7 +916,7 @@ export function PayrollTimeGrid({
             ))}
             <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">TSS</th>
             <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">ISR</th>
-            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">Ausencias</th>
+            <th className="text-center min-w-[80px] text-red-600 bg-background h-12 px-4 align-middle font-medium whitespace-nowrap">{t("timeGrid.absences")}</th>
           </tr>
         </thead>
         <tbody className="[&_tr:last-child]:border-0">
@@ -1040,9 +1040,9 @@ export function PayrollTimeGrid({
                               <button
                                 onClick={() => toggleAbsentForDay(employee.id, day)}
                                 className="text-red-600 dark:text-red-400 font-bold text-sm w-full py-3 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-colors cursor-pointer active:scale-95"
-                                title="Click para quitar ausencia"
+                                title={t("timeGrid.removeAbsent")}
                               >
-                                AUSENTE
+                                {t("timeGrid.absent")}
                               </button>
                             )}
                             {/* Toggle absent button - only show when not vacation and not already absent and not Sunday */}
@@ -1050,9 +1050,9 @@ export function PayrollTimeGrid({
                               <button
                                 onClick={() => toggleAbsentForDay(employee.id, day)}
                                 className="text-[10px] text-muted-foreground hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded px-1 py-0.5 transition-colors"
-                                title="Marcar como ausente"
+                                title={t("timeGrid.markAbsent")}
                               >
-                                AUS
+                                {t("timeGrid.absentShort")}
                               </button>
                             )}
                           </div>

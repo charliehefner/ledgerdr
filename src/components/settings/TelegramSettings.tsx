@@ -7,15 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { MessageCircle, Search, Send, Plus, Trash2, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-const ALERT_CATEGORIES = [
-  { value: "all", label: "Todos", description: "Recibe todas las alertas" },
-  { value: "operations", label: "Operaciones", description: "Nuevas operaciones de campo" },
-  { value: "finance", label: "Finanzas", description: "Transacciones, pagos, CxP/CxC" },
-  { value: "maintenance", label: "Mantenimiento", description: "Alertas de equipos" },
-  { value: "inventory", label: "Inventario", description: "Alertas de stock" },
-  { value: "hr", label: "RRHH", description: "Nómina, empleados" },
-] as const;
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Recipient = {
   id: string;
@@ -26,17 +18,26 @@ type Recipient = {
 };
 
 export function TelegramSettings() {
+  const { t } = useLanguage();
+
+  const ALERT_CATEGORIES = [
+    { value: "all", label: t("telegram.catAll"), description: t("telegram.catAllDesc") },
+    { value: "operations", label: t("telegram.catOperations"), description: t("telegram.catOperationsDesc") },
+    { value: "finance", label: t("telegram.catFinance"), description: t("telegram.catFinanceDesc") },
+    { value: "maintenance", label: t("telegram.catMaintenance"), description: t("telegram.catMaintenanceDesc") },
+    { value: "inventory", label: t("telegram.catInventory"), description: t("telegram.catInventoryDesc") },
+    { value: "hr", label: t("telegram.catHR"), description: t("telegram.catHRDesc") },
+  ] as const;
+
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
 
-  // Add form state
   const [newChatId, setNewChatId] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [newCategories, setNewCategories] = useState<string[]>(["all"]);
   const [adding, setAdding] = useState(false);
 
-  // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editCategories, setEditCategories] = useState<string[]>([]);
@@ -67,15 +68,15 @@ export function TelegramSettings() {
       if (error) throw error;
       const chats = data?.chats ?? [];
       if (chats.length === 0) {
-        toast.error("No se encontraron mensajes. Envía un mensaje al bot primero.");
+        toast.error(t("telegram.noChatsFound"));
         return;
       }
       const chat = chats[0];
       setNewChatId(String(chat.chat_id));
       if (!newLabel) setNewLabel(chat.name || "");
-      toast.success(`Chat encontrado: ${chat.name} (${chat.chat_id})`);
+      toast.success(t("telegram.chatFound").replace("{name}", chat.name).replace("{id}", String(chat.chat_id)));
     } catch (err: any) {
-      toast.error(`Error descubriendo chat ID: ${err.message}`);
+      toast.error(t("telegram.discoverError").replace("{msg}", err.message));
     } finally {
       setDiscovering(false);
     }
@@ -83,7 +84,7 @@ export function TelegramSettings() {
 
   const handleAdd = async () => {
     if (!newChatId) {
-      toast.error("Ingresa un Chat ID");
+      toast.error(t("telegram.enterChatId"));
       return;
     }
     setAdding(true);
@@ -97,13 +98,13 @@ export function TelegramSettings() {
           is_active: true,
         } as any);
       if (error) throw error;
-      toast.success("Destinatario agregado");
+      toast.success(t("telegram.recipientAdded"));
       setNewChatId("");
       setNewLabel("");
       setNewCategories(["all"]);
       await loadRecipients();
     } catch (err: any) {
-      toast.error(`Error agregando: ${err.message}`);
+      toast.error(t("telegram.addError").replace("{msg}", err.message));
     } finally {
       setAdding(false);
     }
@@ -115,7 +116,7 @@ export function TelegramSettings() {
       .update({ is_active: !isActive } as any)
       .eq("id", id);
     if (error) {
-      toast.error("Error actualizando estado");
+      toast.error(t("telegram.updateError"));
       return;
     }
     setRecipients(prev => prev.map(r => r.id === id ? { ...r, is_active: !isActive } : r));
@@ -127,22 +128,22 @@ export function TelegramSettings() {
       .delete()
       .eq("id", id);
     if (error) {
-      toast.error("Error eliminando");
+      toast.error(t("telegram.deleteError"));
       return;
     }
     setRecipients(prev => prev.filter(r => r.id !== id));
-    toast.success("Destinatario eliminado");
+    toast.success(t("telegram.recipientDeleted"));
   };
 
   const handleTestMessage = async (chatId: string, label: string) => {
     try {
       const { error } = await supabase.functions.invoke("send-telegram", {
-        body: { chat_id: chatId, message: `✅ Mensaje de prueba para <b>${label}</b> desde LedgerDR` },
+        body: { chat_id: chatId, message: `✅ ${t("telegram.testMessageBody")} <b>${label}</b>` },
       });
       if (error) throw error;
-      toast.success(`Mensaje enviado a ${label}`);
+      toast.success(t("telegram.messageSent").replace("{label}", label));
     } catch (err: any) {
-      toast.error(`Error enviando: ${err.message}`);
+      toast.error(t("telegram.sendError").replace("{msg}", err.message));
     }
   };
 
@@ -177,35 +178,33 @@ export function TelegramSettings() {
       .update({ label: editLabel, categories: editCategories } as any)
       .eq("id", editingId);
     if (error) {
-      toast.error("Error actualizando destinatario");
+      toast.error(t("telegram.updateRecipientError"));
       return;
     }
     setRecipients(prev => prev.map(r => r.id === editingId ? { ...r, label: editLabel, categories: editCategories } : r));
-    toast.success("Destinatario actualizado");
+    toast.success(t("telegram.recipientUpdated"));
     setEditingId(null);
   };
 
   return (
     <div className="max-w-3xl space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
             <MessageCircle className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold">Telegram — Destinatarios</h3>
+            <h3 className="font-semibold">{t("telegram.title")}</h3>
             <p className="text-sm text-muted-foreground">
-              Configura múltiples destinatarios y qué categorías de alertas recibe cada uno.
+              {t("telegram.subtitle")}
             </p>
           </div>
         </div>
 
-        {/* Existing recipients */}
         {loading ? (
-          <p className="text-sm text-muted-foreground">Cargando…</p>
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : recipients.length === 0 ? (
-          <p className="text-sm text-muted-foreground mb-4">No hay destinatarios configurados.</p>
+          <p className="text-sm text-muted-foreground mb-4">{t("telegram.noRecipients")}</p>
         ) : (
           <div className="space-y-3 mb-6">
             {recipients.map((r) => (
@@ -214,14 +213,13 @@ export function TelegramSettings() {
                 className={`rounded-lg border p-4 transition-colors ${r.is_active ? "bg-card" : "bg-muted/50 opacity-60"}`}
               >
                 {editingId === r.id ? (
-                  /* Edit mode */
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Input
                         value={editLabel}
                         onChange={(e) => setEditLabel(e.target.value)}
                         className="max-w-xs"
-                        placeholder="Nombre"
+                        placeholder={t("common.name")}
                       />
                       <span className="text-xs text-muted-foreground font-mono">{r.chat_id}</span>
                     </div>
@@ -245,15 +243,14 @@ export function TelegramSettings() {
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleSaveEdit}>
-                        <Check className="mr-1 h-4 w-4" /> Guardar
+                        <Check className="mr-1 h-4 w-4" /> {t("common.save")}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={cancelEditing}>
-                        <X className="mr-1 h-4 w-4" /> Cancelar
+                        <X className="mr-1 h-4 w-4" /> {t("common.cancel")}
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  /* View mode */
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -269,30 +266,14 @@ export function TelegramSettings() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => startEditing(r)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => startEditing(r)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleTestMessage(r.chat_id, r.label)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleTestMessage(r.chat_id, r.label)}>
                         <Send className="h-4 w-4" />
                       </Button>
-                      <Switch
-                        checked={r.is_active}
-                        onCheckedChange={() => handleToggleActive(r.id, r.is_active)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(r.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
+                      <Switch checked={r.is_active} onCheckedChange={() => handleToggleActive(r.id, r.is_active)} />
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} className="text-destructive hover:text-destructive">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -303,30 +284,27 @@ export function TelegramSettings() {
           </div>
         )}
 
-        {/* Add new recipient */}
         <div className="bg-muted/50 rounded-lg p-4 space-y-4">
-          <p className="text-sm font-medium">Agregar destinatario</p>
+          <p className="text-sm font-medium">{t("telegram.addRecipient")}</p>
 
-          {/* Discover */}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleDiscover} disabled={discovering}>
               <Search className="mr-2 h-4 w-4" />
-              {discovering ? "Buscando…" : "Descubrir Chat ID"}
+              {discovering ? t("telegram.discovering") : t("telegram.discoverChatId")}
             </Button>
             <p className="text-xs text-muted-foreground self-center">
-              Envía un mensaje al bot y haz clic en Descubrir.
+              {t("telegram.discoverHint")}
             </p>
           </div>
 
-          {/* Label + Chat ID */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="new-label">Nombre</Label>
+              <Label htmlFor="new-label">{t("common.name")}</Label>
               <Input
                 id="new-label"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
-                placeholder="Ej: Juan, Grupo Ops"
+                placeholder={t("telegram.namePlaceholder")}
               />
             </div>
             <div className="space-y-1">
@@ -335,14 +313,13 @@ export function TelegramSettings() {
                 id="new-chat-id"
                 value={newChatId}
                 onChange={(e) => setNewChatId(e.target.value)}
-                placeholder="Ej: 123456789"
+                placeholder={t("telegram.chatIdPlaceholder")}
               />
             </div>
           </div>
 
-          {/* Categories */}
           <div className="space-y-2">
-            <Label>Categorías de alerta</Label>
+            <Label>{t("telegram.alertCategories")}</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {ALERT_CATEGORIES.map(cat => (
                 <label
@@ -365,7 +342,7 @@ export function TelegramSettings() {
 
           <Button onClick={handleAdd} disabled={adding || !newChatId}>
             <Plus className="mr-2 h-4 w-4" />
-            {adding ? "Agregando…" : "Agregar Destinatario"}
+            {adding ? t("telegram.adding") : t("telegram.addRecipientBtn")}
           </Button>
         </div>
       </div>

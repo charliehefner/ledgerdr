@@ -311,7 +311,7 @@ export function PayrollTimeGrid({
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        if (!selectedEntityId) throw new Error("Debe seleccionar una entidad.");
+        if (!selectedEntityId) throw new Error(t("timeGrid.selectEntity"));
         const { error } = await supabase
           .from("employee_benefits")
           .insert({
@@ -328,7 +328,7 @@ export function PayrollTimeGrid({
       queryClient.invalidateQueries({ queryKey: ["employee-benefits"] });
     },
     onError: (error) => {
-      toast.error("Error al guardar beneficio: " + error.message);
+      toast.error(t("timeGrid.benefitError") + error.message);
     },
   });
 
@@ -354,7 +354,7 @@ export function PayrollTimeGrid({
     );
 
     if (salariedEmployees.length === 0) {
-      toast.info("No hay empleados asalariados para auto-llenar");
+      toast.info(t("timeGrid.noSalaried"));
       return;
     }
 
@@ -393,9 +393,9 @@ export function PayrollTimeGrid({
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
-      toast.success(`Auto-llenado para ${salariedEmployees.length} empleado(s) asalariado(s)`);
+      toast.success(t("timeGrid.autoFilled").replace("{count}", String(salariedEmployees.length)));
     } catch (error: any) {
-      toast.error("Error al auto-llenar: " + error.message);
+      toast.error(t("timeGrid.autoFillError") + error.message);
     }
   };
 
@@ -542,9 +542,9 @@ export function PayrollTimeGrid({
       }
       
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
-      toast.success(newHolidayStatus ? "Día marcado como feriado (100% bono)" : "Estado de feriado removido");
+      toast.success(newHolidayStatus ? t("timeGrid.holidayMarked") : t("timeGrid.holidayRemoved"));
     } catch (error: any) {
-      toast.error("Error al cambiar feriado: " + error.message);
+      toast.error(t("timeGrid.holidayError") + error.message);
     }
   };
 

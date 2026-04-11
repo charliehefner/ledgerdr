@@ -30,3 +30,32 @@ export function parseDateLocal(dateString: string | null | undefined): Date {
   if (!year || !month || !day) return new Date(NaN);
   return new Date(year, month - 1, day);
 }
+
+/**
+ * Standard date format used throughout the app: "10 APR 2026"
+ * Use with date-fns format() then .toUpperCase(), or use the helper below.
+ */
+export const APP_DATE_FORMAT = "dd MMM yyyy";
+
+/**
+ * Standard datetime format: "10 APR 2026 14:30"
+ */
+export const APP_DATETIME_FORMAT = "dd MMM yyyy HH:mm";
+
+/**
+ * Format a date to the app standard: "10 APR 2026"
+ */
+export function formatAppDate(date: Date | string): string {
+  const { format } = require("date-fns");
+  const d = typeof date === "string" ? new Date(date) : date;
+  return format(d, APP_DATE_FORMAT).toUpperCase();
+}
+
+/**
+ * Format a datetime to the app standard: "10 APR 2026 14:30"
+ */
+export function formatAppDateTime(date: Date | string): string {
+  const { format } = require("date-fns");
+  const d = typeof date === "string" ? new Date(date) : date;
+  return format(d, APP_DATETIME_FORMAT).toUpperCase();
+}

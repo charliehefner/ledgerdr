@@ -390,8 +390,8 @@ export function OperationsLogView() {
   const addInput = () => {
     if (!newInput.inventory_item_id || !newInput.quantity_used) {
       toast({
-        title: "Error de Validación",
-        description: "Seleccione un artículo e ingrese la cantidad.",
+        title: t("operations.toast.validationError"),
+        description: t("operations.toast.selectItemAndQty"),
         variant: "destructive",
       });
       return;
@@ -400,8 +400,8 @@ export function OperationsLogView() {
     // Check if item already added
     if (inputs.some(i => i.inventory_item_id === newInput.inventory_item_id)) {
       toast({
-        title: "Artículo Duplicado",
-        description: "Este artículo ya está agregado. Actualice la cantidad.",
+        title: t("operations.toast.duplicateItem"),
+        description: t("operations.toast.duplicateItemDesc"),
         variant: "destructive",
       });
       return;
@@ -412,8 +412,8 @@ export function OperationsLogView() {
     
     if (item && qty > item.current_quantity) {
       toast({
-        title: "Stock Insuficiente",
-        description: `Solo ${item.current_quantity} ${item.use_unit} disponibles.`,
+        title: t("operations.toast.insufficientStock"),
+        description: t("operations.toast.onlyAvailable").replace("{qty}", String(item.current_quantity)).replace("{unit}", item.use_unit),
         variant: "destructive",
       });
       return;
@@ -530,13 +530,13 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
-        title: "Operación registrada",
-        description: "La operación de campo ha sido registrada y el inventario actualizado.",
+        title: t("operations.toast.operationRecorded"),
+        description: t("operations.toast.operationRecordedDesc"),
       });
       if (result?.followUpMessage) {
         setTimeout(() => {
           toast({
-            title: "📅 Seguimiento programado",
+            title: t("operations.toast.followUpScheduled"),
             description: result.followUpMessage,
           });
         }, 500);
@@ -546,8 +546,8 @@ export function OperationsLogView() {
     onError: (error) => {
       console.error("[Operations] Create mutation error:", error);
       toast({
-        title: "Error al registrar operación",
-        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
+        title: t("operations.toast.errorRecording"),
+        description: error.message || t("operations.toast.unknownError"),
         variant: "destructive",
       });
     },
@@ -643,16 +643,16 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
-        title: "Operación actualizada",
-        description: "La operación ha sido actualizada y el inventario ajustado.",
+        title: t("operations.toast.operationUpdated"),
+        description: t("operations.toast.operationUpdatedDesc"),
       });
       handleCloseDialog();
     },
     onError: (error) => {
       console.error("[Operations] Update mutation error:", error);
       toast({
-        title: "Error al actualizar operación",
-        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
+        title: t("operations.toast.errorUpdating"),
+        description: error.message || t("operations.toast.unknownError"),
         variant: "destructive",
       });
     },
@@ -707,16 +707,16 @@ export function OperationsLogView() {
       queryClient.invalidateQueries({ queryKey: ["tractors"] });
       queryClient.invalidateQueries({ queryKey: ["tractors-for-horometer"] });
       toast({
-        title: "Operación eliminada",
-        description: "La operación ha sido eliminada y el inventario restaurado.",
+        title: t("operations.toast.operationDeleted"),
+        description: t("operations.toast.operationDeletedDesc"),
       });
       setDeleteOperationId(null);
     },
     onError: (error) => {
       console.error("[Operations] Delete mutation error:", error);
       toast({
-        title: "Error al eliminar operación",
-        description: error.message || "Error desconocido. Verifique su conexión e intente de nuevo.",
+        title: t("operations.toast.errorDeleting"),
+        description: error.message || t("operations.toast.unknownError"),
         variant: "destructive",
       });
     },

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,7 +14,7 @@ import { Clock, Undo2, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { roleDisplayNames, UserRole } from "@/lib/permissions";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 
 interface ScheduledDeletion {
   id: string;
@@ -27,6 +28,8 @@ interface ScheduledDeletion {
 
 export function ScheduledDeletions() {
   const queryClient = useQueryClient();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "es" ? es : enUS;
 
   const { data: pendingDeletions = [], isLoading } = useQuery({
     queryKey: ["scheduled-deletions"],
@@ -58,11 +61,11 @@ export function ScheduledDeletions() {
 
       if (error) throw error;
 
-      toast.success(`Eliminación de ${deletion.user_email} cancelada`);
+      toast.success(t("scheduled.cancelledSuccess").replace("{email}", deletion.user_email));
       queryClient.invalidateQueries({ queryKey: ["scheduled-deletions"] });
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
     } catch (error: any) {
-      toast.error(error.message || "Error al cancelar eliminación");
+      toast.error(error.message || t("scheduled.cancelError"));
     }
   };
 
@@ -93,9 +96,9 @@ export function ScheduledDeletions() {
           <AlertTriangle className="h-5 w-5 text-destructive" />
         </div>
         <div>
-          <h3 className="font-semibold text-destructive">Eliminaciones Pendientes</h3>
+          <h3 className="font-semibold text-destructive">{t("scheduled.title")}</h3>
           <p className="text-sm text-muted-foreground">
-            Los siguientes usuarios serán eliminados a medianoche. Cancele antes si fue un error.
+            {t("scheduled.subtitle")}
           </p>
         </div>
       </div>
@@ -103,11 +106,11 @@ export function ScheduledDeletions() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Usuario</TableHead>
-            <TableHead>Rol</TableHead>
-            <TableHead>Programado</TableHead>
-            <TableHead>Se elimina</TableHead>
-            <TableHead className="w-[100px]">Acción</TableHead>
+             <TableHead>{t("scheduled.user")}</TableHead>
+             <TableHead>{t("scheduled.role")}</TableHead>
+             <TableHead>{t("scheduled.scheduled")}</TableHead>
+             <TableHead>{t("scheduled.deletesAt")}</TableHead>
+             <TableHead className="w-[100px]">{t("scheduled.action")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -123,12 +126,12 @@ export function ScheduledDeletions() {
                 }
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {format(new Date(deletion.scheduled_at), "dd MMM, HH:mm", { locale: es })}
+                {format(new Date(deletion.scheduled_at), "dd MMM, HH:mm", { locale: dateFnsLocale })}
               </TableCell>
               <TableCell>
                 <span className="flex items-center gap-1 text-destructive">
                   <Clock className="h-3 w-3" />
-                  {format(new Date(deletion.execute_after), "dd MMM, HH:mm", { locale: es })}
+                  {format(new Date(deletion.execute_after), "dd MMM, HH:mm", { locale: dateFnsLocale })}
                 </span>
               </TableCell>
               <TableCell>
@@ -139,7 +142,7 @@ export function ScheduledDeletions() {
                   onClick={() => handleCancelDeletion(deletion)}
                 >
                   <Undo2 className="h-4 w-4 mr-1" />
-                  Cancelar
+                  {t("common.cancel")}
                 </Button>
               </TableCell>
             </TableRow>

@@ -50,9 +50,9 @@ export function TractorOperatorsManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tractor-operators"] });
       setNewName("");
-      toast.success("Operador agregado");
+      toast.success(t("operators.added"));
     },
-    onError: () => toast.error("Error al agregar operador"),
+    onError: () => toast.error(t("operators.addError")),
   });
 
   const toggleMutation = useMutation({
@@ -66,7 +66,7 @@ export function TractorOperatorsManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tractor-operators"] });
     },
-    onError: () => toast.error("Error al actualizar"),
+    onError: () => toast.error(t("operators.updateError")),
   });
 
   const deleteMutation = useMutation({
@@ -79,9 +79,9 @@ export function TractorOperatorsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tractor-operators"] });
-      toast.success("Operador eliminado");
+      toast.success(t("operators.deleted"));
     },
-    onError: () => toast.error("Error al eliminar"),
+    onError: () => toast.error(t("operators.deleteError")),
   });
 
   const handleAdd = () => {
@@ -95,33 +95,33 @@ export function TractorOperatorsManager() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Operadores de Tractor
+          {t("operators.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
           <Input
-            placeholder="Nombre del operador"
+            placeholder={t("operators.namePlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           />
           <Button onClick={handleAdd} disabled={!newName.trim()}>
             <Plus className="h-4 w-4 mr-1" />
-            Agregar
+            {t("common.add")}
           </Button>
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : operators.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay operadores registrados.</p>
+          <p className="text-sm text-muted-foreground">{t("operators.noOperators")}</p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead className="w-24 text-center">Activo</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead className="w-24 text-center">{t("common.active")}</TableHead>
                 <TableHead className="w-16" />
               </TableRow>
             </TableHeader>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ const emptyForm: FormState = {
 };
 
 export function EntitiesManager() {
+  const { t } = useLanguage();
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -147,7 +149,7 @@ export function EntitiesManager() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.code.trim()) {
-      toast.error("Nombre y Código son requeridos");
+      toast.error(t("entities.nameCodeRequired"));
       return;
     }
 
@@ -167,7 +169,7 @@ export function EntitiesManager() {
           })
           .eq("id", editingId);
         if (error) throw error;
-        toast.success("Entidad actualizada");
+        toast.success(t("entities.updated"));
         setDialogOpen(false);
         fetchEntities();
       } else {
@@ -183,13 +185,13 @@ export function EntitiesManager() {
         }).select().single();
         if (error) {
           if (error.code === "23505") {
-            toast.error("El código ya existe. Use un código único.");
+            toast.error(t("entities.codeExists"));
           } else {
             throw error;
           }
           return;
         }
-        toast.success("Entidad creada");
+        toast.success(t("entities.created"));
         setDialogOpen(false);
         await fetchEntities();
         if (inserted) {
@@ -197,7 +199,7 @@ export function EntitiesManager() {
         }
       }
     } catch (err: any) {
-      toast.error(err.message || "Error al guardar");
+      toast.error(err.message || t("entities.saveError"));
     } finally {
       setSaving(false);
     }
@@ -209,10 +211,10 @@ export function EntitiesManager() {
 
       <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Entidades</h3>
+        <h3 className="text-lg font-semibold">{t("settings.entities")}</h3>
         <Button onClick={openNew} size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          Nueva Entidad
+          {t("entities.new")}
         </Button>
       </div>
 
@@ -220,13 +222,13 @@ export function EntitiesManager() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Grupo</TableHead>
+              <TableHead>{t("entities.code")}</TableHead>
+              <TableHead>{t("common.name")}</TableHead>
+              <TableHead>{t("entities.group")}</TableHead>
               <TableHead>RNC</TableHead>
-              <TableHead>País</TableHead>
-              <TableHead>Moneda</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>{t("entities.country")}</TableHead>
+              <TableHead>{t("entities.currency")}</TableHead>
+              <TableHead>{t("common.status")}</TableHead>
               <TableHead className="w-[100px]" />
             </TableRow>
           </TableHeader>
@@ -234,13 +236,13 @@ export function EntitiesManager() {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  Cargando...
+                  {t("common.loading")}
                 </TableCell>
               </TableRow>
             ) : entities.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  No hay entidades
+                  {t("entities.noEntities")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -254,7 +256,7 @@ export function EntitiesManager() {
                         {groups.find(g => g.id === e.entity_group_id)?.code || "—"}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground text-xs">Independiente</span>
+                      <span className="text-muted-foreground text-xs">{t("entities.independent")}</span>
                     )}
                   </TableCell>
                   <TableCell className="font-mono text-xs">{e.rnc || <span className="text-muted-foreground">—</span>}</TableCell>
@@ -262,7 +264,7 @@ export function EntitiesManager() {
                   <TableCell>{e.currency}</TableCell>
                   <TableCell>
                     <Badge variant={e.is_active ? "default" : "secondary"}>
-                      {e.is_active ? "Activo" : "Inactivo"}
+                      {e.is_active ? t("common.active") : t("common.inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -272,7 +274,7 @@ export function EntitiesManager() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setWizardEntity(e)}
-                          title="Asistente de configuración"
+                          title={t("entities.setupWizard")}
                         >
                           <Wand2 className="h-4 w-4 text-primary" />
                         </Button>
@@ -292,11 +294,11 @@ export function EntitiesManager() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Entidad" : "Nueva Entidad"}</DialogTitle>
+            <DialogTitle>{editingId ? t("entities.edit") : t("entities.new")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Nombre *</Label>
+              <Label>{t("common.name")} *</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -304,7 +306,7 @@ export function EntitiesManager() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Código *</Label>
+              <Label>{t("entities.code")} *</Label>
               <Input
                 value={form.code}
                 onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
@@ -313,7 +315,7 @@ export function EntitiesManager() {
                 className="font-mono"
               />
               {!editingId && (
-                <p className="text-xs text-muted-foreground">Identificador único corto. No se puede cambiar después.</p>
+                <p className="text-xs text-muted-foreground">{t("entities.codeHint")}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -325,10 +327,10 @@ export function EntitiesManager() {
                 maxLength={11}
                 className="font-mono"
               />
-              <p className="text-xs text-muted-foreground">Requerido para reportes DGII (606, 607, 608)</p>
+              <p className="text-xs text-muted-foreground">{t("entities.rncHint")}</p>
             </div>
             <div className="space-y-2">
-              <Label>Código Nómina TSS</Label>
+              <Label>{t("entities.tssCode")}</Label>
               <Input
                 value={form.tss_nomina_code}
                 onChange={(e) => setForm((f) => ({ ...f, tss_nomina_code: e.target.value.replace(/[^0-9]/g, "") }))}
@@ -336,19 +338,19 @@ export function EntitiesManager() {
                 maxLength={3}
                 className="font-mono"
               />
-              <p className="text-xs text-muted-foreground">Código de 3 dígitos asignado por la TSS al empleador</p>
+              <p className="text-xs text-muted-foreground">{t("entities.tssCodeHint")}</p>
             </div>
             <div className="space-y-2">
-              <Label>Descripción</Label>
+              <Label>{t("common.description")}</Label>
               <Input
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Opcional"
+                placeholder={t("entities.optional")}
               />
             </div>
             {groups.length > 0 && (
               <div className="space-y-2">
-                <Label>Grupo Intercompañía</Label>
+                <Label>{t("entities.intercompanyGroup")}</Label>
                 <Select
                   value={form.entity_group_id}
                   onValueChange={(v) => setForm((f) => ({ ...f, entity_group_id: v }))}
@@ -357,7 +359,7 @@ export function EntitiesManager() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Sin grupo (independiente)</SelectItem>
+                    <SelectItem value="__none__">{t("entities.noGroup")}</SelectItem>
                     {groups.map((g) => (
                       <SelectItem key={g.id} value={g.id}>
                         {g.code} — {g.name}
@@ -366,14 +368,14 @@ export function EntitiesManager() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Asignar a un grupo permite compartir cuentas bancarias y generar asientos intercompañía.
+                  {t("entities.groupHint")}
                 </p>
               </div>
             )}
             {!editingId && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>País</Label>
+                  <Label>{t("entities.country")}</Label>
                   <Input
                     value={form.country_code}
                     onChange={(e) => setForm((f) => ({ ...f, country_code: e.target.value }))}
@@ -382,7 +384,7 @@ export function EntitiesManager() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Moneda</Label>
+                  <Label>{t("entities.currency")}</Label>
                   <Input
                     value={form.currency}
                     onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
@@ -394,7 +396,7 @@ export function EntitiesManager() {
             )}
             {editingId && (
               <div className="flex items-center justify-between">
-                <Label>Activo</Label>
+                <Label>{t("common.active")}</Label>
                 <Switch
                   checked={form.is_active}
                   onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
@@ -403,9 +405,9 @@ export function EntitiesManager() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
+              {saving ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

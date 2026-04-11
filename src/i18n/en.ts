@@ -2433,4 +2433,50 @@ export const en = {
   "quickEntry.created": "Entry created and line reconciled",
   "quickEntry.create": "Create Entry",
   "quickEntry.creating": "Creating...",
+
+  // Fuel - Pending Submissions
+  "fuel.pendingSubmissions": "Pending Submissions",
+  "pending.cleanupComplete": "Cleanup complete",
+  "pending.cleanupResult": "{expired} expired and {orphan} orphans removed.",
+  "pending.expiredTitle": "Expired submissions",
+  "pending.expiredDesc": "There are {count} expired fuel submission(s) pending cleanup.",
+  "pending.cleanExpired": "Clean expired",
+  "pending.noPending": "No pending submissions.",
+  "pending.submitted": "Submitted",
+  "pending.expires": "Expires",
+  "pending.submittedBy": "Submitted by",
+  "pending.transaction": "Transaction",
+  "pending.unlinked": "Unlinked",
+  "pending.expired": "Expired",
+  "pending.pendingStatus": "Pending",
+
+  // Equipment - Hour Meter
+  "equipment.hourMeter": "Hour Meter",
+  "hourMeter.selectTractor": "Select tractor",
+  "hourMeter.currentMeter": "Current hour meter",
+  "hourMeter.gapsFound": "Gaps found",
+  "hourMeter.totalGapHours": "Total gap hours",
+  "hourMeter.noOperations": "No operations with hour meter for this tractor.",
+  "hourMeter.operation": "Operation",
+  "hourMeter.field": "Field",
+  "hourMeter.operator": "Operator",
+  "hourMeter.start": "Start",
+  "hourMeter.end": "End",
+  "hourMeter.hours": "Hours",
+  "hourMeter.gap": "Gap",
+
+  // Inventory tabs
+  "inventory.inventory": "Inventory",
+  "inventory.physicalCount": "Physical Count",
+
+  // Settings tabs
+  "settings.general": "General",
+  "settings.users": "Users",
+  "settings.qrCodes": "QR Codes",
+  "settings.followUps": "Follow-ups",
+  "settings.vendorRules": "Vendor Rules",
+  "settings.operators": "Operators",
+  "settings.transportation": "Transportation",
+  "settings.entities": "Entities",
+  "settings.approvals": "Approvals",
 };

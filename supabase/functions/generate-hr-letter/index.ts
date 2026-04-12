@@ -584,6 +584,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.error("Auth error:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -591,7 +592,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { letter_type, employee_id, ...letterData } = body;
+    const { letter_type, employee_id, entity_id, ...letterData } = body;
+    console.log("Generating letter:", letter_type, "for employee:", employee_id, "entity:", entity_id);
 
     let pdfBytes: Uint8Array;
     let fileName: string;
@@ -625,19 +627,32 @@ Deno.serve(async (req: Request) => {
         });
     }
 
+    console.log("PDF generated, uploading to storage:", fileName);
+
     // Upload to storage
-    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceRoleKey) {
+      console.error("SUPABASE_SERVICE_ROLE_KEY not set");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { error: uploadError } = await serviceClient.storage
       .from("employee-documents")
       .upload(fileName, pdfBytes, { contentType: "application/pdf", upsert: false });
 
     if (uploadError) {
+      console.error("Upload error:", uploadError.message);
       return new Response(JSON.stringify({ error: "Upload failed: " + uploadError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log("Upload successful, inserting document record");
 
     // Insert record
     const { data: docRecord, error: dbError } = await serviceClient
@@ -649,22 +664,27 @@ Deno.serve(async (req: Request) => {
         storage_path: fileName,
         letter_type,
         letter_metadata: letterData,
+        entity_id: entity_id,
       })
       .select("id")
       .single();
 
     if (dbError) {
+      console.error("DB insert error:", dbError.message, dbError.details, dbError.hint);
       return new Response(JSON.stringify({ error: "DB insert failed: " + dbError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("Document record created:", docRecord.id);
+
     return new Response(
       JSON.stringify({ success: true, document_id: docRecord.id, storage_path: fileName }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
+    console.error("Unhandled error in generate-hr-letter:", e.message, e.stack);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

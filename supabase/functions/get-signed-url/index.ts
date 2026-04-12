@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { filePath } = await req.json();
+    const { filePath, bucket } = await req.json();
     
     if (!filePath || typeof filePath !== 'string') {
       return new Response(
@@ -81,8 +81,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Determine bucket and validate path
+    const allowedBuckets: Record<string, (p: string) => boolean> = {
+      'transaction-attachments': (p) => p.startsWith('receipts/'),
+      'employee-documents': (p) => /^[0-9a-f-]+\//.test(p),
+    };
+
+    const targetBucket = bucket || 'transaction-attachments';
+
+    if (!allowedBuckets[targetBucket]) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid bucket' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Validate file path to prevent path traversal
-    if (filePath.includes('..') || !filePath.startsWith('receipts/')) {
+    if (filePath.includes('..') || !allowedBuckets[targetBucket](filePath)) {
       return new Response(
         JSON.stringify({ error: 'Invalid file path' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -91,7 +106,7 @@ Deno.serve(async (req) => {
 
     // Create signed URL with 1 hour expiry
     const { data, error } = await adminSupabase.storage
-      .from('transaction-attachments')
+      .from(targetBucket)
       .createSignedUrl(filePath, 3600); // 1 hour
 
     if (error) {

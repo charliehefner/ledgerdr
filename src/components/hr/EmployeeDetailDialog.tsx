@@ -92,7 +92,7 @@ export function EmployeeDetailDialog({
   const [incidentSeverity, setIncidentSeverity] = useState<string>("");
   const [incidentResolution, setIncidentResolution] = useState("");
 
-  const { data: employee } = useQuery({
+  const { data: employee, isLoading: isEmployeeLoading } = useQuery({
     queryKey: ["employee", employeeId],
     queryFn: async () => {
       if (!employeeId) return null;
@@ -442,16 +442,57 @@ export function EmployeeDetailDialog({
     }
   };
 
+  const getEmployeeDocumentSignedUrl = async (storagePath: string) => {
+    const { data, error } = await supabase.functions.invoke("get-signed-url", {
+      body: { filePath: storagePath, bucket: "employee-documents" },
+    });
+
+    if (error || !data?.signedUrl) {
+      throw error || new Error("No URL returned");
+    }
+
+    return data.signedUrl as string;
+  };
+
   const handleViewDocument = async (storagePath: string) => {
+    const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+
     try {
-      const { data, error } = await supabase.functions.invoke("get-signed-url", {
-        body: { filePath: storagePath, bucket: "employee-documents" },
-      });
-      if (error || !data?.signedUrl) throw error || new Error("No URL returned");
-      window.open(data.signedUrl, "_blank");
+      const signedUrl = await getEmployeeDocumentSignedUrl(storagePath);
+
+      if (previewWindow) {
+        previewWindow.location.href = signedUrl;
+      } else {
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
+      }
     } catch (error) {
+      previewWindow?.close();
       console.error("Error getting signed URL:", error);
       toast.error("Error al abrir documento");
+    }
+  };
+
+  const handleDownloadDocument = async (storagePath: string, fileName?: string | null) => {
+    try {
+      const signedUrl = await getEmployeeDocumentSignedUrl(storagePath);
+      const response = await fetch(signedUrl);
+
+      if (!response.ok) {
+        throw new Error("Failed to download document");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = fileName || storagePath.split("/").pop() || "documento";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      toast.error("Error al descargar documento");
     }
   };
 
@@ -486,6 +527,24 @@ export function EmployeeDetailDialog({
     }
     e.target.value = "";
   };
+
+  if (!employee) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Empleado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-8 text-sm text-muted-foreground">
+            {isEmployeeLoading ? "Cargando empleado..." : "No se pudo cargar el empleado."}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
 
 
@@ -1207,7 +1266,7 @@ export function EmployeeDetailDialog({
                             className="font-medium cursor-pointer text-primary hover:underline"
                             onClick={() => handleViewDocument(doc.storage_path)}
                           >
-                            {doc.document_name}
+                            {doc.document_name || doc.storage_path.split("/").pop() || "Documento"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {doc.letter_type
@@ -1226,8 +1285,8 @@ export function EmployeeDetailDialog({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                title="Abrir"
-                                onClick={() => handleViewDocument(doc.storage_path)}
+                                title="Descargar"
+                                onClick={() => handleDownloadDocument(doc.storage_path, doc.document_name)}
                               >
                                 <Download className="h-4 w-4" />
                               </Button>

@@ -39,6 +39,8 @@ import {
   Plus,
   Trash2,
   Upload,
+  Download,
+  Replace,
   History,
   TrendingUp,
   Percent,

@@ -1197,30 +1197,69 @@ export function EmployeeDetailDialog({
                         <TableHead>Nombre</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Subido</TableHead>
-                        {canModifySettings && <TableHead className="w-12" />}
+                        <TableHead className="w-32">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {documents?.map((doc) => (
                         <TableRow key={doc.id}>
-                          <TableCell className="font-medium">{doc.document_name}</TableCell>
+                          <TableCell
+                            className="font-medium cursor-pointer text-primary hover:underline"
+                            onClick={() => handleViewDocument(doc.storage_path)}
+                          >
+                            {doc.document_name}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {doc.document_type}
+                            {doc.letter_type
+                              ? doc.letter_type === "contrato" ? "Contrato"
+                                : doc.letter_type === "terminacion" ? "Terminación"
+                                : doc.letter_type === "carta_banco" ? "Carta Banco"
+                                : doc.letter_type === "vacaciones" ? "Vacaciones"
+                                : doc.document_type
+                              : doc.document_type}
                           </TableCell>
                           <TableCell>
                             {format(new Date(doc.created_at), "d MMM yyyy", { locale: es })}
                           </TableCell>
-                          {canModifySettings && (
-                            <TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteDocument(doc.id, doc.storage_path)}
+                                title="Abrir"
+                                onClick={() => handleViewDocument(doc.storage_path)}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Download className="h-4 w-4" />
                               </Button>
-                            </TableCell>
-                          )}
+                              {canModifySettings && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Reemplazar con documento firmado"
+                                    onClick={() => {
+                                      const input = document.createElement("input");
+                                      input.type = "file";
+                                      input.accept = ".pdf,.jpg,.jpeg,.png";
+                                      input.onchange = (e) =>
+                                        handleReplaceDocument(doc.id, doc.storage_path, e as any);
+                                      input.click();
+                                    }}
+                                  >
+                                    <Replace className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Eliminar"
+                                    onClick={() => handleDeleteDocument(doc.id, doc.storage_path)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

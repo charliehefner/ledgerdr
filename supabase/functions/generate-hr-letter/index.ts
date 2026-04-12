@@ -664,7 +664,7 @@ Deno.serve(async (req: Request) => {
         storage_path: fileName,
         letter_type,
         letter_metadata: letterData,
-        entity_id: body.entity_id || undefined,
+        entity_id: entity_id,
       })
       .select("id")
       .single();

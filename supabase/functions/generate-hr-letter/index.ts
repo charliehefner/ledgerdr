@@ -592,8 +592,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { letter_type, employee_id, ...letterData } = body;
-    console.log("Generating letter:", letter_type, "for employee:", employee_id);
+    const { letter_type, employee_id, entity_id, ...letterData } = body;
+    console.log("Generating letter:", letter_type, "for employee:", employee_id, "entity:", entity_id);
 
     let pdfBytes: Uint8Array;
     let fileName: string;

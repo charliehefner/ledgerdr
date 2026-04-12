@@ -442,7 +442,52 @@ export function EmployeeDetailDialog({
     }
   };
 
-  if (!employee) return null;
+  const handleViewDocument = async (storagePath: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-signed-url", {
+        body: { filePath: storagePath, bucket: "employee-documents" },
+      });
+      if (error || !data?.signedUrl) throw error || new Error("No URL returned");
+      window.open(data.signedUrl, "_blank");
+    } catch (error) {
+      console.error("Error getting signed URL:", error);
+      toast.error("Error al abrir documento");
+    }
+  };
+
+  const handleReplaceDocument = async (docId: string, storagePath: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Upload replacement file to same path (overwrite)
+      const { error: uploadError } = await supabase.storage
+        .from("employee-documents")
+        .upload(storagePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Update document record with new name/type
+      const { error: dbError } = await supabase
+        .from("employee_documents")
+        .update({
+          document_name: file.name,
+          document_type: file.type,
+        })
+        .eq("id", docId);
+
+      if (dbError) throw dbError;
+
+      toast.success("Documento reemplazado exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
+    } catch (error) {
+      console.error("Error replacing document:", error);
+      toast.error("Error al reemplazar documento");
+    }
+    e.target.value = "";
+  };
+
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

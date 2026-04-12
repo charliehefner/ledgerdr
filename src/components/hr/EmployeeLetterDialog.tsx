@@ -150,6 +150,7 @@ export function EmployeeLetterDialog({
         employee_name: employee.name,
         cedula: employee.cedula,
         position: employee.position,
+        entity_id: selectedEntityId,
       };
 
       if (letterType === "contrato") {

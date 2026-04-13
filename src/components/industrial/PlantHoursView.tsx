@@ -214,7 +214,10 @@ export function PlantHoursView() {
                   <TableCell>{hrs}</TableCell>
                   <TableCell>{r.estimated_tons ?? "—"}</TableCell>
                   <TableCell>{r.notes || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
+                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(r.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

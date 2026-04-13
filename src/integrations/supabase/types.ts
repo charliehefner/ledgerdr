@@ -5550,19 +5550,33 @@ export type Database = {
               vacation_deduction: number
             }[]
           }
-      calculate_prestaciones: {
-        Args: {
-          p_employee_id: string
-          p_include_loans?: boolean
-          p_manual_adjustments?: number
-          p_manual_deductions?: number
-          p_pending_vacation_days?: number
-          p_scenario: Database["public"]["Enums"]["prestaciones_scenario"]
-          p_termination_date: string
-          p_worked_notice?: boolean
-        }
-        Returns: Json
-      }
+      calculate_prestaciones:
+        | {
+            Args: {
+              p_employee_id: string
+              p_include_loans?: boolean
+              p_manual_adjustments?: number
+              p_manual_deductions?: number
+              p_pending_vacation_days?: number
+              p_scenario: Database["public"]["Enums"]["prestaciones_scenario"]
+              p_termination_date: string
+              p_worked_notice?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_employee_id: string
+              p_include_loans?: boolean
+              p_manual_adjustments?: number
+              p_manual_deductions?: number
+              p_pending_vacation_days?: number
+              p_scenario?: string
+              p_termination_date: string
+              p_worked_notice?: boolean
+            }
+            Returns: Json
+          }
       cancel_stock_count: { Args: { p_session_id: string }; Returns: boolean }
       close_day_labor_week: { Args: { p_week_ending: string }; Returns: string }
       count_unlinked_transactions: {

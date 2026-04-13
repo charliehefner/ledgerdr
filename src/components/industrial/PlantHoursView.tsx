@@ -25,12 +25,30 @@ import autoTable from "jspdf-autotable";
 
 export function PlantHoursView() {
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
   const { toast } = useToast();
   const { user } = useAuth();
   const { t } = useLanguage();
   const qc = useQueryClient();
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
+
+  const resetForm = () => {
+    setForm({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
+    setEditingId(null);
+  };
+
+  const openEdit = (row: any) => {
+    setEditingId(row.id);
+    setForm({
+      date: row.date || "",
+      start_hour_meter: row.start_hour_meter != null ? String(row.start_hour_meter) : "",
+      finish_hour_meter: row.finish_hour_meter != null ? String(row.finish_hour_meter) : "",
+      estimated_tons: row.estimated_tons != null ? String(row.estimated_tons) : "",
+      notes: row.notes || "",
+    });
+    setOpen(true);
+  };
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["industrial-plant-hours", selectedEntityId],
@@ -61,8 +79,29 @@ export function PlantHoursView() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["industrial-plant-hours"] });
       setOpen(false);
-      setForm({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
+      resetForm();
       toast({ title: t("industrial.recordAdded") });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      const { error } = await supabase.from("industrial_plant_hours").update({
+        date: form.date || null,
+        start_hour_meter: form.start_hour_meter ? Number(form.start_hour_meter) : null,
+        finish_hour_meter: form.finish_hour_meter ? Number(form.finish_hour_meter) : null,
+        estimated_tons: form.estimated_tons ? Number(form.estimated_tons) : null,
+        notes: form.notes || null,
+      }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["industrial-plant-hours"] });
+      setOpen(false);
+      resetForm();
+      toast({ title: t("industrial.recordUpdated") || "Record updated" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

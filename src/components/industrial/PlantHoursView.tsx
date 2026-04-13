@@ -157,12 +157,12 @@ export function PlantHoursView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-1" /> {t("industrial.add")}</Button>
+            <Button onClick={() => resetForm()}><Plus className="h-4 w-4 mr-1" /> {t("industrial.add")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{t("industrial.newPlantHours")}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingId ? (t("industrial.editPlantHours") || "Edit Record") : t("industrial.newPlantHours")}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
               <div><Label>{t("industrial.date")}</Label><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
               <div><Label>{t("industrial.startMeter")}</Label><Input type="number" step="0.1" value={form.start_hour_meter} onChange={(e) => setForm({ ...form, start_hour_meter: e.target.value })} /></div>
@@ -170,7 +170,7 @@ export function PlantHoursView() {
               <div><Label>{t("industrial.estimatedTons")}</Label><Input type="number" step="0.01" value={form.estimated_tons} onChange={(e) => setForm({ ...form, estimated_tons: e.target.value })} /></div>
               <div><Label>{t("industrial.notes")}</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
-            <Button onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>{t("industrial.save")}</Button>
+            <Button onClick={() => editingId ? updateMutation.mutate() : addMutation.mutate()} disabled={addMutation.isPending || updateMutation.isPending}>{t("industrial.save")}</Button>
           </DialogContent>
         </Dialog>
 

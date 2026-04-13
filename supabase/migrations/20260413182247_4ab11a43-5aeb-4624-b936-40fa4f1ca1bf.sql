@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.calculate_prestaciones(uuid, date, prestaciones_scenario, boolean, numeric, boolean, numeric, numeric);

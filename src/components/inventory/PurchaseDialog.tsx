@@ -213,7 +213,12 @@ export function PurchaseDialog({
       toast.error("Please enter a valid packaging size");
       return;
     }
-    mutation.mutate(form);
+    const entityId = requireEntity();
+    if (!entityId) {
+      toast.error("Please select an entity before registering a purchase");
+      return;
+    }
+    mutation.mutate({ ...form, entity_id: entityId });
   };
 
   const calculateTotal = () => {

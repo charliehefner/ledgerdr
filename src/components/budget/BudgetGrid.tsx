@@ -294,33 +294,26 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           .eq("id", params.lineId);
         if (error) throw error;
       } else {
-        // Check if a row already exists (race-condition guard)
-        let query = supabase
+        // Check if a row already exists (race-condition guard against duplicate inserts)
+        const pCode = budgetType === "project" ? projectCode : null;
+        const pLineId = params.parentLineId || null;
+        const sLabel = params.subLabel || null;
+
+        let rpcQuery = supabase
           .from("budget_lines")
           .select("id")
           .eq("budget_type" as any, budgetType)
           .eq("fiscal_year" as any, fiscalYear)
-          .eq("line_code" as any, params.lineCode);
+          .eq("line_code" as any, params.lineCode) as any;
 
-        if (budgetType === "project") {
-          query = query.eq("project_code" as any, projectCode!);
-        } else {
-          query = query.is("project_code" as any, null);
-        }
+        if (pCode) { rpcQuery = rpcQuery.eq("project_code", pCode); }
+        else { rpcQuery = rpcQuery.is("project_code", null); }
+        if (pLineId) { rpcQuery = rpcQuery.eq("parent_line_id", pLineId); }
+        else { rpcQuery = rpcQuery.is("parent_line_id", null); }
+        if (sLabel) { rpcQuery = rpcQuery.eq("sub_label", sLabel); }
+        else { rpcQuery = rpcQuery.is("sub_label", null); }
 
-        if (params.parentLineId) {
-          query = query.eq("parent_line_id" as any, params.parentLineId);
-        } else {
-          query = query.is("parent_line_id" as any, null);
-        }
-
-        if (params.subLabel) {
-          query = query.eq("sub_label" as any, params.subLabel);
-        } else {
-          query = query.is("sub_label" as any, null);
-        }
-
-        const { data: existing } = await query.limit(1).maybeSingle();
+        const { data: existing } = await rpcQuery.limit(1).maybeSingle();
 
         if (existing?.id) {
           const { error } = await supabase

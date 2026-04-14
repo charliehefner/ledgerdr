@@ -294,19 +294,42 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           .eq("id", params.lineId);
         if (error) throw error;
       } else {
-        // Insert new top-level line
-        const row: any = {
-          budget_type: budgetType,
-          project_code: budgetType === "project" ? projectCode : null,
-          fiscal_year: fiscalYear,
-          line_code: params.lineCode,
-          [params.field]: params.value,
-          created_by: user?.id || null,
-          parent_line_id: params.parentLineId || null,
-          sub_label: params.subLabel || null,
-        };
-        const { error } = await supabase.from("budget_lines").insert(row);
-        if (error) throw error;
+        // Check if a row already exists (race-condition guard against duplicate inserts)
+        const pCode = budgetType === "project" ? projectCode : null;
+        const pLineId = params.parentLineId || null;
+        const sLabel = params.subLabel || null;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = supabase.from("budget_lines").select("id");
+        q = q.eq("budget_type", budgetType);
+        q = q.eq("fiscal_year", fiscalYear);
+        q = q.eq("line_code", params.lineCode);
+        q = pCode ? q.eq("project_code", pCode) : q.is("project_code", null);
+        q = pLineId ? q.eq("parent_line_id", pLineId) : q.is("parent_line_id", null);
+        q = sLabel ? q.eq("sub_label", sLabel) : q.is("sub_label", null);
+
+        const { data: existing } = await q.limit(1).maybeSingle();
+
+        if (existing?.id) {
+          const { error } = await supabase
+            .from("budget_lines")
+            .update({ [params.field]: params.value } as any)
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const row: any = {
+            budget_type: budgetType,
+            project_code: budgetType === "project" ? projectCode : null,
+            fiscal_year: fiscalYear,
+            line_code: params.lineCode,
+            [params.field]: params.value,
+            created_by: user?.id || null,
+            parent_line_id: params.parentLineId || null,
+            sub_label: params.subLabel || null,
+          };
+          const { error } = await supabase.from("budget_lines").insert(row);
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {

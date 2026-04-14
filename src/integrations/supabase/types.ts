@@ -5522,31 +5522,32 @@ export type Database = {
           }
         | {
             Args: {
-              p_commit?: boolean
-              p_entity_id?: string
+              p_commit: boolean
+              p_entity_id: string
               p_period_id: string
             }
             Returns: {
               absence_deduction: number
               base_pay: number
-              committed: boolean
+              benefits: number
               days_absent: number
               days_holiday: number
               days_worked: number
               employee_id: string
               employee_name: string
               gross_pay: number
+              holiday_hours: number
               holiday_pay: number
-              isr: number
+              isr_deduction: number
               loan_deduction: number
               net_pay: number
               overtime_hours: number
               overtime_pay: number
               salary: number
+              sunday_hours: number
               sunday_pay: number
-              total_benefits: number
               total_deductions: number
-              tss: number
+              tss_deduction: number
               vacation_deduction: number
             }[]
           }

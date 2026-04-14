@@ -294,19 +294,59 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
           .eq("id", params.lineId);
         if (error) throw error;
       } else {
-        // Insert new top-level line
-        const row: any = {
+        // Check if a row already exists (race-condition guard)
+        const matchFilter: any = {
           budget_type: budgetType,
-          project_code: budgetType === "project" ? projectCode : null,
           fiscal_year: fiscalYear,
           line_code: params.lineCode,
-          [params.field]: params.value,
-          created_by: user?.id || null,
-          parent_line_id: params.parentLineId || null,
-          sub_label: params.subLabel || null,
         };
-        const { error } = await supabase.from("budget_lines").insert(row);
-        if (error) throw error;
+        let query = supabase
+          .from("budget_lines")
+          .select("id")
+          .match(matchFilter)
+          .eq("project_code", budgetType === "project" ? projectCode! : "")
+          .is("parent_line_id", params.parentLineId ?? null)
+          .is("sub_label", params.subLabel ?? null)
+          .limit(1)
+          .maybeSingle();
+
+        // project_code can be null for non-project budgets
+        if (budgetType !== "project") {
+          query = supabase
+            .from("budget_lines")
+            .select("id")
+            .eq("budget_type", budgetType)
+            .eq("fiscal_year", fiscalYear)
+            .eq("line_code", params.lineCode)
+            .is("project_code", null)
+            .is("parent_line_id", params.parentLineId ?? null)
+            .is("sub_label", params.subLabel ?? null)
+            .limit(1)
+            .maybeSingle();
+        }
+
+        const { data: existing } = await query;
+
+        if (existing?.id) {
+          const { error } = await supabase
+            .from("budget_lines")
+            .update({ [params.field]: params.value } as any)
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const row: any = {
+            budget_type: budgetType,
+            project_code: budgetType === "project" ? projectCode : null,
+            fiscal_year: fiscalYear,
+            line_code: params.lineCode,
+            [params.field]: params.value,
+            created_by: user?.id || null,
+            parent_line_id: params.parentLineId || null,
+            sub_label: params.subLabel || null,
+          };
+          const { error } = await supabase.from("budget_lines").insert(row);
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {

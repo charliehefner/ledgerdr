@@ -295,37 +295,32 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         if (error) throw error;
       } else {
         // Check if a row already exists (race-condition guard)
-        const matchFilter: any = {
-          budget_type: budgetType,
-          fiscal_year: fiscalYear,
-          line_code: params.lineCode,
-        };
         let query = supabase
           .from("budget_lines")
           .select("id")
-          .match(matchFilter)
-          .eq("project_code", budgetType === "project" ? projectCode! : "")
-          .is("parent_line_id", params.parentLineId ?? null)
-          .is("sub_label", params.subLabel ?? null)
-          .limit(1)
-          .maybeSingle();
+          .eq("budget_type" as any, budgetType)
+          .eq("fiscal_year" as any, fiscalYear)
+          .eq("line_code" as any, params.lineCode);
 
-        // project_code can be null for non-project budgets
-        if (budgetType !== "project") {
-          query = supabase
-            .from("budget_lines")
-            .select("id")
-            .eq("budget_type", budgetType)
-            .eq("fiscal_year", fiscalYear)
-            .eq("line_code", params.lineCode)
-            .is("project_code", null)
-            .is("parent_line_id", params.parentLineId ?? null)
-            .is("sub_label", params.subLabel ?? null)
-            .limit(1)
-            .maybeSingle();
+        if (budgetType === "project") {
+          query = query.eq("project_code" as any, projectCode!);
+        } else {
+          query = query.is("project_code" as any, null);
         }
 
-        const { data: existing } = await query;
+        if (params.parentLineId) {
+          query = query.eq("parent_line_id" as any, params.parentLineId);
+        } else {
+          query = query.is("parent_line_id" as any, null);
+        }
+
+        if (params.subLabel) {
+          query = query.eq("sub_label" as any, params.subLabel);
+        } else {
+          query = query.is("sub_label" as any, null);
+        }
+
+        const { data: existing } = await query.limit(1).maybeSingle();
 
         if (existing?.id) {
           const { error } = await supabase

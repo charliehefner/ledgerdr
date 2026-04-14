@@ -254,6 +254,7 @@ export function PayrollTimeGrid({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-preview"] });
     },
     onError: (error) => {
       toast.error(t("timeGrid.saveError") + error.message);
@@ -284,6 +285,7 @@ export function PayrollTimeGrid({
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-preview"] });
     },
   });
 
@@ -385,6 +387,7 @@ export function PayrollTimeGrid({
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-preview"] });
       toast.success(t("timeGrid.autoFilled").replace("{count}", String(salariedEmployees.length)));
     } catch (error: any) {
       toast.error(t("timeGrid.autoFillError") + error.message);
@@ -534,6 +537,7 @@ export function PayrollTimeGrid({
       }
       
       queryClient.invalidateQueries({ queryKey: ["timesheets", periodId] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-preview"] });
       toast.success(newHolidayStatus ? t("timeGrid.holidayMarked") : t("timeGrid.holidayRemoved"));
     } catch (error: any) {
       toast.error(t("timeGrid.holidayError") + error.message);

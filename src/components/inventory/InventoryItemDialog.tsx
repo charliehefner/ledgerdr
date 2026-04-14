@@ -67,6 +67,7 @@ export function InventoryItemDialog({
   editingItemId,
 }: InventoryItemDialogProps) {
   const queryClient = useQueryClient();
+  const { requireEntity } = useEntity();
   const [form, setForm] = useState(initialFormState);
 
   const { data: existingItem } = useQuery({

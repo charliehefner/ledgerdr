@@ -1,52 +1,23 @@
 
 
-## Fix Prestaciones Calculation to Match Ministry of Labor
+## Fix: Budget and Forecast Save Errors
 
 ### Problem
-Two calculation formulas differ from the Ministry of Labor's official calculator:
+When editing both Budget and Forecast (or any two fields) on the same row, the first edit creates the row via INSERT. Before the query cache refreshes, the second edit also tries INSERT — hitting the unique constraint and failing.
 
-1. **Cesantía uses prorated months; Ministry uses complete years**
-   - Art. 80 C.T.: "21 days per year" for 1-5 years of service
-   - Ministry interprets this as 21 × complete_years (e.g., 2 years = 42 days)
-   - App currently does `21 × total_months / 12` which prorates partial years (e.g., 2y1m = 44.3 days)
+### Root Cause
+`handleBlur` (line 320) checks `lineMap[lineCode]` to decide INSERT vs UPDATE. But `lineMap` only updates after the query refetch completes. Rapid edits on a new row race against the refetch.
 
-2. **Vacation accrual gives fractional days; Ministry rounds to entitlement**
-   - Ministry gives full 14 days when nearly a full year has elapsed since last vacation
-   - App gives proportional 13.73 days
-
-### Data Issues to Fix
-- Employee hire date: change from 2024-04-02 to 2024-04-01 to match actual date
-- Salary history effective_date: `0024-02-14` should be `2024-02-14` (year typo)
+### Solution
+Change the upsert mutation to **always check for an existing row first** via a SELECT before deciding to INSERT or UPDATE. This eliminates the race condition.
 
 ### Changes
 
-**Database migration — update `calculate_prestaciones` function:**
+**`src/components/budget/BudgetGrid.tsx`** — modify the `upsertMutation` (lines 287-318):
 
-1. **Cesantía logic** — change from prorated months to complete years:
-   ```sql
-   -- CURRENT (prorated):
-   v_cesantia_days := ROUND(21 * v_total_service_months / 12.0, 2);
-   
-   -- FIXED (complete years, matching Ministry):
-   v_cesantia_days := 21 * v_service_years;
-   ```
-   Same fix for the 5+ year bracket (23 × complete years).
+1. When no `lineId` is provided, run a SELECT query first using the unique key columns (`budget_type`, `project_code`, `fiscal_year`, `line_code`, `parent_line_id`, `sub_label`)
+2. If a matching row is found, UPDATE it instead of INSERTing
+3. If no row exists, INSERT as before
 
-2. **Vacation rounding** — round up to full entitlement when accrued days are within 1 day of the entitlement:
-   ```sql
-   -- After proportional calculation, round up if >= 95% of entitlement
-   IF v_pending_vacation_days >= (v_vacation_entitlement * 0.95) THEN
-     v_pending_vacation_days := v_vacation_entitlement;
-   END IF;
-   ```
-
-3. **Data fix** — correct the employee's hire date and salary history date via migration.
-
-### Steps
-1. Create a database migration with the corrected `calculate_prestaciones` function
-2. Include data fix for employee hire date and salary history date
-3. No UI changes needed — the dialog already calls the RPC
-
-### Expected Result After Fix
-Running Cedeño's calculation with termination date 2026-04-30 should produce values matching the Ministry's totals within a few pesos of rounding.
+This is a ~15-line change inside the `mutationFn` at line 288. No other files affected.
 

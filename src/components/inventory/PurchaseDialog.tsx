@@ -58,6 +58,7 @@ export function PurchaseDialog({
   preselectedItemId,
 }: PurchaseDialogProps) {
   const queryClient = useQueryClient();
+  const { requireEntity } = useEntity();
   const [form, setForm] = useState({
     ...initialFormState,
     item_id: preselectedItemId || "",

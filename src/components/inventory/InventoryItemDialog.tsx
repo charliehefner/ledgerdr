@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEntity } from "@/contexts/EntityContext";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +67,7 @@ export function InventoryItemDialog({
   editingItemId,
 }: InventoryItemDialogProps) {
   const queryClient = useQueryClient();
+  const { requireEntity } = useEntity();
   const [form, setForm] = useState(initialFormState);
 
   const { data: existingItem } = useQuery({
@@ -124,7 +126,9 @@ export function InventoryItemDialog({
           .eq("id", editingItemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("inventory_items").insert(payload);
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Please select an entity before adding an item");
+        const { error } = await supabase.from("inventory_items").insert({ ...payload, entity_id: entityId });
         if (error) throw error;
       }
     },

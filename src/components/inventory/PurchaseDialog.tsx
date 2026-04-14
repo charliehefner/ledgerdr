@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEntity } from "@/contexts/EntityContext";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -57,6 +58,7 @@ export function PurchaseDialog({
   preselectedItemId,
 }: PurchaseDialogProps) {
   const queryClient = useQueryClient();
+  const { requireEntity } = useEntity();
   const [form, setForm] = useState({
     ...initialFormState,
     item_id: preselectedItemId || "",
@@ -99,7 +101,7 @@ export function PurchaseDialog({
   }, [isFuelItem, form.tank_id]);
 
   const mutation = useMutation({
-    mutationFn: async (data: typeof form) => {
+    mutationFn: async (data: typeof form & { entity_id: string }) => {
       const quantity = parseFloat(data.quantity);
       const unitPrice = parseFloat(data.unit_price);
       const packagingQuantity = parseFloat(data.packaging_quantity) || 1;
@@ -110,6 +112,7 @@ export function PurchaseDialog({
       const { error: purchaseError } = await supabase
         .from("inventory_purchases")
         .insert({
+          entity_id: data.entity_id,
           item_id: data.item_id,
           purchase_date: format(data.purchase_date, "yyyy-MM-dd"),
           document_number: data.document_number || null,
@@ -139,6 +142,7 @@ export function PurchaseDialog({
         const { error: transactionError } = await supabase
           .from("fuel_transactions")
           .insert({
+            entity_id: data.entity_id,
             tank_id: data.tank_id,
             transaction_type: "refill",
             gallons: addedQuantity,
@@ -209,7 +213,12 @@ export function PurchaseDialog({
       toast.error("Please enter a valid packaging size");
       return;
     }
-    mutation.mutate(form);
+    const entityId = requireEntity();
+    if (!entityId) {
+      toast.error("Please select an entity before registering a purchase");
+      return;
+    }
+    mutation.mutate({ ...form, entity_id: entityId });
   };
 
   const calculateTotal = () => {

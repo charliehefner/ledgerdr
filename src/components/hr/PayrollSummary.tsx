@@ -233,7 +233,7 @@ export function PayrollSummary({
         loan_deduction: Number(s.loan_deduction),
         absence_deduction: Number(s.absence_deduction),
         vacation_deduction: Number(s.vacation_deduction),
-        total_deductions: Number(s.tss) + Number(s.isr) + Number(s.absence_deduction) + Number(s.vacation_deduction) + Number(s.loan_deduction),
+        total_deductions: Number(s.gross_pay) - Number(s.net_pay),
         net_pay: Number(s.net_pay),
         days_worked: 0,
         days_absent: 0,

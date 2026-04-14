@@ -1,23 +1,26 @@
 
 
-## Fix: Budget and Forecast Save Errors
+## Remove Number Input Spinners from Budget Grid
 
 ### Problem
-When editing both Budget and Forecast (or any two fields) on the same row, the first edit creates the row via INSERT. Before the query cache refreshes, the second edit also tries INSERT — hitting the unique constraint and failing.
-
-### Root Cause
-`handleBlur` (line 320) checks `lineMap[lineCode]` to decide INSERT vs UPDATE. But `lineMap` only updates after the query refetch completes. Rapid edits on a new row race against the refetch.
+All `type="number"` inputs in the Budget grid show browser-native increment/decrement arrows (spinners). These are unnecessary for financial data entry and add visual clutter.
 
 ### Solution
-Change the upsert mutation to **always check for an existing row first** via a SELECT before deciding to INSERT or UPDATE. This eliminates the race condition.
+Add CSS rules to `src/index.css` to hide the number input spinners globally (or scoped to the budget grid). This is a tiny CSS-only change — no component logic changes needed.
 
 ### Changes
 
-**`src/components/budget/BudgetGrid.tsx`** — modify the `upsertMutation` (lines 287-318):
+**`src/index.css`** — Add these rules to hide number input spinners across all browsers:
+```css
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+```
 
-1. When no `lineId` is provided, run a SELECT query first using the unique key columns (`budget_type`, `project_code`, `fiscal_year`, `line_code`, `parent_line_id`, `sub_label`)
-2. If a matching row is found, UPDATE it instead of INSERTing
-3. If no row exists, INSERT as before
-
-This is a ~15-line change inside the `mutationFn` at line 288. No other files affected.
+This removes the arrows globally, which is appropriate since the app is a financial/ERP tool where spinner arrows are generally unwanted. Single file, ~8 lines of CSS.
 

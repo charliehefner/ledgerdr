@@ -299,22 +299,16 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         const pLineId = params.parentLineId || null;
         const sLabel = params.subLabel || null;
 
-        // Build filter string for PostgREST
-        const filters: string[] = [
-          `budget_type.eq.${budgetType}`,
-          `fiscal_year.eq.${fiscalYear}`,
-          `line_code.eq.${params.lineCode}`,
-          pCode ? `project_code.eq.${pCode}` : `project_code.is.null`,
-          pLineId ? `parent_line_id.eq.${pLineId}` : `parent_line_id.is.null`,
-          sLabel ? `sub_label.eq.${sLabel}` : `sub_label.is.null`,
-        ];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = supabase.from("budget_lines").select("id");
+        q = q.eq("budget_type", budgetType);
+        q = q.eq("fiscal_year", fiscalYear);
+        q = q.eq("line_code", params.lineCode);
+        q = pCode ? q.eq("project_code", pCode) : q.is("project_code", null);
+        q = pLineId ? q.eq("parent_line_id", pLineId) : q.is("parent_line_id", null);
+        q = sLabel ? q.eq("sub_label", sLabel) : q.is("sub_label", null);
 
-        const { data: existing } = await (supabase
-          .from("budget_lines")
-          .select("id")
-          .or(filters.join(",and:")) as any)
-          .limit(1)
-          .maybeSingle();
+        const { data: existing } = await q.limit(1).maybeSingle();
 
         if (existing?.id) {
           const { error } = await supabase

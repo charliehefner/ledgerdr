@@ -1,29 +1,51 @@
 
 
-## Fix: TSS and ISR Not Calculating (Wrong Parameter Key Names)
+## Audit: Two Divergent Payroll Functions — Root Cause and Hidden Issues
 
-### Root Cause
+### What Happened
 
-There are two overloads of `calculate_payroll_for_period`:
-- **2-arg version** (p_period_id, p_commit) — uses correct keys: `afp_employee_pct`, `sfs_employee_pct`, `afp_cap_monthly`, `sfs_cap_monthly`
-- **3-arg version** (p_period_id, p_commit, p_entity_id) — uses wrong keys: `employee_afp_rate`, `employee_sfs_rate`, `afp_salary_cap`, `sfs_salary_cap`
+The first holiday-fix migration (20260414150040) **dropped and recreated both overloads** of `calculate_payroll_for_period`. The 3-arg version (which the frontend actually calls) was recreated from a stale copy with wrong parameter keys and missing logic. Each subsequent fix patched one symptom but introduced further drift. You now have two overloads that calculate payroll **differently**.
 
-The frontend (PayrollSummary) calls the 3-arg version. Since those keys don't exist in `tss_parameters`, all four variables are NULL, making TSS = NULL and ISR = NULL → zero deductions for everyone.
+### Hidden Issues Found (3-arg overload vs 2-arg)
 
-This was introduced by the earlier migration that recreated the function with the holiday fix — it used stale key names in the first overload.
+| # | Issue | Severity | Detail |
+|---|---|---|---|
+| 1 | **Loan decrement missing on commit** | Critical | When you Close Period via the 3-arg overload, `employee_loans.remaining_payments` is never decremented. Loans will never pay down. |
+| 2 | **Benefits source wrong** | High | 2-arg reads `period_employee_benefits` first (per-period overrides), falls back to `employee_benefits / 2`. 3-arg reads only `employee_benefits` (full amount, not halved). Benefits may be doubled. |
+| 3 | **No intermediate rounding** | Medium | 2-arg rounds all intermediate values to 2 decimals. 3-arg doesn't round at all, causing penny drift across employees. |
+| 4 | **2-arg OT still has the old lunch bug** | Medium | The 2-arg overload was never patched with the lunch deduction fix — it still uses raw `hours_worked - 8`. If anything ever calls the 2-arg, OT will be wrong. |
+| 5 | **Snapshot column mismatch** | Low | 2-arg saves to `payroll_snapshots` with column names like `tss`, `total_benefits`. 3-arg uses `tss_deduction`, `benefits`. If the table has both sets, one set will be NULL. |
 
-### Fix
+### Plan: Consolidate Into a Single Canonical Function
 
-Single migration to drop and recreate the 3-arg overload, replacing the four wrong parameter keys with the correct ones:
+Rather than patching more drift, **replace both overloads with a single function** that has the entity parameter as optional (defaulting to NULL = all entities). This eliminates the synchronization problem permanently.
 
-| Wrong key | Correct key |
-|---|---|
-| `employee_afp_rate` | `afp_employee_pct` |
-| `employee_sfs_rate` | `sfs_employee_pct` |
-| `afp_salary_cap` | `afp_cap_monthly` |
-| `sfs_salary_cap` | `sfs_cap_monthly` |
+**Single migration** that:
 
-Also add COALESCE defaults (matching the 2-arg version) and divide percentages by 100, since the values are stored as `2.87` / `3.04`, not `0.0287` / `0.0304`.
+1. Drops both existing overloads
+2. Creates one function: `calculate_payroll_for_period(p_period_id UUID, p_commit BOOLEAN DEFAULT FALSE, p_entity_id UUID DEFAULT NULL)` incorporating:
+   - Correct TSS parameter keys with `/100` division and COALESCE defaults
+   - Lunch deduction on OT, Sunday, and holiday hours
+   - Holiday-absence exclusion
+   - `period_employee_benefits` with fallback to `employee_benefits / 2`
+   - Loan decrement on commit
+   - `round()` on all intermediate calculations
+   - Year passed to `calculate_annual_isr`
+   - Correct snapshot column names matching the actual table schema
+3. No frontend changes needed — the RPC call already passes 3 args
 
-One migration file. No frontend changes needed.
+### Technical Details
+
+The function signature stays compatible:
+```sql
+CREATE OR REPLACE FUNCTION public.calculate_payroll_for_period(
+  p_period_id UUID,
+  p_commit BOOLEAN DEFAULT FALSE,
+  p_entity_id UUID DEFAULT NULL
+) RETURNS TABLE (...)
+```
+
+The RETURN TABLE columns will use the names from the current 3-arg version (which the frontend expects): `tss_deduction`, `isr_deduction`, `benefits`, `sunday_hours`, `holiday_hours`.
+
+The `payroll_snapshots` INSERT will be verified against the actual table columns to prevent NULL mismatches.
 

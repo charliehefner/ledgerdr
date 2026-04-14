@@ -299,21 +299,22 @@ export function BudgetGrid({ budgetType, projectCode, fiscalYear }: BudgetGridPr
         const pLineId = params.parentLineId || null;
         const sLabel = params.subLabel || null;
 
-        let rpcQuery = supabase
+        // Build filter string for PostgREST
+        const filters: string[] = [
+          `budget_type.eq.${budgetType}`,
+          `fiscal_year.eq.${fiscalYear}`,
+          `line_code.eq.${params.lineCode}`,
+          pCode ? `project_code.eq.${pCode}` : `project_code.is.null`,
+          pLineId ? `parent_line_id.eq.${pLineId}` : `parent_line_id.is.null`,
+          sLabel ? `sub_label.eq.${sLabel}` : `sub_label.is.null`,
+        ];
+
+        const { data: existing } = await (supabase
           .from("budget_lines")
           .select("id")
-          .eq("budget_type" as any, budgetType)
-          .eq("fiscal_year" as any, fiscalYear)
-          .eq("line_code" as any, params.lineCode) as any;
-
-        if (pCode) { rpcQuery = rpcQuery.eq("project_code", pCode); }
-        else { rpcQuery = rpcQuery.is("project_code", null); }
-        if (pLineId) { rpcQuery = rpcQuery.eq("parent_line_id", pLineId); }
-        else { rpcQuery = rpcQuery.is("parent_line_id", null); }
-        if (sLabel) { rpcQuery = rpcQuery.eq("sub_label", sLabel); }
-        else { rpcQuery = rpcQuery.is("sub_label", null); }
-
-        const { data: existing } = await rpcQuery.limit(1).maybeSingle();
+          .or(filters.join(",and:")) as any)
+          .limit(1)
+          .maybeSingle();
 
         if (existing?.id) {
           const { error } = await supabase

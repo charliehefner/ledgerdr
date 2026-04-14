@@ -1,23 +1,29 @@
 
 
-## Fix: Timesheet Changes Not Reflected in Summary & Close
+## Fix: TSS and ISR Not Calculating (Wrong Parameter Key Names)
 
-### Problem
-When you edit timesheet data (e.g., remove a holiday marking), the Summary & Close tab still shows the old cached payroll preview. The preview query uses `enabled: false` (manual trigger only) and its cache key `["payroll-preview", periodId]` is never invalidated when timesheet data changes.
+### Root Cause
 
-### Solution
-Invalidate the payroll preview cache whenever timesheet data is modified, so the next time the user views the Summary tab, the stale data is cleared and they see a prompt to re-preview (or it auto-refreshes).
+There are two overloads of `calculate_payroll_for_period`:
+- **2-arg version** (p_period_id, p_commit) — uses correct keys: `afp_employee_pct`, `sfs_employee_pct`, `afp_cap_monthly`, `sfs_cap_monthly`
+- **3-arg version** (p_period_id, p_commit, p_entity_id) — uses wrong keys: `employee_afp_rate`, `employee_sfs_rate`, `afp_salary_cap`, `sfs_salary_cap`
 
-### Changes
+The frontend (PayrollSummary) calls the 3-arg version. Since those keys don't exist in `tss_parameters`, all four variables are NULL, making TSS = NULL and ISR = NULL → zero deductions for everyone.
 
-**`src/components/hr/PayrollTimeGrid.tsx`** — Add `queryClient.invalidateQueries({ queryKey: ["payroll-preview"] })` in these locations:
+This was introduced by the earlier migration that recreated the function with the holiday fix — it used stale key names in the first overload.
 
-1. **Upsert mutation `onSuccess`** (line ~256) — when any timesheet cell is saved
-2. **Absence toggle `onSettled`** (line ~286) — when absence is toggled
-3. **Auto-fill handler** (line ~387) — after bulk auto-fill
-4. **Holiday toggle** (line ~536) — after marking/unmarking a holiday
+### Fix
 
-Each is a single line addition alongside the existing `["timesheets", periodId]` invalidation. This ensures that any timesheet change clears the stale payroll preview, forcing a fresh RPC call on the Summary tab.
+Single migration to drop and recreate the 3-arg overload, replacing the four wrong parameter keys with the correct ones:
 
-No other files need changes. The Summary component already handles the "no preview data" state correctly.
+| Wrong key | Correct key |
+|---|---|
+| `employee_afp_rate` | `afp_employee_pct` |
+| `employee_sfs_rate` | `sfs_employee_pct` |
+| `afp_salary_cap` | `afp_cap_monthly` |
+| `sfs_salary_cap` | `sfs_cap_monthly` |
+
+Also add COALESCE defaults (matching the 2-arg version) and divide percentages by 100, since the values are stored as `2.87` / `3.04`, not `0.0287` / `0.0304`.
+
+One migration file. No frontend changes needed.
 

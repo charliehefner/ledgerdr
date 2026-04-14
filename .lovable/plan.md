@@ -1,26 +1,25 @@
 
 
-## Remove Number Input Spinners from Budget Grid
+## Fix: Pass `entity_id` Explicitly in All Inventory Inserts
 
 ### Problem
-All `type="number"` inputs in the Budget grid show browser-native increment/decrement arrows (spinners). These are unnecessary for financial data entry and add visual clutter.
+When a global admin is in "All Entities" mode (or `current_user_entity_id()` returns NULL for any reason), inserts into `inventory_purchases`, `fuel_transactions`, and `inventory_items` fail because `entity_id` is NOT NULL but the default function returns NULL. The PurchaseDialog and InventoryItemDialog never pass `entity_id` explicitly.
 
 ### Solution
-Add CSS rules to `src/index.css` to hide the number input spinners globally (or scoped to the budget grid). This is a tiny CSS-only change — no component logic changes needed.
+Import `useEntity` in both dialogs, call `requireEntity()` before insert, and pass the `entity_id` in every insert payload. If no entity is selected, show an error toast and block the save.
 
 ### Changes
 
-**`src/index.css`** — Add these rules to hide number input spinners across all browsers:
-```css
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-```
+**`src/components/inventory/PurchaseDialog.tsx`**
+1. Import `useEntity` from `@/contexts/EntityContext`
+2. Call `requireEntity()` at the start of `handleSubmit` — if null, toast error and return
+3. Pass `entity_id` in the `inventory_purchases` insert (line 112)
+4. Pass `entity_id` in the `fuel_transactions` insert (line 141)
 
-This removes the arrows globally, which is appropriate since the app is a financial/ERP tool where spinner arrows are generally unwanted. Single file, ~8 lines of CSS.
+**`src/components/inventory/InventoryItemDialog.tsx`**
+1. Import `useEntity` from `@/contexts/EntityContext`
+2. Call `requireEntity()` before mutation — if null, toast error and return
+3. Pass `entity_id` in the `inventory_items` insert (line 127)
+
+Both files follow the same pattern already used in `PhysicalCountView.tsx`. Two files, ~10 lines each.
 

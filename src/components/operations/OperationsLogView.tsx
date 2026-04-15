@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Plus, CalendarIcon, Users, MapPin, Activity, Trash2, Package, 
   MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, 
-  FileSpreadsheet, FileText, Download, ChevronDown 
+  FileSpreadsheet, FileText, Download, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,7 +58,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
@@ -231,9 +232,15 @@ export function OperationsLogView() {
     },
   });
 
-  // Fetch operations with inputs
+  // Resolve field IDs for farm filter (needed for server-side filtering)
+  const farmFieldIds = useMemo(() => {
+    if (!filterFarm || !fields) return null;
+    return fields.filter(f => f.farm_id === filterFarm).map(f => f.id);
+  }, [filterFarm, fields]);
+
+  // Fetch operations with server-side date + column filters
   const { data: operations, isLoading } = useQuery({
-    queryKey: ["operations", selectedEntityId],
+    queryKey: ["operations", selectedEntityId, startDate?.toISOString(), endDate?.toISOString(), filterField, filterTractor, filterOperationType, filterFarm, farmFieldIds],
     queryFn: async () => {
       let q: any = supabase
         .from("operations")
@@ -247,10 +254,38 @@ export function OperationsLogView() {
         `)
         .order("operation_date", { ascending: false });
       q = applyEntityFilter(q);
+
+      // Server-side date range filter
+      if (startDate) {
+        q = q.gte("operation_date", format(startDate, "yyyy-MM-dd"));
+      }
+      if (endDate) {
+        q = q.lte("operation_date", format(endDate, "yyyy-MM-dd"));
+      }
+
+      // Server-side direct column filters
+      if (filterField) {
+        q = q.eq("field_id", filterField);
+      }
+      if (filterTractor) {
+        q = q.eq("tractor_id", filterTractor);
+      }
+      if (filterOperationType) {
+        q = q.eq("operation_type_id", filterOperationType);
+      }
+      // Farm filter via field IDs
+      if (filterFarm && farmFieldIds && farmFieldIds.length > 0) {
+        q = q.in("field_id", farmFieldIds);
+      } else if (filterFarm && farmFieldIds && farmFieldIds.length === 0) {
+        // Farm selected but no fields match — return empty
+        return [] as Operation[];
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return data as Operation[];
     },
+    placeholderData: keepPreviousData,
   });
 
   const selectedOperationType = operationTypes?.find(t => t.id === form.operation_type_id);
@@ -291,38 +326,14 @@ export function OperationsLogView() {
     return Array.from(farmSet, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [fields]);
 
-  // Filter and sort operations
+  // Sort operations (filtering is now server-side)
   const filteredOperations = useMemo(() => {
     if (!operations) return [];
-    let result = operations.filter((op) => {
-      const opDate = parseDateLocal(op.operation_date);
-      
-      // Date filter
-      if (startDate && endDate) {
-        if (!isWithinInterval(opDate, {
-          start: startOfDay(startDate),
-          end: endOfDay(endDate),
-        })) return false;
-      }
-      
-      // Farm filter
-      if (filterFarm && op.fields?.farm_id !== filterFarm) return false;
-      
-      // Field filter
-      if (filterField && op.field_id !== filterField) return false;
-      
-      // Tractor filter
-      if (filterTractor && op.tractor_id !== filterTractor) return false;
-      
-      // Operation Type filter
-      if (filterOperationType && op.operation_type_id !== filterOperationType) return false;
-      
-      return true;
-    });
+    let result = [...operations];
 
-    // Apply sorting
+    // Apply sorting (client-side since some sort columns need joined data)
     if (sortColumn && sortDirection) {
-      result = [...result].sort((a, b) => {
+      result.sort((a, b) => {
         let comparison = 0;
         switch (sortColumn) {
           case "date":
@@ -360,7 +371,21 @@ export function OperationsLogView() {
     }
 
     return result;
-  }, [operations, startDate, endDate, sortColumn, sortDirection, filterFarm, filterField, filterTractor, filterOperationType]);
+  }, [operations, sortColumn, sortDirection]);
+
+  // Client-side pagination for sorted results
+  const [opsPage, setOpsPage] = useState(0);
+  const [opsPageSize, setOpsPageSize] = useState(20);
+  const OPS_PAGE_SIZE_OPTIONS = [20, 50, 100, 200];
+  const opsTotalItems = filteredOperations.length;
+  const opsTotalPages = Math.max(1, Math.ceil(opsTotalItems / opsPageSize));
+  const safeOpsPage = Math.min(opsPage, opsTotalPages - 1);
+  const paginatedOperations = useMemo(() => {
+    const start = safeOpsPage * opsPageSize;
+    return filteredOperations.slice(start, start + opsPageSize);
+  }, [filteredOperations, safeOpsPage, opsPageSize]);
+  const opsHasNextPage = safeOpsPage < opsTotalPages - 1;
+  const opsHasPrevPage = safeOpsPage > 0;
 
   // Top 5 operations by hectares
   const top5Operations = useMemo(() => {
@@ -1457,7 +1482,7 @@ export function OperationsLogView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOperations.map((op) => {
+            {paginatedOperations.map((op) => {
               const missingClosingData = isMissingClosingData(op);
               
               return (
@@ -1570,6 +1595,48 @@ export function OperationsLogView() {
             })}
           </TableBody>
         </Table>
+      )}
+
+      {/* Operations Pagination */}
+      {opsTotalItems > 0 && (
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{t("operations.show") || "Show"}</span>
+            <Select
+              value={String(opsPageSize)}
+              onValueChange={(v) => { setOpsPageSize(Number(v)); setOpsPage(0); }}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OPS_PAGE_SIZE_OPTIONS.map(size => (
+                  <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span>
+              {t("operations.ofTotal")?.replace("{count}", String(opsTotalItems)) || `of ${opsTotalItems} operations`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasPrevPage} onClick={() => setOpsPage(0)}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasPrevPage} onClick={() => setOpsPage(p => Math.max(p - 1, 0))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm px-2">
+              {safeOpsPage + 1} / {opsTotalPages}
+            </span>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasNextPage} onClick={() => setOpsPage(p => p + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasNextPage} onClick={() => setOpsPage(opsTotalPages - 1)}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Dialog */}

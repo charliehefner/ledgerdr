@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { fetchRecentTransactions, Transaction } from '@/lib/api';
+import { fetchPaginatedTransactions, Transaction } from '@/lib/api';
 import { getAllAttachmentUrls, AttachmentCategory } from '@/lib/attachments';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -30,17 +30,22 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { ColumnSelector } from '@/components/ui/column-selector';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TRANSACTION_COLUMNS } from './columnConfig';
-import { usePagination } from '@/hooks/usePagination';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
 }
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 200];
 
 export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
   const queryClient = useQueryClient();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { t, language } = useLanguage();
+
+  // Server-side pagination state
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
 
   const columnVisibility = useColumnVisibility("recent-transactions", TRANSACTION_COLUMNS);
 
@@ -54,13 +59,19 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     setEditDialogOpen(true);
   };
 
-  const { data: allTransactions = [], isLoading } = useQuery({
-    queryKey: ['recentTransactions', refreshKey],
-    queryFn: () => fetchRecentTransactions(500),
+  const offset = page * pageSize;
+
+  const { data: result, isLoading } = useQuery({
+    queryKey: ['recentTransactions', refreshKey, page, pageSize],
+    queryFn: () => fetchPaginatedTransactions(pageSize, offset),
+    placeholderData: (prev) => prev, // keep previous data while loading next page
   });
 
-  const pagination = usePagination(allTransactions, { defaultPageSize: 20 });
-  const transactions = pagination.pageData;
+  const transactions = result?.data ?? [];
+  const totalItems = result?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const hasNextPage = page < totalPages - 1;
+  const hasPrevPage = page > 0;
 
   // Use UUID for attachment lookups (transaction_attachments now uses UUID FK)
   const attachmentIds = transactions
@@ -119,6 +130,11 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
 
   const visibleCount = columnVisibility.visibleColumns.length;
 
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(0);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -152,7 +168,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoading && !result ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
                     {[...Array(visibleCount)].map((_, j) => (
@@ -268,43 +284,43 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
         </div>
 
         {/* Pagination controls */}
-        {pagination.totalItems > 0 && (
+        {totalItems > 0 && (
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{language === 'es' ? 'Mostrar' : 'Show'}</span>
               <Select
-                value={String(pagination.pageSize)}
-                onValueChange={(v) => pagination.setPageSize(Number(v))}
+                value={String(pageSize)}
+                onValueChange={(v) => handlePageSizeChange(Number(v))}
               >
                 <SelectTrigger className="h-8 w-[70px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {pagination.pageSizeOptions.map(size => (
+                  {PAGE_SIZE_OPTIONS.map(size => (
                     <SelectItem key={size} value={String(size)}>{size}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <span>
                 {language === 'es' 
-                  ? `de ${pagination.totalItems} transacciones`
-                  : `of ${pagination.totalItems} transactions`}
+                  ? `de ${totalItems} transacciones`
+                  : `of ${totalItems} transactions`}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasPrevPage} onClick={() => pagination.setPage(0)}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!hasPrevPage} onClick={() => setPage(0)}>
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasPrevPage} onClick={pagination.prevPage}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!hasPrevPage} onClick={() => setPage(p => p - 1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="text-sm px-2">
-                {pagination.page + 1} / {pagination.totalPages}
+                {page + 1} / {totalPages}
               </span>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasNextPage} onClick={pagination.nextPage}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!hasNextPage} onClick={() => setPage(p => p + 1)}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!pagination.hasNextPage} onClick={() => pagination.setPage(pagination.totalPages - 1)}>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!hasNextPage} onClick={() => setPage(totalPages - 1)}>
                 <ChevronsRight className="h-4 w-4" />
               </Button>
             </div>

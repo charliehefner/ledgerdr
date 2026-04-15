@@ -134,9 +134,9 @@ function generateEmployeeReceipt(
 
     const earnings = [
       { label: "Salario Base (Quincenal)", value: data.basePay },
-      { label: `Horas Extras (${data.overtimeHours.toFixed(1)} hrs)`, value: data.overtimePay },
-      { label: `Bono Feriado (${data.holidayHours.toFixed(1)} hrs)`, value: data.holidayPay },
-      { label: `Bono Domingo (${data.sundayHours.toFixed(1)} hrs)`, value: data.sundayPay },
+      { label: data.overtimeHours > 0 ? `Horas Extras (${data.overtimeHours.toFixed(1)} hrs)` : "Horas Extras", value: data.overtimePay },
+      { label: data.holidayHours > 0 ? `Bono Feriado (${data.holidayHours.toFixed(1)} hrs)` : "Bono Feriado", value: data.holidayPay },
+      { label: data.sundayHours > 0 ? `Bono Domingo (${data.sundayHours.toFixed(1)} hrs)` : "Bono Domingo", value: data.sundayPay },
     ];
 
     // Add benefits

@@ -155,26 +155,26 @@ export function PurchaseDialog({
           });
 
         if (transactionError) throw transactionError;
-      } else {
-        // For non-fuel items, update inventory directly
-        const { data: currentItem, error: fetchError } = await supabase
-          .from("inventory_items")
-          .select("current_quantity, use_unit")
-          .eq("id", data.item_id)
-          .maybeSingle();
-
-        if (fetchError) throw fetchError;
-        if (!currentItem) throw new Error("Inventory item not found");
-
-        const newQuantity = Math.round((Number(currentItem.current_quantity) + addedQuantity) * 10000) / 10000;
-
-        const { error: updateError } = await supabase
-          .from("inventory_items")
-          .update({ current_quantity: newQuantity })
-          .eq("id", data.item_id);
-
-        if (updateError) throw updateError;
       }
+
+      // Update inventory stock for ALL items (fuel and non-fuel)
+      const { data: currentItem, error: fetchError } = await supabase
+        .from("inventory_items")
+        .select("current_quantity, use_unit")
+        .eq("id", data.item_id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!currentItem) throw new Error("Inventory item not found");
+
+      const newQuantity = Math.round((Number(currentItem.current_quantity) + addedQuantity) * 10000) / 10000;
+
+      const { error: updateError } = await supabase
+        .from("inventory_items")
+        .update({ current_quantity: newQuantity })
+        .eq("id", data.item_id);
+
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventoryItems"] });

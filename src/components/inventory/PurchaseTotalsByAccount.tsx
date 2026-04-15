@@ -3,26 +3,33 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetchRecentTransactions } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatters";
-import { parseDateLocal } from "@/lib/dateUtils";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
-const ACCOUNT_CBS_PAIRS = [
-  { label: "Agrochemicals", accounts: ["4030"], cbs: "13" },
-  { label: "Diesel", accounts: ["4040"], cbs: "14" },
-  { label: "Fertilizer", accounts: ["4080", "4082"], cbs: "12" },
-  { label: "Oil and Grease", accounts: ["4050", "4060"], cbs: "15" },
-];
+type FunctionCategory = "agrochemicals" | "diesel" | "fertilizer" | "oil_grease";
+
+const FUNCTION_TO_CATEGORY: Record<string, FunctionCategory> = {
+  fuel: "diesel",
+  fertilizer: "fertilizer",
+  pre_emergent_herbicide: "agrochemicals",
+  post_emergent_herbicide: "agrochemicals",
+  adherente: "agrochemicals",
+  condicionador: "agrochemicals",
+};
+
+const CATEGORY_LABELS: Record<FunctionCategory, string> = {
+  agrochemicals: "Agrochemicals",
+  diesel: "Diesel",
+  fertilizer: "Fertilizer",
+  oil_grease: "Oil and Grease",
+};
+
+const CATEGORY_ORDER: FunctionCategory[] = ["agrochemicals", "diesel", "fertilizer", "oil_grease"];
 
 export function PurchaseTotalsByAccount() {
   const [period, setPeriod] = useState("current_month");
-
-  const { data: allTransactions = [] } = useQuery({
-    queryKey: ["reportTransactions", "1000"],
-    queryFn: () => fetchRecentTransactions(1000),
-  });
-
-  const nonVoidedTransactions = allTransactions.filter((tx) => !tx.is_void);
+  const { selectedEntityId: entityId } = useEntityFilter();
 
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -31,47 +38,67 @@ export function PurchaseTotalsByAccount() {
     switch (period) {
       case "past_month": {
         const start = new Date(year, month - 1, 1);
-        const end = new Date(year, month, 0, 23, 59, 59, 999);
-        return { start, end };
+        const end = new Date(year, month, 0);
+        return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
       }
       case "ytd":
-        return { start: new Date(year, 0, 1), end: now };
+        return { start: `${year}-01-01`, end: now.toISOString().slice(0, 10) };
       case "prior_year":
-        return { start: new Date(year - 1, 0, 1), end: new Date(year - 1, 11, 31, 23, 59, 59, 999) };
+        return { start: `${year - 1}-01-01`, end: `${year - 1}-12-31` };
       case "current_month":
-      default:
-        return { start: new Date(year, month, 1), end: now };
+      default: {
+        const start = new Date(year, month, 1);
+        return { start: start.toISOString().slice(0, 10), end: now.toISOString().slice(0, 10) };
+      }
     }
   }, [period]);
 
-  const totals = ACCOUNT_CBS_PAIRS.map((pair) => {
-    const matchingTx = nonVoidedTransactions.filter((tx) => {
-      const txDate = parseDateLocal(tx.transaction_date);
-      if (txDate < dateRange.start || txDate > dateRange.end) return false;
-      // Use master_acct_code (backfilled from UUID join in fetchRecentTransactions)
-      const acctCode = tx.master_acct_code;
-      const cbsCode = tx.cbs_code;
-      return (
-        (acctCode && pair.accounts.includes(acctCode)) ||
-        cbsCode?.startsWith(pair.cbs)
-      );
-    });
-    const totalDOP = matchingTx
-      .filter((tx) => tx.currency === "DOP")
-      .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
-    const totalUSD = matchingTx
-      .filter((tx) => tx.currency === "USD")
-      .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
-    const totalEUR = matchingTx
-      .filter((tx) => tx.currency === "EUR")
-      .reduce((sum, tx) => sum + (parseFloat(String(tx.amount)) || 0), 0);
-    return { label: pair.label, count: matchingTx.length, totalDOP, totalUSD, totalEUR };
+  const { data: purchases = [] } = useQuery({
+    queryKey: ["inventoryPurchaseTotals", dateRange, entityId],
+    queryFn: async () => {
+      let query = supabase
+        .from("inventory_purchases")
+        .select("total_price, item_id, inventory_items!inner(function)")
+        .gte("purchase_date", dateRange.start)
+        .lte("purchase_date", dateRange.end);
+
+      if (entityId) {
+        query = query.eq("entity_id", entityId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data ?? [];
+    },
   });
+
+  const totals = useMemo(() => {
+    const categoryMap: Record<FunctionCategory, { count: number; totalDOP: number }> = {
+      agrochemicals: { count: 0, totalDOP: 0 },
+      diesel: { count: 0, totalDOP: 0 },
+      fertilizer: { count: 0, totalDOP: 0 },
+      oil_grease: { count: 0, totalDOP: 0 },
+    };
+
+    for (const p of purchases) {
+      const fn = (p.inventory_items as any)?.function as string;
+      const cat = FUNCTION_TO_CATEGORY[fn];
+      if (!cat) continue;
+      categoryMap[cat].count += 1;
+      categoryMap[cat].totalDOP += Number(p.total_price) || 0;
+    }
+
+    return CATEGORY_ORDER.map((cat) => ({
+      label: CATEGORY_LABELS[cat],
+      count: categoryMap[cat].count,
+      totalDOP: categoryMap[cat].totalDOP,
+    }));
+  }, [purchases]);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Purchase Totals by Account & CBS</CardTitle>
+        <CardTitle>Purchase Totals by Category</CardTitle>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-[160px]">
             <SelectValue />
@@ -88,11 +115,9 @@ export function PurchaseTotalsByAccount() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Account / CBS Pair</TableHead>
-              <TableHead className="text-right">Transactions</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead className="text-right">Purchases</TableHead>
               <TableHead className="text-right">Total DOP</TableHead>
-              <TableHead className="text-right">Total USD</TableHead>
-              <TableHead className="text-right">Total EUR</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,12 +127,6 @@ export function PurchaseTotalsByAccount() {
                 <TableCell className="text-right font-mono">{row.count}</TableCell>
                 <TableCell className="text-right font-mono">
                   {formatCurrency(row.totalDOP, "DOP")}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {formatCurrency(row.totalUSD, "USD")}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {formatCurrency(row.totalEUR, "EUR")}
                 </TableCell>
               </TableRow>
             ))}

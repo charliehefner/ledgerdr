@@ -99,7 +99,7 @@ export function IndustryFuelView() {
 
   // Fetch plant hours with diesel estimates
   const { data: plantHours = [], isLoading } = useQuery({
-    queryKey: ["industrialPlantHoursFuel", entityFilter],
+    queryKey: ["industrialPlantHoursFuel", selectedEntityId],
     queryFn: async () => {
       let query = supabase
         .from("industrial_plant_hours")
@@ -107,9 +107,7 @@ export function IndustryFuelView() {
         .not("estimated_diesel_liters", "is", null)
         .order("date", { ascending: false });
 
-      if (entityFilter) {
-        query = query.eq("entity_id", entityFilter);
-      }
+      query = applyEntityFilter(query);
 
       const { data, error } = await query;
       if (error) throw error;

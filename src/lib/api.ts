@@ -121,32 +121,20 @@ export async function fetchCbsCodes(): Promise<CbsCode[]> {
   return data || [];
 }
 
-export async function fetchRecentTransactions(limit: number = 500, entityId?: string | null): Promise<Transaction[]> {
-  let query = supabase
-    .from('transactions')
-    .select(`
-      *,
-      chart_of_accounts:chart_of_accounts!transactions_account_id_fkey (account_code, account_name, english_description, spanish_description),
-      projects:projects!transactions_project_id_fkey (code, english_description, spanish_description),
-      cbs_codes:cbs_codes!transactions_cbs_id_fkey (code, english_description, spanish_description)
-    `)
-    .eq('is_void', false);
+export interface PaginatedResult<T> {
+  data: T[];
+  totalCount: number;
+}
 
-  // Filter by entity when not in "All Entities" mode
-  if (entityId) {
-    query = query.eq('entity_id', entityId);
-  }
+const TRANSACTION_SELECT = `
+  *,
+  chart_of_accounts:chart_of_accounts!transactions_account_id_fkey (account_code, account_name, english_description, spanish_description),
+  projects:projects!transactions_project_id_fkey (code, english_description, spanish_description),
+  cbs_codes:cbs_codes!transactions_cbs_id_fkey (code, english_description, spanish_description)
+`;
 
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  
-  if (error) {
-    console.error('Error fetching transactions:', error);
-    throw new Error(error.message);
-  }
-  
-  return (data || []).map((t: any) => ({
+function mapTransaction(t: any): Transaction {
+  return {
     ...t,
     currency: t.currency as 'DOP' | 'USD' | 'EUR',
     is_internal: t.is_internal ?? false,
@@ -166,7 +154,68 @@ export async function fetchRecentTransactions(limit: number = 500, entityId?: st
     chart_of_accounts: undefined,
     projects: undefined,
     cbs_codes: undefined,
-  }));
+  };
+}
+
+export async function fetchRecentTransactions(limit: number = 500, entityId?: string | null): Promise<Transaction[]> {
+  let query = supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .eq('is_void', false);
+
+  if (entityId) {
+    query = query.eq('entity_id', entityId);
+  }
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  
+  if (error) {
+    console.error('Error fetching transactions:', error);
+    throw new Error(error.message);
+  }
+  
+  return (data || []).map(mapTransaction);
+}
+
+export async function fetchPaginatedTransactions(
+  pageSize: number = 20,
+  offset: number = 0,
+  entityId?: string | null
+): Promise<PaginatedResult<Transaction>> {
+  // Count query (lightweight, no data returned)
+  let countQuery = supabase
+    .from('transactions')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_void', false);
+  if (entityId) countQuery = countQuery.eq('entity_id', entityId);
+  const { count, error: countError } = await countQuery;
+  if (countError) {
+    console.error('Error counting transactions:', countError);
+    throw new Error(countError.message);
+  }
+
+  // Data query — fetch only the requested page
+  let query = supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .eq('is_void', false);
+  if (entityId) query = query.eq('entity_id', entityId);
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + pageSize - 1);
+  
+  if (error) {
+    console.error('Error fetching transactions:', error);
+    throw new Error(error.message);
+  }
+  
+  return {
+    data: (data || []).map(mapTransaction),
+    totalCount: count ?? 0,
+  };
 }
 
 export async function createTransaction(transaction: Omit<Transaction, 'id'>, entityId?: string | null): Promise<Transaction> {

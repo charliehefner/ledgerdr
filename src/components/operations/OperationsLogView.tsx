@@ -1482,7 +1482,7 @@ export function OperationsLogView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOperations.map((op) => {
+            {paginatedOperations.map((op) => {
               const missingClosingData = isMissingClosingData(op);
               
               return (

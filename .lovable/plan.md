@@ -1,47 +1,32 @@
 
 
-## Fix: Purchase Totals Table + Fuel Stock Update
+## Add Estimated Diesel Used Column to Plant Hours
 
-### Problem 1: Purchase Totals table reads wrong data source
-The `PurchaseTotalsByAccount` component fetches from `fetchRecentTransactions()` which queries the `transactions` table. But purchases entered via the Purchase Dialog write to `inventory_purchases` — a completely separate table. The summary table never sees inventory purchases.
-
-### Problem 2: Fuel purchases skip inventory stock update
-In `PurchaseDialog.tsx`, the `inventory_items.current_quantity` update is inside an `else` block (line 158) that only runs for non-fuel items. Fuel purchases update the tank but never update inventory stock.
-
----
+### What
+Add an `estimated_diesel_liters` column to the Plant Hours table so operators can manually record estimated diesel consumption per session. This gives a mechanism to track diesel drawdown from the Industrial Diesel tank.
 
 ### Plan
 
-**1. Rewrite `PurchaseTotalsByAccount.tsx` to query `inventory_purchases`**
-
-Instead of fetching from `transactions`, query `inventory_purchases` joined with `inventory_items` to get CBS/account codes. This is the correct data source for purchase totals.
-
-- Query `inventory_purchases` with a join to `inventory_items` (to get account/CBS info from the item)
-- Filter by date range and entity
-- Group totals by the same account/CBS pairs
-- The component will need the item's associated account code — I'll check if `inventory_items` has a direct link or if we need to map by item function/category
-
-**2. Fix fuel stock update in `PurchaseDialog.tsx`**
-
-Move the `inventory_items.current_quantity` update **outside** the if/else block so it runs for ALL items (fuel and non-fuel). The fuel-specific tank operations remain inside the `if` block.
-
-```
-// New flow:
-1. Insert purchase record (all items)
-2. If fuel → insert fuel_transaction refill + optional gauge reset
-3. Update inventory_items.current_quantity (ALL items)
+**1. Database migration — add column**
+```sql
+ALTER TABLE industrial_plant_hours
+ADD COLUMN estimated_diesel_liters numeric NULL;
 ```
 
-**3. Add query invalidation for purchase totals**
+**2. Update `PlantHoursView.tsx`**
+- Add `estimated_diesel_liters` to the form state, insert, update, and edit logic
+- Add a new column in the table between "Est. Tons" and "Notes"
+- Add the field to the dialog form with label "Est. Diesel (L)"
+- Include the new column in both Excel and PDF exports
 
-Add `queryClient.invalidateQueries({ queryKey: ["inventoryPurchases"] })` or whatever key the new component uses, so the table refreshes after a purchase is recorded.
-
----
+**3. Add i18n keys** (both `en.ts` and `es.ts`)
+- `"industrial.estimatedDiesel"`: "Est. Diesel (L)" / "Diesel Est. (L)"
 
 ### Scope
 
 | Component | Change |
 |-----------|--------|
-| `PurchaseTotalsByAccount.tsx` | Rewrite to query `inventory_purchases` instead of `transactions` |
-| `PurchaseDialog.tsx` | Move stock update outside else block; runs for all items |
+| SQL migration | Add `estimated_diesel_liters` column |
+| `PlantHoursView.tsx` | Form field, table column, insert/update/export |
+| `en.ts` / `es.ts` | 1 new i18n key each |
 

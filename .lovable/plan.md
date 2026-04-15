@@ -1,36 +1,47 @@
 
 
-## Fix: Round All Inventory Item Quantities in Database
+## Fix: Purchase Totals Table + Fuel Stock Update
 
-### Problem
-Several inventory items have floating-point drift in their `current_quantity` values stored in the database:
+### Problem 1: Purchase Totals table reads wrong data source
+The `PurchaseTotalsByAccount` component fetches from `fetchRecentTransactions()` which queries the `transactions` table. But purchases entered via the Purchase Dialog write to `inventory_purchases` — a completely separate table. The summary table never sees inventory purchases.
 
-| Item | Current DB Value | Should Be |
-|------|-----------------|-----------|
-| Diesel Agrícola | 283.29999999999999 | 283.30 |
-| Diesel Industrial | 298.50000000000006 | 298.50 |
-| Pledge 51 WG | 1.0799999999999996 | 1.08 |
+### Problem 2: Fuel purchases skip inventory stock update
+In `PurchaseDialog.tsx`, the `inventory_items.current_quantity` update is inside an `else` block (line 158) that only runs for non-fuel items. Fuel purchases update the tank but never update inventory stock.
 
-The UI uses `.toFixed(2)` so most display is fine, but the underlying data should be clean. Additionally, the `PurchaseDialog` and `StockAdjustmentDialog` perform arithmetic without rounding, which can reintroduce drift.
+---
 
 ### Plan
 
-**1. Data fix (SQL migration)**
-Round all `current_quantity` values in `inventory_items` to 4 decimal places:
-```sql
-UPDATE inventory_items SET current_quantity = ROUND(current_quantity::numeric, 4);
+**1. Rewrite `PurchaseTotalsByAccount.tsx` to query `inventory_purchases`**
+
+Instead of fetching from `transactions`, query `inventory_purchases` joined with `inventory_items` to get CBS/account codes. This is the correct data source for purchase totals.
+
+- Query `inventory_purchases` with a join to `inventory_items` (to get account/CBS info from the item)
+- Filter by date range and entity
+- Group totals by the same account/CBS pairs
+- The component will need the item's associated account code — I'll check if `inventory_items` has a direct link or if we need to map by item function/category
+
+**2. Fix fuel stock update in `PurchaseDialog.tsx`**
+
+Move the `inventory_items.current_quantity` update **outside** the if/else block so it runs for ALL items (fuel and non-fuel). The fuel-specific tank operations remain inside the `if` block.
+
+```
+// New flow:
+1. Insert purchase record (all items)
+2. If fuel → insert fuel_transaction refill + optional gauge reset
+3. Update inventory_items.current_quantity (ALL items)
 ```
 
-**2. Code fixes — add ROUND to client-side stock arithmetic**
-- `PurchaseDialog.tsx` (line ~169): Wrap `newQuantity` in `Math.round(... * 10000) / 10000`
-- `StockAdjustmentDialog.tsx` (lines ~51-55): Same rounding for add/subtract/set cases
+**3. Add query invalidation for purchase totals**
 
-This ensures all three stock mutation paths (operations via DB function, purchases, manual adjustments) consistently round to 4 decimals.
+Add `queryClient.invalidateQueries({ queryKey: ["inventoryPurchases"] })` or whatever key the new component uses, so the table refreshes after a purchase is recorded.
+
+---
 
 ### Scope
+
 | Component | Change |
 |-----------|--------|
-| SQL migration | Round all current_quantity values |
-| PurchaseDialog.tsx | Add rounding to purchase stock update |
-| StockAdjustmentDialog.tsx | Add rounding to adjustment stock update |
+| `PurchaseTotalsByAccount.tsx` | Rewrite to query `inventory_purchases` instead of `transactions` |
+| `PurchaseDialog.tsx` | Move stock update outside else block; runs for all items |
 

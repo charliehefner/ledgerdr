@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Plus, CalendarIcon, Users, MapPin, Activity, Trash2, Package, 
   MoreHorizontal, Pencil, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, 
-  FileSpreadsheet, FileText, Download, ChevronDown 
+  FileSpreadsheet, FileText, Download, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 import {
   DropdownMenu,

@@ -29,7 +29,7 @@ const CATEGORY_ORDER: FunctionCategory[] = ["agrochemicals", "diesel", "fertiliz
 
 export function PurchaseTotalsByAccount() {
   const [period, setPeriod] = useState("current_month");
-  const { entityId } = useEntityFilter();
+  const { selectedEntityId: entityId } = useEntityFilter();
 
   const dateRange = useMemo(() => {
     const now = new Date();

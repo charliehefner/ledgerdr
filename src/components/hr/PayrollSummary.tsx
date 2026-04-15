@@ -552,8 +552,55 @@ export function PayrollSummary({
         throw new Error("Seleccione una entidad específica para cerrar el período");
       }
 
+      // 0. Read committed snapshots from DB as source of truth
+      const { data: freshSnapshots, error: snapErr } = await supabase
+        .from("payroll_snapshots")
+        .select("*")
+        .eq("period_id", periodId);
+      if (snapErr) throw snapErr;
+      if (!freshSnapshots || freshSnapshots.length === 0) {
+        throw new Error("Debe confirmar la nómina antes de cerrar el período. Haga clic en 'Confirmar y Guardar' primero.");
+      }
+
+      // Build legacy data from DB snapshots (authoritative), not stale preview
+      const snapshotLegacyData = freshSnapshots.map((s) => {
+        const employee = employees.find((e) => e.id === s.employee_id);
+        const employeeLoans = loans.filter((l) => l.employee_id === s.employee_id);
+        const loanDetails = employeeLoans.map((l) => ({
+          loan_amount: l.loan_amount,
+          payment_amount: l.payment_amount,
+          payment_number: l.number_of_payments - l.remaining_payments,
+          total_payments: l.number_of_payments,
+        }));
+        const grossPay = Number(s.gross_pay);
+        const netPay = Number(s.net_pay);
+        return {
+          employee: employee ?? { id: s.employee_id, name: "?", salary: 0, position: "", bank: null, bank_account_number: null },
+          regularHours: 0,
+          overtimeHours: 0,
+          holidayHours: 0,
+          sundayHours: 0,
+          vacationDays: 0,
+          basePay: Number(s.base_pay),
+          overtimePay: Number(s.overtime_pay),
+          holidayPay: Number(s.holiday_pay),
+          sundayPay: Number(s.sunday_pay),
+          benefits: [],
+          totalBenefits: Number(s.total_benefits),
+          tss: Number(s.tss),
+          isr: Number(s.isr),
+          absenceDeduction: Number(s.absence_deduction),
+          vacationDeduction: Number(s.vacation_deduction),
+          loanDeduction: Number(s.loan_deduction),
+          loanDetails,
+          totalDeductions: grossPay - netPay,
+          grossPay,
+          netPay,
+        };
+      });
+
       const dateStr = format(endDate, "yyyy-MM-dd");
-      const legacyData = buildLegacyData();
+      const legacyData = snapshotLegacyData;
 
       // 1. Create transactions for each employee's net pay
       for (const p of legacyData) {
@@ -742,7 +789,7 @@ export function PayrollSummary({
           </Button>
 
           {!isClosed && (
-            <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0}>
+            <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0 || !hasCommittedSnapshots}>
               <Lock className="h-4 w-4 mr-2" />
               {t("payrollSummary.closePeriod")}
             </Button>

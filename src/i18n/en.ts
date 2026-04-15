@@ -2590,7 +2590,8 @@ export const en = {
   "industrial.start": "Start",
   "industrial.finish": "Finish",
   "industrial.hours": "Hours",
-  "industrial.estimatedTons": "Est. Tons",
+   "industrial.estimatedTons": "Est. Tons",
+   "industrial.estimatedDiesel": "Est. Diesel (L)",
   // Carretas
   "industrial.newCarreta": "New Wagon",
   "industrial.datetimeOut": "Date/Time Out",

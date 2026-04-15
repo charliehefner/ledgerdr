@@ -26,7 +26,7 @@ import autoTable from "jspdf-autotable";
 export function PlantHoursView() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
+  const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", estimated_diesel_liters: "", notes: "" });
   const { toast } = useToast();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -34,7 +34,7 @@ export function PlantHoursView() {
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   const resetForm = () => {
-    setForm({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", notes: "" });
+    setForm({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", estimated_diesel_liters: "", notes: "" });
     setEditingId(null);
   };
 
@@ -45,6 +45,7 @@ export function PlantHoursView() {
       start_hour_meter: row.start_hour_meter != null ? String(row.start_hour_meter) : "",
       finish_hour_meter: row.finish_hour_meter != null ? String(row.finish_hour_meter) : "",
       estimated_tons: row.estimated_tons != null ? String(row.estimated_tons) : "",
+      estimated_diesel_liters: row.estimated_diesel_liters != null ? String(row.estimated_diesel_liters) : "",
       notes: row.notes || "",
     });
     setOpen(true);
@@ -71,6 +72,7 @@ export function PlantHoursView() {
         start_hour_meter: form.start_hour_meter ? Number(form.start_hour_meter) : null,
         finish_hour_meter: form.finish_hour_meter ? Number(form.finish_hour_meter) : null,
         estimated_tons: form.estimated_tons ? Number(form.estimated_tons) : null,
+        estimated_diesel_liters: form.estimated_diesel_liters ? Number(form.estimated_diesel_liters) : null,
         notes: form.notes || null,
         created_by: user?.id,
       });
@@ -93,6 +95,7 @@ export function PlantHoursView() {
         start_hour_meter: form.start_hour_meter ? Number(form.start_hour_meter) : null,
         finish_hour_meter: form.finish_hour_meter ? Number(form.finish_hour_meter) : null,
         estimated_tons: form.estimated_tons ? Number(form.estimated_tons) : null,
+        estimated_diesel_liters: form.estimated_diesel_liters ? Number(form.estimated_diesel_liters) : null,
         notes: form.notes || null,
       }).eq("id", editingId);
       if (error) throw error;
@@ -126,12 +129,13 @@ export function PlantHoursView() {
       { header: t("industrial.finish"), key: "finish", width: 12 },
       { header: t("industrial.hours"), key: "hours", width: 10 },
       { header: t("industrial.estimatedTons"), key: "estimated_tons", width: 14 },
+      { header: t("industrial.estimatedDiesel"), key: "estimated_diesel_liters", width: 14 },
       { header: t("industrial.notes"), key: "notes", width: 30 },
     ];
     rows.forEach((r: any) => {
       const hrs = r.start_hour_meter != null && r.finish_hour_meter != null
         ? Number(r.finish_hour_meter) - Number(r.start_hour_meter) : null;
-      ws.addRow({ date: r.date, start: r.start_hour_meter, finish: r.finish_hour_meter, hours: hrs, estimated_tons: r.estimated_tons, notes: r.notes });
+      ws.addRow({ date: r.date, start: r.start_hour_meter, finish: r.finish_hour_meter, hours: hrs, estimated_tons: r.estimated_tons, estimated_diesel_liters: r.estimated_diesel_liters, notes: r.notes });
     });
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -144,11 +148,11 @@ export function PlantHoursView() {
     doc.text(t("industrial.plantHours"), 14, 16);
     autoTable(doc, {
       startY: 22,
-      head: [[t("industrial.date"), t("industrial.start"), t("industrial.finish"), t("industrial.hours"), t("industrial.estimatedTons"), t("industrial.notes")]],
+      head: [[t("industrial.date"), t("industrial.start"), t("industrial.finish"), t("industrial.hours"), t("industrial.estimatedTons"), t("industrial.estimatedDiesel"), t("industrial.notes")]],
       body: rows.map((r: any) => {
         const hrs = r.start_hour_meter != null && r.finish_hour_meter != null
           ? (Number(r.finish_hour_meter) - Number(r.start_hour_meter)).toFixed(1) : "";
-        return [r.date || "", r.start_hour_meter ?? "", r.finish_hour_meter ?? "", hrs, r.estimated_tons ?? "", r.notes || ""];
+        return [r.date || "", r.start_hour_meter ?? "", r.finish_hour_meter ?? "", hrs, r.estimated_tons ?? "", r.estimated_diesel_liters ?? "", r.notes || ""];
       }),
     });
     doc.save("horas_planta.pdf");
@@ -168,6 +172,7 @@ export function PlantHoursView() {
               <div><Label>{t("industrial.startMeter")}</Label><Input type="number" step="0.1" value={form.start_hour_meter} onChange={(e) => setForm({ ...form, start_hour_meter: e.target.value })} /></div>
               <div><Label>{t("industrial.finishMeter")}</Label><Input type="number" step="0.1" value={form.finish_hour_meter} onChange={(e) => setForm({ ...form, finish_hour_meter: e.target.value })} /></div>
               <div><Label>{t("industrial.estimatedTons")}</Label><Input type="number" step="0.01" value={form.estimated_tons} onChange={(e) => setForm({ ...form, estimated_tons: e.target.value })} /></div>
+              <div><Label>{t("industrial.estimatedDiesel")}</Label><Input type="number" step="0.1" value={form.estimated_diesel_liters} onChange={(e) => setForm({ ...form, estimated_diesel_liters: e.target.value })} /></div>
               <div><Label>{t("industrial.notes")}</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
             <Button onClick={() => editingId ? updateMutation.mutate() : addMutation.mutate()} disabled={addMutation.isPending || updateMutation.isPending}>{t("industrial.save")}</Button>
@@ -194,15 +199,16 @@ export function PlantHoursView() {
               <TableHead>{t("industrial.finish")}</TableHead>
               <TableHead>{t("industrial.hours")}</TableHead>
               <TableHead>{t("industrial.estimatedTons")}</TableHead>
+              <TableHead>{t("industrial.estimatedDiesel")}</TableHead>
               <TableHead>{t("industrial.notes")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">{t("industrial.loading")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">{t("industrial.loading")}</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">{t("industrial.noRecords")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">{t("industrial.noRecords")}</TableCell></TableRow>
             ) : rows.map((r: any) => {
               const hrs = r.start_hour_meter != null && r.finish_hour_meter != null
                 ? (Number(r.finish_hour_meter) - Number(r.start_hour_meter)).toFixed(1) : "—";
@@ -213,6 +219,7 @@ export function PlantHoursView() {
                   <TableCell>{r.finish_hour_meter ?? "—"}</TableCell>
                   <TableCell>{hrs}</TableCell>
                   <TableCell>{r.estimated_tons ?? "—"}</TableCell>
+                  <TableCell>{r.estimated_diesel_liters ?? "—"}</TableCell>
                   <TableCell>{r.notes || "—"}</TableCell>
                   <TableCell className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>

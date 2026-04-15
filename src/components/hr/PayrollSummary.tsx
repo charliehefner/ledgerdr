@@ -548,6 +548,10 @@ export function PayrollSummary({
   // Close period mutation (creates transactions, journals, receipts)
   const closePeriod = useMutation({
     mutationFn: async () => {
+      if (!selectedEntityId) {
+        throw new Error("Seleccione una entidad específica para cerrar el período");
+      }
+
       const dateStr = format(endDate, "yyyy-MM-dd");
       const legacyData = buildLegacyData();
 
@@ -564,7 +568,7 @@ export function PayrollSummary({
           name: p.employee.name,
           is_internal: true,
           comments: `Período: ${fmtDate(startDate)} - ${fmtDate(endDate)} | Deducciones: ${p.totalDeductions.toFixed(2)}`,
-        });
+        }, selectedEntityId);
       }
 
       // 2. Update period status to 'closed'

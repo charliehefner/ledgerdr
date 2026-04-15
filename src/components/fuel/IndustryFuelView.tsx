@@ -107,7 +107,7 @@ export function IndustryFuelView() {
         .not("estimated_diesel_liters", "is", null)
         .order("date", { ascending: false });
 
-      query = applyEntityFilter(query);
+      query = applyEntityFilter(query as any) as typeof query;
 
       const { data, error } = await query;
       if (error) throw error;

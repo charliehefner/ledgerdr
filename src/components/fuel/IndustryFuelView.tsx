@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Fuel, Zap, Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Fuel, CalendarIcon, Download, ChevronDown, FileSpreadsheet, FileText, Droplets } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,11 +43,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { parseDateLocal, fmtDate } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { format, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { cn } from "@/lib/utils";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface FuelTank {
   id: string;
@@ -48,43 +57,30 @@ interface FuelTank {
   current_level_gallons: number;
 }
 
-interface FuelEquipment {
+interface PlantHourRow {
   id: string;
-  name: string;
-  current_hour_meter: number;
-}
-
-interface FuelTransaction {
-  id: string;
-  tank_id: string;
-  equipment_id: string;
-  transaction_type: string;
-  transaction_date: string;
-  gallons: number;
-  hour_meter_reading: number;
-  previous_hour_meter: number;
-  gallons_per_hour: number | null;
+  date: string;
+  start_hour_meter: number | null;
+  finish_hour_meter: number | null;
+  estimated_diesel_liters: number | null;
   notes: string | null;
-  fuel_tanks: { name: string };
-  fuel_equipment: { name: string } | null;
 }
 
 export function IndustryFuelView() {
+  const [activeTab, setActiveTab] = useState("fueling-report");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [dateTo, setDateTo] = useState<Date | undefined>(endOfMonth(new Date()));
   const [isRefillDialogOpen, setIsRefillDialogOpen] = useState(false);
-  const [isReadingDialogOpen, setIsReadingDialogOpen] = useState(false);
   const [refillForm, setRefillForm] = useState({
     tank_id: "",
     gallons: "",
     notes: "",
   });
-  const [readingForm, setReadingForm] = useState({
-    equipment_id: "",
-    hour_meter_reading: "",
-    notes: "",
-  });
 
   const { toast } = useToast();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   // Fetch industry tanks
   const { data: tanks = [] } = useQuery({
@@ -101,230 +97,170 @@ export function IndustryFuelView() {
     },
   });
 
-  // Fetch generators
-  const { data: generators = [] } = useQuery({
-    queryKey: ["fuelEquipment", "generator"],
+  // Fetch plant hours with diesel estimates
+  const { data: plantHours = [], isLoading } = useQuery({
+    queryKey: ["industrialPlantHoursFuel", selectedEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fuel_equipment")
-        .select("id, name, current_hour_meter")
-        .eq("equipment_type", "generator")
-        .eq("is_active", true)
-        .order("name");
+      let query = supabase
+        .from("industrial_plant_hours")
+        .select("id, date, start_hour_meter, finish_hour_meter, estimated_diesel_liters, notes")
+        .not("estimated_diesel_liters", "is", null)
+        .order("date", { ascending: false });
+
+      query = applyEntityFilter(query as any) as typeof query;
+
+      const { data, error } = await query;
       if (error) throw error;
-      return data as FuelEquipment[];
+      return data as PlantHourRow[];
     },
   });
 
-  // Fetch recent transactions
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ["fuelTransactions", "industry"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("fuel_transactions")
-        .select(`
-          *,
-          fuel_tanks!tank_id!inner(name, use_type),
-          fuel_equipment(name)
-        `)
-        .eq("fuel_tanks.use_type", "industry")
-        .order("transaction_date", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data as FuelTransaction[];
-    },
-  });
+  // Filter by date range
+  const filteredRows = useMemo(() => {
+    if (!dateFrom && !dateTo) return plantHours;
+    return plantHours.filter((row) => {
+      const d = parseDateLocal(row.date);
+      const from = dateFrom ? startOfDay(dateFrom) : new Date(0);
+      const to = dateTo ? endOfDay(dateTo) : new Date(9999, 11, 31);
+      return isWithinInterval(d, { start: from, end: to });
+    });
+  }, [plantHours, dateFrom, dateTo]);
 
-  // Get last transaction for each generator to calculate efficiency
-  const getGeneratorStats = (generatorId: string) => {
-    const genTransactions = transactions.filter(
-      (tx) => tx.equipment_id === generatorId && tx.gallons_per_hour
-    );
-    if (genTransactions.length === 0) return null;
-    const lastEfficiency = genTransactions[0].gallons_per_hour;
-    return { lastEfficiency };
-  };
+  // Summary totals
+  const totals = useMemo(() => {
+    let totalHours = 0;
+    let totalLiters = 0;
+    filteredRows.forEach((row) => {
+      const hrs = (row.finish_hour_meter ?? 0) - (row.start_hour_meter ?? 0);
+      if (hrs > 0) totalHours += hrs;
+      totalLiters += row.estimated_diesel_liters ?? 0;
+    });
+    return { totalHours, totalLiters };
+  }, [filteredRows]);
 
+  // Refill mutation (keep existing)
   const refillMutation = useMutation({
     mutationFn: async (data: typeof refillForm) => {
       const gallons = parseFloat(data.gallons);
-
-      // Insert refill transaction
-      const { error: txError } = await supabase.from("fuel_transactions").insert({
+      const { error } = await supabase.from("fuel_transactions").insert({
         tank_id: data.tank_id,
         transaction_type: "refill",
         gallons,
         notes: data.notes || null,
       });
-      if (txError) throw txError;
-
-      // Tank level is automatically adjusted by DB trigger trg_adjust_tank_level
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
-      toast({
-        title: "Tank refilled",
-        description: "The tank refill has been recorded.",
-      });
+      toast({ title: "Tank refilled", description: "The tank refill has been recorded." });
       setIsRefillDialogOpen(false);
       setRefillForm({ tank_id: "", gallons: "", notes: "" });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
-  const readingMutation = useMutation({
-    mutationFn: async (data: typeof readingForm) => {
-      const hourMeter = parseFloat(data.hour_meter_reading);
-
-      // Get equipment's previous hour meter and find associated tank
-      const { data: equipment } = await supabase
-        .from("fuel_equipment")
-        .select("current_hour_meter")
-        .eq("id", data.equipment_id)
-        .maybeSingle();
-
-      // Find the industry tank to link to (use first one for now)
-      const { data: industryTank } = await supabase
-        .from("fuel_tanks")
-        .select("id, current_level_gallons")
-        .eq("use_type", "industry")
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (!industryTank) {
-        throw new Error("No industry tank found. Please add an industry tank first.");
-      }
-
-      const previousHourMeter = equipment?.current_hour_meter || 0;
-      const hoursUsed = hourMeter - previousHourMeter;
-
-      // Calculate gallons used since last reading by checking tank difference
-      // This assumes the tank was refilled since the last reading
-      const gallonsUsed = industryTank.current_level_gallons;
-      const gallonsPerHour = hoursUsed > 0 ? gallonsUsed / hoursUsed : null;
-
-      // Insert reading transaction (dispense type for consumption tracking)
-      const { error: txError } = await supabase.from("fuel_transactions").insert({
-        tank_id: industryTank.id,
-        equipment_id: data.equipment_id,
-        transaction_type: "dispense",
-        gallons: gallonsUsed,
-        hour_meter_reading: hourMeter,
-        previous_hour_meter: previousHourMeter,
-        gallons_per_hour: gallonsPerHour,
-        notes: data.notes || null,
-      });
-      if (txError) throw txError;
-
-      // Tank level is automatically adjusted by DB trigger trg_adjust_tank_level
-
-      // Update equipment hour meter
-      const { error: equipError } = await supabase
-        .from("fuel_equipment")
-        .update({ current_hour_meter: hourMeter })
-        .eq("id", data.equipment_id);
-      if (equipError) throw equipError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fuelTransactions"] });
-      queryClient.invalidateQueries({ queryKey: ["fuelTanks"] });
-      queryClient.invalidateQueries({ queryKey: ["fuelEquipment"] });
-      toast({
-        title: "Reading recorded",
-        description: "Generator hour meter and consumption has been recorded.",
-      });
-      setIsReadingDialogOpen(false);
-      setReadingForm({ equipment_id: "", hour_meter_reading: "", notes: "" });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const selectedGenerator = generators.find((g) => g.id === readingForm.equipment_id);
-
+  // Export fueling report
   const exportToExcel = async () => {
-    if (transactions.length === 0) return;
+    if (filteredRows.length === 0) return;
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Generator Usage");
+    const ws = workbook.addWorksheet("Industry Fueling Report");
 
-    worksheet.mergeCells("A1:G1");
-    worksheet.getCell("A1").value = "Generator Usage Log";
-    worksheet.getCell("A1").font = { bold: true, size: 14 };
-    worksheet.addRow([]);
+    ws.columns = [
+      { header: "Date", key: "date", width: 14 },
+      { header: "Start Hr", key: "start", width: 12 },
+      { header: "Finish Hr", key: "finish", width: 12 },
+      { header: "Hours Run", key: "hours", width: 12 },
+      { header: "Est. Diesel (L)", key: "diesel", width: 16 },
+      { header: "Notes", key: "notes", width: 25 },
+    ];
+    ws.getRow(1).font = { bold: true };
+    ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F81BD" } };
+    ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
-    const headerRow = worksheet.addRow(["Date", "Type", "Tank", "Generator", "Hour Meter", "Gallons", "Efficiency", "Notes"]);
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+    filteredRows.forEach((row) => {
+      const hrs = (row.finish_hour_meter ?? 0) - (row.start_hour_meter ?? 0);
+      ws.addRow({
+        date: fmtDate(parseDateLocal(row.date)),
+        start: row.start_hour_meter ?? "-",
+        finish: row.finish_hour_meter ?? "-",
+        hours: hrs > 0 ? hrs.toFixed(1) : "-",
+        diesel: row.estimated_diesel_liters?.toFixed(1) ?? "-",
+        notes: row.notes || "-",
+      });
     });
 
-    transactions.forEach((tx) => {
-      worksheet.addRow([
-        fmtDate(parseDateLocal(tx.transaction_date)),
-        tx.transaction_type === "refill" ? "Refill" : "Usage",
-        tx.fuel_tanks?.name || "-",
-        tx.fuel_equipment?.name || "-",
-        tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-",
-        tx.gallons.toFixed(1),
-        tx.gallons_per_hour ? `${tx.gallons_per_hour.toFixed(2)} gal/hr` : "-",
-        tx.notes || "-",
-      ]);
+    // Totals
+    const totRow = ws.addRow({
+      date: "TOTAL",
+      start: "",
+      finish: "",
+      hours: totals.totalHours.toFixed(1),
+      diesel: totals.totalLiters.toFixed(1),
+      notes: "",
     });
-
-    worksheet.columns.forEach((col) => { col.width = 16; });
+    totRow.font = { bold: true };
+    totRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9E1F2" } };
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Generator_Usage_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    a.download = `Industry_Fueling_Report_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const exportToPDF = () => {
-    if (transactions.length === 0) return;
+    if (filteredRows.length === 0) return;
     const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(14);
-    doc.text("Generator Usage Log", 14, 15);
+    doc.text("Industry Fueling Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${fmtDate(new Date())}`, 14, 22);
 
-    autoTable(doc, {
-      head: [["Date", "Type", "Tank", "Generator", "Hour Meter", "Gallons", "Efficiency", "Notes"]],
-      body: transactions.map((tx) => [
-        fmtDate(parseDateLocal(tx.transaction_date)),
-        tx.transaction_type === "refill" ? "Refill" : "Usage",
-        tx.fuel_tanks?.name || "-",
-        tx.fuel_equipment?.name || "-",
-        tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-",
-        tx.gallons.toFixed(1),
-        tx.gallons_per_hour ? `${tx.gallons_per_hour.toFixed(2)} gal/hr` : "-",
-        tx.notes || "-",
-      ]),
-      startY: 22,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [59, 130, 246] },
+    const body = filteredRows.map((row) => {
+      const hrs = (row.finish_hour_meter ?? 0) - (row.start_hour_meter ?? 0);
+      return [
+        fmtDate(parseDateLocal(row.date)),
+        row.start_hour_meter?.toString() ?? "-",
+        row.finish_hour_meter?.toString() ?? "-",
+        hrs > 0 ? hrs.toFixed(1) : "-",
+        row.estimated_diesel_liters?.toFixed(1) ?? "-",
+        row.notes || "-",
+      ];
     });
 
-    doc.save(`Generator_Usage_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    body.push([
+      "TOTAL", "", "",
+      totals.totalHours.toFixed(1),
+      totals.totalLiters.toFixed(1),
+      "",
+    ]);
+
+    autoTable(doc, {
+      head: [["Date", "Start Hr", "Finish Hr", "Hours Run", "Est. Diesel (L)", "Notes"]],
+      body,
+      startY: 28,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [79, 129, 189] },
+      didParseCell: (cellData) => {
+        if (cellData.row.index === body.length - 1) {
+          cellData.cell.styles.fontStyle = "bold";
+          cellData.cell.styles.fillColor = [217, 225, 242];
+        }
+      },
+    });
+
+    doc.save(`Industry_Fueling_Report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
+      {/* Tank Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         {tanks.map((tank) => (
           <Card key={tank.id}>
@@ -339,283 +275,253 @@ export function IndustryFuelView() {
             </CardContent>
           </Card>
         ))}
-        {generators.map((gen) => {
-          const stats = getGeneratorStats(gen.id);
-          return (
-            <Card key={gen.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{gen.name}</CardTitle>
-                <Zap className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{gen.current_hour_meter} hrs</div>
-                {stats?.lastEfficiency && (
-                  <p className="text-xs text-muted-foreground">
-                    Last: {stats.lastEfficiency.toFixed(2)} gal/hr
-                  </p>
-                )}
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="fueling-report">Fueling Report</TabsTrigger>
+            <TabsTrigger value="tank-refills">Tank Refills</TabsTrigger>
+          </TabsList>
+
+          {activeTab === "fueling-report" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={filteredRows.length === 0}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover">
+                <DropdownMenuItem onClick={exportToExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {activeTab === "tank-refills" && (
+            <Dialog open={isRefillDialogOpen} onOpenChange={setIsRefillDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Fuel className="mr-2 h-4 w-4" />
+                  Record Tank Refill
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Record Tank Refill</DialogTitle>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!refillForm.tank_id || !refillForm.gallons) {
+                      toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
+                      return;
+                    }
+                    refillMutation.mutate(refillForm);
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <Label>Tank *</Label>
+                    <Select value={refillForm.tank_id} onValueChange={(v) => setRefillForm({ ...refillForm, tank_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select tank" /></SelectTrigger>
+                      <SelectContent>
+                        {tanks.map((tank) => (
+                          <SelectItem key={tank.id} value={tank.id}>{tank.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Gallons Added *</Label>
+                    <Input type="number" step="0.1" value={refillForm.gallons} onChange={(e) => setRefillForm({ ...refillForm, gallons: e.target.value })} placeholder="e.g., 50" />
+                  </div>
+                  <div>
+                    <Label>Notes</Label>
+                    <Input value={refillForm.notes} onChange={(e) => setRefillForm({ ...refillForm, notes: e.target.value })} placeholder="Optional notes" />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsRefillDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={refillMutation.isPending}>{refillMutation.isPending ? "Recording..." : "Record Refill"}</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+
+        {/* Fueling Report Tab */}
+        <TabsContent value="fueling-report">
+          {/* Date filters */}
+          <div className="flex items-center gap-4 mb-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground">—</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "MMM d, yyyy") : "To"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
+              </PopoverContent>
+            </Popover>
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* Summary cards */}
+          <div className="grid gap-4 md:grid-cols-3 mb-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-sm text-muted-foreground">Total Records</div>
+                <div className="text-2xl font-bold">{filteredRows.length}</div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-sm text-muted-foreground">Total Hours Run</div>
+                <div className="text-2xl font-bold">{totals.totalHours.toFixed(1)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Droplets className="h-4 w-4" /> Total Est. Diesel (L)
+                </div>
+                <div className="text-2xl font-bold">{totals.totalLiters.toFixed(1)}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Actions */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Generator Usage Log</h2>
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={transactions.length === 0}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-popover">
-              <DropdownMenuItem onClick={exportToExcel} className="text-excel">
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportToPDF}>
-                <FileText className="mr-2 h-4 w-4" />
-                Export to PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Dialog open={isRefillDialogOpen} onOpenChange={setIsRefillDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Fuel className="mr-2 h-4 w-4" />
-                Record Tank Refill
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Record Tank Refill</DialogTitle>
-              </DialogHeader>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!refillForm.tank_id || !refillForm.gallons) {
-                    toast({
-                      title: "Validation Error",
-                      description: "Please fill in all required fields.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  refillMutation.mutate(refillForm);
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <Label>Tank *</Label>
-                  <Select
-                    value={refillForm.tank_id}
-                    onValueChange={(value) =>
-                      setRefillForm({ ...refillForm, tank_id: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select tank" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tanks.map((tank) => (
-                        <SelectItem key={tank.id} value={tank.id}>
-                          {tank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Gallons Added *</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={refillForm.gallons}
-                    onChange={(e) =>
-                      setRefillForm({ ...refillForm, gallons: e.target.value })
-                    }
-                    placeholder="e.g., 50"
-                  />
-                </div>
-                <div>
-                  <Label>Notes</Label>
-                  <Input
-                    value={refillForm.notes}
-                    onChange={(e) =>
-                      setRefillForm({ ...refillForm, notes: e.target.value })
-                    }
-                    placeholder="Optional notes"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsRefillDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={refillMutation.isPending}>
-                    {refillMutation.isPending ? "Recording..." : "Record Refill"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          {/* Table */}
+          {isLoading ? (
+            <div className="text-muted-foreground">Loading...</div>
+          ) : filteredRows.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Droplets className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p>No diesel consumption records found.</p>
+              <p className="text-sm">Enter estimated diesel in Industrial → Plant Hours to see data here.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Start Hr</TableHead>
+                  <TableHead className="text-right">Finish Hr</TableHead>
+                  <TableHead className="text-right">Hours Run</TableHead>
+                  <TableHead className="text-right">Est. Diesel (L)</TableHead>
+                  <TableHead>Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRows.map((row) => {
+                  const hrs = (row.finish_hour_meter ?? 0) - (row.start_hour_meter ?? 0);
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>{fmtDate(parseDateLocal(row.date))}</TableCell>
+                      <TableCell className="text-right">{row.start_hour_meter ?? "-"}</TableCell>
+                      <TableCell className="text-right">{row.finish_hour_meter ?? "-"}</TableCell>
+                      <TableCell className="text-right">{hrs > 0 ? hrs.toFixed(1) : "-"}</TableCell>
+                      <TableCell className="text-right font-medium">{row.estimated_diesel_liters?.toFixed(1) ?? "-"}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.notes || "-"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Totals row */}
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell>TOTAL</TableCell>
+                  <TableCell />
+                  <TableCell />
+                  <TableCell className="text-right">{totals.totalHours.toFixed(1)}</TableCell>
+                  <TableCell className="text-right">{totals.totalLiters.toFixed(1)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
 
-          <Dialog open={isReadingDialogOpen} onOpenChange={setIsReadingDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Record Hour Meter
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Record Generator Hour Meter</DialogTitle>
-              </DialogHeader>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!readingForm.equipment_id || !readingForm.hour_meter_reading) {
-                    toast({
-                      title: "Validation Error",
-                      description: "Please fill in all required fields.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  readingMutation.mutate(readingForm);
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <Label>Generator *</Label>
-                  <Select
-                    value={readingForm.equipment_id}
-                    onValueChange={(value) =>
-                      setReadingForm({ ...readingForm, equipment_id: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select generator" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {generators.map((gen) => (
-                        <SelectItem key={gen.id} value={gen.id}>
-                          {gen.name} ({gen.current_hour_meter} hrs)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedGenerator && (
-                  <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                    <Zap className="inline h-4 w-4 mr-1" />
-                    Last reading: {selectedGenerator.current_hour_meter} hrs
-                  </div>
-                )}
-
-                <div>
-                  <Label>Current Hour Meter *</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={readingForm.hour_meter_reading}
-                    onChange={(e) =>
-                      setReadingForm({ ...readingForm, hour_meter_reading: e.target.value })
-                    }
-                    placeholder="e.g., 1500"
-                  />
-                </div>
-                <div>
-                  <Label>Notes</Label>
-                  <Input
-                    value={readingForm.notes}
-                    onChange={(e) =>
-                      setReadingForm({ ...readingForm, notes: e.target.value })
-                    }
-                    placeholder="Optional notes"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsReadingDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={readingMutation.isPending}>
-                    {readingMutation.isPending ? "Recording..." : "Record Reading"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Transactions Table */}
-      {isLoading ? (
-        <div className="text-muted-foreground">Loading transactions...</div>
-      ) : transactions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Zap className="mx-auto h-12 w-12 mb-4 opacity-50" />
-          <p>No generator usage records yet.</p>
-          <p className="text-sm">Record tank refills and hour meter readings to track consumption.</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date/Time</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Tank</TableHead>
-              <TableHead>Generator</TableHead>
-              <TableHead>Hour Meter</TableHead>
-              <TableHead>Gallons</TableHead>
-              <TableHead>Efficiency</TableHead>
-              <TableHead>Notes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transactions.map((tx) => (
-              <TableRow key={tx.id}>
-                <TableCell>
-                  {format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={tx.transaction_type === "refill" ? "default" : "secondary"}>
-                    {tx.transaction_type === "refill" ? "Refill" : "Usage"}
-                  </Badge>
-                </TableCell>
-                <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
-                <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
-                <TableCell>
-                  {tx.hour_meter_reading ? `${tx.hour_meter_reading} hrs` : "-"}
-                </TableCell>
-                <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>
-                <TableCell>
-                  {tx.gallons_per_hour ? (
-                    <span className="text-primary font-medium">
-                      {tx.gallons_per_hour.toFixed(2)} gal/hr
-                    </span>
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{tx.notes || "-"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+        {/* Tank Refills Tab - shows existing tank refill transactions */}
+        <TabsContent value="tank-refills">
+          <TankRefillsSection tanks={tanks} />
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+/** Small sub-component showing recent refill transactions for industry tanks */
+function TankRefillsSection({ tanks }: { tanks: FuelTank[] }) {
+  const { data: refills = [], isLoading } = useQuery({
+    queryKey: ["fuelTransactions", "industry", "refills"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fuel_transactions")
+        .select("id, transaction_date, gallons, notes, fuel_tanks!tank_id!inner(name, use_type)")
+        .eq("fuel_tanks.use_type", "industry")
+        .eq("transaction_type", "refill")
+        .order("transaction_date", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as { id: string; transaction_date: string; gallons: number; notes: string | null; fuel_tanks: { name: string } }[];
+    },
+  });
+
+  if (isLoading) return <div className="text-muted-foreground">Loading...</div>;
+
+  if (refills.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Fuel className="mx-auto h-12 w-12 mb-4 opacity-50" />
+        <p>No tank refills recorded yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>Tank</TableHead>
+          <TableHead className="text-right">Gallons</TableHead>
+          <TableHead>Notes</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {refills.map((r) => (
+          <TableRow key={r.id}>
+            <TableCell>{fmtDate(parseDateLocal(r.transaction_date))}</TableCell>
+            <TableCell>{r.fuel_tanks?.name || "-"}</TableCell>
+            <TableCell className="text-right font-medium">{r.gallons.toFixed(1)} gal</TableCell>
+            <TableCell className="text-muted-foreground">{r.notes || "-"}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

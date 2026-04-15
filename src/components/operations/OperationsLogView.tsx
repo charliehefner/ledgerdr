@@ -489,36 +489,17 @@ export function OperationsLogView() {
         console.warn("Follow-up scheduling failed:", e);
       }
 
-      // Insert inputs and deduct from inventory
+      // Atomically insert inputs and deduct from inventory via RPC
       if (currentInputs.length > 0) {
-        const inputRecords = currentInputs.map(input => ({
-          operation_id: operation.id,
-          inventory_item_id: input.inventory_item_id,
-          quantity_used: input.quantity_used,
-        }));
-
-        const { error: inputError } = await supabase
-          .from("operation_inputs")
-          .insert(inputRecords);
-        
+        const { error: inputError } = await supabase.rpc("save_operation_inputs", {
+          p_operation_id: operation.id,
+          p_inputs: currentInputs.map(i => ({
+            inventory_item_id: i.inventory_item_id,
+            quantity_used: i.quantity_used,
+          })),
+          p_restore_original: false,
+        });
         if (inputError) throw inputError;
-
-        // Deduct from inventory (fetch fresh to avoid stale cache)
-        for (const input of currentInputs) {
-          const { data: freshItem } = await supabase
-            .from("inventory_items")
-            .select("current_quantity")
-            .eq("id", input.inventory_item_id)
-            .maybeSingle();
-          if (!freshItem) continue;
-          const newQuantity = freshItem.current_quantity - input.quantity_used;
-          const { error: updateError } = await supabase
-            .from("inventory_items")
-            .update({ current_quantity: newQuantity })
-            .eq("id", input.inventory_item_id);
-          
-          if (updateError) throw updateError;
-        }
       }
 
       return { followUpMessage };
@@ -577,65 +558,16 @@ export function OperationsLogView() {
       
       if (updateError) throw updateError;
 
-      // Restore inventory for original inputs (fetch fresh to avoid stale cache)
-      for (const input of originalInputs) {
-        const { data: freshItem } = await supabase
-          .from("inventory_items")
-          .select("current_quantity")
-          .eq("id", input.inventory_item_id)
-          .maybeSingle();
-        if (!freshItem) continue;
-        const newQuantity = freshItem.current_quantity + input.quantity_used;
-        const { error: restoreError } = await supabase
-          .from("inventory_items")
-          .update({ current_quantity: newQuantity })
-          .eq("id", input.inventory_item_id);
-        
-        if (restoreError) throw restoreError;
-      }
-
-      // Delete old operation_inputs
-      const { error: deleteInputsError } = await supabase
-        .from("operation_inputs")
-        .delete()
-        .eq("operation_id", operationId);
-      
-      if (deleteInputsError) throw deleteInputsError;
-
-      // Insert new inputs and deduct from inventory
-      if (currentInputs.length > 0) {
-        const inputRecords = currentInputs.map(input => ({
-          operation_id: operationId,
-          inventory_item_id: input.inventory_item_id,
-          quantity_used: input.quantity_used,
-        }));
-
-        const { error: inputError } = await supabase
-          .from("operation_inputs")
-          .insert(inputRecords);
-        
-        if (inputError) throw inputError;
-
-        // Deduct from inventory (use fresh data after restore)
-        for (const input of currentInputs) {
-          const { data: currentItem, error: fetchError } = await supabase
-            .from("inventory_items")
-            .select("current_quantity")
-            .eq("id", input.inventory_item_id)
-            .maybeSingle();
-          
-          if (fetchError) throw fetchError;
-          if (!currentItem) throw new Error(`Inventory item ${input.inventory_item_id} not found`);
-          
-          const newQuantity = currentItem.current_quantity - input.quantity_used;
-          const { error: deductError } = await supabase
-            .from("inventory_items")
-            .update({ current_quantity: newQuantity })
-            .eq("id", input.inventory_item_id);
-          
-          if (deductError) throw deductError;
-        }
-      }
+      // Atomically restore old inputs, insert new ones, and reconcile inventory
+      const { error: inputError } = await supabase.rpc("save_operation_inputs", {
+        p_operation_id: operationId,
+        p_inputs: currentInputs.map(i => ({
+          inventory_item_id: i.inventory_item_id,
+          quantity_used: i.quantity_used,
+        })),
+        p_restore_original: true,
+      });
+      if (inputError) throw inputError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["operations"] });
@@ -661,38 +593,13 @@ export function OperationsLogView() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (operationId: string) => {
-      const { data: inputs, error: inputsError } = await supabase
-        .from("operation_inputs")
-        .select("inventory_item_id, quantity_used")
-        .eq("operation_id", operationId);
-      
-      if (inputsError) throw inputsError;
-
-      // Restore inventory (fetch fresh to avoid stale cache)
-      if (inputs && inputs.length > 0) {
-        for (const input of inputs) {
-          const { data: freshItem } = await supabase
-            .from("inventory_items")
-            .select("current_quantity")
-            .eq("id", input.inventory_item_id)
-            .maybeSingle();
-          if (!freshItem) continue;
-          const newQuantity = freshItem.current_quantity + input.quantity_used;
-          const { error: updateError } = await supabase
-            .from("inventory_items")
-            .update({ current_quantity: newQuantity })
-            .eq("id", input.inventory_item_id);
-          
-          if (updateError) throw updateError;
-        }
-      }
-
-      const { error: deleteInputsError } = await supabase
-        .from("operation_inputs")
-        .delete()
-        .eq("operation_id", operationId);
-      
-      if (deleteInputsError) throw deleteInputsError;
+      // Atomically restore inventory and clear inputs
+      const { error: inputError } = await supabase.rpc("save_operation_inputs", {
+        p_operation_id: operationId,
+        p_inputs: [],
+        p_restore_original: true,
+      });
+      if (inputError) throw inputError;
 
       const { error: deleteError } = await supabase
         .from("operations")

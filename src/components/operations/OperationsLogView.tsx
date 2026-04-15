@@ -1597,6 +1597,48 @@ export function OperationsLogView() {
         </Table>
       )}
 
+      {/* Operations Pagination */}
+      {opsTotalItems > 0 && (
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{t("operations.show") || "Show"}</span>
+            <Select
+              value={String(opsPageSize)}
+              onValueChange={(v) => { setOpsPageSize(Number(v)); setOpsPage(0); }}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OPS_PAGE_SIZE_OPTIONS.map(size => (
+                  <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span>
+              {t("operations.ofTotal")?.replace("{count}", String(opsTotalItems)) || `of ${opsTotalItems} operations`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasPrevPage} onClick={() => setOpsPage(0)}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasPrevPage} onClick={() => setOpsPage(p => Math.max(p - 1, 0))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm px-2">
+              {safeOpsPage + 1} / {opsTotalPages}
+            </span>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasNextPage} onClick={() => setOpsPage(p => p + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!opsHasNextPage} onClick={() => setOpsPage(opsTotalPages - 1)}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteOperationId} onOpenChange={(open) => !open && setDeleteOperationId(null)}>
         <AlertDialogContent>

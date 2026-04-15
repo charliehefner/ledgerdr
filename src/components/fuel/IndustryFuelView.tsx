@@ -80,7 +80,7 @@ export function IndustryFuelView() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
-  const entityFilter = useEntityFilter();
+  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
 
   // Fetch industry tanks
   const { data: tanks = [] } = useQuery({

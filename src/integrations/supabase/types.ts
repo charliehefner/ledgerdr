@@ -2409,6 +2409,7 @@ export type Database = {
           created_by: string | null
           date: string | null
           entity_id: string | null
+          estimated_diesel_liters: number | null
           estimated_tons: number | null
           finish_hour_meter: number | null
           id: string
@@ -2421,6 +2422,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           entity_id?: string | null
+          estimated_diesel_liters?: number | null
           estimated_tons?: number | null
           finish_hour_meter?: number | null
           id?: string
@@ -2433,6 +2435,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           entity_id?: string | null
+          estimated_diesel_liters?: number | null
           estimated_tons?: number | null
           finish_hour_meter?: number | null
           id?: string

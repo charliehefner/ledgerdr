@@ -599,7 +599,9 @@ export function PayrollSummary({
           overtimePay: Number(s.overtime_pay),
           holidayPay: Number(s.holiday_pay),
           sundayPay: Number(s.sunday_pay),
-          benefits: [],
+          benefits: employeeBenefits
+            .filter((b) => b.employee_id === s.employee_id)
+            .map((b) => ({ benefit_type: b.benefit_type, amount: b.amount })),
           totalBenefits: Number(s.total_benefits),
           tss: Number(s.tss),
           isr: Number(s.isr),

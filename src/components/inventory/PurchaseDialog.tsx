@@ -166,7 +166,7 @@ export function PurchaseDialog({
         if (fetchError) throw fetchError;
         if (!currentItem) throw new Error("Inventory item not found");
 
-        const newQuantity = Number(currentItem.current_quantity) + addedQuantity;
+        const newQuantity = Math.round((Number(currentItem.current_quantity) + addedQuantity) * 10000) / 10000;
 
         const { error: updateError } = await supabase
           .from("inventory_items")

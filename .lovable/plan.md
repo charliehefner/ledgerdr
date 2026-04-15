@@ -1,41 +1,36 @@
 
 
-## Fix: Inventory Display Precision + Correct Stock Levels + Add Missing P01 Inputs
+## Fix: Round All Inventory Item Quantities in Database
 
-### Problem Summary
+### Problem
+Several inventory items have floating-point drift in their `current_quantity` values stored in the database:
 
-1. **Floating point display**: Operation inputs column (line 1507) and input chips (line 1300) in `OperationsLogView.tsx` display `quantity_used` without `.toFixed(2)`, so raw float values like `0.15000000000000002` appear.
+| Item | Current DB Value | Should Be |
+|------|-----------------|-----------|
+| Diesel Agrícola | 283.29999999999999 | 283.30 |
+| Diesel Industrial | 298.50000000000006 | 298.50 |
+| Pledge 51 WG | 1.0799999999999996 | 1.08 |
 
-2. **Stock levels inflated by race condition**: Same bug as Revolver — repeated partial mutations inflated stock for Abland, Bionex, and pH Ned.
-
-3. **Missing P01 inputs**: The April 14 P01 operation (ID `43be04dc`) only has Revolver recorded; Abland (0.15L), Bionex (0.625L), and pH Ned (0.15L) are missing.
-
-### Audit Results
-
-| Item | Purchased | Used (recorded) | P01 Missing | Expected Stock | Current DB | Off By |
-|------|-----------|-----------------|-------------|---------------|------------|--------|
-| Abland | 4.27 | 1.95 | 0.15 | 2.17 | 3.98 | +1.81 |
-| Bionex | 11.00 | 10.375 | 0.625 | 0.00 | 7.50 | +7.50 |
-| pH Ned | 3.80 | 3.66 | 0.15 | ~0.00 | 1.68 | +1.68 |
+The UI uses `.toFixed(2)` so most display is fine, but the underlying data should be clean. Additionally, the `PurchaseDialog` and `StockAdjustmentDialog` perform arithmetic without rounding, which can reintroduce drift.
 
 ### Plan
 
-**1. Data fixes (SQL)**
-- Insert 3 missing `operation_inputs` rows for the P01 operation (`43be04dc`): Abland 0.15, Bionex 0.625, pH Ned 0.15
-- Correct `current_quantity` for all three items: Abland → 2.17, Bionex → 0.00, pH Ned → 0.00 (purchased 3.80 minus total used 3.81 rounds to 0; cannot go negative)
+**1. Data fix (SQL migration)**
+Round all `current_quantity` values in `inventory_items` to 4 decimal places:
+```sql
+UPDATE inventory_items SET current_quantity = ROUND(current_quantity::numeric, 4);
+```
 
-**2. Display fix — `OperationsLogView.tsx`**
-- Line 1300: Change `{input.quantity_used}` to `{Number(input.quantity_used).toFixed(2)}`
-- Line 1507: Change `{input.quantity_used}` to `{Number(input.quantity_used).toFixed(2)}`
+**2. Code fixes — add ROUND to client-side stock arithmetic**
+- `PurchaseDialog.tsx` (line ~169): Wrap `newQuantity` in `Math.round(... * 10000) / 10000`
+- `StockAdjustmentDialog.tsx` (lines ~51-55): Same rounding for add/subtract/set cases
 
-**3. Database function improvement — `save_operation_inputs`**
-- Add `ROUND(..., 4)` to the stock arithmetic inside the function to prevent floating point drift from accumulating over time
+This ensures all three stock mutation paths (operations via DB function, purchases, manual adjustments) consistently round to 4 decimals.
 
 ### Scope
-
 | Component | Change |
 |-----------|--------|
-| Data fix (SQL) | 3 input inserts + 3 stock corrections |
-| OperationsLogView.tsx | 2 lines — add `.toFixed(2)` to quantity display |
-| save_operation_inputs migration | Add ROUND() to arithmetic |
+| SQL migration | Round all current_quantity values |
+| PurchaseDialog.tsx | Add rounding to purchase stock update |
+| StockAdjustmentDialog.tsx | Add rounding to adjustment stock update |
 

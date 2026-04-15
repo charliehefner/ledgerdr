@@ -1297,7 +1297,7 @@ export function OperationsLogView() {
                         return (
                           <div key={input.inventory_item_id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
                             <span className="text-sm">
-                              {item?.commercial_name} - {input.quantity_used} {item?.use_unit}
+                              {item?.commercial_name} - {Number(input.quantity_used).toFixed(2)} {item?.use_unit}
                             </span>
                             <Button
                               type="button"
@@ -1504,7 +1504,7 @@ export function OperationsLogView() {
                         <div className="space-y-1">
                       {op.operation_inputs.map((input) => (
                             <div key={input.id} className="text-xs">
-                              {input.inventory_items?.commercial_name || "Unknown"}: {input.quantity_used} {input.inventory_items?.use_unit || ""}
+                              {input.inventory_items?.commercial_name || "Unknown"}: {Number(input.quantity_used).toFixed(2)} {input.inventory_items?.use_unit || ""}
                             </div>
                           ))}
                         </div>

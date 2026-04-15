@@ -789,7 +789,7 @@ export function PayrollSummary({
           </Button>
 
           {!isClosed && (
-            <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0}>
+            <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0 || !hasCommittedSnapshots}>
               <Lock className="h-4 w-4 mr-2" />
               {t("payrollSummary.closePeriod")}
             </Button>

@@ -5858,6 +5858,14 @@ export type Database = {
             }
             Returns: number
           }
+      save_operation_inputs: {
+        Args: {
+          p_inputs?: Json
+          p_operation_id: string
+          p_restore_original?: boolean
+        }
+        Returns: undefined
+      }
       trial_balance: {
         Args: { p_end?: string; p_start?: string }
         Returns: {

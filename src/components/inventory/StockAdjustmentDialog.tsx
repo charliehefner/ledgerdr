@@ -45,13 +45,13 @@ export function StockAdjustmentDialog({
 
       switch (adjustmentType) {
         case "set":
-          newQuantity = adjustmentAmount;
+          newQuantity = Math.round(adjustmentAmount * 10000) / 10000;
           break;
         case "add":
-          newQuantity = Number(item.current_quantity) + adjustmentAmount;
+          newQuantity = Math.round((Number(item.current_quantity) + adjustmentAmount) * 10000) / 10000;
           break;
         case "subtract":
-          newQuantity = Number(item.current_quantity) - adjustmentAmount;
+          newQuantity = Math.round((Number(item.current_quantity) - adjustmentAmount) * 10000) / 10000;
           break;
       }
 

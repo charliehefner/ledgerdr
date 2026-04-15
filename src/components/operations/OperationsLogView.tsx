@@ -326,38 +326,14 @@ export function OperationsLogView() {
     return Array.from(farmSet, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [fields]);
 
-  // Filter and sort operations
+  // Sort operations (filtering is now server-side)
   const filteredOperations = useMemo(() => {
     if (!operations) return [];
-    let result = operations.filter((op) => {
-      const opDate = parseDateLocal(op.operation_date);
-      
-      // Date filter
-      if (startDate && endDate) {
-        if (!isWithinInterval(opDate, {
-          start: startOfDay(startDate),
-          end: endOfDay(endDate),
-        })) return false;
-      }
-      
-      // Farm filter
-      if (filterFarm && op.fields?.farm_id !== filterFarm) return false;
-      
-      // Field filter
-      if (filterField && op.field_id !== filterField) return false;
-      
-      // Tractor filter
-      if (filterTractor && op.tractor_id !== filterTractor) return false;
-      
-      // Operation Type filter
-      if (filterOperationType && op.operation_type_id !== filterOperationType) return false;
-      
-      return true;
-    });
+    let result = [...operations];
 
-    // Apply sorting
+    // Apply sorting (client-side since some sort columns need joined data)
     if (sortColumn && sortDirection) {
-      result = [...result].sort((a, b) => {
+      result.sort((a, b) => {
         let comparison = 0;
         switch (sortColumn) {
           case "date":
@@ -395,7 +371,21 @@ export function OperationsLogView() {
     }
 
     return result;
-  }, [operations, startDate, endDate, sortColumn, sortDirection, filterFarm, filterField, filterTractor, filterOperationType]);
+  }, [operations, sortColumn, sortDirection]);
+
+  // Client-side pagination for sorted results
+  const [opsPage, setOpsPage] = useState(0);
+  const [opsPageSize, setOpsPageSize] = useState(20);
+  const OPS_PAGE_SIZE_OPTIONS = [20, 50, 100, 200];
+  const opsTotalItems = filteredOperations.length;
+  const opsTotalPages = Math.max(1, Math.ceil(opsTotalItems / opsPageSize));
+  const safeOpsPage = Math.min(opsPage, opsTotalPages - 1);
+  const paginatedOperations = useMemo(() => {
+    const start = safeOpsPage * opsPageSize;
+    return filteredOperations.slice(start, start + opsPageSize);
+  }, [filteredOperations, safeOpsPage, opsPageSize]);
+  const opsHasNextPage = safeOpsPage < opsTotalPages - 1;
+  const opsHasPrevPage = safeOpsPage > 0;
 
   // Top 5 operations by hectares
   const top5Operations = useMemo(() => {

@@ -232,9 +232,15 @@ export function OperationsLogView() {
     },
   });
 
-  // Fetch operations with inputs
+  // Resolve field IDs for farm filter (needed for server-side filtering)
+  const farmFieldIds = useMemo(() => {
+    if (!filterFarm || !fields) return null;
+    return fields.filter(f => f.farm_id === filterFarm).map(f => f.id);
+  }, [filterFarm, fields]);
+
+  // Fetch operations with server-side date + column filters
   const { data: operations, isLoading } = useQuery({
-    queryKey: ["operations", selectedEntityId],
+    queryKey: ["operations", selectedEntityId, startDate?.toISOString(), endDate?.toISOString(), filterField, filterTractor, filterOperationType, filterFarm, farmFieldIds],
     queryFn: async () => {
       let q: any = supabase
         .from("operations")
@@ -248,10 +254,38 @@ export function OperationsLogView() {
         `)
         .order("operation_date", { ascending: false });
       q = applyEntityFilter(q);
+
+      // Server-side date range filter
+      if (startDate) {
+        q = q.gte("operation_date", format(startDate, "yyyy-MM-dd"));
+      }
+      if (endDate) {
+        q = q.lte("operation_date", format(endDate, "yyyy-MM-dd"));
+      }
+
+      // Server-side direct column filters
+      if (filterField) {
+        q = q.eq("field_id", filterField);
+      }
+      if (filterTractor) {
+        q = q.eq("tractor_id", filterTractor);
+      }
+      if (filterOperationType) {
+        q = q.eq("operation_type_id", filterOperationType);
+      }
+      // Farm filter via field IDs
+      if (filterFarm && farmFieldIds && farmFieldIds.length > 0) {
+        q = q.in("field_id", farmFieldIds);
+      } else if (filterFarm && farmFieldIds && farmFieldIds.length === 0) {
+        // Farm selected but no fields match — return empty
+        return [] as Operation[];
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return data as Operation[];
     },
+    placeholderData: keepPreviousData,
   });
 
   const selectedOperationType = operationTypes?.find(t => t.id === form.operation_type_id);

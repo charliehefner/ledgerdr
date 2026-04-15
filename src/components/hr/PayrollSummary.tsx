@@ -191,6 +191,18 @@ export function PayrollSummary({
     },
   });
 
+  // Fetch employee benefits (for receipts)
+  const { data: employeeBenefits = [] } = useQuery({
+    queryKey: ["employee-benefits-for-receipts", selectedEntityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_benefits")
+        .select("employee_id, benefit_type, amount");
+      if (error) throw error;
+      return data as { employee_id: string; benefit_type: string; amount: number }[];
+    },
+  });
+
   // Commit payroll mutation
   const commitPayroll = useMutation({
     mutationFn: async () => {

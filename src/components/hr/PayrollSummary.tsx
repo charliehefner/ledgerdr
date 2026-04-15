@@ -601,7 +601,7 @@ export function PayrollSummary({
           sundayPay: Number(s.sunday_pay),
           benefits: employeeBenefits
             .filter((b) => b.employee_id === s.employee_id)
-            .map((b) => ({ benefit_type: b.benefit_type, amount: b.amount })),
+            .map((b) => ({ benefit_type: b.benefit_type, amount: b.amount / 2 })),
           totalBenefits: Number(s.total_benefits),
           tss: Number(s.tss),
           isr: Number(s.isr),

@@ -1,32 +1,31 @@
 
 
-## Fix: Entity ID Missing When Closing Payroll Period
+## Fix: Remove Incorrect `/2` Division on Recurring Benefits
 
 ### Root Cause
-In `PayrollSummary.tsx` line 556, the `closePeriod` mutation calls `createTransaction(...)` for each employee's net pay but **never passes `entityId`** as the second argument. The `createTransaction` function in `api.ts` (line 229) only includes `entity_id` in the insert when `entityId` is truthy — so the column is omitted entirely, triggering the NOT NULL constraint on `transactions.entity_id`.
+The `calculate_payroll_for_period` RPC (line 152) divides `employee_benefits.amount` by 2, assuming it represents a monthly figure. In reality, the amount stored is the **per-period value** — the same value shown in the Timesheet cell and paid in full each payroll (as Nomina 94 correctly did).
 
-### Fix
+### Changes
 
-**`src/components/hr/PayrollSummary.tsx`** — Pass `selectedEntityId` (already available via `useEntity()` on line 100) to every `createTransaction` call inside the `closePeriod` mutation:
-
-```typescript
-// Line 556: Change from
-await createTransaction({ ... });
-// To
-await createTransaction({ ... }, selectedEntityId);
+**1. Fix RPC** — Remove the `/ 2` from line 152:
+```sql
+-- FROM:
+SELECT COALESCE(SUM(eb.amount) / 2, 0) INTO v_benefits
+-- TO:
+SELECT COALESCE(SUM(eb.amount), 0) INTO v_benefits
 ```
 
-Additionally, add a guard at the top of the mutation to prevent closing when in "All Entities" mode (no entity selected):
+**2. Fix receipt line items** — Remove the `/ 2` from `PayrollSummary.tsx` benefit mapping (lines ~325 and ~604) so individual receipt items show the full stored amount.
 
-```typescript
-if (!selectedEntityId) {
-  throw new Error("Seleccione una entidad específica para cerrar el período");
-}
-```
+**3. Correct Nomina 95 snapshots** — Update the 13 snapshot records with recalculated `total_benefits`, `gross_pay`, and `net_pay` at full benefit values.
+
+**4. Provide difference report** — List each employee's underpayment from Nomina 95 so you can add the difference to the next cycle.
 
 ### Scope
-| File | Change |
+| Item | Change |
 |------|--------|
-| `PayrollSummary.tsx` | Pass `selectedEntityId` to `createTransaction`, add entity guard |
+| RPC `calculate_payroll_for_period` | Remove `/ 2` on recurring benefits (line 152) |
+| `PayrollSummary.tsx` | Remove `/ 2` from receipt benefit line items |
+| Nomina 95 snapshots | Update benefit/gross/net values to full amounts |
+| Output | List of underpaid amounts per employee |
 
-One-line fix + one safety guard. No database changes needed.

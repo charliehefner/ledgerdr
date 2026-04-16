@@ -468,7 +468,7 @@ export function BalanceSheetView() {
             step="0.01"
             min="1"
             value={exchangeRate}
-            onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)}
+            onChange={e => { manuallyEdited.current = true; setExchangeRate(parseFloat(e.target.value) || 1); }}
             className="w-28"
           />
         </div>

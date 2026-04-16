@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 
 const CC_LABELS: Record<string, Record<string, string>> = {
   es: { general: "General", agricultural: "Agrícola", industrial: "Industrial" },
@@ -86,6 +87,16 @@ export function CashFlowView() {
   const [endDate, setEndDate] = useState(format(now, "yyyy-MM-dd"));
   const [costCenter, setCostCenter] = useState("all");
   const [exchangeRate, setExchangeRate] = useState(60);
+  const manuallyEdited = useRef(false);
+  const { rate: fetchedRate, isLoading: rateLoading } = useExchangeRate(endDate);
+
+  useEffect(() => {
+    if (fetchedRate != null && !manuallyEdited.current) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate]);
+
+  useEffect(() => { manuallyEdited.current = false; }, [endDate]);
 
   // Fetch all accounts
   const { data: accounts = [] } = useQuery({

@@ -36,6 +36,7 @@ import { format } from "date-fns";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 
 const CC_LABELS: Record<string, Record<string, string>> = {
   es: { general: "General", agricultural: "Agrícola", industrial: "Industrial" },
@@ -77,6 +78,16 @@ export function BalanceSheetView() {
   const [asOfDate, setAsOfDate] = useState(format(now, "yyyy-MM-dd"));
   const [costCenter, setCostCenter] = useState("all");
   const [exchangeRate, setExchangeRate] = useState(60);
+  const manuallyEdited = useRef(false);
+  const { rate: fetchedRate, isLoading: rateLoading } = useExchangeRate(asOfDate);
+
+  useEffect(() => {
+    if (fetchedRate != null && !manuallyEdited.current) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate]);
+
+  useEffect(() => { manuallyEdited.current = false; }, [asOfDate]);
   const [compareEnabled, setCompareEnabled] = useState(false);
   const [compAsOfDate, setCompAsOfDate] = useState(format(new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()), "yyyy-MM-dd"));
 

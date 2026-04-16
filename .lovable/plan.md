@@ -1,25 +1,28 @@
 
 
-## Fix `linked_transaction_ids` Column Reference Error
+## Fix Industrial Tab Slow Load
 
-### Problem
-The `ap_ar_documents` table was refactored to use a junction table (`ap_ar_document_transactions`) instead of a `linked_transaction_ids UUID[]` column. However, `EditTransactionDialog.tsx` still references the old column in two places, causing errors when saving or voiding transactions.
+### Root Cause
+All three Industrial sub-views (`PlantHoursView`, `CarretasView`, `TrucksView`) eagerly import `ExcelJS` (~800KB) and `jsPDF` + `jspdf-autotable` (~400KB) at the top level. These libraries are only needed when the user clicks an export button, but they block the initial render of the entire tab.
+
+### Solution
+Lazy-load `ExcelJS` and `jsPDF`/`jspdf-autotable` using dynamic `import()` inside the export handler functions, and remove the top-level static imports.
 
 ### Changes
 
-**`src/components/invoices/EditTransactionDialog.tsx`**
+**1. `src/components/industrial/PlantHoursView.tsx`**
+- Remove top-level `import ExcelJS from "exceljs"` and `import jsPDF` / `import autoTable`
+- In the Excel export function, use `const ExcelJS = (await import("exceljs")).default`
+- In the PDF export function, use `const jsPDF = (await import("jspdf")).default` and `const autoTable = (await import("jspdf-autotable")).default`
 
-1. **Line ~296-299** — Replace the `.contains('linked_transaction_ids', ...)` lookup with a query against `ap_ar_document_transactions`:
-   - Query `ap_ar_document_transactions` for rows where `transaction_id = transaction.id`
-   - If found, use the `document_id` to get the AP/AR document
+**2. `src/components/industrial/CarretasView.tsx`**
+- Same pattern: move ExcelJS/jsPDF to dynamic imports inside export handlers
 
-2. **Lines ~318-333** — Replace `linked_transaction_ids: [transaction.id]` in the insert payload:
-   - Remove `linked_transaction_ids` from the `ap_ar_documents` insert
-   - After inserting the AP/AR document, insert a row into `ap_ar_document_transactions` linking the new document to the transaction
+**3. `src/components/industrial/TrucksView.tsx`**
+- Same pattern
 
-**`src/components/settings/backup/schemaSql.ts`** (line 908)
-- Remove `linked_transaction_ids UUID[]` from the backup schema to match the actual table
-
-### Risk
-- Low — fixes a broken code path; no schema changes needed since the junction table already exists
+### Impact
+- Initial load of the Industrial tab drops from ~1.2MB+ of JS parsing down to just the lightweight table/form components
+- Export functionality works identically — the libraries load on first export click (typically <1s on any connection)
+- No API or schema changes
 

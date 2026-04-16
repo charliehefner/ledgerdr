@@ -1,0 +1,1 @@
+ALTER FUNCTION public.void_ap_ar_on_transaction_void() SECURITY INVOKER;

@@ -19,9 +19,6 @@ import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useLanguage } from "@/contexts/LanguageContext";
-import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export function PlantHoursView() {
   const [open, setOpen] = useState(false);
@@ -121,6 +118,7 @@ export function PlantHoursView() {
   });
 
   const exportExcel = async () => {
+    const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet(t("industrial.plantHours"));
     ws.columns = [
@@ -143,7 +141,9 @@ export function PlantHoursView() {
     const a = document.createElement("a"); a.href = url; a.download = "horas_planta.xlsx"; a.click();
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF();
     doc.text(t("industrial.plantHours"), 14, 16);
     autoTable(doc, {

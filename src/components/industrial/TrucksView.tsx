@@ -21,9 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useLanguage } from "@/contexts/LanguageContext";
-import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 import { fmtDateTime } from "@/lib/dateUtils";
 
@@ -101,6 +98,7 @@ export function TrucksView() {
   });
 
   const exportExcel = async () => {
+    const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet(t("industrial.trucks"));
     ws.columns = [
@@ -121,7 +119,9 @@ export function TrucksView() {
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "camiones.xlsx"; a.click();
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF({ orientation: "landscape" });
     doc.text(t("industrial.trucks"), 14, 16);
     autoTable(doc, {

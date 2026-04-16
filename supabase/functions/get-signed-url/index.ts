@@ -110,10 +110,13 @@ Deno.serve(async (req) => {
       .createSignedUrl(filePath, 3600); // 1 hour
 
     if (error) {
-      console.error('Signed URL error:', error);
+      console.error('Signed URL error:', JSON.stringify(error));
+      const isNotFound = error.message?.toLowerCase().includes('not found') ||
+                         error.message?.toLowerCase().includes('object not found');
+      const status = isNotFound ? 404 : 500;
       return new Response(
-        JSON.stringify({ error: 'Failed to generate signed URL' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: isNotFound ? 'File not found' : 'Failed to generate signed URL' }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

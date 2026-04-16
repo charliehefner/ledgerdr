@@ -291,12 +291,13 @@ export function EditTransactionDialog({
 
       if (transaction.id && (effectivePayMethod === 'credit' || effectiveDueDate) && effectiveDirection !== 'payment' && effectiveDirection !== 'investment') {
         try {
-          // Check if AP/AR document already exists for this transaction
-          const { data: existingDoc } = await supabase
-            .from('ap_ar_documents')
-            .select('id')
-            .contains('linked_transaction_ids', [transaction.id])
+          // Check if AP/AR document already exists for this transaction via junction table
+          const { data: existingLink } = await supabase
+            .from('ap_ar_document_transactions')
+            .select('document_id')
+            .eq('transaction_id', transaction.id)
             .maybeSingle();
+          const existingDoc = existingLink ? { id: existingLink.document_id } : null;
 
           if (!existingDoc) {
             const direction = effectiveDirection === 'sale' ? 'receivable' : 'payable';
@@ -315,7 +316,7 @@ export function EditTransactionDialog({
             const txDate = updates.transaction_date || formData.transaction_date;
             const dueDateVal = effectiveDueDate || txDate;
 
-            await supabase.from('ap_ar_documents').insert({
+            const { data: newDoc } = await supabase.from('ap_ar_documents').insert({
               contact_name: updates.name || formData.name || 'Sin nombre',
               contact_rnc: updates.rnc !== undefined ? updates.rnc : (editedRnc || null),
               direction,
@@ -325,12 +326,18 @@ export function EditTransactionDialog({
               amount_paid: 0,
               status: 'open',
               currency: txCurrency,
-              linked_transaction_ids: [transaction.id],
               account_id: defaultAcct?.id || null,
               document_type: direction === 'receivable' ? 'invoice' : 'bill',
               document_number: transaction.legacy_id?.toString() || null,
               ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
-            });
+            }).select('id').single();
+
+            if (newDoc) {
+              await supabase.from('ap_ar_document_transactions').insert({
+                document_id: newDoc.id,
+                transaction_id: transaction.id,
+              });
+            }
           } else {
             // Sync updated fields to existing AP/AR document
             const txAmount = updates.amount !== undefined ? updates.amount : parseFloat(formData.amount);

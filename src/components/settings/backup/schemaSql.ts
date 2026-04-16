@@ -905,7 +905,7 @@ CREATE TABLE IF NOT EXISTS ap_ar_documents (
   balance_remaining NUMERIC GENERATED ALWAYS AS (total_amount - amount_paid) STORED,
   status TEXT NOT NULL DEFAULT 'open',
   account_id UUID REFERENCES chart_of_accounts(id),
-  linked_transaction_ids UUID[],
+  
   notes TEXT,
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

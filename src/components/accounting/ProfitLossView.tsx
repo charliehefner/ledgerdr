@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 
 const CC_LABELS: Record<string, Record<string, string>> = {
   es: { general: "General", agricultural: "Agrícola", industrial: "Industrial" },
@@ -138,6 +139,17 @@ export function ProfitLossView() {
   const [endDate, setEndDate] = useState(format(now, "yyyy-MM-dd"));
   const [costCenter, setCostCenter] = useState("all");
   const [exchangeRate, setExchangeRate] = useState(60);
+  const manuallyEdited = useRef(false);
+  const { rate: fetchedRate, isLoading: rateLoading } = useExchangeRate(endDate);
+
+  useEffect(() => {
+    if (fetchedRate != null && !manuallyEdited.current) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate]);
+
+  // Reset manual flag when date changes
+  useEffect(() => { manuallyEdited.current = false; }, [endDate]);
   const [compareEnabled, setCompareEnabled] = useState(false);
   const [compStartDate, setCompStartDate] = useState(format(new Date(now.getFullYear() - 1, 0, 1), "yyyy-MM-dd"));
   const [compEndDate, setCompEndDate] = useState(format(new Date(now.getFullYear() - 1, 11, 31), "yyyy-MM-dd"));
@@ -602,7 +614,7 @@ export function ProfitLossView() {
         <div className="space-y-1">
           <Label>{t("pl.exchangeRate")} (USD→DOP)</Label>
           <Input type="number" step="0.01" min="1" value={exchangeRate}
-            onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)} className="w-28" />
+            onChange={e => { manuallyEdited.current = true; setExchangeRate(parseFloat(e.target.value) || 1); }} className="w-28" />
         </div>
         <div className="flex items-center gap-2 self-end pb-1">
           <Switch checked={compareEnabled} onCheckedChange={setCompareEnabled} className="scale-75" />

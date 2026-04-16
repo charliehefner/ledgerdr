@@ -424,7 +424,7 @@ export function CashFlowView() {
         <div className="space-y-1">
           <Label>{t("pl.exchangeRate")} (USD→DOP fallback)</Label>
           <Input type="number" step="0.01" min="1" value={exchangeRate}
-            onChange={e => setExchangeRate(parseFloat(e.target.value) || 1)} className="w-28" />
+            onChange={e => { manuallyEdited.current = true; setExchangeRate(parseFloat(e.target.value) || 1); }} className="w-28" />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

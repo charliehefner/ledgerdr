@@ -161,10 +161,17 @@ export function CreditCardsList() {
             <TableBody>
               {accounts.map(acct => (
                 <TableRow key={acct.id}>
-                  <TableCell className="font-medium">{acct.account_name}</TableCell>
+                  <TableCell className="font-medium">
+                    {acct.account_name}
+                    <span className="ml-2 text-xs text-muted-foreground">· {acct.currency || "DOP"}</span>
+                  </TableCell>
                   <TableCell>{acct.bank_name}</TableCell>
                   <TableCell className="text-muted-foreground">{acct.account_number || "—"}</TableCell>
-                  <TableCell>{acct.currency || "DOP"}</TableCell>
+                  <TableCell>
+                    <Badge variant={(acct.currency || "DOP") === "DOP" ? "outline" : "default"}>
+                      {acct.currency || "DOP"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {chartAccounts.find(c => c.id === acct.chart_account_id)?.account_code || "—"}
                   </TableCell>

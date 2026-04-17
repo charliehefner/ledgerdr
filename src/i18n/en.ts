@@ -2598,7 +2598,7 @@ export const en = {
   "industrial.finish": "Finish",
   "industrial.hours": "Hours",
    "industrial.estimatedTons": "Est. Tons",
-   "industrial.estimatedDiesel": "Est. Diesel (L)",
+   "industrial.estimatedDiesel": "Est. Diesel (gal)",
   // Carretas
   "industrial.newCarreta": "New Wagon",
   "industrial.datetimeOut": "Date/Time Out",

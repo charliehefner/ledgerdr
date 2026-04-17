@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+const todayISO = () => format(new Date(), "yyyy-MM-dd");
+const firstOfMonthISO = () => {
+  const d = new Date();
+  return format(new Date(d.getFullYear(), d.getMonth(), 1), "yyyy-MM-dd");
+};
+
 export function PlantHoursView() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", estimated_diesel_liters: "", notes: "" });
+  const [statsStart, setStatsStart] = useState<string>(firstOfMonthISO());
+  const [statsEnd, setStatsEnd] = useState<string>(todayISO());
   const { toast } = useToast();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -189,6 +197,60 @@ export function PlantHoursView() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {(() => {
+        const inRange = rows.filter((r: any) => {
+          if (!r.date) return false;
+          return r.date >= statsStart && r.date <= statsEnd;
+        });
+        let hours = 0;
+        let tons = 0;
+        let gallons = 0;
+        inRange.forEach((r: any) => {
+          if (r.start_hour_meter != null && r.finish_hour_meter != null) {
+            hours += Number(r.finish_hour_meter) - Number(r.start_hour_meter);
+          }
+          if (r.estimated_tons != null) tons += Number(r.estimated_tons);
+          if (r.estimated_diesel_liters != null) gallons += Number(r.estimated_diesel_liters);
+        });
+        const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const safeDiv = (a: number, b: number) => b > 0 ? fmt(a / b) : "—";
+        const metrics = [
+          { label: t("industrial.hours"), value: fmt(hours) },
+          { label: t("industrial.estimatedTons"), value: fmt(tons) },
+          { label: t("industrial.gallons"), value: fmt(gallons) },
+          { label: t("industrial.tonPerGallon"), value: safeDiv(tons, gallons) },
+          { label: t("industrial.gallonPerHour"), value: safeDiv(gallons, hours) },
+          { label: t("industrial.tonPerHour"), value: safeDiv(tons, hours) },
+        ];
+        return (
+          <div className="rounded-lg border bg-card p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">{t("industrial.statsTitle")}</h3>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <Label className="text-xs">{t("industrial.from")}</Label>
+                    <Input type="date" value={statsStart} onChange={(e) => setStatsStart(e.target.value)} className="w-40" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{t("industrial.to")}</Label>
+                    <Input type="date" value={statsEnd} onChange={(e) => setStatsEnd(e.target.value)} className="w-40" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-1 lg:max-w-3xl">
+                {metrics.map((m) => (
+                  <div key={m.label} className="rounded-md bg-muted/40 px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{m.label}</div>
+                    <div className="text-base font-semibold tabular-nums">{m.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="rounded-md border">
         <Table>

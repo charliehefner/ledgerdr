@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+const todayISO = () => format(new Date(), "yyyy-MM-dd");
+const firstOfMonthISO = () => {
+  const d = new Date();
+  return format(new Date(d.getFullYear(), d.getMonth(), 1), "yyyy-MM-dd");
+};
+
 export function PlantHoursView() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: "", start_hour_meter: "", finish_hour_meter: "", estimated_tons: "", estimated_diesel_liters: "", notes: "" });
+  const [statsStart, setStatsStart] = useState<string>(firstOfMonthISO());
+  const [statsEnd, setStatsEnd] = useState<string>(todayISO());
   const { toast } = useToast();
   const { user } = useAuth();
   const { t } = useLanguage();

@@ -64,7 +64,7 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
         .from("transactions")
         .select("transaction_date")
         .eq("destination_acct_code", fund.id)
-        .neq("pay_method", "petty_cash")
+        .neq("pay_method", fund.id)
         .order("transaction_date", { ascending: false })
         .limit(1);
       if (error) throw error;
@@ -80,7 +80,7 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
       let query = supabase
         .from("transactions")
         .select("amount")
-        .eq("pay_method", "petty_cash");
+        .eq("pay_method", fund.id);
 
       if (lastReplenishment) {
         query = query.gt("transaction_date", lastReplenishment);
@@ -114,8 +114,6 @@ export function ReplenishmentDialog({ open, onOpenChange, fund }: Props) {
         description: `${t("treasury.replenish.submit")}: ${fund.account_name}${overShortNote}`,
         amount: replenishmentAmount,
         currency: fund.currency || "DOP",
-        transaction_direction: "payment",
-        is_internal: true,
         pay_method: sourceAccountId,
         destination_acct_code: fund.id,
         account_code: "0000",

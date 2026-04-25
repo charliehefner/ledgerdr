@@ -260,6 +260,19 @@ export function FollowUpRulesManager() {
               </div>
 
               <div className="space-y-2">
+                <Label>Días de alerta previa</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={form.alert_days_prior}
+                  onChange={(e) => setForm({ ...form, alert_days_prior: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cuántos días antes de la fecha programada debe mostrarse la alerta
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Tractorista por defecto</Label>
                 <Select
                   value={form.default_driver_id}

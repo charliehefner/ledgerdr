@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     if (isNaN(buyRate) || isNaN(sellRate) || buyRate < 30 || buyRate > 120) {
       throw new Error(
-        `Invalid rates parsed: buy=${buyMatch[1]}, sell=${sellMatch[1]}`
+        `Invalid rates parsed: buy=${tcSection[1]}, sell=${tcSection[2]}`
       );
     }
 

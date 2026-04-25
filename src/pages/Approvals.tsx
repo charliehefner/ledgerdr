@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -29,8 +30,8 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
 interface PendingApproval {
-  id: string;
-  request_type: string;
+  request_id: string;
+  applies_to: string;
   record_id: string;
   description: string;
   amount: number;

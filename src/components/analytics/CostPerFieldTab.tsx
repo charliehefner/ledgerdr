@@ -165,9 +165,9 @@ export function CostPerFieldTab({ entityId, isAllEntities }: Props) {
             rows: data.map((r: any) => ({
               farm: r.farm_name,
               field: r.field_name,
-              operations: r.operation_count,
-              hectares: r.hectares_worked.toFixed(2),
-              cost: formatCurrency(r.input_cost_dop, "DOP"),
+              operations: Number(r.operation_count) || 0,
+              hectares: (Number(r.hectares_worked) || 0).toFixed(2),
+              cost: formatCurrency(Number(r.input_cost_dop) || 0, "DOP"),
             })),
           })}
         />

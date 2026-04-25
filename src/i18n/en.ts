@@ -1245,6 +1245,8 @@ export const en = {
   "pl.totalFinancial": "Total Other Income/Expenses",
   "pl.subtotal": "Subtotal",
   "pl.compare": "Compare",
+  "report.showNativeCurrencies": "Show native currencies",
+  "report.singleCurrencyHint": "Reported in DOP. USD/EUR converted at the closing rate.",
   "pl.priorStart": "Prior Start",
   "pl.priorEnd": "Prior End",
   "pl.priorRd": "Prior RD$",

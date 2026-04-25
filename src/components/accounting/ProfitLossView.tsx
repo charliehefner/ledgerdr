@@ -151,6 +151,7 @@ export function ProfitLossView() {
   // Reset manual flag when date changes
   useEffect(() => { manuallyEdited.current = false; }, [endDate]);
   const [compareEnabled, setCompareEnabled] = useState(false);
+  const [showNative, setShowNative] = useState(false);
   const [compStartDate, setCompStartDate] = useState(format(new Date(now.getFullYear() - 1, 0, 1), "yyyy-MM-dd"));
   const [compEndDate, setCompEndDate] = useState(format(new Date(now.getFullYear() - 1, 11, 31), "yyyy-MM-dd"));
 
@@ -318,7 +319,8 @@ export function ProfitLossView() {
     const compNetIncomeUs = compEbitUs + compNetFinancialUs;
 
     const allBlocks = [...revenue.blocks, ...cogs.blocks, ...opex.blocks, ...financial.blocks];
-    const hasUsd = allBlocks.some(b => b.usTotal !== 0 || b.compUsTotal !== 0);
+    const hasUsdData = allBlocks.some(b => b.usTotal !== 0 || b.compUsTotal !== 0);
+    const hasUsd = showNative && hasUsdData;
 
     const rows: StatementRow[] = [];
 
@@ -382,7 +384,7 @@ export function ProfitLossView() {
     rows.push({ type: "netIncome", label: t("pl.netIncome"), rd: netIncomeRd, us: netIncomeUs, compRd: compNetIncomeRd, compUs: compNetIncomeUs });
 
     return { statementRows: rows, hasUsd };
-  }, [accounts, accountTotals, compAccountTotals, language, t]);
+  }, [accounts, accountTotals, compAccountTotals, language, t, showNative]);
 
   const baseCols = hasUsd ? 4 : 3;
   const compCols = compareEnabled ? 3 : 0;
@@ -615,6 +617,10 @@ export function ProfitLossView() {
           <Label>{t("pl.exchangeRate")} (USD→DOP)</Label>
           <Input type="number" step="0.01" min="1" value={exchangeRate}
             onChange={e => { manuallyEdited.current = true; setExchangeRate(parseFloat(e.target.value) || 1); }} className="w-28" />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-1">
+          <Switch checked={showNative} onCheckedChange={setShowNative} className="scale-75" />
+          <span className="text-xs text-muted-foreground">{t("report.showNativeCurrencies")}</span>
         </div>
         <div className="flex items-center gap-2 self-end pb-1">
           <Switch checked={compareEnabled} onCheckedChange={setCompareEnabled} className="scale-75" />

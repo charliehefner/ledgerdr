@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEntity } from "@/contexts/EntityContext";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+// ScrollArea removed: native overflow-x-auto gives draggable scrollbar + trackpad swipe
 import {
   Select,
   SelectContent,
@@ -266,14 +266,14 @@ export function CronogramaGrid() {
     return map;
   }, [entries]);
 
-  // Fetch user emails for displaying in tooltips
+  // Fetch user emails for displaying in tooltips.
+  // Stable key + long staleTime: directory is small, fetched once per session,
+  // shared across week navigation. Prevents the "Usuario desconocido" flicker.
   const { data: userEmailMap = new Map<string, string>() } = useQuery({
-    queryKey: ["user-emails-cronograma", entries.map(e => e.updated_by).filter(Boolean)],
-    queryFn: async () => {
-      const userIds = entries.map(e => e.updated_by).filter(Boolean) as string[];
-      return fetchUserEmails(userIds);
-    },
-    enabled: entries.length > 0,
+    queryKey: ["all-user-emails"],
+    queryFn: async () => fetchUserEmails([]),
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
   });
 
   // Fetch week status
@@ -784,7 +784,7 @@ export function CronogramaGrid() {
 
       {/* Schedule Grid */}
       <TooltipProvider delayDuration={300}>
-        <ScrollArea className="w-full">
+        <div className="w-full overflow-x-auto overflow-y-visible">
           <div className="min-w-[900px]">
             <table className="w-full border-collapse text-sm" style={{ borderSpacing: 0 }}>
               <thead className="border-b-[4px] border-foreground/40 sticky top-0 z-20">
@@ -946,8 +946,7 @@ export function CronogramaGrid() {
               </tbody>
             </table>
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </TooltipProvider>
 
       {/* Close Week Confirmation */}
@@ -1053,23 +1052,24 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       (e.target as HTMLInputElement).blur();
     }
-    if (e.ctrlKey && e.key === "c" && localValue) {
-      onCopy(localValue);
-    }
-    if (e.ctrlKey && e.key === "v" && hasCopied) {
-      e.preventDefault();
-      onPaste();
-    }
+    // Ctrl+C / Ctrl+V are intentionally NOT intercepted here so the browser's
+    // native clipboard handling works inside the textarea (copy from Word,
+    // WhatsApp, other cells, etc.). The "duplicate cell" workflow is available
+    // via the dedicated Copy button in the toolbar.
   };
 
   const getTooltipContent = () => {
     if (!isHighlighted || !modifiedAt) return null;
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
-    const userDisplay = modifierEmail || (language === "es" ? "Usuario desconocido" : "Unknown user");
+    const userDisplay = modifierEmail
+      || (userEmailMap.size === 0
+            ? (language === "es" ? "Cargando…" : "Loading…")
+            : (language === "es" ? "Usuario desconocido" : "Unknown user"));
     
     const modTypeLabel = highlightType === "self-edit"
       ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")

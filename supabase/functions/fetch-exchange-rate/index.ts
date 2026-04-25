@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     if (isNaN(buyRate) || isNaN(sellRate) || buyRate < 30 || buyRate > 120) {
       throw new Error(
-        `Invalid rates parsed: buy=${buyMatch[1]}, sell=${sellMatch[1]}`
+        `Invalid rates parsed: buy=${tcSection[1]}, sell=${tcSection[2]}`
       );
     }
 
@@ -79,8 +79,9 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("Error fetching exchange rate:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
     return new Response(
-      JSON.stringify({ success: false, error: err.message }),
+      JSON.stringify({ success: false, error: message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -29,8 +30,8 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
 interface PendingApproval {
-  id: string;
-  request_type: string;
+  request_id: string;
+  applies_to: string;
   record_id: string;
   description: string;
   amount: number;
@@ -162,13 +163,13 @@ export default function Approvals() {
                     </TableRow>
                   ) : (
                     pendingItems.map((item) => (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.request_id}>
                         <TableCell className="font-mono text-sm whitespace-nowrap">
                           {formatDate(item.submitted_at)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {item.request_type === "transaction"
+                            {item.applies_to === "transaction"
                               ? "Transacción"
                               : "Asiento"}
                           </Badge>
@@ -189,12 +190,10 @@ export default function Approvals() {
                           <div className="flex items-center justify-center gap-1">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
                               onClick={() =>
                                 openAction(
                                   "approve",
-                                  item.id,
+                                  item.request_id,
                                   item.description
                                 )
                               }
@@ -204,12 +203,11 @@ export default function Approvals() {
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+                              variant="destructive"
                               onClick={() =>
                                 openAction(
                                   "reject",
-                                  item.id,
+                                  item.request_id,
                                   item.description
                                 )
                               }
@@ -241,6 +239,9 @@ export default function Approvals() {
                 ? "Aprobar Solicitud"
                 : "Rechazar Solicitud"}
             </DialogTitle>
+            <DialogDescription>
+              Confirme la acción para esta solicitud pendiente.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">

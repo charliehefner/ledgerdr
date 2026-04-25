@@ -784,7 +784,7 @@ export function CronogramaGrid() {
 
       {/* Schedule Grid */}
       <TooltipProvider delayDuration={300}>
-        <ScrollArea className="w-full">
+        <div className="w-full overflow-x-auto overflow-y-visible">
           <div className="min-w-[900px]">
             <table className="w-full border-collapse text-sm" style={{ borderSpacing: 0 }}>
               <thead className="border-b-[4px] border-foreground/40 sticky top-0 z-20">
@@ -946,8 +946,7 @@ export function CronogramaGrid() {
               </tbody>
             </table>
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </TooltipProvider>
 
       {/* Close Week Confirmation */}

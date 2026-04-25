@@ -323,6 +323,7 @@ export function FollowUpRulesManager() {
                   <TableCell className="font-medium">{getOperationName(rule.trigger_operation_type_id)}</TableCell>
                   <TableCell>{rule.followup_text}</TableCell>
                   <TableCell className="text-center">{rule.days_offset}</TableCell>
+                  <TableCell className="text-center">{rule.alert_days_prior ?? 1}</TableCell>
                   <TableCell>{getDriverName(rule.default_driver_id)}</TableCell>
                   <TableCell className="text-center">
                     <Switch

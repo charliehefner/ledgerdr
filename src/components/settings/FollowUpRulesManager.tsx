@@ -52,6 +52,7 @@ export function FollowUpRulesManager() {
     trigger_operation_type_id: "",
     followup_text: "",
     days_offset: "3",
+    alert_days_prior: "1",
     default_driver_id: "",
   });
 

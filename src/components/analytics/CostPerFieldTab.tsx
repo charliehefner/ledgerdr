@@ -123,9 +123,9 @@ export function CostPerFieldTab({ entityId, isAllEntities }: Props) {
                           <TableRow key={r.field_id}>
                             <TableCell />
                             <TableCell>{r.field_name}</TableCell>
-                            <TableCell className="text-right">{r.operation_count}</TableCell>
-                            <TableCell className="text-right">{r.hectares_worked.toFixed(2)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(r.input_cost_dop, "DOP")}</TableCell>
+                            <TableCell className="text-right">{Number(r.operation_count) || 0}</TableCell>
+                            <TableCell className="text-right">{(Number(r.hectares_worked) || 0).toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(Number(r.input_cost_dop) || 0, "DOP")}</TableCell>
                           </TableRow>
                         ))}
                       </>

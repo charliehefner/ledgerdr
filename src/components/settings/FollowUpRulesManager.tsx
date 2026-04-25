@@ -37,6 +37,7 @@ interface FollowUpRule {
   trigger_operation_type_id: string;
   followup_text: string;
   days_offset: number;
+  alert_days_prior: number;
   default_driver_id: string | null;
   is_active: boolean;
   created_at: string;

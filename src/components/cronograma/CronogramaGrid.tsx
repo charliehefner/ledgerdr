@@ -1052,16 +1052,14 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       (e.target as HTMLInputElement).blur();
     }
-    if (e.ctrlKey && e.key === "c" && localValue) {
-      onCopy(localValue);
-    }
-    if (e.ctrlKey && e.key === "v" && hasCopied) {
-      e.preventDefault();
-      onPaste();
-    }
+    // Ctrl+C / Ctrl+V are intentionally NOT intercepted here so the browser's
+    // native clipboard handling works inside the textarea (copy from Word,
+    // WhatsApp, other cells, etc.). The "duplicate cell" workflow is available
+    // via the dedicated Copy button in the toolbar.
   };
 
   const getTooltipContent = () => {

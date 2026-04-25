@@ -151,6 +151,7 @@ export function ProfitLossView() {
   // Reset manual flag when date changes
   useEffect(() => { manuallyEdited.current = false; }, [endDate]);
   const [compareEnabled, setCompareEnabled] = useState(false);
+  const [showNative, setShowNative] = useState(false);
   const [compStartDate, setCompStartDate] = useState(format(new Date(now.getFullYear() - 1, 0, 1), "yyyy-MM-dd"));
   const [compEndDate, setCompEndDate] = useState(format(new Date(now.getFullYear() - 1, 11, 31), "yyyy-MM-dd"));
 

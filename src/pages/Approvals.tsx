@@ -190,8 +190,6 @@ export default function Approvals() {
                           <div className="flex items-center justify-center gap-1">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
                               onClick={() =>
                                 openAction(
                                   "approve",
@@ -205,8 +203,7 @@ export default function Approvals() {
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                              variant="destructive"
                               onClick={() =>
                                 openAction(
                                   "reject",
@@ -242,6 +239,9 @@ export default function Approvals() {
                 ? "Aprobar Solicitud"
                 : "Rechazar Solicitud"}
             </DialogTitle>
+            <DialogDescription>
+              Confirme la acción para esta solicitud pendiente.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">

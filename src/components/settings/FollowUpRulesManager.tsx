@@ -37,6 +37,7 @@ interface FollowUpRule {
   trigger_operation_type_id: string;
   followup_text: string;
   days_offset: number;
+  alert_days_prior: number;
   default_driver_id: string | null;
   is_active: boolean;
   created_at: string;
@@ -51,6 +52,7 @@ export function FollowUpRulesManager() {
     trigger_operation_type_id: "",
     followup_text: "",
     days_offset: "3",
+    alert_days_prior: "1",
     default_driver_id: "",
   });
 
@@ -102,6 +104,7 @@ export function FollowUpRulesManager() {
         trigger_operation_type_id: form.trigger_operation_type_id,
         followup_text: form.followup_text,
         days_offset: parseInt(form.days_offset) || 3,
+        alert_days_prior: parseInt(form.alert_days_prior) || 1,
         default_driver_id: form.default_driver_id || null,
       };
 
@@ -162,6 +165,7 @@ export function FollowUpRulesManager() {
       trigger_operation_type_id: "",
       followup_text: "",
       days_offset: "3",
+      alert_days_prior: "1",
       default_driver_id: "",
     });
   };
@@ -172,6 +176,7 @@ export function FollowUpRulesManager() {
       trigger_operation_type_id: rule.trigger_operation_type_id,
       followup_text: rule.followup_text,
       days_offset: String(rule.days_offset),
+      alert_days_prior: String(rule.alert_days_prior ?? 1),
       default_driver_id: rule.default_driver_id || "",
     });
     setIsDialogOpen(true);
@@ -201,7 +206,7 @@ export function FollowUpRulesManager() {
           <div>
             <CardTitle className="text-base">Seguimientos Automáticos</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Reglas para programar operaciones de seguimiento en el Cronograma
+              Reglas para programar operaciones de seguimiento en Operaciones
             </p>
           </div>
         </div>
@@ -255,6 +260,19 @@ export function FollowUpRulesManager() {
               </div>
 
               <div className="space-y-2">
+                <Label>Días de alerta previa</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={form.alert_days_prior}
+                  onChange={(e) => setForm({ ...form, alert_days_prior: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cuántos días antes de la fecha programada debe mostrarse la alerta
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Tractorista por defecto</Label>
                 <Select
                   value={form.default_driver_id}
@@ -293,6 +311,7 @@ export function FollowUpRulesManager() {
                 <TableHead>Operación</TableHead>
                 <TableHead>Seguimiento</TableHead>
                 <TableHead className="text-center">Días</TableHead>
+                <TableHead className="text-center">Alerta (días antes)</TableHead>
                 <TableHead>Tractorista</TableHead>
                 <TableHead className="text-center">Activo</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -304,6 +323,7 @@ export function FollowUpRulesManager() {
                   <TableCell className="font-medium">{getOperationName(rule.trigger_operation_type_id)}</TableCell>
                   <TableCell>{rule.followup_text}</TableCell>
                   <TableCell className="text-center">{rule.days_offset}</TableCell>
+                  <TableCell className="text-center">{rule.alert_days_prior ?? 1}</TableCell>
                   <TableCell>{getDriverName(rule.default_driver_id)}</TableCell>
                   <TableCell className="text-center">
                     <Switch

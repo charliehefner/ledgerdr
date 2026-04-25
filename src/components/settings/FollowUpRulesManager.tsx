@@ -206,7 +206,7 @@ export function FollowUpRulesManager() {
           <div>
             <CardTitle className="text-base">Seguimientos Automáticos</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Reglas para programar operaciones de seguimiento en el Cronograma
+              Reglas para programar operaciones de seguimiento en Operaciones
             </p>
           </div>
         </div>

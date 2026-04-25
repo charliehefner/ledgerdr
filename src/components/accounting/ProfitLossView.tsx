@@ -619,6 +619,10 @@ export function ProfitLossView() {
             onChange={e => { manuallyEdited.current = true; setExchangeRate(parseFloat(e.target.value) || 1); }} className="w-28" />
         </div>
         <div className="flex items-center gap-2 self-end pb-1">
+          <Switch checked={showNative} onCheckedChange={setShowNative} className="scale-75" />
+          <span className="text-xs text-muted-foreground">{t("report.showNativeCurrencies")}</span>
+        </div>
+        <div className="flex items-center gap-2 self-end pb-1">
           <Switch checked={compareEnabled} onCheckedChange={setCompareEnabled} className="scale-75" />
           <span className="text-xs text-muted-foreground">{t("pl.compare")}</span>
         </div>

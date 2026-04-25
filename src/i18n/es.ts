@@ -1246,6 +1246,8 @@ export const es = {
   "pl.totalFinancial": "Total Otros Ingresos/Gastos",
   "pl.subtotal": "Subtotal",
   "pl.compare": "Comparar",
+  "report.showNativeCurrencies": "Mostrar monedas nativas",
+  "report.singleCurrencyHint": "Reportado en DOP. USD/EUR convertidos a la tasa de cierre.",
   "pl.priorStart": "Inicio Anterior",
   "pl.priorEnd": "Fin Anterior",
   "pl.priorRd": "Anterior RD$",

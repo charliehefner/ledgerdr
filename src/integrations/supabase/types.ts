@@ -3169,6 +3169,7 @@ export type Database = {
       }
       operation_followups: {
         Row: {
+          alert_days_prior: number
           created_at: string | null
           days_offset: number
           default_driver_id: string | null
@@ -3178,6 +3179,7 @@ export type Database = {
           trigger_operation_type_id: string
         }
         Insert: {
+          alert_days_prior?: number
           created_at?: string | null
           days_offset?: number
           default_driver_id?: string | null
@@ -3187,6 +3189,7 @@ export type Database = {
           trigger_operation_type_id: string
         }
         Update: {
+          alert_days_prior?: number
           created_at?: string | null
           days_offset?: number
           default_driver_id?: string | null

@@ -210,6 +210,39 @@ export function ProfitLossView() {
     enabled: compareEnabled,
   });
 
+  // FX translation gain/loss for the period (USD balance-sheet positions at closing rate)
+  const { data: fxRows = [] } = useQuery({
+    queryKey: ["pl-fx-translation", endDate, exchangeRate],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("compute_period_fx_translation", {
+        p_end_date: endDate,
+        p_closing_rate: exchangeRate,
+      });
+      if (error) throw error;
+      return (data || []) as FxTranslationRow[];
+    },
+    enabled: !showNative,
+  });
+
+  // Detect whether FX revaluation has already been posted for this period (avoids double-counting)
+  const { data: revalCount = 0 } = useQuery({
+    queryKey: ["pl-reval-check", startDate, endDate],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("revaluation_log")
+        .select("id", { count: "exact", head: true })
+        .gte("revaluation_date", startDate)
+        .lte("revaluation_date", endDate);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !showNative,
+  });
+
+  const fxRevaluationPosted = revalCount > 0;
+  const fxTranslationTotal = fxRows.reduce((s, r) => s + (Number(r.fx_impact) || 0), 0);
+  const [fxDialogOpen, setFxDialogOpen] = useState(false);
+
   const buildAccountTotals = (rows: JournalBalance[]) => {
     const totals: Record<string, { rd: number; us: number }> = {};
     rows.forEach((r) => {

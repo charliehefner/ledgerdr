@@ -319,7 +319,8 @@ export function ProfitLossView() {
     const compNetIncomeUs = compEbitUs + compNetFinancialUs;
 
     const allBlocks = [...revenue.blocks, ...cogs.blocks, ...opex.blocks, ...financial.blocks];
-    const hasUsd = allBlocks.some(b => b.usTotal !== 0 || b.compUsTotal !== 0);
+    const hasUsdData = allBlocks.some(b => b.usTotal !== 0 || b.compUsTotal !== 0);
+    const hasUsd = showNative && hasUsdData;
 
     const rows: StatementRow[] = [];
 

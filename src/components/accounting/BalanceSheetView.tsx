@@ -89,6 +89,7 @@ export function BalanceSheetView() {
 
   useEffect(() => { manuallyEdited.current = false; }, [asOfDate]);
   const [compareEnabled, setCompareEnabled] = useState(false);
+  const [showNative, setShowNative] = useState(false);
   const [compAsOfDate, setCompAsOfDate] = useState(format(new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()), "yyyy-MM-dd"));
 
   const { data: accounts = [] } = useQuery({
@@ -258,7 +259,8 @@ export function BalanceSheetView() {
   const compTotalLERd = compTotalLiabRd + compTotalEquityRd;
 
   const isBalanced = Math.abs(totalAssetsRd - totalLERd) < 0.01;
-  const hasUsd = totalAssetsUs !== 0 || totalLiabUs !== 0 || equityUs !== 0 || retainedUs !== 0;
+  const hasUsdData = totalAssetsUs !== 0 || totalLiabUs !== 0 || equityUs !== 0 || retainedUs !== 0;
+  const hasUsd = showNative && hasUsdData;
   const baseCols = hasUsd ? 4 : 3;
   const compCols = compareEnabled ? 3 : 0;
   const colCount = baseCols + compCols;
@@ -471,6 +473,10 @@ export function BalanceSheetView() {
             onChange={e => { manuallyEdited.current = true; setExchangeRate(parseFloat(e.target.value) || 1); }}
             className="w-28"
           />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-1">
+          <Switch checked={showNative} onCheckedChange={setShowNative} className="scale-75" />
+          <span className="text-xs text-muted-foreground">{t("report.showNativeCurrencies")}</span>
         </div>
         <div className="flex items-center gap-2 self-end pb-1">
           <Switch checked={compareEnabled} onCheckedChange={setCompareEnabled} className="scale-75" />

@@ -104,6 +104,7 @@ export function FollowUpRulesManager() {
         trigger_operation_type_id: form.trigger_operation_type_id,
         followup_text: form.followup_text,
         days_offset: parseInt(form.days_offset) || 3,
+        alert_days_prior: parseInt(form.alert_days_prior) || 1,
         default_driver_id: form.default_driver_id || null,
       };
 

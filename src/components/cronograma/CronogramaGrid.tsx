@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEntity } from "@/contexts/EntityContext";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+// ScrollArea removed: native overflow-x-auto gives draggable scrollbar + trackpad swipe
 import {
   Select,
   SelectContent,
@@ -1066,7 +1066,10 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     if (!isHighlighted || !modifiedAt) return null;
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
-    const userDisplay = modifierEmail || (language === "es" ? "Usuario desconocido" : "Unknown user");
+    const userDisplay = modifierEmail
+      || (userEmailMap.size === 0
+            ? (language === "es" ? "Cargando…" : "Loading…")
+            : (language === "es" ? "Usuario desconocido" : "Unknown user"));
     
     const modTypeLabel = highlightType === "self-edit"
       ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")

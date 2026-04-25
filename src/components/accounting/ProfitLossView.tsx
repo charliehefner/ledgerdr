@@ -36,6 +36,7 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { FxTranslationDetailDialog, FxTranslationRow } from "./FxTranslationDetailDialog";
 
 const CC_LABELS: Record<string, Record<string, string>> = {
   es: { general: "General", agricultural: "Agrícola", industrial: "Industrial" },
@@ -112,6 +113,7 @@ type StatementRow =
   | { type: "sectionTotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
   | { type: "intermediateTotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
   | { type: "netIncome"; label: string; rd: number; us: number; compRd: number; compUs: number }
+  | { type: "fxTranslation"; label: string; rd: number; suppressed: boolean }
   | { type: "blank" };
 
 function getAcctName(a: AccountRow, language: Language) {

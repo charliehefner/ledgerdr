@@ -384,7 +384,7 @@ export function ProfitLossView() {
     rows.push({ type: "netIncome", label: t("pl.netIncome"), rd: netIncomeRd, us: netIncomeUs, compRd: compNetIncomeRd, compUs: compNetIncomeUs });
 
     return { statementRows: rows, hasUsd };
-  }, [accounts, accountTotals, compAccountTotals, language, t]);
+  }, [accounts, accountTotals, compAccountTotals, language, t, showNative]);
 
   const baseCols = hasUsd ? 4 : 3;
   const compCols = compareEnabled ? 3 : 0;

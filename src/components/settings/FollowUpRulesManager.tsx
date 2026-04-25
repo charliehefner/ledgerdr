@@ -311,6 +311,7 @@ export function FollowUpRulesManager() {
                 <TableHead>Operación</TableHead>
                 <TableHead>Seguimiento</TableHead>
                 <TableHead className="text-center">Días</TableHead>
+                <TableHead className="text-center">Alerta (días antes)</TableHead>
                 <TableHead>Tractorista</TableHead>
                 <TableHead className="text-center">Activo</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>

@@ -83,9 +83,9 @@ export function CostPerFieldTab({ entityId, isAllEntities }: Props) {
           />
         </div>
         {Object.entries(byEntity).map(([entityName, rows]) => {
-          const totalOps = rows!.reduce((s, r: any) => s + r.operation_count, 0);
-          const totalHa = rows!.reduce((s, r: any) => s + r.hectares_worked, 0);
-          const totalCost = rows!.reduce((s, r: any) => s + r.input_cost_dop, 0);
+          const totalOps = rows!.reduce((s, r: any) => s + (Number(r.operation_count) || 0), 0);
+          const totalHa = rows!.reduce((s, r: any) => s + (Number(r.hectares_worked) || 0), 0);
+          const totalCost = rows!.reduce((s, r: any) => s + (Number(r.input_cost_dop) || 0), 0);
           // Group by farm within entity
           const farms: Record<string, any[]> = {};
           rows!.forEach((r: any) => {

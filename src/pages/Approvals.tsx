@@ -163,13 +163,13 @@ export default function Approvals() {
                     </TableRow>
                   ) : (
                     pendingItems.map((item) => (
-                      <TableRow key={item.id}>
+                      <TableRow key={item.request_id}>
                         <TableCell className="font-mono text-sm whitespace-nowrap">
                           {formatDate(item.submitted_at)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {item.request_type === "transaction"
+                            {item.applies_to === "transaction"
                               ? "Transacción"
                               : "Asiento"}
                           </Badge>
@@ -191,11 +191,11 @@ export default function Approvals() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
+                              className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
                               onClick={() =>
                                 openAction(
                                   "approve",
-                                  item.id,
+                                  item.request_id,
                                   item.description
                                 )
                               }
@@ -206,11 +206,11 @@ export default function Approvals() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+                              className="text-destructive border-destructive/40 hover:bg-destructive/10"
                               onClick={() =>
                                 openAction(
                                   "reject",
-                                  item.id,
+                                  item.request_id,
                                   item.description
                                 )
                               }

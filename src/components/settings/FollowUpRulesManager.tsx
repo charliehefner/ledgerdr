@@ -165,6 +165,7 @@ export function FollowUpRulesManager() {
       trigger_operation_type_id: "",
       followup_text: "",
       days_offset: "3",
+      alert_days_prior: "1",
       default_driver_id: "",
     });
   };
@@ -175,6 +176,7 @@ export function FollowUpRulesManager() {
       trigger_operation_type_id: rule.trigger_operation_type_id,
       followup_text: rule.followup_text,
       days_offset: String(rule.days_offset),
+      alert_days_prior: String(rule.alert_days_prior ?? 1),
       default_driver_id: rule.default_driver_id || "",
     });
     setIsDialogOpen(true);

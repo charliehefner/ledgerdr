@@ -36,6 +36,7 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { FxTranslationDetailDialog, FxTranslationRow } from "./FxTranslationDetailDialog";
 
 const CC_LABELS: Record<string, Record<string, string>> = {
   es: { general: "General", agricultural: "Agrícola", industrial: "Industrial" },
@@ -112,6 +113,7 @@ type StatementRow =
   | { type: "sectionTotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
   | { type: "intermediateTotal"; label: string; rd: number; us: number; compRd: number; compUs: number }
   | { type: "netIncome"; label: string; rd: number; us: number; compRd: number; compUs: number }
+  | { type: "fxTranslation"; label: string; rd: number; suppressed: boolean }
   | { type: "blank" };
 
 function getAcctName(a: AccountRow, language: Language) {
@@ -207,6 +209,39 @@ export function ProfitLossView() {
     },
     enabled: compareEnabled,
   });
+
+  // FX translation gain/loss for the period (USD balance-sheet positions at closing rate)
+  const { data: fxRows = [] } = useQuery({
+    queryKey: ["pl-fx-translation", endDate, exchangeRate],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("compute_period_fx_translation", {
+        p_end_date: endDate,
+        p_closing_rate: exchangeRate,
+      });
+      if (error) throw error;
+      return (data || []) as FxTranslationRow[];
+    },
+    enabled: !showNative,
+  });
+
+  // Detect whether FX revaluation has already been posted for this period (avoids double-counting)
+  const { data: revalCount = 0 } = useQuery({
+    queryKey: ["pl-reval-check", startDate, endDate],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("revaluation_log")
+        .select("id", { count: "exact", head: true })
+        .gte("revaluation_date", startDate)
+        .lte("revaluation_date", endDate);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !showNative,
+  });
+
+  const fxRevaluationPosted = revalCount > 0;
+  const fxTranslationTotal = fxRows.reduce((s, r) => s + (Number(r.fx_impact) || 0), 0);
+  const [fxDialogOpen, setFxDialogOpen] = useState(false);
 
   const buildAccountTotals = (rows: JournalBalance[]) => {
     const totals: Record<string, { rd: number; us: number }> = {};
@@ -313,7 +348,11 @@ export function ProfitLossView() {
     const compNetFinancialRd = compFinancialIncomeRd - compFinancialExpenseRd;
     const compNetFinancialUs = compFinancialIncomeUs - compFinancialExpenseUs;
 
-    const netIncomeRd = ebitRd + netFinancialRd;
+    // FX translation only impacts net income in single-DOP-column mode and when revaluation hasn't been posted.
+    const fxLineActive = !showNative && !fxRevaluationPosted && Math.abs(fxTranslationTotal) >= 0.01;
+    const fxLineRd = fxLineActive ? fxTranslationTotal : 0;
+
+    const netIncomeRd = ebitRd + netFinancialRd + fxLineRd;
     const netIncomeUs = ebitUs + netFinancialUs;
     const compNetIncomeRd = compEbitRd + compNetFinancialRd;
     const compNetIncomeUs = compEbitUs + compNetFinancialUs;
@@ -380,11 +419,22 @@ export function ProfitLossView() {
       rows.push({ type: "blank" });
     }
 
+    // ─── FX TRANSLATION GAIN/LOSS (single-column mode only) ───
+    if (!showNative) {
+      if (fxRevaluationPosted) {
+        rows.push({ type: "fxTranslation", label: t("fx.revaluationAlreadyPosted"), rd: 0, suppressed: true });
+        rows.push({ type: "blank" });
+      } else if (Math.abs(fxTranslationTotal) >= 0.01) {
+        rows.push({ type: "fxTranslation", label: t("fx.translationGainLoss"), rd: fxTranslationTotal, suppressed: false });
+        rows.push({ type: "blank" });
+      }
+    }
+
     // ─── NET INCOME ───
     rows.push({ type: "netIncome", label: t("pl.netIncome"), rd: netIncomeRd, us: netIncomeUs, compRd: compNetIncomeRd, compUs: compNetIncomeUs });
 
     return { statementRows: rows, hasUsd };
-  }, [accounts, accountTotals, compAccountTotals, language, t, showNative]);
+  }, [accounts, accountTotals, compAccountTotals, language, t, showNative, fxTranslationTotal, fxRevaluationPosted]);
 
   const baseCols = hasUsd ? 4 : 3;
   const compCols = compareEnabled ? 3 : 0;
@@ -478,6 +528,13 @@ export function ProfitLossView() {
               fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F1" } } as ExcelJS.Fill
             });
             break;
+          case "fxTranslation":
+            if (sr.suppressed) {
+              addRow("", sr.label, undefined, undefined, undefined, { font: { italic: true, size: 9 } });
+            } else {
+              addRow("", sr.label, sr.rd, undefined, undefined, { font: { italic: true } });
+            }
+            break;
           case "netIncome":
             addRow("", sr.label, sr.rd, sr.us, sr.compRd, { 
               font: { bold: true, size: 14 },
@@ -550,6 +607,13 @@ export function ProfitLossView() {
         case "intermediateTotal":
           intermediateIndices.push(body.length);
           body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
+          break;
+        case "fxTranslation":
+          if (sr.suppressed) {
+            body.push(["", sr.label, "", ...(hasUsd ? [""] : []), ...(compareEnabled ? ["", "", ""] : [])]);
+          } else {
+            body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [""] : []), ...(compareEnabled ? ["", "", ""] : [])]);
+          }
           break;
         case "netIncome":
           netIncomeIndex.push(body.length);
@@ -744,6 +808,35 @@ export function ProfitLossView() {
                         <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
+                  case "fxTranslation":
+                    if (row.suppressed) {
+                      return (
+                        <TableRow key={i} className="bg-muted/40">
+                          <TableCell />
+                          <TableCell colSpan={colCount - 1} className="text-xs italic text-muted-foreground py-2">
+                            {row.label}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    return (
+                      <TableRow
+                        key={i}
+                        className="bg-accent/20 border-y border-accent-foreground/20 cursor-pointer hover:bg-accent/30"
+                        onClick={() => setFxDialogOpen(true)}
+                        title={t("fx.translationTooltip")}
+                      >
+                        <TableCell />
+                        <TableCell className="font-medium italic">
+                          {row.label}
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${row.rd >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {formatCurrency(row.rd, "DOP")}
+                        </TableCell>
+                        {hasUsd && <TableCell />}
+                        <VarCells rd={row.rd} compRd={0} />
+                      </TableRow>
+                    );
                   case "netIncome":
                     return (
                       <TableRow key={i} className="bg-muted border-y-4 border-primary/40">
@@ -774,6 +867,14 @@ export function ProfitLossView() {
           </Table>
         </div>
       )}
+
+      <FxTranslationDetailDialog
+        open={fxDialogOpen}
+        onOpenChange={setFxDialogOpen}
+        rows={fxRows}
+        closingRate={exchangeRate}
+        asOfDate={endDate}
+      />
     </div>
   );
 }

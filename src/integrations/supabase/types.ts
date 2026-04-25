@@ -5571,6 +5571,22 @@ export type Database = {
       }
       cancel_stock_count: { Args: { p_session_id: string }; Returns: boolean }
       close_day_labor_week: { Args: { p_week_ending: string }; Returns: string }
+      compute_period_fx_translation: {
+        Args: {
+          p_closing_rate: number
+          p_end_date: string
+          p_entity_id?: string
+        }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          book_dop_balance: number
+          fx_impact: number
+          reported_dop_balance: number
+          usd_balance: number
+        }[]
+      }
       count_unlinked_transactions: {
         Args: { p_end?: string; p_start?: string }
         Returns: number

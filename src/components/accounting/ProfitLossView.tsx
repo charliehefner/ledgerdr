@@ -867,6 +867,14 @@ export function ProfitLossView() {
           </Table>
         </div>
       )}
+
+      <FxTranslationDetailDialog
+        open={fxDialogOpen}
+        onOpenChange={setFxDialogOpen}
+        rows={fxRows}
+        closingRate={exchangeRate}
+        asOfDate={endDate}
+      />
     </div>
   );
 }

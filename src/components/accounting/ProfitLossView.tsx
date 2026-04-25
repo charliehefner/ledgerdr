@@ -794,6 +794,35 @@ export function ProfitLossView() {
                         <VarCells rd={row.rd} compRd={row.compRd} />
                       </TableRow>
                     );
+                  case "fxTranslation":
+                    if (row.suppressed) {
+                      return (
+                        <TableRow key={i} className="bg-muted/40">
+                          <TableCell />
+                          <TableCell colSpan={colCount - 1} className="text-xs italic text-muted-foreground py-2">
+                            {row.label}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    return (
+                      <TableRow
+                        key={i}
+                        className="bg-accent/20 border-y border-accent-foreground/20 cursor-pointer hover:bg-accent/30"
+                        onClick={() => setFxDialogOpen(true)}
+                        title={t("fx.translationTooltip")}
+                      >
+                        <TableCell />
+                        <TableCell className="font-medium italic">
+                          {row.label}
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${row.rd >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {formatCurrency(row.rd, "DOP")}
+                        </TableCell>
+                        {hasUsd && <TableCell />}
+                        <VarCells rd={row.rd} compRd={0} />
+                      </TableRow>
+                    );
                   case "netIncome":
                     return (
                       <TableRow key={i} className="bg-muted border-y-4 border-primary/40">

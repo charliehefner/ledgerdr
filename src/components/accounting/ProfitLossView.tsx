@@ -528,6 +528,13 @@ export function ProfitLossView() {
               fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F1" } } as ExcelJS.Fill
             });
             break;
+          case "fxTranslation":
+            if (sr.suppressed) {
+              addRow("", sr.label, undefined, undefined, undefined, { font: { italic: true, size: 9 } });
+            } else {
+              addRow("", sr.label, sr.rd, undefined, undefined, { font: { italic: true } });
+            }
+            break;
           case "netIncome":
             addRow("", sr.label, sr.rd, sr.us, sr.compRd, { 
               font: { bold: true, size: 14 },
@@ -600,6 +607,13 @@ export function ProfitLossView() {
         case "intermediateTotal":
           intermediateIndices.push(body.length);
           body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [formatCurrency(sr.us, "USD")] : []), ...fmtCompCells(sr.rd, sr.compRd)]);
+          break;
+        case "fxTranslation":
+          if (sr.suppressed) {
+            body.push(["", sr.label, "", ...(hasUsd ? [""] : []), ...(compareEnabled ? ["", "", ""] : [])]);
+          } else {
+            body.push(["", sr.label, formatCurrency(sr.rd, "DOP"), ...(hasUsd ? [""] : []), ...(compareEnabled ? ["", "", ""] : [])]);
+          }
           break;
         case "netIncome":
           netIncomeIndex.push(body.length);

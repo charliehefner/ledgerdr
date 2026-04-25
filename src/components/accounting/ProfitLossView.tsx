@@ -348,7 +348,11 @@ export function ProfitLossView() {
     const compNetFinancialRd = compFinancialIncomeRd - compFinancialExpenseRd;
     const compNetFinancialUs = compFinancialIncomeUs - compFinancialExpenseUs;
 
-    const netIncomeRd = ebitRd + netFinancialRd;
+    // FX translation only impacts net income in single-DOP-column mode and when revaluation hasn't been posted.
+    const fxLineActive = !showNative && !fxRevaluationPosted && Math.abs(fxTranslationTotal) >= 0.01;
+    const fxLineRd = fxLineActive ? fxTranslationTotal : 0;
+
+    const netIncomeRd = ebitRd + netFinancialRd + fxLineRd;
     const netIncomeUs = ebitUs + netFinancialUs;
     const compNetIncomeRd = compEbitRd + compNetFinancialRd;
     const compNetIncomeUs = compEbitUs + compNetFinancialUs;
@@ -415,11 +419,22 @@ export function ProfitLossView() {
       rows.push({ type: "blank" });
     }
 
+    // ─── FX TRANSLATION GAIN/LOSS (single-column mode only) ───
+    if (!showNative) {
+      if (fxRevaluationPosted) {
+        rows.push({ type: "fxTranslation", label: t("fx.revaluationAlreadyPosted"), rd: 0, suppressed: true });
+        rows.push({ type: "blank" });
+      } else if (Math.abs(fxTranslationTotal) >= 0.01) {
+        rows.push({ type: "fxTranslation", label: t("fx.translationGainLoss"), rd: fxTranslationTotal, suppressed: false });
+        rows.push({ type: "blank" });
+      }
+    }
+
     // ─── NET INCOME ───
     rows.push({ type: "netIncome", label: t("pl.netIncome"), rd: netIncomeRd, us: netIncomeUs, compRd: compNetIncomeRd, compUs: compNetIncomeUs });
 
     return { statementRows: rows, hasUsd };
-  }, [accounts, accountTotals, compAccountTotals, language, t, showNative]);
+  }, [accounts, accountTotals, compAccountTotals, language, t, showNative, fxTranslationTotal, fxRevaluationPosted]);
 
   const baseCols = hasUsd ? 4 : 3;
   const compCols = compareEnabled ? 3 : 0;

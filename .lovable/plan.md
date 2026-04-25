@@ -1,61 +1,70 @@
 ## Goal
-Eliminate the duplicate Profit & Loss, Balance Sheet, Trial Balance, and Aging reports between **Analytics** and **Accounting**. Make **Accounting** the single source of truth (richer feature set: dual currency, BAS-prefix categorization, parent/child grouping, period comparison, FX rate). Preserve the unique multi-entity consolidation feature currently only in Analytics by adding it to the Accounting views.
 
-## Why this matters
-- **Risk of mismatched numbers**: Accounting views read `account_balances_from_journals` RPC; Analytics tabs use `get_profit_loss`, `get_balance_sheet`, and `v_trial_balance`. Different filters/sources can yield different totals for the same date range — accountants will lose trust.
-- **Double maintenance burden** for sign conventions, FX, period locking, etc.
-- **User confusion**: two "Estado de Resultados" entries with different layouts.
+Convert all four financial statements (P&L, Balance Sheet, Trial Balance, Cash Flow) to display a **single DOP "reporting currency" column** instead of dual DOP/USD columns. Use the **closing rate** for conversion and add an explicit **"Ganancia/Pérdida por Tipo de Cambio"** line on the P&L to show FX impact transparently.
 
----
+This simplifies reports, aligns with DGII filing currency, and lays the groundwork for cleaner multi-entity side-by-side views later.
 
-## Changes
+## Approach
 
-### 1. `src/pages/AnalyticsReports.tsx` — remove duplicate tabs
-Remove these tabs (and their imports): **Estado de Resultados (`pnl`), Balance General (`balance-sheet`), Aging CxP/CxC (`aging`), Balanza Comprobación (`trial-balance`)**.
+### 1. FX rate sourcing (already in place)
+- `useExchangeRate(date)` hook already pulls the most recent BCRD USD/DOP `sell_rate` from the `exchange_rates` table on or before a given date.
+- The reports already have a manual "Tipo de Cambio (USD→DOP)" input that auto-populates from this hook. We'll keep the manual override (useful for what-if scenarios) but use it as the closing rate for everything.
+- For Balance Sheet → use rate at "as of" date.
+- For P&L / Cash Flow → use rate at the **period-end** date (closing rate, per user choice).
+- For Trial Balance → use rate at the "as of" date.
 
-Analytics keeps only the genuinely analytical tabs:
-- Costo por Campo (`cost-field`)
-- Resumen Nómina (`payroll`)
-- Consumo Combustible (`fuel`)
+### 2. Default display: single DOP column
+Each report becomes single-currency by default:
 
-Default `activeTab` becomes `"cost-field"`.
+```
+Account     | DOP (Reporting)
+Ventas      |  2,400,000     ← native DOP + (USD × closing rate)
+```
 
-The page subtitle stays; consider renaming to **"Analítica Operacional"** since financial statements move out.
+The existing `r.rdTotal` (DOP native) and `r.usTotal` (USD native) totals already exist in component state. The new "reporting" total = `rdTotal + (usTotal × closingRate)`.
 
-### 2. Delete the now-orphaned components
-- `src/components/analytics/ProfitLossTab.tsx`
-- `src/components/analytics/BalanceSheetTab.tsx`
-- `src/components/analytics/TrialBalanceTab.tsx`
-- `src/components/analytics/AgingReportTab.tsx`
+### 3. Toggle for native-currency view
+Add a switch labeled **"Mostrar monedas nativas"** at the top of each report. When ON, restores today's dual-column DOP / USD view. Default OFF (single-column reporting view).
 
-### 3. Port multi-entity consolidation to Accounting views
-This is the only feature Accounting lacks today. Add it to:
-- `src/components/accounting/ProfitLossView.tsx`
-- `src/components/accounting/BalanceSheetView.tsx`
-- `src/components/accounting/TrialBalanceView.tsx`
-- `src/components/accounting/AgingReportView.tsx`
+### 4. FX gain/loss line on P&L
+Add a new line at the bottom of "Otros Ingresos/Egresos" section:
 
-**Approach**:
-- Read `selectedEntityId` and `isAllEntities` from `useEntity()`.
-- When `isAllEntities` is true (global admin in "All Entities" mode), fetch balances per entity and render an extra **side-by-side column per entity + Consolidated column** (mirroring the pattern already in `ProfitLossTab` / `BalanceSheetTab`).
-- When a single entity is selected, behavior is unchanged.
-- The existing `account_balances_from_journals` RPC needs to accept an optional `p_entity_id` parameter — verify it does; if not, add an overloaded version via migration. (Will check during implementation; likely a one-line filter add.)
+```
+Ganancia/(Pérdida) por Tipo de Cambio    XX,XXX
+```
 
-### 4. Verify the Accounting `AccountingReportsView` card grid is complete
-The landing card grid in Accounting → Reportes already exposes: P&L, Balance Sheet, Trial Balance, Cash Flow, Aging, Transaction Detail. ✅ No change needed — users already have one clear entry point.
+Calculation (simple closing-rate method): For each USD-denominated balance sheet account (cash, AP, AR), the FX gain/loss = `usTotal × (currentClosingRate − priorPeriodClosingRate)`. For P&L purposes (single-period view without comparison), we'll compute it as the difference between USD balances translated at closing rate vs. the rate they were originally booked at (already tracked via the journals' `fx_rate` field).
 
-### 5. i18n
-Remove unused translation keys only if confirmed unreferenced after the deletions; otherwise leave to avoid breaking other usages.
+A simpler v1: query the difference between `SUM(usd_amount × journal_fx_rate)` and `SUM(usd_amount × closingRate)` across USD-denominated journal lines for the period. This gives the unrealized translation gain/loss.
 
----
+### 5. Files to modify
 
-## Out of scope
-- No changes to Cash Flow (already only in Accounting).
-- No changes to the `get_profit_loss` / `get_balance_sheet` RPCs themselves — they may still be used by edge functions or other reports; leave them.
-- No changes to financial calculation logic in the Accounting views — they remain authoritative.
+- `src/components/accounting/ProfitLossView.tsx` — add toggle, single-column rendering, FX gain/loss line, update Excel/PDF export
+- `src/components/accounting/BalanceSheetView.tsx` — add toggle, single-column rendering, update exports
+- `src/components/accounting/TrialBalanceView.tsx` — add toggle, single-column rendering, update exports
+- `src/components/accounting/CashFlowView.tsx` — already largely single-currency (DOP-converted with USD/EUR fallback rates); add the toggle for consistency + adopt the same FX rate sourcing
 
-## Verification after implementation
-1. Analytics page loads with 3 tabs (Costo por Campo, Nómina, Combustible). Default tab renders.
-2. Accounting → Reportes → Estado de Resultados: when global admin selects "All Entities", side-by-side columns appear per entity. When a single entity is selected, view is unchanged from today.
-3. Same for Balance Sheet, Trial Balance, Aging.
-4. No dead imports, no broken routes.
+### 6. No database changes required
+All conversion happens client-side using data the RPC already returns (per-currency balances). The `exchange_rates` table is already populated.
+
+## What stays the same
+- Single-entity users see no behavioral change beyond the new default (single DOP column) and the toggle to flip back.
+- All existing Excel and PDF exports continue to work — they'll respect the toggle state.
+- DGII reports, journals, and the underlying ledger remain untouched (always native currency).
+- Multi-entity consolidation is **not** in scope for this phase — explicitly deferred.
+
+## Risks & mitigations
+
+- **Risk**: Users expecting to see USD totals will be confused.
+  **Mitigation**: Toggle is one click away, labeled clearly in Spanish. Footnote on each report shows the closing rate used.
+
+- **Risk**: FX gain/loss calculation could double-count if the user has already run period-end FX revaluation (which posts journal entries for the same effect).
+  **Mitigation**: Detect whether revaluation journals exist for the period; if yes, suppress the calculated FX line and show "Ver Revaluación FX en libro diario" note instead.
+
+- **Risk**: Closing rate may not exist for the chosen date if BCRD scrape failed.
+  **Mitigation**: Hook already falls back to most recent prior date. Manual override input remains available.
+
+## Out of scope (future phases)
+- Multi-entity side-by-side columns.
+- Average-rate vs. closing-rate split for proper IFRS-style translation.
+- Historical-rate tracking for equity accounts.

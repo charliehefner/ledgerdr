@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
     }
 
     // --- Fetch lookup data ---
-    const [mappingsRes, accountsRes, bankRes, linkedRes, txnsRes, icConfigRes, entitiesRes] = await Promise.all([
+    const [mappingsRes, accountsRes, bankRes, linkedRes, txnsRes, icConfigRes, entitiesRes, periodsRes] = await Promise.all([
       db.from("payment_method_accounts").select("pay_method, account_id"),
       db.from("chart_of_accounts").select("id, account_code").eq("allow_posting", true).is("deleted_at", null),
       db.from("bank_accounts").select("id, chart_account_id, currency, entity_id, is_shared"),
@@ -304,6 +304,7 @@ Deno.serve(async (req) => {
         .limit(10000),
       db.from("intercompany_account_config").select("group_id, receivable_account_id, payable_account_id"),
       db.from("entities").select("id, entity_group_id"),
+      db.from("accounting_periods").select("id, start_date, end_date, status, is_closed").is("deleted_at", null),
     ]);
 
     if (mappingsRes.error) throw mappingsRes.error;

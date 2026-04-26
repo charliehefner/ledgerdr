@@ -1135,6 +1135,7 @@ export const en = {
 
   // Transaction Form
   "txForm.title": "New Transaction",
+  "txForm.officeApprovalNotice": "Transactions exceeding the approval threshold will be held as pending until approved. All fields can be edited before saving.",
   "txForm.transactionDate": "Transaction Date *",
   "txForm.purchaseDate": "Purchase Date",
   "txForm.selectDate": "Select date",

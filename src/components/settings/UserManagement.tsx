@@ -48,7 +48,7 @@ import { roleDisplayNames, roleDescriptions, UserRole } from "@/lib/permissions"
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
-const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "viewer", "driver"];
+const ALL_ROLES: UserRole[] = ["admin", "management", "accountant", "supervisor", "office", "viewer", "driver"];
 
 interface EntityGroup {
   id: string;

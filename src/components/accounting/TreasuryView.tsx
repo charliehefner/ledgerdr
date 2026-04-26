@@ -4,11 +4,16 @@ import { BankAccountsList } from "./BankAccountsList";
 import { CreditCardsList } from "./CreditCardsList";
 import { PettyCashView } from "./PettyCashView";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function TreasuryView() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const isOffice = user?.role === "office";
+  // Office only has write access to petty cash; default that tab to focus their work.
+  const defaultTab = isOffice ? "petty-cash" : "reconciliation";
   return (
-    <Tabs defaultValue="reconciliation" className="space-y-4">
+    <Tabs defaultValue={defaultTab} className="space-y-4">
       <TabsList>
         <TabsTrigger value="reconciliation">{t("treasury.reconciliation")}</TabsTrigger>
         <TabsTrigger value="bank-accounts">{t("treasury.bankAccounts")}</TabsTrigger>

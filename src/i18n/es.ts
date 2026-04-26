@@ -1135,6 +1135,7 @@ export const es = {
 
   // Transaction Form
   "txForm.title": "Nueva Transacción",
+  "txForm.officeApprovalNotice": "Las transacciones que excedan el umbral de aprobación quedarán pendientes hasta ser aprobadas. Todos los campos pueden editarse antes de guardar.",
   "txForm.transactionDate": "Fecha de Transacción *",
   "txForm.purchaseDate": "Fecha de Compra",
   "txForm.selectDate": "Seleccionar fecha",

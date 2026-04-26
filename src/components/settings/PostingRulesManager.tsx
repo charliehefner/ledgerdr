@@ -32,6 +32,19 @@ interface RuleConditions {
   transaction_type?: string[];
 }
 
+type ExtraSplit =
+  | { type: "percent"; value: number }
+  | { type: "fixed"; value: number }
+  | { type: "remainder" };
+
+interface ExtraLine {
+  account_code: string;
+  side: "debit" | "credit";
+  split: ExtraSplit;
+  cost_center?: "general" | "agricultural" | "industrial";
+  description?: string;
+}
+
 interface RuleActions {
   master_account_code?: string;
   credit_account_code?: string;
@@ -39,6 +52,9 @@ interface RuleActions {
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";
   append_note?: string;
+  extra_lines?: ExtraLine[];
+  replace_main_debit?: boolean;
+  replace_main_credit?: boolean;
 }
 
 interface PostingRule {
@@ -52,6 +68,27 @@ interface PostingRule {
   actions: RuleActions;
   applies_to: "transaction_entry" | "bank_quick_entry" | "both";
 }
+
+const MAX_EXTRA_LINES = 10;
+
+// Form representation of an extra line (string inputs for editor)
+type ExtraLineDraft = {
+  account_code: string;
+  side: "debit" | "credit";
+  split_type: "percent" | "fixed" | "remainder";
+  split_value: string;        // string in form, parsed on save
+  cost_center: "" | "general" | "agricultural" | "industrial";
+  description: string;
+};
+
+const emptyExtraLine = (): ExtraLineDraft => ({
+  account_code: "",
+  side: "debit",
+  split_type: "percent",
+  split_value: "",
+  cost_center: "",
+  description: "",
+});
 
 const emptyForm = {
   name: "",
@@ -75,6 +112,10 @@ const emptyForm = {
   cbs_code: "",
   cost_center: "" as "" | "general" | "agricultural" | "industrial",
   append_note: "",
+  // extra lines (Phase 2)
+  extra_lines: [] as ExtraLineDraft[],
+  replace_main_debit: false,
+  replace_main_credit: false,
 };
 
 // Action fields used for conflict detection (in display order).

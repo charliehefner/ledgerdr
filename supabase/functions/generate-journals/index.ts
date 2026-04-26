@@ -169,6 +169,74 @@ function resolveExtraLines(
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2.5: amortization scheduler
+// ─────────────────────────────────────────────────────────────────────────────
+interface AmortizeSpec {
+  months: number;
+  start_date: string;
+  expense_account_code?: string;
+  prepaid_account_code?: string;
+}
+
+interface PeriodLookup {
+  id: string;
+  start_date: string;
+  end_date: string;
+  status: string;       // 'open' | 'closed' | 'reported' | 'locked'
+  is_closed: boolean | null;
+}
+
+/** Pull `amortize` from the highest-priority matched rule that defines it. */
+function findAmortizeAction(
+  matchedRules: Array<{ rule_id: string; rule_name: string; actions: any }>,
+): { spec: AmortizeSpec; rule_id: string; rule_name: string } | null {
+  for (const r of matchedRules) {
+    const a = r.actions?.amortize;
+    if (a && Number.isFinite(a.months) && a.months >= 2 && a.start_date) {
+      return { spec: a as AmortizeSpec, rule_id: r.rule_id, rule_name: r.rule_name };
+    }
+  }
+  return null;
+}
+
+/**
+ * Build N slice dates: same day-of-month as start_date, advancing one calendar
+ * month at a time. Day clamps to month-end (e.g., Jan-31 → Feb-28).
+ */
+function buildSliceDates(startISO: string, months: number): string[] {
+  const [y, m, d] = startISO.split("-").map(Number);
+  const out: string[] = [];
+  for (let i = 0; i < months; i++) {
+    const dt = new Date(Date.UTC(y, m - 1 + i, 1));
+    const lastDay = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
+    const day = Math.min(d, lastDay);
+    out.push(`${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+/** Find the open accounting period containing `dateISO`. Returns null if none / closed. */
+function findOpenPeriodForDate(dateISO: string, periods: PeriodLookup[]): PeriodLookup | null {
+  for (const p of periods) {
+    if (dateISO >= p.start_date && dateISO <= p.end_date) {
+      const blocked = p.is_closed === true || p.status === "closed" || p.status === "reported" || p.status === "locked";
+      return blocked ? null : p;
+    }
+  }
+  return null;
+}
+
+/** Split `total` into N equal slices of 2 decimals, with rounding remainder absorbed into the last slice. */
+function splitAmount(total: number, n: number): number[] {
+  const base = Math.floor((total / n) * 100) / 100;
+  const slices = new Array(n).fill(base);
+  const sum = base * n;
+  const remainder = Math.round((total - sum) * 100) / 100;
+  slices[n - 1] = Math.round((slices[n - 1] + remainder) * 100) / 100;
+  return slices;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

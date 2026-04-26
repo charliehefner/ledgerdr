@@ -1,54 +1,29 @@
-# Plan: New "Office" Role
+## Problem
 
-## Scope
-Create a new `office` role with the access matrix you specified, plugged into the existing approval engine. Office can write petty cash in Treasury; the rest of Treasury stays read-only.
+The Cronograma grid wraps every cell edited by anyone *other than* `cedenojord` or the `instructor` user (hardcoded IDs in `CronogramaGrid.tsx` lines 49–50) with a solid orange ring + orange dot indicator. Iramaia is not in that allowlist, so **100% of her entries get this treatment**, making her own text appear cramped against the ring and visually obscured by the corner dot — which matches the photo exactly.
 
-## 1. Database migration
-- Extend the `app_role` enum with `'office'`.
-- RLS additions:
-  - `transactions`: office can `INSERT` her own rows; can `UPDATE`/`DELETE` her own rows only while `approval_status = 'pending'`.
-  - `petty_cash_transactions` (and related petty cash tables): office can `INSERT`/`UPDATE`/`DELETE` within her entity scope.
-  - All other Treasury tables (`bank_accounts`, `bank_movements`, `credit_cards`, `credit_card_transactions`, `bank_reconciliation*`): read-only for office.
-  - Read-only SELECT policies for office on: `journals`, `journal_lines`, `chart_of_accounts`, `ap_ar_documents`, `treasury` views.
-- No changes to `approval_policies` or `trg_check_transaction_approval` — office inherits the existing threshold engine. Above-threshold inserts land as `pending` with no journal; under-threshold auto-approve and post normally.
+This is by design (an audit trail of "who edited what"), but the visual treatment is too aggressive for legitimate editors and degrades readability of the text they just typed.
 
-## 2. Permissions matrix (`src/lib/permissions.ts`)
-Add `"office"` to `UserRole`. Section access:
+## Proposed fix (3 small changes to `src/components/cronograma/CronogramaGrid.tsx`)
 
-| Section | Access |
-|---|---|
-| alerts, transactions, contacts, inventory, fuel, equipment, operations, herbicide, rainfall, cronograma, industrial, hr | **Read + Write** |
-| accounting (Ledger), invoices, reports, analytics, ap-ar | **Read-only** |
-| treasury | **Read-only** view, **Write** only on petty cash (enforced in `PettyCashView` + RLS) |
-| settings, budget, approvals, payroll (HR sub-tab) | **No access** |
+### 1. Add Iramaia (and any future "trusted editor") to the allowlist
+Promote the hardcoded IDs into a list and add Iramaia's user_id so her edits don't get the orange ring at all (treated like cedenojord's edits — the schedule owner). I'll need her user_id; I can pull it from the database or you can confirm her username.
 
-HR sub-tabs for office: `day-labor`, `servicios`, `jornaleros`, `prestadores`, `employees` (read+write). Block `payroll`, `add-employee`, `tss`.
+### 2. Soften the visual when the ring IS shown
+Even for non-allowlisted users, improve text legibility:
+- Change `ring-2 ring-inset` → `ring-1` with a small inner padding so the text isn't flush against the colored border
+- Move the corner dot from `top-0 right-0` to `-top-1 -right-1` (outside the cell) so it never overlaps text
+- Slightly lighten the ring color (`ring-orange-300` instead of `ring-orange-400`) so it's an indicator, not a frame
 
-Add helper `canWritePettyCash(role)` returning true for `admin`, `management`, `accountant`, `office`.
+### 3. (Optional) Make the highlight respect a setting
+Add a small `localStorage` toggle ("Show edit indicators") so each user can hide the orange rings on their own machine without affecting others. Useful since the indicators are mainly meaningful to the schedule owner reviewing changes — not to the person doing the editing.
 
-## 3. UI changes
-- **`UserManagement.tsx`**: add "Oficina" to role dropdown + `roleDisplayNames`/`roleDescriptions`.
-- **`TransactionForm.tsx`**: when current role is `office`, show an info banner: *"Las transacciones que excedan el umbral de aprobación quedarán en estado pendiente hasta ser aprobadas."*
-- **`TreasuryView.tsx`**: hide write actions on bank/credit card tabs for office; keep petty cash tab fully interactive.
-- **`PettyCashView.tsx`**: gate write buttons via `canWritePettyCash`.
-- **Sidebar**: existing `canAccessSection` filtering handles visibility automatically.
+## Files to edit
+- `src/components/cronograma/CronogramaGrid.tsx` — allowlist + ring/dot styling (lines 48–51, 1023–1028, 1119–1162)
 
-## 4. Edge function
-- **`update-user-role/index.ts`**: add `'office'` to `VALID_ROLES`.
-
-## 5. i18n
-- Add `roles.office`, banner copy, and any new labels to `src/i18n/es.ts` and `src/i18n/en.ts`.
-
-## Files to touch
-- New SQL migration (enum + RLS)
-- `src/lib/permissions.ts`
-- `src/contexts/AuthContext.tsx` (if role-derived flags need updating)
-- `src/components/settings/UserManagement.tsx`
-- `src/components/transactions/TransactionForm.tsx`
-- `src/components/accounting/TreasuryView.tsx`
-- `src/components/accounting/PettyCashView.tsx`
-- `supabase/functions/update-user-role/index.ts`
-- `src/i18n/es.ts`, `src/i18n/en.ts`
+## What I need from you
+- Confirm Iramaia should be in the "trusted editor" list (i.e. her edits should NOT be flagged) — or if her edits should still be flagged but just rendered more legibly (option 2 only).
+- If yes to allowlist, I'll look up her user_id from the database (no need for you to provide it).
 
 ## Out of scope
-- No changes to approval thresholds — admins configure office's limits via existing **Settings → Approval Thresholds** UI by selecting the `office` role after this ships.
+- This is purely a styling/allowlist change. The audit trail in the database (`updated_by`, `updated_at`) is unaffected — the Audit Log will still show every edit she made.

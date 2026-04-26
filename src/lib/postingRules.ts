@@ -137,6 +137,47 @@ export function mergeRuleActions(rules: MatchedRule[]): PostingRuleAction {
 }
 
 /**
+ * Detect rules that disagree on the same field. When two or more matched rules
+ * suggest different values for the same field (e.g., master_account_code), the
+ * caller can warn the operator before silently picking the highest-priority one.
+ *
+ * Returns one entry per conflicting field with the proposing rule names + values.
+ */
+export interface RuleConflict {
+  field: keyof PostingRuleAction;
+  values: { ruleName: string; value: string }[];
+}
+
+const CONFLICT_FIELDS: (keyof PostingRuleAction)[] = [
+  "master_account_code",
+  "credit_account_code",
+  "project_code",
+  "cbs_code",
+  "cost_center",
+];
+
+export function detectRuleConflicts(rules: MatchedRule[]): RuleConflict[] {
+  if (rules.length < 2) return [];
+  const out: RuleConflict[] = [];
+  for (const field of CONFLICT_FIELDS) {
+    const seen = new Map<string, string>(); // value → first rule that proposed it
+    for (const r of rules) {
+      const v = (r.actions as any)?.[field];
+      if (v && typeof v === "string") {
+        if (!seen.has(v)) seen.set(v, r.rule_name);
+      }
+    }
+    if (seen.size > 1) {
+      out.push({
+        field,
+        values: Array.from(seen.entries()).map(([value, ruleName]) => ({ value, ruleName })),
+      });
+    }
+  }
+  return out;
+}
+
+/**
  * Silently log which rules touched fields on a transaction.
  * Failures are swallowed — audit logging must never block transaction save.
  */

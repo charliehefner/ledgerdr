@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, addWeeks, subWeeks, getDay, eachDayOfInterval, isWithinInterval } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, Download, FileSpreadsheet, FileText, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +48,23 @@ import autoTable from "jspdf-autotable";
 // User IDs for highlight logic
 const CEDENOJORD_ID = "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80"; // Schedule owner
 const INSTRUCTOR_ID = "7ce0dff1-c2b3-4506-b6eb-c61d9ca50121"; // Never highlighted
+// Trusted editors whose edits do NOT trigger the orange-ring "other editor" indicator
+const TRUSTED_EDITOR_IDS = new Set<string>([
+  INSTRUCTOR_ID,
+  "b2a33a75-b63c-48e1-a252-7ab843f559d5", // Iramaia Bassoi (irabassoi@gmail.com)
+]);
 const SELF_EDIT_HIGHLIGHT_HOURS = 8; // Hours after creation before cedenojord edits are highlighted
+
+// Per-device toggle: hide edit indicators on this machine
+const HIGHLIGHT_PREF_KEY = "cronograma.showEditIndicators";
+function getShowIndicatorsPref(): boolean {
+  try {
+    const v = localStorage.getItem(HIGHLIGHT_PREF_KEY);
+    return v === null ? true : v === "true";
+  } catch {
+    return true;
+  }
+}
 
 // Highlight types for visual differentiation
 type HighlightType = "other" | "self-edit" | null;
@@ -150,7 +166,7 @@ function entryKey(workerName: string, workerType: string, dayOfWeek: number, tim
  */
 function getHighlightType(entry?: CronogramaEntry): HighlightType {
   if (!entry?.updated_by) return null;
-  if (entry.updated_by === INSTRUCTOR_ID) return null;
+  if (TRUSTED_EDITOR_IDS.has(entry.updated_by)) return null;
   if (entry.updated_by === CEDENOJORD_ID) {
     const createdAt = new Date(entry.created_at);
     const updatedAt = new Date(entry.updated_at);
@@ -171,6 +187,15 @@ export function CronogramaGrid() {
   const [additionalRows, setAdditionalRows] = useState<WorkerRow[]>([]);
   const [copiedTask, setCopiedTask] = useState<string | null>(null);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showIndicators, setShowIndicators] = useState<boolean>(() => getShowIndicatorsPref());
+
+  const toggleIndicators = useCallback(() => {
+    setShowIndicators(prev => {
+      const next = !prev;
+      try { localStorage.setItem(HIGHLIGHT_PREF_KEY, String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
   
   // Debounce timer ref for mutations
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -728,6 +753,25 @@ export function CronogramaGrid() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleIndicators}
+                aria-label={showIndicators
+                  ? (language === "es" ? "Ocultar indicadores de edición" : "Hide edit indicators")
+                  : (language === "es" ? "Mostrar indicadores de edición" : "Show edit indicators")}
+              >
+                {showIndicators ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showIndicators
+                ? (language === "es" ? "Ocultar indicadores de edición" : "Hide edit indicators")
+                : (language === "es" ? "Mostrar indicadores de edición" : "Show edit indicators")}
+            </TooltipContent>
+          </Tooltip>
           {/* Export dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -916,6 +960,7 @@ export function CronogramaGrid() {
                               entry={morningEntry}
                               userEmailMap={userEmailMap}
                               language={language}
+                              showIndicators={showIndicators}
                             />
                             <CronogramaCellMemo
                               key={`${rowIdx}-${dayIdx}-pm`}
@@ -936,6 +981,7 @@ export function CronogramaGrid() {
                               entry={afternoonEntry}
                               userEmailMap={userEmailMap}
                               language={language}
+                              showIndicators={showIndicators}
                             />
                           </>
                         );
@@ -989,6 +1035,7 @@ type CronogramaCellProps = {
   entry?: CronogramaEntry;
   userEmailMap: Map<string, string>;
   language: string;
+  showIndicators: boolean;
 };
 
 // Memoized cell component — only re-renders when its specific props change
@@ -1010,21 +1057,24 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   entry,
   userEmailMap,
   language,
+  showIndicators,
 }: CronogramaCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const highlightType = getHighlightType(entry);
+  const rawHighlightType = getHighlightType(entry);
+  const highlightType = showIndicators ? rawHighlightType : null;
   const isHighlighted = highlightType !== null;
   const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
   const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
 
-  const ringClass = highlightType === "self-edit" 
-    ? "ring-2 ring-inset ring-blue-400 dark:ring-blue-500" 
-    : "ring-2 ring-inset ring-orange-400 dark:ring-orange-500";
-  const dotClass = highlightType === "self-edit" 
-    ? "bg-blue-400" 
+  // Softer indicator: thin outline + dot positioned outside the cell so it never overlaps text
+  const ringClass = highlightType === "self-edit"
+    ? "ring-1 ring-inset ring-blue-300 dark:ring-blue-500"
+    : "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
+  const dotClass = highlightType === "self-edit"
+    ? "bg-blue-400"
     : "bg-orange-400";
 
   const autoResize = useCallback(() => {
@@ -1123,7 +1173,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
             <TooltipTrigger asChild>
               <div className="relative">
                 {cellContent}
-                <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
+                <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
               </div>
             </TooltipTrigger>
             <TooltipContent className="whitespace-pre-line text-xs">
@@ -1149,7 +1199,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
           <TooltipTrigger asChild>
             <div className="relative">
               {cellContent}
-              <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
+              <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
             </div>
           </TooltipTrigger>
           <TooltipContent className="whitespace-pre-line text-xs">
@@ -1172,6 +1222,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     prevProps.dayShade === nextProps.dayShade &&
     prevProps.isLastOfDay === nextProps.isLastOfDay &&
     prevProps.language === nextProps.language &&
+    prevProps.showIndicators === nextProps.showIndicators &&
     prevProps.entry?.updated_by === nextProps.entry?.updated_by &&
     prevProps.entry?.updated_at === nextProps.entry?.updated_at &&
     prevProps.entry?.task === nextProps.entry?.task

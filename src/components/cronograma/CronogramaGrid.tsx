@@ -1005,6 +1005,7 @@ type CronogramaCellProps = {
   entry?: CronogramaEntry;
   userEmailMap: Map<string, string>;
   language: string;
+  showIndicators: boolean;
 };
 
 // Memoized cell component — only re-renders when its specific props change

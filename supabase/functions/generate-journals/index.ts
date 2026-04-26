@@ -384,18 +384,48 @@ Deno.serve(async (req) => {
         const netAmount = txn.amount - itbisAmount;
         const lines: any[] = [];
 
+        // ── PHASE 2: evaluate posting rules + resolve extra lines ──
+        let matchedRules: Array<{ rule_id: string; rule_name: string; actions: any }> = [];
+        try {
+          const { data: rulesData } = await db.rpc("evaluate_posting_rules", {
+            p_entity_id: txn.entity_id,
+            p_payload: {
+              vendor: (txn as any).name ?? null,
+              description: txn.description,
+              document: (txn as any).document ?? null,
+              amount: txn.amount,
+              currency: txn.currency || "DOP",
+              transaction_type: txn.transaction_direction,
+              context: "transaction_entry",
+            },
+          });
+          matchedRules = (rulesData || []) as any[];
+        } catch (rErr: any) {
+          console.warn(`[generate-journals] rule eval failed for txn ${txn.id}: ${rErr?.message}`);
+        }
+
+        const ruleErrors: string[] = [];
+        const extras = resolveExtraLines(matchedRules, netAmount, acctByCode, ruleErrors);
+        const debitExtrasTotal = extras.debit.reduce((s, l) => s + l.amount, 0);
+        const creditExtrasTotal = extras.credit.reduce((s, l) => s + l.amount, 0);
+
         if (isSale) {
           // ── SALE: Debit bank/cash, Credit revenue + ITBIS por Pagar ──
-          lines.push({
-            journal_id: journalId, account_id: payAccountId,
-            debit: txn.amount, credit: 0, created_by: userId,
-            description: `Cobro venta${costCenterLabel(txn.cost_center)}`,
-          });
-          lines.push({
-            journal_id: journalId, account_id: mainAccountId,
-            debit: 0, credit: netAmount, created_by: userId,
-            description: `Ingreso venta`,
-          });
+          // For sales, replace_main_debit affects the bank/cash line; replace_main_credit affects revenue.
+          if (!extras.replaceMainDebit) {
+            lines.push({
+              journal_id: journalId, account_id: payAccountId,
+              debit: txn.amount, credit: 0, created_by: userId,
+              description: `Cobro venta${costCenterLabel(txn.cost_center)}`,
+            });
+          }
+          if (!extras.replaceMainCredit) {
+            lines.push({
+              journal_id: journalId, account_id: mainAccountId,
+              debit: 0, credit: netAmount, created_by: userId,
+              description: `Ingreso venta`,
+            });
+          }
           if (itbisAmount > 0 && itbisPorPagarId) {
             lines.push({
               journal_id: journalId, account_id: itbisPorPagarId,
@@ -403,13 +433,22 @@ Deno.serve(async (req) => {
               description: "ITBIS por Pagar",
             });
           }
+          // Splice extras
+          for (const e of extras.debit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: e.amount, credit: 0, created_by: userId, description: e.description });
+          }
+          for (const e of extras.credit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: 0, credit: e.amount, created_by: userId, description: e.description });
+          }
         } else {
           // ── PURCHASE: Debit expense + ITBIS pagado, Credit bank/cash ──
-          lines.push({
-            journal_id: journalId, account_id: mainAccountId,
-            debit: netAmount, credit: 0, created_by: userId,
-            description: `Gasto${costCenterLabel(txn.cost_center)}`,
-          });
+          if (!extras.replaceMainDebit) {
+            lines.push({
+              journal_id: journalId, account_id: mainAccountId,
+              debit: netAmount, credit: 0, created_by: userId,
+              description: `Gasto${costCenterLabel(txn.cost_center)}`,
+            });
+          }
           if (itbisAmount > 0 && itbisPagadoId) {
             lines.push({
               journal_id: journalId, account_id: itbisPagadoId,
@@ -438,11 +477,32 @@ Deno.serve(async (req) => {
             bankCredit -= isrRetenido;
           }
 
-          lines.push({
-            journal_id: journalId, account_id: payAccountId,
-            debit: 0, credit: Math.max(0, bankCredit), created_by: userId,
-            description: `Pago`,
-          });
+          // Splice debit extras (e.g. cost-center splits)
+          for (const e of extras.debit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: e.amount, credit: 0, created_by: userId, description: e.description });
+          }
+          // Splice credit extras (e.g. ISR accrual) — these reduce what's left to credit to bank
+          for (const e of extras.credit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: 0, credit: e.amount, created_by: userId, description: e.description });
+            bankCredit -= e.amount;
+          }
+          // If credit extras don't replace the bank line, post the (reduced) bank line.
+          if (!extras.replaceMainCredit) {
+            lines.push({
+              journal_id: journalId, account_id: payAccountId,
+              debit: 0, credit: Math.max(0, bankCredit), created_by: userId,
+              description: `Pago`,
+            });
+          }
+        }
+
+        // ── BALANCE GUARD ──
+        const totalD = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+        const totalC = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+        if (Math.abs(totalD - totalC) > 0.01) {
+          await db.from("journals").delete().eq("id", journalId);
+          skipped.push(`${label}: asiento desbalanceado D=${totalD.toFixed(2)} C=${totalC.toFixed(2)} (revisar reglas con líneas extra)`);
+          continue;
         }
 
         const { error: lErr } = await db.from("journal_lines").insert(lines);

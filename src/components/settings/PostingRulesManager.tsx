@@ -351,6 +351,35 @@ export function PostingRulesManager() {
     if (form.replace_main_debit && extras.some(e => e.side === "debit")) actions.replace_main_debit = true;
     if (form.replace_main_credit && extras.some(e => e.side === "credit")) actions.replace_main_credit = true;
 
+    // Phase 2.5: amortization
+    if (form.amortize_enabled) {
+      const months = Number(form.amortize_months);
+      if (!Number.isInteger(months) || months < 2 || months > 60) {
+        toast.error("Amortización: meses debe ser un entero entre 2 y 60");
+        return;
+      }
+      if (!form.amortize_start_date) {
+        toast.error("Amortización: fecha de inicio es requerida");
+        return;
+      }
+      const expense = form.amortize_expense_account_code || form.master_account_code;
+      const prepaid = form.amortize_prepaid_account_code || "1480";
+      if (!expense) {
+        toast.error("Amortización: define una cuenta de gasto (o cuenta principal de débito)");
+        return;
+      }
+      if (expense === prepaid) {
+        toast.error("Amortización: la cuenta de gasto y la cuenta de prepago deben ser distintas");
+        return;
+      }
+      actions.amortize = {
+        months,
+        start_date: form.amortize_start_date,
+        ...(form.amortize_expense_account_code ? { expense_account_code: form.amortize_expense_account_code } : {}),
+        ...(prepaid !== "1480" ? { prepaid_account_code: prepaid } : { prepaid_account_code: "1480" }),
+      };
+    }
+
     if (Object.keys(conditions).length === 0) {
       toast.error("Define al menos una condición (sino la regla coincidiría con todo)");
       return;

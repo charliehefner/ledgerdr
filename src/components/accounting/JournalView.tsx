@@ -71,6 +71,7 @@ export function JournalView() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [ruleFilter, setRuleFilter] = useState<string>("all");
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);

@@ -540,7 +540,7 @@ Deno.serve(async (req) => {
             amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
 
             // Swap the master debit account so the original journal posts as DR Prepaid / CR Bank
-            (mainAccountId as any) = prepaidAccountId;
+            mainAccountId = prepaidAccountId;
 
             amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
           }

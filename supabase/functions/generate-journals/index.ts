@@ -649,6 +649,69 @@ Deno.serve(async (req) => {
         } else {
           created++;
 
+          // ── PHASE 2.5: amortization slices ──
+          // Original journal posted as DR Prepaid / CR Bank. Now post N monthly
+          // DR Expense / CR Prepaid journals. Each slice is its own balanced
+          // GJ tied to the same transaction_source_id.
+          if (amortizePlan) {
+            const totalSlices = amortizePlan.slices.length;
+            for (let i = 0; i < totalSlices; i++) {
+              const slice = amortizePlan.slices[i];
+              try {
+                const sliceDescr = `Amortización ${i + 1}/${totalSlices} — ${txn.description || "Gasto"}${costCenterLabel(txn.cost_center)}`;
+                const { data: sliceJournalId, error: sjErr } = await db.rpc("create_journal_from_transaction", {
+                  p_transaction_id: txn.id,
+                  p_date: slice.date,
+                  p_description: sliceDescr,
+                  p_created_by: userId,
+                  p_journal_type: "GJ",
+                });
+                if (sjErr || !sliceJournalId) {
+                  await db.from("app_error_log").insert({
+                    user_id: userId,
+                    component_name: "generate-journals/amortize",
+                    error_message: `Txn ${txn.id} slice ${i + 1}/${totalSlices} (${slice.date}): ${sjErr?.message || "no id"}`,
+                  });
+                  continue;
+                }
+                await db.from("journals").update({
+                  currency: txn.currency || "DOP",
+                  exchange_rate: exchangeRate,
+                  period_id: slice.period_id,
+                  ...(txn.entity_id ? { entity_id: txn.entity_id } : {}),
+                }).eq("id", sliceJournalId);
+
+                const sliceLines = [
+                  {
+                    journal_id: sliceJournalId,
+                    account_id: amortizePlan.expenseAccountId,
+                    debit: slice.amount, credit: 0, created_by: userId,
+                    description: `Gasto amortizado${costCenterLabel(txn.cost_center)}`,
+                  },
+                  {
+                    journal_id: sliceJournalId,
+                    account_id: amortizePlan.prepaidAccountId,
+                    debit: 0, credit: slice.amount, created_by: userId,
+                    description: `Liberación prepago`,
+                  },
+                ];
+                const { error: slErr } = await db.from("journal_lines").insert(sliceLines);
+                if (slErr) {
+                  await db.from("journals").delete().eq("id", sliceJournalId);
+                  await db.from("app_error_log").insert({
+                    user_id: userId,
+                    component_name: "generate-journals/amortize",
+                    error_message: `Txn ${txn.id} slice ${i + 1}/${totalSlices}: ${slErr.message}`,
+                  });
+                } else {
+                  created++;
+                }
+              } catch (e: any) {
+                console.warn(`[generate-journals/amortize] slice ${i + 1} error: ${e?.message}`);
+              }
+            }
+          }
+
           // ── PHASE 2: log rule applications + any extras errors ──
           if (matchedRules.length > 0) {
             try {

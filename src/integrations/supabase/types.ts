@@ -86,6 +86,102 @@ export type Database = {
         }
         Relationships: []
       }
+      accrual_entries: {
+        Row: {
+          accrual_date: string
+          accrual_journal_id: string | null
+          amount: number
+          cost_center: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string
+          entity_id: string
+          expense_account_id: string
+          id: string
+          liability_account_id: string
+          reference: string | null
+          reversal_date: string
+          reversal_journal_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accrual_date: string
+          accrual_journal_id?: string | null
+          amount: number
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description: string
+          entity_id: string
+          expense_account_id: string
+          id?: string
+          liability_account_id: string
+          reference?: string | null
+          reversal_date: string
+          reversal_journal_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accrual_date?: string
+          accrual_journal_id?: string | null
+          amount?: number
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          entity_id?: string
+          expense_account_id?: string
+          id?: string
+          liability_account_id?: string
+          reference?: string | null
+          reversal_date?: string
+          reversal_journal_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accrual_entries_accrual_journal_id_fkey"
+            columns: ["accrual_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accrual_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accrual_entries_expense_account_id_fkey"
+            columns: ["expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accrual_entries_liability_account_id_fkey"
+            columns: ["liability_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accrual_entries_reversal_journal_id_fkey"
+            columns: ["reversal_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advance_allocations: {
         Row: {
           advance_doc_id: string

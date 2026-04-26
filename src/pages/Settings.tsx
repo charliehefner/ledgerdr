@@ -367,6 +367,14 @@ export default function Settings() {
           )}
 
           {canModifySettings && (
+            <TabsContent value="posting-rules" className="mt-6">
+              <div className="max-w-6xl">
+                <PostingRulesManager />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
             <TabsContent value="gps" className="mt-6">
               <div className="max-w-4xl">
                 <GPSLinkingManager />

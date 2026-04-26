@@ -1,38 +1,36 @@
-# Fix: `Cannot read properties of undefined (reading 'toFixed')` on /analytics
+## Context
 
-## Root cause
+The card-grid landing in **Contabilidad → Reportes** does already exist in `src/components/accounting/AccountingReportsView.tsx` (lines 400–427) and shows 6 cards: P&L, Balance Sheet, Trial Balance, Cash Flow, Aging, and Transaction Reports. Since you say it isn't appearing the way it used to, I'll treat this as a **visual restoration / upgrade** request — making it more attractive and clearly the entry point, like a "report selector" landing.
 
-`src/components/analytics/CostPerFieldTab.tsx` calls `r.hectares_worked.toFixed(2)` and `r.operation_count` / `r.input_cost_dop` directly on rows returned by RPC `get_cost_per_field`. When any row has a NULL value for those numeric columns (e.g., a field with operations logged but no recorded hectares), the component crashes and the ErrorBoundary takes over.
+## Proposed Changes
 
-This is **unrelated to the recent FX translation work** — it's a pre-existing fragility exposed by current data on the Analytics page.
+### 1. `src/components/accounting/AccountingReportsView.tsx`
+Replace the current minimal card grid (lines 407–426) with a richer "selection box" layout:
 
-Stack trace points to line 468 of a previously bundled version; in the current 217-line file the same pattern exists at lines **79, 87, 88, 127, 169, 200, 207** (and matching `input_cost_dop` / `operation_count` reduces).
+- **Grouped sections** with subtle headings:
+  - **Estados Financieros** — P&L, Balance Sheet, Trial Balance, Cash Flow
+  - **Sub-mayores y Detalle** — Aging, Transaction Reports
+- **Larger, color-coded cards** (each report gets its own accent color):
+  - P&L → emerald, BS → indigo, TB → amber, Cash Flow → sky, Aging → rose, Detail → slate
+- **Visual treatment**:
+  - 2-column grid on desktop (`md:grid-cols-2`), single column on mobile
+  - Larger icons (h-6 w-6) inside a 14×14 rounded tile with the accent color background
+  - Title (base font), description (muted, 1–2 lines), and a small "Abrir →" affordance bottom-right
+  - Hover: slight lift, accent left-border slides in (already there), subtle ring in the accent color
+  - Focus-visible ring for accessibility
+- Keep the existing `PowerBIExportButton` in the top-right of the landing
+- Preserve all existing logic: `setReportType(card.key)`, BackButton, all sub-views, exports, filter dialog — no behavioral changes
 
-## Fix
+### 2. No new translation keys required
+All card titles/descriptions already use existing `t()` keys (`pl.title`, `acctReport.plDesc`, etc.). No `i18n` updates needed.
 
-Defensively coerce all numeric fields read from the RPC to numbers with a `0` fallback, then call `.toFixed()` / arithmetic on the safe value.
+### 3. No DB / RPC / type changes
+Pure presentational change inside one file.
 
-Pattern:
-```ts
-const ha   = Number(r.hectares_worked) || 0;
-const ops  = Number(r.operation_count) || 0;
-const cost = Number(r.input_cost_dop)  || 0;
-```
+## Files Modified
+- `src/components/accounting/AccountingReportsView.tsx` — replace the landing grid block (lines ~400–427) only
 
-### Edits to `src/components/analytics/CostPerFieldTab.tsx`
-
-1. **Export rows (line 79 and 169)** — replace `r.hectares_worked.toFixed(2)` with `(Number(r.hectares_worked) || 0).toFixed(2)`, and wrap `r.input_cost_dop` / `r.operation_count` similarly.
-2. **Aggregations (lines 86-88 and farm-level reducers)** — wrap each accumulator term with `Number(...) || 0`.
-3. **Table cells (lines 127, 200, 207)** — same `Number(...) || 0` guard before `.toFixed()`.
-4. **Display of cost / counts** — apply the same guard so a NULL cost renders as `0.00` instead of `NaN` or crash.
-
-No schema changes, no RPC changes — purely a defensive client-side fix.
-
-## Out of scope
-
-- Investigating *why* some rows have NULL hectares (likely operations logged without `hectares_worked`). Can be a follow-up if the user wants those rows excluded server-side instead.
-- Other analytics tabs — only `CostPerFieldTab` is implicated by the stack trace, but a quick `rg` for the same `.toFixed` pattern in the other Analytics tabs is included as a verification step.
-
-## Verification
-
-After the edit, navigate to `/analytics` → Cost per Field tab; the page should render without the ErrorBoundary, and any NULL-hectares row should show `0.00`.
+## Out of Scope
+- The `/analytics` page tabs are unchanged (you confirmed Accounting Reports is the target)
+- No changes to ProfitLossView, BalanceSheetView, etc.
+- No backend changes

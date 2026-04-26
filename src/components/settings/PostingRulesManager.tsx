@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Power, PowerOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, PowerOff, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
 import { getDescription } from "@/lib/getDescription";

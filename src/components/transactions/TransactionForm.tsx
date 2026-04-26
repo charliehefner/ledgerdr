@@ -104,6 +104,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
 
+  // Posting-rule engine state — captured silently. Used at submit time to
+  // (a) set manual_credit_account_code on the new transaction row, and
+  // (b) write audit rows to posting_rule_applications.
+  const matchedPostingRulesRef = useRef<MatchedRule[]>([]);
+  const pendingCreditCodeRef = useRef<string | null>(null);
+  const ruleAppliedFieldsRef = useRef<Record<string, unknown>>({});
+
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: fetchAccounts,

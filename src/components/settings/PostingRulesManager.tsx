@@ -70,10 +70,21 @@ const emptyForm = {
   transaction_type: [] as string[],
   // actions
   master_account_code: "",
+  credit_account_code: "",
   project_code: "",
   cbs_code: "",
   cost_center: "" as "" | "general" | "agricultural" | "industrial",
   append_note: "",
+};
+
+// Action fields used for conflict detection (in display order).
+const ACTION_FIELD_LABELS: Record<keyof RuleActions, string> = {
+  master_account_code: "Cuenta de débito",
+  credit_account_code: "Cuenta de crédito",
+  project_code: "Proyecto",
+  cbs_code: "CBS",
+  cost_center: "Centro de costo",
+  append_note: "Nota",
 };
 
 export function PostingRulesManager() {

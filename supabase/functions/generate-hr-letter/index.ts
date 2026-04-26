@@ -98,11 +98,23 @@ interface PdfLine {
   underline?: boolean;
 }
 
+// ─── Letterhead images (loaded once at module init) ───
+// Drawn full-width on every page. Top: 1920x275, Bottom: 1920x184.
+const LETTERHEAD_TOP_BYTES = await Deno.readFile(new URL("./assets/top.jpg", import.meta.url));
+const LETTERHEAD_BOTTOM_BYTES = await Deno.readFile(new URL("./assets/bottom.jpg", import.meta.url));
+const LETTERHEAD_TOP_W = 1920;
+const LETTERHEAD_TOP_H = 275;
+const LETTERHEAD_BOTTOM_W = 1920;
+const LETTERHEAD_BOTTOM_H = 184;
+
 function buildPdf(lines: PdfLine[]): Uint8Array {
   const encoder = new TextEncoder();
   const pageW = 612;
   const pageH = 792;
-  const marginBottom = 60;
+  // Letterhead drawn full-width. Compute display heights.
+  const topImgH = (pageW * LETTERHEAD_TOP_H) / LETTERHEAD_TOP_W;     // ~88pt
+  const bottomImgH = (pageW * LETTERHEAD_BOTTOM_H) / LETTERHEAD_BOTTOM_W; // ~59pt
+  const marginBottom = bottomImgH + 20; // keep text clear of bottom letterhead
 
   // First pass: expand word-wrapped lines to determine actual Y positions and page breaks
   interface RenderedLine {
@@ -166,10 +178,16 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
 
   const totalPages = currentPage + 1;
 
-  // Build content streams per page
+  // Build content streams per page (with letterhead drawn first)
+  const topY = pageH - topImgH; // top edge of top image
+  const bottomY = 0;            // bottom image flush with bottom
+  const letterheadOps =
+    `q ${pageW} 0 0 ${topImgH} 0 ${topY} cm /ImTop Do Q\n` +
+    `q ${pageW} 0 0 ${bottomImgH} 0 ${bottomY} cm /ImBot Do Q\n`;
+
   const pageContents: string[] = [];
   for (let p = 0; p < totalPages; p++) {
-    let content = "";
+    let content = letterheadOps;
     const pageLines = rendered.filter((l) => l.page === p);
     for (const l of pageLines) {
       const fontRef = l.bold ? "/F2" : "/F1";
@@ -192,6 +210,10 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
     objects.push(b);
     pos += b.length;
   }
+  function writeBytes(b: Uint8Array) {
+    objects.push(b);
+    pos += b.length;
+  }
 
   function obj(id: number, content: string) {
     offsets[id] = pos;
@@ -200,8 +222,11 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
 
   write("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
 
-  // Object layout: 1=catalog, 2=pages, 3=font-regular, 4=font-bold, then page+content pairs
-  const firstPageObjId = 5;
+  // Object layout:
+  //   1=catalog, 2=pages, 3=font-regular, 4=font-bold,
+  //   5=ImTop XObject, 6=ImBot XObject,
+  //   then page+content pairs starting at 7
+  const firstPageObjId = 7;
   const numObjs = firstPageObjId + totalPages * 2;
 
   obj(1, `<< /Type /Catalog /Pages 2 0 R >>`);
@@ -214,12 +239,23 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
   obj(3, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`);
   obj(4, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`);
 
+  // Letterhead JPEG XObjects (DCTDecode = JPEG)
+  offsets[5] = pos;
+  write(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${LETTERHEAD_TOP_W} /Height ${LETTERHEAD_TOP_H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${LETTERHEAD_TOP_BYTES.length} >>\nstream\n`);
+  writeBytes(LETTERHEAD_TOP_BYTES);
+  write(`\nendstream\nendobj\n`);
+
+  offsets[6] = pos;
+  write(`6 0 obj\n<< /Type /XObject /Subtype /Image /Width ${LETTERHEAD_BOTTOM_W} /Height ${LETTERHEAD_BOTTOM_H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${LETTERHEAD_BOTTOM_BYTES.length} >>\nstream\n`);
+  writeBytes(LETTERHEAD_BOTTOM_BYTES);
+  write(`\nendstream\nendobj\n`);
+
   for (let p = 0; p < totalPages; p++) {
     const pageObjId = firstPageObjId + p * 2;
     const contentObjId = pageObjId + 1;
     const contentBytes = encoder.encode(pageContents[p]);
 
-    obj(pageObjId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents ${contentObjId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>`);
+    obj(pageObjId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents ${contentObjId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /ImTop 5 0 R /ImBot 6 0 R >> >> >>`);
 
     offsets[contentObjId] = pos;
     write(`${contentObjId} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
@@ -326,7 +362,7 @@ function generateHiringPdf(data: HiringData): Uint8Array {
   const biweeklyWords = numberToSpanish(biweekly);
 
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
 
@@ -383,15 +419,10 @@ function generateHiringPdf(data: HiringData): Uint8Array {
 
 function generateTerminationPdf(data: TerminationData): Uint8Array {
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
-
-  // Company header
-  lines.push({ text: data.company_name.toUpperCase(), x: lm, y, size: 12, bold: true });
-  y -= 16;
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: lm, y, size: 10 });
-  y -= 30;
+  // Company name + RNC are provided by the letterhead image.
 
   // Date line
   lines.push({ text: `SPM, ${formatDateDocLong(data.termination_date)}.`, x: lm, y, size: 11 });
@@ -444,15 +475,10 @@ function generateTerminationPdf(data: TerminationData): Uint8Array {
 
 function generateBankLetterPdf(data: BankLetterData): Uint8Array {
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
-
-  // Company header
-  lines.push({ text: data.company_name.toUpperCase(), x: lm, y, size: 12, bold: true });
-  y -= 16;
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: lm, y, size: 10 });
-  y -= 30;
+  // Company name + RNC are provided by the letterhead image.
 
   // Date and addressee
   lines.push({ text: `SPM, R.D. ${formatDateDoc(data.letter_date)}`, x: lm, y, size: 11 });
@@ -485,26 +511,17 @@ function generateBankLetterPdf(data: BankLetterData): Uint8Array {
   y -= 15;
   lines.push({ text: data.signer_title || "Gerente General", x: lm, y, size: 10 });
 
-  // Footer
-  if (data.company_address) {
-    y -= 40;
-    lines.push({ text: data.company_address, x: lm, y, size: 8 });
-  }
+  // Address footer is provided by the letterhead image.
 
   return buildPdf(lines);
 }
 
 function generateVacationPdf(data: VacationData): Uint8Array {
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
-
-  // Company header
-  lines.push({ text: data.company_name.toUpperCase(), x: lm, y, size: 12, bold: true });
-  y -= 16;
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: lm, y, size: 10 });
-  y -= 30;
+  // Company name + RNC are provided by the letterhead image.
 
   // Date (right-aligned style, but we place at right)
   const dateFormatted = formatDateDoc(data.letter_date);

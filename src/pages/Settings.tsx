@@ -46,6 +46,7 @@ import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { QRCodeManager } from "@/components/settings/QRCodeManager";
 import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager";
 import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
+import { PostingRulesManager } from "@/components/settings/PostingRulesManager";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";

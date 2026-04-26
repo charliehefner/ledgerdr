@@ -1222,6 +1222,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     prevProps.dayShade === nextProps.dayShade &&
     prevProps.isLastOfDay === nextProps.isLastOfDay &&
     prevProps.language === nextProps.language &&
+    prevProps.showIndicators === nextProps.showIndicators &&
     prevProps.entry?.updated_by === nextProps.entry?.updated_by &&
     prevProps.entry?.updated_at === nextProps.entry?.updated_at &&
     prevProps.entry?.task === nextProps.entry?.task

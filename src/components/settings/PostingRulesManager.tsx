@@ -543,11 +543,12 @@ export function PostingRulesManager() {
               <p className="text-xs text-muted-foreground">Solo se aplican a campos vacíos en el formulario.</p>
 
               <div className="space-y-2">
-                <Label className="text-xs">Cuenta principal</Label>
+                <Label className="text-xs">Cuenta de débito</Label>
                 <Select value={form.master_account_code}
-                  onValueChange={v => setForm(f => ({ ...f, master_account_code: v }))}>
+                  onValueChange={v => setForm(f => ({ ...f, master_account_code: v === "__clear__" ? "" : v }))}>
                   <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent className="bg-popover max-h-[300px]">
+                    <SelectItem value="__clear__">— Ninguna —</SelectItem>
                     {accounts.map((a: any) => (
                       <SelectItem key={a.code} value={a.code}>
                         {a.code} - {getDescription(a)}
@@ -555,6 +556,25 @@ export function PostingRulesManager() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">Cuenta de crédito (opcional)</Label>
+                <Select value={form.credit_account_code}
+                  onValueChange={v => setForm(f => ({ ...f, credit_account_code: v === "__clear__" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="— Auto (banco / CxP / CxC) —" /></SelectTrigger>
+                  <SelectContent className="bg-popover max-h-[300px]">
+                    <SelectItem value="__clear__">— Auto (banco / CxP / CxC) —</SelectItem>
+                    {accounts.map((a: any) => (
+                      <SelectItem key={a.code} value={a.code}>
+                        {a.code} - {getDescription(a)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Déjelo vacío para usar la cuenta automática según el tipo de transacción y método de pago. Use esto para reclasificaciones o asientos no estándar.
+                </p>
               </div>
 
               <div className="space-y-2">

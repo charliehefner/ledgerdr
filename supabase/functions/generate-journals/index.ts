@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       db.from("bank_accounts").select("id, chart_account_id, currency, entity_id, is_shared"),
       db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null).limit(10000),
       db.from("transactions")
-        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate, entity_id")
+        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate, entity_id, manual_credit_account_code")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true })
         .limit(10000),

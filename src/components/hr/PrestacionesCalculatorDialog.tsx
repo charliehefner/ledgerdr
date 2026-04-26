@@ -372,8 +372,22 @@ export function PrestacionesCalculatorDialog({
 
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between"><span>{t("prestaciones.preaviso")}</span><span className="font-medium">{formatCurrency(result.line_items.preaviso_amount)}</span></div>
-                    <div className="flex items-center justify-between"><span>{t("prestaciones.cesantia")}</span><span className="font-medium">{formatCurrency(result.line_items.cesantia_amount)}</span></div>
-                    <div className="flex items-center justify-between"><span>{t("prestaciones.pendingVacations")}</span><span className="font-medium">{formatCurrency(result.line_items.vacation_amount)}</span></div>
+                    <div>
+                      <div className="flex items-center justify-between"><span>{t("prestaciones.cesantia")}</span><span className="font-medium">{formatCurrency(result.line_items.cesantia_amount)}</span></div>
+                      {result.line_items.cesantia_breakdown && result.line_items.cesantia_breakdown.days_from_remainder > 0 && result.line_items.cesantia_breakdown.complete_years > 0 && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {result.line_items.cesantia_breakdown.days_from_years} d ({result.line_items.cesantia_breakdown.complete_years} {result.line_items.cesantia_breakdown.complete_years === 1 ? "año" : "años"}) + {result.line_items.cesantia_breakdown.days_from_remainder} d ({result.line_items.cesantia_breakdown.remainder_months.toFixed(1)} meses) = {result.line_items.cesantia_days} días
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between"><span>{t("prestaciones.pendingVacations")}</span><span className="font-medium">{formatCurrency(result.line_items.vacation_amount)}</span></div>
+                      {result.salary_basis.daily_salary_vacation && result.salary_basis.daily_salary_vacation !== result.salary_basis.daily_salary && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Base: promedio últimos 12 meses ({formatCurrency(result.salary_basis.daily_salary_vacation)}/día)
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between"><span>{t("prestaciones.regalía")}</span><span className="font-medium">{formatCurrency(result.line_items.regalia_amount)}</span></div>
                     <div className="flex items-center justify-between"><span>{t("prestaciones.adjustments")}</span><span className="font-medium">{formatCurrency(result.line_items.manual_adjustments)}</span></div>
                     <div className="flex items-center justify-between"><span>{t("prestaciones.loansDed")}</span><span className="font-medium">-{formatCurrency(result.line_items.loan_deductions)}</span></div>

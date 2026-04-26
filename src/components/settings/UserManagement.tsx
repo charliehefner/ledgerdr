@@ -69,6 +69,8 @@ interface UserWithRole {
 
 const isUsernameAccount = (email: string) => email.endsWith("@internal.jord.local");
 const extractUsername = (email: string) => email.replace("@internal.jord.local", "");
+const GLOBAL_ACCESS_ROLES: AppRole[] = ["admin", "management"];
+const requiresScopedAccess = (role: AppRole) => !GLOBAL_ACCESS_ROLES.includes(role);
 
 export function UserManagement() {
   const queryClient = useQueryClient();

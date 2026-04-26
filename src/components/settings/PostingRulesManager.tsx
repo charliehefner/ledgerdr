@@ -227,6 +227,16 @@ export function PostingRulesManager() {
       cbs_code: rule.actions?.cbs_code || "",
       cost_center: (rule.actions?.cost_center as any) || "",
       append_note: rule.actions?.append_note || "",
+      extra_lines: (rule.actions?.extra_lines || []).map((l): ExtraLineDraft => ({
+        account_code: l.account_code || "",
+        side: l.side === "credit" ? "credit" : "debit",
+        split_type: l.split?.type || "percent",
+        split_value: l.split?.type === "remainder" ? "" : String((l.split as any)?.value ?? ""),
+        cost_center: (l.cost_center as any) || "",
+        description: l.description || "",
+      })),
+      replace_main_debit: !!rule.actions?.replace_main_debit,
+      replace_main_credit: !!rule.actions?.replace_main_credit,
     });
     setDialogOpen(true);
   };

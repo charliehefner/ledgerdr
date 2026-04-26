@@ -350,6 +350,9 @@ export function JournalView() {
             <>
               <InfoTooltip translationKey="help.generateJournals" />
               <GenerateJournalsButton userId={user?.id} />
+              <Button size="sm" variant="outline" onClick={() => setAccrualOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Acumulación
+              </Button>
               <Button size="sm" onClick={() => setNewOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> {t("accounting.newEntry")}
               </Button>

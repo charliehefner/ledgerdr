@@ -134,6 +134,7 @@ export function PostingRulesManager() {
       currency: rule.conditions?.currency || [],
       transaction_type: rule.conditions?.transaction_type || [],
       master_account_code: rule.actions?.master_account_code || "",
+      credit_account_code: rule.actions?.credit_account_code || "",
       project_code: rule.actions?.project_code || "",
       cbs_code: rule.actions?.cbs_code || "",
       cost_center: (rule.actions?.cost_center as any) || "",

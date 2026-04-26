@@ -49,8 +49,10 @@ interface CalculationResult {
   worked_notice: boolean;
   salary_basis: {
     average_monthly: number;
+    average_monthly_12m?: number;
     daily_divisor: number;
     daily_salary: number;
+    daily_salary_vacation?: number;
   };
   service_time: {
     years: number;

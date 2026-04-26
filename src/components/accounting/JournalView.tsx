@@ -23,6 +23,7 @@ import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalRuleBadge } from "./JournalRuleBadge";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
+import { AccrualEntryDialog } from "./AccrualEntryDialog";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useExport } from "@/hooks/useExport";

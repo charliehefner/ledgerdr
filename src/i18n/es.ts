@@ -525,7 +525,7 @@ export const es = {
   "acctReport.cfDesc": "Flujos operativos, inversión y financiamiento",
   "acctReport.agingDesc": "Saldos pendientes por antigüedad",
   "acctReport.backToReports": "Volver a Informes",
-  "acctReport.selectReport": "Selecciona un reporte para comenzar",
+  "acctReport.selectReportLanding": "Selecciona un reporte para comenzar",
   "acctReport.groupFinancial": "Estados Financieros",
   "acctReport.groupDetail": "Sub-mayores y Detalle",
   "acctReport.open": "Abrir",

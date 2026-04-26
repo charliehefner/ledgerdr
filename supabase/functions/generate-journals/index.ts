@@ -322,6 +322,7 @@ Deno.serve(async (req) => {
       (bankRes.data || []).map((b: any) => [b.id, b as BankAccountLookup])
     );
     const linkedIds = new Set((linkedRes.data || []).map((j: any) => j.transaction_source_id));
+    const periodsList: PeriodLookup[] = (periodsRes.data || []) as PeriodLookup[];
 
     // Intercompany config maps
     const icConfigByGroup = new Map<string, IntercompanyConfig>(

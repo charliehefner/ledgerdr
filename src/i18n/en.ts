@@ -1136,6 +1136,8 @@ export const en = {
   // Transaction Form
   "txForm.title": "New Transaction",
   "txForm.officeApprovalNotice": "Transactions exceeding the approval threshold will be held as pending until approved. All fields can be edited before saving.",
+  "txForm.ruleConflictTitle": "Rule conflict detected",
+  "txForm.ruleConflictHint": "The highest-priority rule's value was applied. You can manually edit any field before saving.",
   "txForm.transactionDate": "Transaction Date *",
   "txForm.purchaseDate": "Purchase Date",
   "txForm.selectDate": "Select date",

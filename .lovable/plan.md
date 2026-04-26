@@ -1,36 +1,75 @@
-## Context
+# Phase 1: Posting Rules Engine (Silent Auto-Apply)
 
-The card-grid landing in **Contabilidad → Reportes** does already exist in `src/components/accounting/AccountingReportsView.tsx` (lines 400–427) and shows 6 cards: P&L, Balance Sheet, Trial Balance, Cash Flow, Aging, and Transaction Reports. Since you say it isn't appearing the way it used to, I'll treat this as a **visual restoration / upgrade** request — making it more attractive and clearly the entry point, like a "report selector" landing.
+## Principle
+Rules fill fields silently on the transaction form, exactly as if the user had typed them. The person entering already visually confirms every field before saving, so no "suggested by rule" chips, tooltips, or confirmation prompts are added. Accountants verify correctness at the Journal stage, where rule provenance is available for audit.
 
-## Proposed Changes
+## Scope
 
-### 1. `src/components/accounting/AccountingReportsView.tsx`
-Replace the current minimal card grid (lines 407–426) with a richer "selection box" layout:
+### 1. Database — new migration
+- **`posting_rules`** table
+  - `id`, `entity_id` (nullable = global), `name`, `priority` (int, lower = first), `is_active`
+  - `conditions jsonb` — supports: `vendor_regex`, `description_regex`, `ncf_prefix` (e.g. B01, B11, B14), `amount_min`, `amount_max`, `currency`, `transaction_type` (purchase/sale/transfer)
+  - `actions jsonb` — supports: `master_account_code`, `project_id`, `cost_center`, `cbs_code`, `append_note`
+  - `created_by`, `created_at`, `updated_at`
+  - RLS: read for Accountant+/Admin/Mgmt within entity scope; write for Admin/Accountant only
+- **`posting_rule_applications`** audit table
+  - `id`, `transaction_id`, `rule_id`, `applied_fields jsonb`, `applied_at`
+  - Written silently by the form when a rule fills a field
+- **`evaluate_posting_rules(p_entity_id, p_payload jsonb)` RPC**
+  - Returns ordered list of `{ rule_id, actions }` matching the payload
+  - Stable, security definer, scoped by entity_id
 
-- **Grouped sections** with subtle headings:
-  - **Estados Financieros** — P&L, Balance Sheet, Trial Balance, Cash Flow
-  - **Sub-mayores y Detalle** — Aging, Transaction Reports
-- **Larger, color-coded cards** (each report gets its own accent color):
-  - P&L → emerald, BS → indigo, TB → amber, Cash Flow → sky, Aging → rose, Detail → slate
-- **Visual treatment**:
-  - 2-column grid on desktop (`md:grid-cols-2`), single column on mobile
-  - Larger icons (h-6 w-6) inside a 14×14 rounded tile with the accent color background
-  - Title (base font), description (muted, 1–2 lines), and a small "Abrir →" affordance bottom-right
-  - Hover: slight lift, accent left-border slides in (already there), subtle ring in the accent color
-  - Focus-visible ring for accessibility
-- Keep the existing `PowerBIExportButton` in the top-right of the landing
-- Preserve all existing logic: `setReportType(card.key)`, BackButton, all sub-views, exports, filter dialog — no behavioral changes
+### 2. Settings UI — `src/components/settings/PostingRulesManager.tsx` (new)
+- List rules grouped by entity (or "Global")
+- Create/edit dialog with condition + action builders
+- Drag-to-reorder priority
+- "Test against recent transactions" panel — paste or pick a recent transaction, see which rules match
+- Toggle active/inactive
+- Visible only to Admin and Accountant roles
 
-### 2. No new translation keys required
-All card titles/descriptions already use existing `t()` keys (`pl.title`, `acctReport.plDesc`, etc.). No `i18n` updates needed.
+### 3. Client evaluator — `src/lib/postingRules.ts` (new)
+- Thin wrapper around the RPC
+- Called on blur/change of trigger fields: vendor, description, NCF/document, amount, currency
+- Returns merged actions (highest-priority rule wins per field)
 
-### 3. No DB / RPC / type changes
-Pure presentational change inside one file.
+### 4. Transaction form integration — `src/components/transactions/TransactionForm.tsx`
+- On relevant field change, call evaluator
+- Apply returned actions only to fields the user has not manually edited (track `dirtyFields`)
+- No new visible UI elements
+- Log applied rule IDs to `posting_rule_applications` on successful submit
 
-## Files Modified
-- `src/components/accounting/AccountingReportsView.tsx` — replace the landing grid block (lines ~400–427) only
+### 5. Quick Entry refactor — `src/components/accounting/QuickEntryDialog.tsx`
+- Remove hardcoded `AUTO_RULES` regex constant
+- Call the same evaluator
+- Seed migration inserts the four existing hardcoded rules (COMISIÓN→6520, IMPUESTO LEY→6530, ITBIS→1650, INTERÉS→6510) as global `posting_rules` rows so behavior is preserved
 
-## Out of Scope
-- The `/analytics` page tabs are unchanged (you confirmed Accounting Reports is the target)
-- No changes to ProfitLossView, BalanceSheetView, etc.
-- No backend changes
+### 6. i18n
+- Add Spanish/English keys only for Settings → Posting Rules manager (table headers, condition/action labels, buttons). No new keys on the transaction form since no new UI is added there.
+
+## Out of scope for Phase 1
+- Generating extra journal lines from rules (Phase 2)
+- Rule execution inside `generate-journals` edge function (Phase 2)
+- "Why this account?" tooltip on Journal view (Phase 3 — uses the audit table written in Phase 1)
+
+## Limitations & guardrails
+- **Manual override always wins.** Once a user edits a field, rules cannot retouch it within that form session.
+- **No bypass of validation.** Rules can only set values that the user could have typed; all existing form validations still run.
+- **No silent account creation.** Rule actions referencing a missing account code are skipped and logged, not auto-created.
+- **Performance.** Evaluator is called on field blur/change, not on every keystroke. RPC is `STABLE` and indexed by `entity_id` + `priority`.
+- **Conflict between rules.** Resolved strictly by `priority`, then by `created_at`. Documented in the manager UI.
+
+## Files
+- `supabase/migrations/<timestamp>_posting_rules.sql` *(new)*
+- `src/components/settings/PostingRulesManager.tsx` *(new)*
+- `src/lib/postingRules.ts` *(new)*
+- `src/components/transactions/TransactionForm.tsx` *(modify)*
+- `src/components/accounting/QuickEntryDialog.tsx` *(modify — remove hardcoded regex)*
+- `src/pages/Settings.tsx` *(modify — add Posting Rules tab)*
+- `src/i18n/es.ts`, `src/i18n/en.ts` *(modify — Settings keys only)*
+
+## Validation after build
+1. Create a rule: vendor matches `/EDESUR/i` → master account `6110` (Electricidad).
+2. Enter a new purchase from EDESUR → account field auto-fills to 6110, no badge shown.
+3. Manually change account to 6120 → save. Verify the manual choice persisted.
+4. Open Journal generated from this transaction → verify it posted to 6120 (manual override respected).
+5. Query `posting_rule_applications` → verify the rule application was logged even though it was overridden (useful for "rule fired but user changed it" analytics later).

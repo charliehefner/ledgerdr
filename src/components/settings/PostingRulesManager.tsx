@@ -282,6 +282,56 @@ export function PostingRulesManager() {
     if (form.cost_center) actions.cost_center = form.cost_center as any;
     if (form.append_note.trim()) actions.append_note = form.append_note.trim();
 
+    // Phase 2: validate + serialize extra lines
+    if (form.extra_lines.length > MAX_EXTRA_LINES) {
+      toast.error(`Máximo ${MAX_EXTRA_LINES} líneas adicionales por regla`);
+      return;
+    }
+    const extras: ExtraLine[] = [];
+    let pctDebit = 0, pctCredit = 0, remDebit = 0, remCredit = 0;
+    for (let i = 0; i < form.extra_lines.length; i++) {
+      const l = form.extra_lines[i];
+      if (!l.account_code) {
+        toast.error(`Línea adicional #${i + 1}: falta cuenta`);
+        return;
+      }
+      let split: ExtraSplit;
+      if (l.split_type === "remainder") {
+        split = { type: "remainder" };
+        if (l.side === "debit") remDebit++; else remCredit++;
+      } else {
+        const v = Number(l.split_value);
+        if (!Number.isFinite(v) || v <= 0) {
+          toast.error(`Línea adicional #${i + 1}: valor inválido`);
+          return;
+        }
+        if (l.split_type === "percent") {
+          if (v > 100) {
+            toast.error(`Línea adicional #${i + 1}: porcentaje > 100`);
+            return;
+          }
+          if (l.side === "debit") pctDebit += v; else pctCredit += v;
+          split = { type: "percent", value: v };
+        } else {
+          split = { type: "fixed", value: v };
+        }
+      }
+      extras.push({
+        account_code: l.account_code,
+        side: l.side,
+        split,
+        ...(l.cost_center ? { cost_center: l.cost_center } : {}),
+        ...(l.description.trim() ? { description: l.description.trim() } : {}),
+      });
+    }
+    if (pctDebit > 100) { toast.error(`Suma de % en débito = ${pctDebit} (máx 100)`); return; }
+    if (pctCredit > 100) { toast.error(`Suma de % en crédito = ${pctCredit} (máx 100)`); return; }
+    if (remDebit > 1) { toast.error("Solo se permite un 'Resto' por lado (débito)"); return; }
+    if (remCredit > 1) { toast.error("Solo se permite un 'Resto' por lado (crédito)"); return; }
+    if (extras.length > 0) actions.extra_lines = extras;
+    if (form.replace_main_debit && extras.some(e => e.side === "debit")) actions.replace_main_debit = true;
+    if (form.replace_main_credit && extras.some(e => e.side === "credit")) actions.replace_main_credit = true;
+
     if (Object.keys(conditions).length === 0) {
       toast.error("Define al menos una condición (sino la regla coincidiría con todo)");
       return;

@@ -753,6 +753,25 @@ export function CronogramaGrid() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleIndicators}
+                aria-label={showIndicators
+                  ? (language === "es" ? "Ocultar indicadores de edición" : "Hide edit indicators")
+                  : (language === "es" ? "Mostrar indicadores de edición" : "Show edit indicators")}
+              >
+                {showIndicators ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showIndicators
+                ? (language === "es" ? "Ocultar indicadores de edición" : "Hide edit indicators")
+                : (language === "es" ? "Mostrar indicadores de edición" : "Show edit indicators")}
+            </TooltipContent>
+          </Tooltip>
           {/* Export dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

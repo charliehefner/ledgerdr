@@ -234,7 +234,21 @@ Deno.serve(async (req) => {
         // Prefer UUID FK (account_id) over legacy text code lookup
         const mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
         // Finding 1 fix: resolve pay_method via legacy mapping OR bank_accounts UUID
-        const payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
+        let payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
+
+        // Posting-rule override: when a rule set manual_credit_account_code,
+        // use that account instead of the auto-resolved bank/AP/AR account.
+        // (For purchases this overrides the credit side; for sales the debit/cash side.)
+        const manualCreditCode: string | null = (txn as any).manual_credit_account_code || null;
+        if (manualCreditCode) {
+          const overrideId = acctByCode.get(manualCreditCode);
+          if (overrideId) {
+            payAccountId = overrideId;
+          } else {
+            // Don't block — fall back silently to auto, log to console for ops visibility.
+            console.warn(`[generate-journals] manual_credit_account_code "${manualCreditCode}" not found in chart_of_accounts (txn ${txn.id}); using auto.`);
+          }
+        }
 
         if (!mainAccountId) { skipped.push(`${label}: cuenta "${txn.master_acct_code}" no encontrada (account_id nulo)`); continue; }
         if (!payAccountId) { skipped.push(`${label}: método pago "${txn.pay_method}" sin mapeo`); continue; }

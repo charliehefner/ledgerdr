@@ -664,6 +664,7 @@ Deno.serve(async (req) => {
                   ...(extrasByRule.get(r.rule_id) ? { extra_lines: extrasByRule.get(r.rule_id) } : {}),
                   ...(extras.replaceMainDebit ? { replace_main_debit: true } : {}),
                   ...(extras.replaceMainCredit ? { replace_main_credit: true } : {}),
+                  ...(amortizePlan && amortizePlan.rule_id === r.rule_id ? { amortize: amortizePlan.slices.length } : {}),
                 },
                 applied_by: userId,
               }));

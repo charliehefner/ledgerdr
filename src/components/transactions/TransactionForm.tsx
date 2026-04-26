@@ -450,6 +450,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       matchedPostingRulesRef.current = [];
       pendingCreditCodeRef.current = null;
       ruleAppliedFieldsRef.current = {};
+      setRuleConflicts([]);
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
@@ -667,6 +668,31 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
             <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>{t('txForm.officeApprovalNotice')}</span>
+          </div>
+        )}
+        {ruleConflicts.length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="font-medium">{t('txForm.ruleConflictTitle')}</div>
+                {ruleConflicts.map((c) => (
+                  <div key={c.field} className="text-xs">
+                    <span className="font-medium">{c.field}:</span>{' '}
+                    {c.values.map((v, i) => (
+                      <span key={v.value}>
+                        {i > 0 && ' · '}
+                        <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/40">{v.value}</code>{' '}
+                        <span className="text-muted-foreground">({v.ruleName})</span>
+                      </span>
+                    ))}
+                  </div>
+                ))}
+                <div className="text-xs text-muted-foreground">
+                  {t('txForm.ruleConflictHint')}
+                </div>
+              </div>
+            </div>
           </div>
         )}
         {showCrmPrompt && pendingCrmContact && (

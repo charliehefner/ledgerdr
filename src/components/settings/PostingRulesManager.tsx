@@ -112,6 +112,49 @@ export function PostingRulesManager() {
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
   const { data: cbsCodes = [] } = useQuery({ queryKey: ["cbsCodes"], queryFn: fetchCbsCodes });
 
+  /**
+   * Conflict detection: another active rule at the same priority with overlapping
+   * scope (same entity, or both global) that sets the SAME action field to a
+   * DIFFERENT value than the current form. Soft warning only — accountant can override.
+   */
+  const conflicts = useMemo(() => {
+    if (!dialogOpen) return [];
+    const formScopeEntity = form.scope === "entity" ? selectedEntityId : null;
+    const currentActions: RuleActions = {
+      master_account_code: form.master_account_code || undefined,
+      credit_account_code: form.credit_account_code || undefined,
+      project_code: form.project_code || undefined,
+      cbs_code: form.cbs_code || undefined,
+      cost_center: (form.cost_center as any) || undefined,
+      append_note: form.append_note.trim() || undefined,
+    };
+
+    const out: { rule: PostingRule; fields: { field: keyof RuleActions; theirs: string; mine: string }[] }[] = [];
+    for (const r of rules) {
+      if (!r.is_active) continue;
+      if (editing && r.id === editing.id) continue;
+      if (r.priority !== Number(form.priority)) continue;
+      // Scope overlap: identical entity (both null = both global)
+      if ((r.entity_id ?? null) !== (formScopeEntity ?? null)) continue;
+
+      const theirActions = r.actions || {};
+      const fieldHits: { field: keyof RuleActions; theirs: string; mine: string }[] = [];
+      (Object.keys(ACTION_FIELD_LABELS) as (keyof RuleActions)[]).forEach(field => {
+        const theirs = theirActions[field];
+        const mine = currentActions[field];
+        if (theirs && mine && String(theirs) !== String(mine)) {
+          fieldHits.push({ field, theirs: String(theirs), mine: String(mine) });
+        }
+      });
+      if (fieldHits.length) out.push({ rule: r, fields: fieldHits });
+    }
+    return out;
+  }, [
+    dialogOpen, rules, editing, form.priority, form.scope, selectedEntityId,
+    form.master_account_code, form.credit_account_code, form.project_code,
+    form.cbs_code, form.cost_center, form.append_note,
+  ]);
+
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm });

@@ -355,6 +355,9 @@ export function JournalView() {
               <Button size="sm" variant="outline" onClick={() => setAccrualOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Acumulación
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setAccrualsListOpen(true)}>
+                <FileText className="h-4 w-4 mr-1" /> Ver acumulaciones
+              </Button>
               <Button size="sm" onClick={() => setNewOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> {t("accounting.newEntry")}
               </Button>

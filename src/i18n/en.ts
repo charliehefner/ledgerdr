@@ -525,6 +525,10 @@ export const en = {
   "acctReport.cfDesc": "Operating, investing & financing flows",
   "acctReport.agingDesc": "Outstanding balances by age",
   "acctReport.backToReports": "Back to Reports",
+  "acctReport.selectReportLanding": "Select a report to get started",
+  "acctReport.groupFinancial": "Financial Statements",
+  "acctReport.groupDetail": "Sub-ledgers & Detail",
+  "acctReport.open": "Open",
 
   // Cronograma Module
   "nav.cronograma": "Schedule",

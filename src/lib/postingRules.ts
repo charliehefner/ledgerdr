@@ -24,6 +24,13 @@ export interface PostingRulePayload {
 
 export interface PostingRuleAction {
   master_account_code?: string;
+  /**
+   * Optional explicit credit account. When set, generate-journals will use it
+   * instead of the auto-resolved bank/AP/AR account on the credit side.
+   * Useful for reclassifications and non-standard liability postings.
+   * Leave empty for normal flow (~95% of cases).
+   */
+  credit_account_code?: string;
   project_code?: string;
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";

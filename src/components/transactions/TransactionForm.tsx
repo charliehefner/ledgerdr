@@ -18,6 +18,12 @@ import {
 } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
 import { useEntity } from '@/contexts/EntityContext';
+import {
+  evaluatePostingRules,
+  mergeRuleActions,
+  logRuleApplications,
+  type MatchedRule,
+} from '@/lib/postingRules';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { NameAutocomplete } from './NameAutocomplete';
@@ -97,6 +103,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
+
+  // Posting-rule engine state — captured silently. Used at submit time to
+  // (a) set manual_credit_account_code on the new transaction row, and
+  // (b) write audit rows to posting_rule_applications.
+  const matchedPostingRulesRef = useRef<MatchedRule[]>([]);
+  const pendingCreditCodeRef = useRef<string | null>(null);
+  const ruleAppliedFieldsRef = useRef<Record<string, unknown>>({});
 
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
@@ -401,11 +414,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
+
+        // Posting rules: persist credit-account override and audit log.
+        // Only fires if at least one rule matched the current input.
+        if (matchedPostingRulesRef.current.length > 0) {
+          if (pendingCreditCodeRef.current) {
+            try {
+              await supabase
+                .from('transactions')
+                .update({ manual_credit_account_code: pendingCreditCodeRef.current } as any)
+                .eq('id', result.id);
+            } catch (e) {
+              console.warn('[postingRules] failed to persist credit override:', e);
+            }
+          }
+          await logRuleApplications({
+            transactionId: result.id,
+            rules: matchedPostingRulesRef.current,
+            appliedFields: ruleAppliedFieldsRef.current,
+            context: 'transaction_entry',
+          });
+        }
       }
 
       toast.success(t('txForm.success'));
       setForm(getInitialFormState());
       setFormKey(k => k + 1);
+      // Clear posting-rule refs for the next entry
+      matchedPostingRulesRef.current = [];
+      pendingCreditCodeRef.current = null;
+      ruleAppliedFieldsRef.current = {};
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
@@ -416,7 +454,76 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     }
   };
 
+  // Posting-rules trigger fields. Changes to these fields re-evaluate rules.
+  const RULE_TRIGGER_FIELDS = new Set<keyof typeof form>([
+    'name', 'description', 'document', 'amount', 'currency', 'transaction_direction',
+  ]);
+
+  /**
+   * Evaluate posting rules against the given form snapshot and silently
+   * apply matching actions to empty fields. Stores matched rules and any
+   * credit-account override on refs for use at submit time.
+   */
+  const runPostingRules = async (snapshot: typeof form) => {
+    try {
+      const rules = await evaluatePostingRules(selectedEntityId || null, {
+        vendor: snapshot.name || null,
+        description: snapshot.description || null,
+        document: snapshot.document || null,
+        amount: snapshot.amount ? parseFloat(snapshot.amount) : null,
+        currency: snapshot.currency || null,
+        transaction_type: snapshot.transaction_direction || null,
+        context: 'transaction_entry',
+      });
+      if (!rules.length) return;
+      const merged = mergeRuleActions(rules);
+      const applied: Record<string, unknown> = {};
+
+      // Apply only to empty fields. Manual user edits always win.
+      setForm(prev => {
+        const upd = { ...prev };
+        if (merged.master_account_code && !prev.master_acct_code) {
+          upd.master_acct_code = merged.master_account_code;
+          applied.master_acct_code = merged.master_account_code;
+        }
+        if (merged.project_code && !prev.project_code) {
+          upd.project_code = merged.project_code;
+          applied.project_code = merged.project_code;
+        }
+        if (merged.cbs_code && !prev.cbs_code) {
+          upd.cbs_code = merged.cbs_code;
+          applied.cbs_code = merged.cbs_code;
+        }
+        if (merged.cost_center && prev.cost_center === 'general') {
+          // Only overwrite the default; user-changed cost centers are respected.
+          upd.cost_center = merged.cost_center;
+          applied.cost_center = merged.cost_center;
+        }
+        if (merged.append_note) {
+          // Only append if note isn't already present, to avoid duplicates on re-eval.
+          if (!prev.comments?.includes(merged.append_note)) {
+            upd.comments = (prev.comments ? prev.comments + ' · ' : '') + merged.append_note;
+            applied.append_note = merged.append_note;
+          }
+        }
+        return upd;
+      });
+
+      // Credit-account override: stored on a ref, persisted post-insert.
+      if (merged.credit_account_code) {
+        pendingCreditCodeRef.current = merged.credit_account_code;
+        applied.manual_credit_account_code = merged.credit_account_code;
+      }
+
+      matchedPostingRulesRef.current = rules;
+      ruleAppliedFieldsRef.current = applied;
+    } catch (e) {
+      console.warn('[postingRules] eval failed (non-blocking):', e);
+    }
+  };
+
   const updateField = <K extends keyof typeof form>(field: K, value: typeof form[K]) => {
+    let nextSnapshot: typeof form | null = null;
     setForm(prev => {
       const updated = { ...prev, [field]: value };
 
@@ -439,7 +546,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           updated.rnc = matchingTx.rnc;
         }
 
-        // Auto-fill from vendor rules
+        // Auto-fill from legacy vendor rules
         const upperName = value.trim().toUpperCase();
         const rule = vendorRules.find(
           (r: any) => upperName.includes(r.vendor_name) || r.vendor_name.includes(upperName)
@@ -451,12 +558,19 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           if (!prev.description && rule.description_template) updated.description = rule.description_template;
         }
       }
-      
+
+      nextSnapshot = updated;
       return updated;
     });
+
+    // Re-evaluate posting rules when a trigger field changed.
+    if (RULE_TRIGGER_FIELDS.has(field) && nextSnapshot) {
+      void runPostingRules(nextSnapshot);
+    }
   };
 
   const handleOcrResult = async (result: OcrResult) => {
+    let postOcrSnapshot: typeof form | null = null;
     setForm(prev => {
       const updated = { ...prev };
       // Only fill empty fields
@@ -497,8 +611,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         updated.master_acct_code = '5611';
       }
 
+      postOcrSnapshot = updated;
       return updated;
     });
+
+    // Posting rules: re-evaluate against the OCR-enriched snapshot.
+    if (postOcrSnapshot) {
+      void runPostingRules(postOcrSnapshot);
+    }
 
     // CRM lookup after OCR
     if (result.rnc) {

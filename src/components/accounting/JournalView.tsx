@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { JournalDetailDialog } from "./JournalDetailDialog";
+import { JournalRuleBadge } from "./JournalRuleBadge";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -70,6 +71,7 @@ export function JournalView() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [ruleFilter, setRuleFilter] = useState<string>("all");
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -119,12 +121,53 @@ export function JournalView() {
     },
   });
 
+  // Posting-rule applications keyed by transaction_source_id (for the row badge filter).
+  // We fetch all applications for the source-tx ids in view; cheap because the table is sparse.
+  const sourceTxIds = useMemo(
+    () => journals.map(j => j.transaction_source_id).filter(Boolean) as string[],
+    [journals]
+  );
+
+  const { data: ruleAppsByTx = {} } = useQuery({
+    queryKey: ["journal-rule-apps", sourceTxIds],
+    enabled: sourceTxIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("posting_rule_applications" as any)
+        .select(`transaction_id, rule_id, rule:posting_rules!posting_rule_applications_rule_id_fkey ( name )`)
+        .in("transaction_id", sourceTxIds);
+      if (error) throw error;
+      const byTx: Record<string, { rule_id: string; rule_name: string }[]> = {};
+      (data || []).forEach((row: any) => {
+        const list = byTx[row.transaction_id] || (byTx[row.transaction_id] = []);
+        list.push({ rule_id: row.rule_id, rule_name: row.rule?.name || "—" });
+      });
+      return byTx;
+    },
+    staleTime: 60_000,
+  });
+
+  // Distinct rules used by visible journals — drives the rule filter dropdown.
+  const usedRules = useMemo(() => {
+    const map = new Map<string, string>();
+    Object.values(ruleAppsByTx).forEach(list => {
+      list.forEach(r => map.set(r.rule_id, r.rule_name));
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [ruleAppsByTx]);
+
   const filtered = useMemo(() => journals.filter((j) => {
     if (statusFilter === "draft" && j.posted) return false;
     if (statusFilter === "posted" && !j.posted) return false;
     if (typeFilter !== "all" && (j as any).journal_type !== typeFilter) return false;
+    if (ruleFilter !== "all") {
+      if (!j.transaction_source_id) return false;
+      const ruleIds = (ruleAppsByTx[j.transaction_source_id] || []).map(r => r.rule_id);
+      if (!ruleIds.includes(ruleFilter)) return false;
+    }
     return true;
-  }), [journals, statusFilter, typeFilter]);
+  }), [journals, statusFilter, typeFilter, ruleFilter, ruleAppsByTx]);
 
   const pagination = usePagination(filtered, { defaultPageSize: 50 });
 
@@ -266,6 +309,23 @@ export function JournalView() {
               </SelectContent>
             </Select>
           </div>
+
+          {usedRules.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium text-muted-foreground mr-1">Regla</span>
+              <Select value={ruleFilter} onValueChange={setRuleFilter}>
+                <SelectTrigger className="h-8 w-[200px] text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">Todas las reglas</SelectItem>
+                  {usedRules.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex gap-1">
           <DropdownMenu>
@@ -380,6 +440,7 @@ export function JournalView() {
                               <FileText className="h-3 w-3 mr-0.5" />Txn
                             </Badge>
                           )}
+                          <JournalRuleBadge transactionSourceId={j.transaction_source_id} />
                         </div>
                       </TableCell>
                     </TableRow>

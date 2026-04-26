@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, addWeeks, subWeeks, getDay, eachDayOfInterval, isWithinInterval } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Plus, Trash2, Copy, Download, FileSpreadsheet, FileText, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";

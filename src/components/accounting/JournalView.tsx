@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { JournalDetailDialog } from "./JournalDetailDialog";
+import { JournalRuleBadge } from "./JournalRuleBadge";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
 import { InfoTooltip } from "@/components/ui/info-tooltip";

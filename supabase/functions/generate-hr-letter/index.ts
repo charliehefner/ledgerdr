@@ -483,15 +483,10 @@ function generateTerminationPdf(data: TerminationData): Uint8Array {
 
 function generateBankLetterPdf(data: BankLetterData): Uint8Array {
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
-
-  // Company header
-  lines.push({ text: data.company_name.toUpperCase(), x: lm, y, size: 12, bold: true });
-  y -= 16;
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: lm, y, size: 10 });
-  y -= 30;
+  // Company name + RNC are provided by the letterhead image.
 
   // Date and addressee
   lines.push({ text: `SPM, R.D. ${formatDateDoc(data.letter_date)}`, x: lm, y, size: 11 });
@@ -535,15 +530,10 @@ function generateBankLetterPdf(data: BankLetterData): Uint8Array {
 
 function generateVacationPdf(data: VacationData): Uint8Array {
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
-
-  // Company header
-  lines.push({ text: data.company_name.toUpperCase(), x: lm, y, size: 12, bold: true });
-  y -= 16;
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: lm, y, size: 10 });
-  y -= 30;
+  // Company name + RNC are provided by the letterhead image.
 
   // Date (right-aligned style, but we place at right)
   const dateFormatted = formatDateDoc(data.letter_date);

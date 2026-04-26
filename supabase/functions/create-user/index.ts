@@ -13,6 +13,7 @@ const USERNAME_EMAIL_DOMAIN = "internal.jord.local";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_ROLES = ["admin", "management", "accountant", "supervisor", "viewer", "driver", "office"];
+const GLOBAL_ACCESS_ROLES = ["admin", "management"];
 
 function sanitizeError(error: Error): string {
   console.error("Operation failed:", error);

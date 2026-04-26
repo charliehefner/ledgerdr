@@ -128,13 +128,20 @@ serve(async (req) => {
     // Use service role to create new user
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Only global admins can create other global admins (entity_id = null)
-    if (!entity_id) {
+    const requestedGlobalAccess = !entity_id && !entity_group_id;
+
+    if (requestedGlobalAccess && !GLOBAL_ACCESS_ROLES.includes(role)) {
+      throw new Error(`Role "${role}" cannot be assigned global access. Please select an entity or group.`);
+    }
+
+    // Only global admins can create users without an entity/group assignment
+    if (requestedGlobalAccess) {
       const { data: callerRole } = await adminClient
         .from("user_roles")
         .select("entity_id")
         .eq("user_id", user.id)
         .is("entity_id", null)
+        .is("entity_group_id", null)
         .limit(1)
         .maybeSingle();
       if (!callerRole) {

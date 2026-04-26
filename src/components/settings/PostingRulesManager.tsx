@@ -171,7 +171,7 @@ export function PostingRulesManager() {
       append_note: form.append_note.trim() || undefined,
     };
 
-    const out: { rule: PostingRule; fields: { field: keyof RuleActions; theirs: string; mine: string }[] }[] = [];
+    const out: { rule: PostingRule; fields: { field: ConflictField; theirs: string; mine: string }[] }[] = [];
     for (const r of rules) {
       if (!r.is_active) continue;
       if (editing && r.id === editing.id) continue;
@@ -180,8 +180,8 @@ export function PostingRulesManager() {
       if ((r.entity_id ?? null) !== (formScopeEntity ?? null)) continue;
 
       const theirActions = r.actions || {};
-      const fieldHits: { field: keyof RuleActions; theirs: string; mine: string }[] = [];
-      (Object.keys(ACTION_FIELD_LABELS) as (keyof RuleActions)[]).forEach(field => {
+      const fieldHits: { field: ConflictField; theirs: string; mine: string }[] = [];
+      (Object.keys(ACTION_FIELD_LABELS) as ConflictField[]).forEach(field => {
         const theirs = theirActions[field];
         const mine = currentActions[field];
         if (theirs && mine && String(theirs) !== String(mine)) {

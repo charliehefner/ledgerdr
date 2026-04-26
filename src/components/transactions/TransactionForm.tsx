@@ -414,11 +414,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         queryClient.invalidateQueries({ queryKey: ['transactionAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['reportAttachments'] });
         queryClient.invalidateQueries({ queryKey: ['ap-ar-documents'] });
+
+        // Posting rules: persist credit-account override and audit log.
+        // Only fires if at least one rule matched the current input.
+        if (matchedPostingRulesRef.current.length > 0) {
+          if (pendingCreditCodeRef.current) {
+            try {
+              await supabase
+                .from('transactions')
+                .update({ manual_credit_account_code: pendingCreditCodeRef.current } as any)
+                .eq('id', result.id);
+            } catch (e) {
+              console.warn('[postingRules] failed to persist credit override:', e);
+            }
+          }
+          await logRuleApplications({
+            transactionId: result.id,
+            rules: matchedPostingRulesRef.current,
+            appliedFields: ruleAppliedFieldsRef.current,
+            context: 'transaction_entry',
+          });
+        }
       }
 
       toast.success(t('txForm.success'));
       setForm(getInitialFormState());
       setFormKey(k => k + 1);
+      // Clear posting-rule refs for the next entry
+      matchedPostingRulesRef.current = [];
+      pendingCreditCodeRef.current = null;
+      ruleAppliedFieldsRef.current = {};
       onSuccess();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';

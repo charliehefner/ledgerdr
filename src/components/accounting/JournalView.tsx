@@ -23,6 +23,7 @@ import { JournalDetailDialog } from "./JournalDetailDialog";
 import { JournalRuleBadge } from "./JournalRuleBadge";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { GenerateJournalsButton } from "./GenerateJournalsButton";
+import { AccrualEntryDialog } from "./AccrualEntryDialog";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useExport } from "@/hooks/useExport";
@@ -75,6 +76,7 @@ export function JournalView() {
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [accrualOpen, setAccrualOpen] = useState(false);
 
   // Date range filter — default to current month
   const now = new Date();
@@ -348,6 +350,9 @@ export function JournalView() {
             <>
               <InfoTooltip translationKey="help.generateJournals" />
               <GenerateJournalsButton userId={user?.id} />
+              <Button size="sm" variant="outline" onClick={() => setAccrualOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Acumulación
+              </Button>
               <Button size="sm" onClick={() => setNewOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> {t("accounting.newEntry")}
               </Button>
@@ -527,6 +532,7 @@ export function JournalView() {
 
       <JournalDetailDialog journal={selectedJournal} open={detailOpen} onOpenChange={setDetailOpen} />
       <JournalEntryForm open={newOpen} onOpenChange={setNewOpen} />
+      <AccrualEntryDialog open={accrualOpen} onOpenChange={setAccrualOpen} />
       
     </div>
   );

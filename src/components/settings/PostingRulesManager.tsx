@@ -178,6 +178,7 @@ export function PostingRulesManager() {
 
     const actions: RuleActions = {};
     if (form.master_account_code) actions.master_account_code = form.master_account_code;
+    if (form.credit_account_code) actions.credit_account_code = form.credit_account_code;
     if (form.project_code) actions.project_code = form.project_code;
     if (form.cbs_code) actions.cbs_code = form.cbs_code;
     if (form.cost_center) actions.cost_center = form.cost_center as any;

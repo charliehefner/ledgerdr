@@ -30,7 +30,7 @@ serve(async (req) => {
     if (!authHeader) {
       throw new Error("No authorization header");
     }
-
+    const body = await req.json();
     const { userId, role, entity_id, entity_group_id } = body;
 
     // Validate UUID

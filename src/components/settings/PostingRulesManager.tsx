@@ -420,8 +420,52 @@ export function PostingRulesManager() {
     if (a.cbs_code) parts.push(`CBS ${a.cbs_code}`);
     if (a.cost_center) parts.push(`CC ${a.cost_center}`);
     if (a.append_note) parts.push(`Nota`);
+    if (a.extra_lines?.length) parts.push(`+${a.extra_lines.length} líneas`);
     return parts.length ? parts.join(" · ") : "—";
   };
+
+  // Helpers for the extras editor
+  const addExtraLine = () => {
+    setForm(f => f.extra_lines.length >= MAX_EXTRA_LINES
+      ? f
+      : { ...f, extra_lines: [...f.extra_lines, emptyExtraLine()] });
+  };
+  const updateExtraLine = (idx: number, patch: Partial<ExtraLineDraft>) => {
+    setForm(f => ({
+      ...f,
+      extra_lines: f.extra_lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)),
+    }));
+  };
+  const removeExtraLine = (idx: number) => {
+    setForm(f => ({ ...f, extra_lines: f.extra_lines.filter((_, i) => i !== idx) }));
+  };
+
+  // Live validation summary for the extras editor
+  const extrasValidation = useMemo(() => {
+    let pctD = 0, pctC = 0, remD = 0, remC = 0, hasD = false, hasC = false;
+    const errors: string[] = [];
+    form.extra_lines.forEach((l, i) => {
+      if (l.side === "debit") hasD = true; else hasC = true;
+      if (l.split_type === "remainder") {
+        if (l.side === "debit") remD++; else remC++;
+      } else {
+        const v = Number(l.split_value);
+        if (l.split_value !== "" && (!Number.isFinite(v) || v <= 0)) {
+          errors.push(`Línea ${i + 1}: valor inválido`);
+        } else if (l.split_type === "percent") {
+          if (l.side === "debit") pctD += v || 0; else pctC += v || 0;
+        }
+      }
+      if (!l.account_code) errors.push(`Línea ${i + 1}: falta cuenta`);
+    });
+    if (pctD > 100) errors.push(`% débito = ${pctD} (máx 100)`);
+    if (pctC > 100) errors.push(`% crédito = ${pctC} (máx 100)`);
+    if (remD > 1) errors.push("Más de un 'Resto' en débito");
+    if (remC > 1) errors.push("Más de un 'Resto' en crédito");
+    return { pctD, pctC, hasD, hasC, errors };
+  }, [form.extra_lines]);
+
+
 
   const accountLabel = (code: string) => {
     const acct = accounts.find((a: any) => a.code === code);

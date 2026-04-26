@@ -570,6 +570,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   };
 
   const handleOcrResult = async (result: OcrResult) => {
+    let postOcrSnapshot: typeof form | null = null;
     setForm(prev => {
       const updated = { ...prev };
       // Only fill empty fields
@@ -610,8 +611,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         updated.master_acct_code = '5611';
       }
 
+      postOcrSnapshot = updated;
       return updated;
     });
+
+    // Posting rules: re-evaluate against the OCR-enriched snapshot.
+    if (postOcrSnapshot) {
+      void runPostingRules(postOcrSnapshot);
+    }
 
     // CRM lookup after OCR
     if (result.rnc) {

@@ -257,7 +257,8 @@ export function PostingRulesManager() {
 
   const actionsSummary = (a: RuleActions): string => {
     const parts: string[] = [];
-    if (a.master_account_code) parts.push(`Cta ${a.master_account_code}`);
+    if (a.master_account_code) parts.push(`Db ${a.master_account_code}`);
+    if (a.credit_account_code) parts.push(`Cr ${a.credit_account_code}`);
     if (a.project_code) parts.push(`Proy ${a.project_code}`);
     if (a.cbs_code) parts.push(`CBS ${a.cbs_code}`);
     if (a.cost_center) parts.push(`CC ${a.cost_center}`);

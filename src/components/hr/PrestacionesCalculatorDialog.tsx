@@ -66,6 +66,12 @@ interface CalculationResult {
     preaviso_amount: number;
     cesantia_days: number;
     cesantia_amount: number;
+    cesantia_breakdown?: {
+      complete_years: number;
+      remainder_months: number;
+      days_from_years: number;
+      days_from_remainder: number;
+    };
     pending_vacation_days: number;
     vacation_amount: number;
     regalia_amount: number;

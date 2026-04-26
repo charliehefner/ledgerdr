@@ -34,6 +34,7 @@ interface RuleConditions {
 
 interface RuleActions {
   master_account_code?: string;
+  credit_account_code?: string;
   project_code?: string;
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";

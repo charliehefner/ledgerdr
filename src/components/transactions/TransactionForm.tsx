@@ -104,6 +104,8 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const [pendingCrmContact, setPendingCrmContact] = useState<{ name: string; rnc: string } | null>(null);
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
+  const { user } = useAuth();
+  const isOffice = user?.role === "office";
 
   // Posting-rule engine state — captured silently. Used at submit time to
   // (a) set manual_credit_account_code on the new transaction row, and
@@ -657,6 +659,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         <ScanReceiptButton onResult={handleOcrResult} disabled={isSubmitting} />
       </CardHeader>
       <CardContent key={formKey}>
+        {isOffice && (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-300/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+            <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>{t('txForm.officeApprovalNotice')}</span>
+          </div>
+        )}
         {showCrmPrompt && pendingCrmContact && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
             <span className="text-sm flex-1">{t('contacts.addToCrm')} <strong>{pendingCrmContact.name}</strong> ({pendingCrmContact.rnc})</span>

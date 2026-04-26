@@ -76,6 +76,7 @@ export function JournalView() {
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [accrualOpen, setAccrualOpen] = useState(false);
 
   // Date range filter — default to current month
   const now = new Date();

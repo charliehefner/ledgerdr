@@ -166,7 +166,7 @@ function entryKey(workerName: string, workerType: string, dayOfWeek: number, tim
  */
 function getHighlightType(entry?: CronogramaEntry): HighlightType {
   if (!entry?.updated_by) return null;
-  if (entry.updated_by === INSTRUCTOR_ID) return null;
+  if (TRUSTED_EDITOR_IDS.has(entry.updated_by)) return null;
   if (entry.updated_by === CEDENOJORD_ID) {
     const createdAt = new Date(entry.created_at);
     const updatedAt = new Date(entry.updated_at);

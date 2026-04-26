@@ -98,11 +98,23 @@ interface PdfLine {
   underline?: boolean;
 }
 
+// ─── Letterhead images (loaded once at module init) ───
+// Drawn full-width on every page. Top: 1920x275, Bottom: 1920x184.
+const LETTERHEAD_TOP_BYTES = await Deno.readFile(new URL("./assets/top.jpg", import.meta.url));
+const LETTERHEAD_BOTTOM_BYTES = await Deno.readFile(new URL("./assets/bottom.jpg", import.meta.url));
+const LETTERHEAD_TOP_W = 1920;
+const LETTERHEAD_TOP_H = 275;
+const LETTERHEAD_BOTTOM_W = 1920;
+const LETTERHEAD_BOTTOM_H = 184;
+
 function buildPdf(lines: PdfLine[]): Uint8Array {
   const encoder = new TextEncoder();
   const pageW = 612;
   const pageH = 792;
-  const marginBottom = 60;
+  // Letterhead drawn full-width. Compute display heights.
+  const topImgH = (pageW * LETTERHEAD_TOP_H) / LETTERHEAD_TOP_W;     // ~88pt
+  const bottomImgH = (pageW * LETTERHEAD_BOTTOM_H) / LETTERHEAD_BOTTOM_W; // ~59pt
+  const marginBottom = bottomImgH + 20; // keep text clear of bottom letterhead
 
   // First pass: expand word-wrapped lines to determine actual Y positions and page breaks
   interface RenderedLine {

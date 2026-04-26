@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, TrendingUp, ClipboardList, Scale, Banknote, Clock, Receipt } from "lucide-react";
+import { FileBarChart, Download, FileSpreadsheet, FileText, Filter, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, TrendingUp, ClipboardList, Scale, Banknote, Clock, Receipt, ArrowRight } from "lucide-react";
 import { ProfitLossView } from "./ProfitLossView";
 import { BalanceSheetView } from "./BalanceSheetView";
 import { PowerBIExportButton } from "./PowerBIExportButton";
@@ -379,14 +379,63 @@ export function AccountingReportsView() {
   const getDesc = (item: { spanish_description: string; english_description: string }) =>
     language === "en" ? item.english_description : item.spanish_description;
 
-  const reportCards = [
-    { key: "pl" as const, icon: TrendingUp, title: t("pl.title"), desc: t("acctReport.plDesc") },
-    { key: "bs" as const, icon: ClipboardList, title: t("bs.title"), desc: t("acctReport.bsDesc") },
-    { key: "tb" as const, icon: Scale, title: t("accounting.tb.title"), desc: t("acctReport.tbDesc") },
-    { key: "cf" as const, icon: Banknote, title: t("cf.title"), desc: t("acctReport.cfDesc") },
-    { key: "aging" as const, icon: Clock, title: t("aging.title"), desc: t("acctReport.agingDesc") },
-    { key: "detail" as const, icon: Receipt, title: t("acctReport.transactionReports"), desc: t("acctReport.transactionReportsDesc") },
+  type ReportCard = {
+    key: Exclude<ReportType, null>;
+    icon: typeof TrendingUp;
+    title: string;
+    desc: string;
+    accent: string; // bg tint for icon tile
+    iconColor: string; // icon foreground
+    border: string; // hover left-border accent
+    ring: string; // focus ring accent
+  };
+
+  const financialCards: ReportCard[] = [
+    { key: "pl", icon: TrendingUp, title: t("pl.title"), desc: t("acctReport.plDesc"),
+      accent: "bg-emerald-500/10", iconColor: "text-emerald-600 dark:text-emerald-400",
+      border: "group-hover:bg-emerald-500", ring: "focus-visible:ring-emerald-500/40" },
+    { key: "bs", icon: ClipboardList, title: t("bs.title"), desc: t("acctReport.bsDesc"),
+      accent: "bg-indigo-500/10", iconColor: "text-indigo-600 dark:text-indigo-400",
+      border: "group-hover:bg-indigo-500", ring: "focus-visible:ring-indigo-500/40" },
+    { key: "tb", icon: Scale, title: t("accounting.tb.title"), desc: t("acctReport.tbDesc"),
+      accent: "bg-amber-500/10", iconColor: "text-amber-600 dark:text-amber-400",
+      border: "group-hover:bg-amber-500", ring: "focus-visible:ring-amber-500/40" },
+    { key: "cf", icon: Banknote, title: t("cf.title"), desc: t("acctReport.cfDesc"),
+      accent: "bg-sky-500/10", iconColor: "text-sky-600 dark:text-sky-400",
+      border: "group-hover:bg-sky-500", ring: "focus-visible:ring-sky-500/40" },
   ];
+
+  const detailCards: ReportCard[] = [
+    { key: "aging", icon: Clock, title: t("aging.title"), desc: t("acctReport.agingDesc"),
+      accent: "bg-rose-500/10", iconColor: "text-rose-600 dark:text-rose-400",
+      border: "group-hover:bg-rose-500", ring: "focus-visible:ring-rose-500/40" },
+    { key: "detail", icon: Receipt, title: t("acctReport.transactionReports"), desc: t("acctReport.transactionReportsDesc"),
+      accent: "bg-slate-500/10", iconColor: "text-slate-600 dark:text-slate-300",
+      border: "group-hover:bg-slate-500", ring: "focus-visible:ring-slate-500/40" },
+  ];
+
+  const renderCard = (card: ReportCard) => (
+    <button
+      key={card.key}
+      onClick={() => setReportType(card.key)}
+      className={`group relative text-left rounded-xl border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-foreground/10 focus-visible:outline-none focus-visible:ring-2 ${card.ring} overflow-hidden`}
+    >
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-transparent transition-colors ${card.border}`} />
+      <div className="flex items-start gap-4">
+        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${card.accent} ${card.iconColor} transition-transform group-hover:scale-105`}>
+          <card.icon className="h-6 w-6" />
+        </div>
+        <div className="flex-1 min-w-0 space-y-1">
+          <h3 className="font-semibold text-base text-foreground leading-tight">{card.title}</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{card.desc}</p>
+        </div>
+      </div>
+      <div className={`absolute bottom-3 right-4 inline-flex items-center gap-1 text-xs font-medium ${card.iconColor} opacity-0 group-hover:opacity-100 transition-opacity`}>
+        {t("acctReport.open") || "Abrir"}
+        <ArrowRight className="h-3 w-3" />
+      </div>
+    </button>
+  );
 
   const BackButton = () => (
     <Button variant="ghost" size="sm" onClick={() => { setReportType(null); setActiveFilters(null); }} className="mb-2">
@@ -399,30 +448,31 @@ export function AccountingReportsView() {
     <div className="space-y-4">
       {reportType === null ? (
         /* ===== Card Grid Landing ===== */
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">{t("acctReport.title")}</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">{t("acctReport.title")}</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("acctReport.selectReportLanding")}</p>
+            </div>
             <PowerBIExportButton />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {reportCards.map((card) => (
-              <button
-                key={card.key}
-                onClick={() => setReportType(card.key)}
-                className="group relative text-left rounded-xl border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-primary/0 transition-colors group-hover:bg-primary" />
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
-                    <card.icon className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-sm text-foreground">{card.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{card.desc}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
+
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              {t("acctReport.groupFinancial") || "Estados Financieros"}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {financialCards.map(renderCard)}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              {t("acctReport.groupDetail") || "Sub-mayores y Detalle"}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {detailCards.map(renderCard)}
+            </div>
           </div>
         </div>
       ) : reportType === "pl" ? (

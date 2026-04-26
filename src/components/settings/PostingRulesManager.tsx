@@ -775,6 +775,153 @@ export function PostingRulesManager() {
             </div>
           </div>
 
+          {/* === Phase 2: extra journal lines === */}
+          <details className="rounded-md border p-3 mt-2">
+            <summary className="cursor-pointer font-semibold text-sm flex items-center gap-2">
+              Líneas adicionales (avanzado)
+              {form.extra_lines.length > 0 && (
+                <Badge variant="secondary">{form.extra_lines.length} línea{form.extra_lines.length === 1 ? "" : "s"}</Badge>
+              )}
+            </summary>
+            <div className="pt-3 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Agrega líneas extra al asiento generado. Útil para auto-divisiones de centro de costo (ej. 70% Agrícola / 30% Industrial), retenciones automáticas (ej. 1% ISR sobre B11) o recargos por proveedor. Las reglas se aplican al generar el asiento desde la transacción.
+              </p>
+
+              {form.extra_lines.length > 0 && (
+                <div className="rounded border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs w-[35%]">Cuenta</TableHead>
+                        <TableHead className="text-xs">Lado</TableHead>
+                        <TableHead className="text-xs">Tipo</TableHead>
+                        <TableHead className="text-xs w-[100px]">Valor</TableHead>
+                        <TableHead className="text-xs">CC</TableHead>
+                        <TableHead className="text-xs">Descripción</TableHead>
+                        <TableHead className="w-[40px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {form.extra_lines.map((l, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="p-1">
+                            <Select value={l.account_code}
+                              onValueChange={v => updateExtraLine(idx, { account_code: v })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                              <SelectContent className="bg-popover max-h-[280px]">
+                                {accounts.map((a: any) => (
+                                  <SelectItem key={a.code} value={a.code}>
+                                    {a.code} - {getDescription(a)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Select value={l.side}
+                              onValueChange={v => updateExtraLine(idx, { side: v as "debit" | "credit" })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="debit">Débito</SelectItem>
+                                <SelectItem value="credit">Crédito</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Select value={l.split_type}
+                              onValueChange={v => updateExtraLine(idx, { split_type: v as any, split_value: v === "remainder" ? "" : l.split_value })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="percent">% del monto</SelectItem>
+                                <SelectItem value="fixed">Monto fijo</SelectItem>
+                                <SelectItem value="remainder">Resto</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            {l.split_type === "remainder" ? (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            ) : (
+                              <Input type="number" className="h-8 text-xs"
+                                value={l.split_value}
+                                onChange={e => updateExtraLine(idx, { split_value: e.target.value })}
+                                placeholder={l.split_type === "percent" ? "70" : "0.00"} />
+                            )}
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Select value={l.cost_center || "__none__"}
+                              onValueChange={v => updateExtraLine(idx, { cost_center: v === "__none__" ? "" : (v as any) })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="__none__">—</SelectItem>
+                                <SelectItem value="general">General</SelectItem>
+                                <SelectItem value="agricultural">Agrícola</SelectItem>
+                                <SelectItem value="industrial">Industrial</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Input className="h-8 text-xs" value={l.description}
+                              onChange={e => updateExtraLine(idx, { description: e.target.value })}
+                              placeholder="(opcional)" />
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => removeExtraLine(idx)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button type="button" size="sm" variant="outline"
+                  onClick={addExtraLine}
+                  disabled={form.extra_lines.length >= MAX_EXTRA_LINES}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Agregar línea
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={form.replace_main_debit}
+                    onCheckedChange={v => setForm(f => ({ ...f, replace_main_debit: v }))}
+                    disabled={!extrasValidation.hasD} />
+                  <Label className="text-xs">Reemplazar débito principal</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={form.replace_main_credit}
+                    onCheckedChange={v => setForm(f => ({ ...f, replace_main_credit: v }))}
+                    disabled={!extrasValidation.hasC} />
+                  <Label className="text-xs">Reemplazar crédito principal</Label>
+                </div>
+              </div>
+
+              {form.extra_lines.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Suma %: débito = <strong>{extrasValidation.pctD}%</strong> · crédito = <strong>{extrasValidation.pctC}%</strong>
+                </div>
+              )}
+
+              {extrasValidation.errors.length > 0 && (
+                <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive space-y-1">
+                  {extrasValidation.errors.map((err, i) => <div key={i}>· {err}</div>)}
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+                <div><strong>Ejemplos:</strong></div>
+                <div>· <em>División 70/30:</em> dos líneas débito a la misma cuenta, 70% Agrícola + 30% Industrial, marca "Reemplazar débito principal".</div>
+                <div>· <em>Retención 1% ISR:</em> una línea crédito a la cuenta 2170 con 1%. No reemplaza nada — se suma al asiento estándar y reduce el crédito al banco.</div>
+                <div>· <em>Recargo fijo:</em> una línea con tipo "Monto fijo".</div>
+              </div>
+            </div>
+          </details>
+
 
           {conflicts.length > 0 && (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 space-y-2 mt-2">

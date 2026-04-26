@@ -309,6 +309,23 @@ export function JournalView() {
               </SelectContent>
             </Select>
           </div>
+
+          {usedRules.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium text-muted-foreground mr-1">Regla</span>
+              <Select value={ruleFilter} onValueChange={setRuleFilter}>
+                <SelectTrigger className="h-8 w-[200px] text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">Todas las reglas</SelectItem>
+                  {usedRules.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex gap-1">
           <DropdownMenu>

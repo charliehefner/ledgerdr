@@ -163,10 +163,10 @@ export function AccrualsListDialog({ open, onOpenChange }: Props) {
               {accruals.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-xs">
-                    {fmtDate(r.accrual_date)}
+                    {fmtDate(new Date(r.accrual_date))}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {fmtDate(r.reversal_date)}
+                    {fmtDate(new Date(r.reversal_date))}
                   </TableCell>
                   <TableCell className="text-xs">{r.reference || "—"}</TableCell>
                   <TableCell className="text-xs max-w-[280px] truncate">

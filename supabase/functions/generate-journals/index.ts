@@ -479,6 +479,61 @@ Deno.serve(async (req) => {
         const debitExtrasTotal = extras.debit.reduce((s, l) => s + l.amount, 0);
         const creditExtrasTotal = extras.credit.reduce((s, l) => s + l.amount, 0);
 
+        // ── PHASE 2.5: amortization (purchase only) ──
+        // If a rule with `amortize` matched and this is a purchase, validate target
+        // periods are open, swap the main debit to the prepaid account, and queue
+        // N monthly DR Expense / CR Prepaid slice journals to post after the original.
+        let amortizePlan: {
+          rule_id: string;
+          rule_name: string;
+          expenseAccountId: string;
+          prepaidAccountId: string;
+          slices: Array<{ date: string; amount: number; period_id: string }>;
+        } | null = null;
+
+        if (!isSale && !isTransfer) {
+          const am = findAmortizeAction(matchedRules);
+          if (am) {
+            const months = Math.max(2, Math.min(60, Math.floor(am.spec.months)));
+            const expenseCode = am.spec.expense_account_code || txn.master_acct_code || "";
+            const prepaidCode = am.spec.prepaid_account_code || "1480";
+            const expenseAccountId = expenseCode ? acctByCode.get(expenseCode) : undefined;
+            const prepaidAccountId = acctByCode.get(prepaidCode);
+
+            if (!expenseAccountId) {
+              skipped.push(`${label}: amortización - cuenta de gasto "${expenseCode}" no permite asientos`);
+              continue;
+            }
+            if (!prepaidAccountId) {
+              skipped.push(`${label}: amortización - cuenta de prepago "${prepaidCode}" no permite asientos`);
+              continue;
+            }
+            if (expenseAccountId === prepaidAccountId) {
+              skipped.push(`${label}: amortización - cuenta de gasto y prepago son la misma`);
+              continue;
+            }
+
+            const sliceDates = buildSliceDates(am.spec.start_date, months);
+            const sliceAmounts = splitAmount(netAmount, months);
+            const slicePlan: Array<{ date: string; amount: number; period_id: string }> = [];
+            let blocked: string | null = null;
+            for (let i = 0; i < months; i++) {
+              const period = findOpenPeriodForDate(sliceDates[i], periodsList);
+              if (!period) {
+                blocked = sliceDates[i];
+                break;
+              }
+              slicePlan.push({ date: sliceDates[i], amount: sliceAmounts[i], period_id: period.id });
+            }
+            if (blocked) {
+              skipped.push(`${label}: amortización bloqueada — el mes ${blocked} cae en un período cerrado o inexistente`);
+              continue;
+            }
+
+            amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
+          }
+        }
+
         if (isSale) {
           // ── SALE: Debit bank/cash, Credit revenue + ITBIS por Pagar ──
           // For sales, replace_main_debit affects the bank/cash line; replace_main_credit affects revenue.

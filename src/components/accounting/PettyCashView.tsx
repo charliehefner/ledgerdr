@@ -20,6 +20,8 @@ import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
+import { useAuth } from "@/contexts/AuthContext";
+import { canManagePettyCashFunds } from "@/lib/permissions";
 
 import { fmtDate } from "@/lib/dateUtils";
 
@@ -53,6 +55,8 @@ const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "
 
 export function PettyCashView() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const canManageFunds = canManagePettyCashFunds(user?.role);
   const queryClient = useQueryClient();
   const { applyEntityFilter, selectedEntityId, isAllEntities } = useEntityFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -215,7 +219,9 @@ export function PettyCashView() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{t("treasury.pc.title")}</h3>
-          <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> {t("treasury.pc.newFund")}</Button>
+          {canManageFunds && (
+            <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> {t("treasury.pc.newFund")}</Button>
+          )}
         </div>
 
         {isLoading ? (
@@ -258,10 +264,12 @@ export function PettyCashView() {
                       </Badge>
                     </TableCell>
                     <TableCell className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      {acct.fixed_amount && acct.fixed_amount > 0 && (
+                      {canManageFunds && (
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(acct)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canManageFunds && acct.fixed_amount && acct.fixed_amount > 0 && (
                         <Button
                           variant="ghost"
                           size="icon"

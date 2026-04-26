@@ -469,6 +469,7 @@ export function PostingRulesManager() {
     if (a.cost_center) parts.push(`CC ${a.cost_center}`);
     if (a.append_note) parts.push(`Nota`);
     if (a.extra_lines?.length) parts.push(`+${a.extra_lines.length} líneas`);
+    if (a.amortize?.months) parts.push(`Amort ${a.amortize.months}×`);
     return parts.length ? parts.join(" · ") : "—";
   };
 

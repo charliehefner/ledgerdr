@@ -118,8 +118,9 @@ const emptyForm = {
   replace_main_credit: false,
 };
 
-// Action fields used for conflict detection (in display order).
-const ACTION_FIELD_LABELS: Record<keyof RuleActions, string> = {
+// Action fields used for conflict detection (string-valued only — extras/flags excluded).
+type ConflictField = "master_account_code" | "credit_account_code" | "project_code" | "cbs_code" | "cost_center" | "append_note";
+const ACTION_FIELD_LABELS: Record<ConflictField, string> = {
   master_account_code: "Cuenta de débito",
   credit_account_code: "Cuenta de crédito",
   project_code: "Proyecto",

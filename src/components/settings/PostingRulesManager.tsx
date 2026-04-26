@@ -629,9 +629,38 @@ export function PostingRulesManager() {
             </div>
           </div>
 
+
+          {conflicts.length > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 space-y-2 mt-2">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-semibold text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                Conflicto detectado con {conflicts.length} regla{conflicts.length === 1 ? "" : "s"} activa{conflicts.length === 1 ? "" : "s"} en la misma prioridad ({form.priority})
+              </div>
+              <ul className="text-xs space-y-1 ml-6 list-disc">
+                {conflicts.map(c => (
+                  <li key={c.rule.id}>
+                    <span className="font-medium">{c.rule.name}</span>
+                    {c.fields.map(f => (
+                      <span key={f.field} className="block ml-2 text-muted-foreground">
+                        · {ACTION_FIELD_LABELS[f.field]}: esta regla = <code>{f.mine}</code> · existente = <code>{f.theirs}</code>
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                Sugerencia: cambie la prioridad para que esta regla gane (menor número) o pierda (mayor número), o ajuste los valores. Si igual quiere guardar, presione <strong>Guardar</strong> de nuevo.
+              </p>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Actualizar" : "Crear"}</Button>
+            <Button onClick={handleSave} variant={conflicts.length > 0 && overrideConflicts ? "destructive" : "default"}>
+              {conflicts.length > 0 && overrideConflicts
+                ? "Guardar de todos modos"
+                : editing ? "Actualizar" : "Crear"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

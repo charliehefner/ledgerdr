@@ -20,6 +20,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   canModifySettings: boolean;
+  /** Posting rules are owned by the GL team. Admin + Accountant can edit them. */
+  canModifyPostingRules: boolean;
   canAccessSection: (section: Section) => boolean;
   canWriteSection: (section: Section) => boolean;
   getDefaultRoute: () => string;
@@ -233,6 +235,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Accountant cannot modify settings/structural changes
   const canModifySettingsValue = user?.role === "admin";
+  // Posting rules: admin OR accountant (GL team owns the rules engine).
+  const canModifyPostingRulesValue = user?.role === "admin" || user?.role === "accountant";
 
   // Permission helper functions
   const checkAccessSection = (section: Section) => canAccessSection(user?.role, section);
@@ -248,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login, 
       logout, 
       canModifySettings: canModifySettingsValue,
+      canModifyPostingRules: canModifyPostingRulesValue,
       canAccessSection: checkAccessSection,
       canWriteSection: checkWriteSection,
       getDefaultRoute,

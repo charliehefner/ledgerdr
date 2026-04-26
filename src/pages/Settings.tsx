@@ -58,7 +58,7 @@ import { TelegramSettings } from "@/components/settings/TelegramSettings";
 import { ErrorLogView } from "@/components/settings/ErrorLogView";
 
 export default function Settings() {
-  const { canModifySettings } = useAuth();
+  const { canModifySettings, canModifyPostingRules } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("general");
 
@@ -135,7 +135,7 @@ export default function Settings() {
                 {t("settings.vendorRules")}
               </TabsTrigger>
             )}
-            {canModifySettings && (
+            {canModifyPostingRules && (
               <TabsTrigger value="posting-rules">
                 <Settings2 className="h-4 w-4 mr-2" />
                 Reglas Contab.
@@ -366,7 +366,7 @@ export default function Settings() {
             </TabsContent>
           )}
 
-          {canModifySettings && (
+          {canModifyPostingRules && (
             <TabsContent value="posting-rules" className="mt-6">
               <div className="max-w-6xl">
                 <PostingRulesManager />

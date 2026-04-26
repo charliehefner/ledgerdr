@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
         }
 
         // Prefer UUID FK (account_id) over legacy text code lookup
-        const mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
+        let mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
         // Finding 1 fix: resolve pay_method via legacy mapping OR bank_accounts UUID
         let payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
 

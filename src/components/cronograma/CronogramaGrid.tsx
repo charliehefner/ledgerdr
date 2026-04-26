@@ -1033,16 +1033,18 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const highlightType = getHighlightType(entry);
+  const rawHighlightType = getHighlightType(entry);
+  const highlightType = showIndicators ? rawHighlightType : null;
   const isHighlighted = highlightType !== null;
   const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
   const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
 
-  const ringClass = highlightType === "self-edit" 
-    ? "ring-2 ring-inset ring-blue-400 dark:ring-blue-500" 
-    : "ring-2 ring-inset ring-orange-400 dark:ring-orange-500";
-  const dotClass = highlightType === "self-edit" 
-    ? "bg-blue-400" 
+  // Softer indicator: thin outline + dot positioned outside the cell so it never overlaps text
+  const ringClass = highlightType === "self-edit"
+    ? "ring-1 ring-inset ring-blue-300 dark:ring-blue-500"
+    : "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
+  const dotClass = highlightType === "self-edit"
+    ? "bg-blue-400"
     : "bg-orange-400";
 
   const autoResize = useCallback(() => {

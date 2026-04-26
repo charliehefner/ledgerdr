@@ -124,6 +124,12 @@ const emptyForm = {
   extra_lines: [] as ExtraLineDraft[],
   replace_main_debit: false,
   replace_main_credit: false,
+  // amortization (Phase 2.5)
+  amortize_enabled: false,
+  amortize_months: "12",
+  amortize_start_date: "",
+  amortize_expense_account_code: "",   // empty = use master
+  amortize_prepaid_account_code: "1480",
 };
 
 // Action fields used for conflict detection (string-valued only — extras/flags excluded).

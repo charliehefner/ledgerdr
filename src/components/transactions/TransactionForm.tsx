@@ -523,6 +523,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
       matchedPostingRulesRef.current = rules;
       ruleAppliedFieldsRef.current = applied;
+      setRuleConflicts(detectRuleConflicts(rules));
     } catch (e) {
       console.warn('[postingRules] eval failed (non-blocking):', e);
     }

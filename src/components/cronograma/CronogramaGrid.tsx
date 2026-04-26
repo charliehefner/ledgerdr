@@ -1027,6 +1027,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   entry,
   userEmailMap,
   language,
+  showIndicators,
 }: CronogramaCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);

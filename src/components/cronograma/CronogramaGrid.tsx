@@ -1143,7 +1143,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
             <TooltipTrigger asChild>
               <div className="relative">
                 {cellContent}
-                <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
+                <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
               </div>
             </TooltipTrigger>
             <TooltipContent className="whitespace-pre-line text-xs">
@@ -1169,7 +1169,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
           <TooltipTrigger asChild>
             <div className="relative">
               {cellContent}
-              <div className={cn("absolute top-0 right-0 w-2 h-2 rounded-full", dotClass)} />
+              <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
             </div>
           </TooltipTrigger>
           <TooltipContent className="whitespace-pre-line text-xs">

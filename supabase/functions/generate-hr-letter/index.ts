@@ -178,14 +178,6 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
 
   const totalPages = currentPage + 1;
 
-  // Build content streams per page
-  const pageContents: string[] = [];
-  for (let p = 0; p < totalPages; p++) {
-    let content = "";
-    const pageLines = rendered.filter((l) => l.page === p);
-    for (const l of pageLines) {
-      const fontRef = l.bold ? "/F2" : "/F1";
-      content += `BT ${fontRef} ${l.size} Tf ${l.x} ${l.y} Td (${escapePdf(l.text)}) Tj ET\n`;
   // Build content streams per page (with letterhead drawn first)
   const topY = pageH - topImgH; // top edge of top image
   const bottomY = 0;            // bottom image flush with bottom

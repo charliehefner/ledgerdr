@@ -22,6 +22,24 @@ export interface PostingRulePayload {
   context?: PostingRuleContext;
 }
 
+/**
+ * Phase 2: extra journal lines (splits / accruals / surcharges).
+ * Resolved server-side in `generate-journals`. See PostingRulesManager
+ * for the editor UI and validation rules.
+ */
+export type PostingRuleExtraSplit =
+  | { type: "percent"; value: number }       // % of net amount
+  | { type: "fixed"; value: number }         // flat amount in txn currency
+  | { type: "remainder" };                   // leftover on this side (max 1 per side)
+
+export interface PostingRuleExtraLine {
+  account_code: string;
+  side: "debit" | "credit";
+  split: PostingRuleExtraSplit;
+  cost_center?: "general" | "agricultural" | "industrial";
+  description?: string;
+}
+
 export interface PostingRuleAction {
   master_account_code?: string;
   /**
@@ -35,6 +53,12 @@ export interface PostingRuleAction {
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";
   append_note?: string;
+  /** Phase 2 — additional balanced lines added by the engine. */
+  extra_lines?: PostingRuleExtraLine[];
+  /** When true and any debit extras exist, suppress the default debit-to-master line. */
+  replace_main_debit?: boolean;
+  /** When true and any credit extras exist, suppress the default bank/AP/AR credit line. */
+  replace_main_credit?: boolean;
 }
 
 export interface MatchedRule {

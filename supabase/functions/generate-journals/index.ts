@@ -61,6 +61,114 @@ function resolvePayAccountId(
   return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2: posting-rule extra lines
+// ─────────────────────────────────────────────────────────────────────────────
+type ExtraSplit =
+  | { type: "percent"; value: number }
+  | { type: "fixed"; value: number }
+  | { type: "remainder" };
+
+interface ExtraLineSpec {
+  account_code: string;
+  side: "debit" | "credit";
+  split: ExtraSplit;
+  cost_center?: "general" | "agricultural" | "industrial";
+  description?: string;
+}
+
+interface ResolvedExtraLine {
+  account_id: string;
+  side: "debit" | "credit";
+  amount: number;            // > 0
+  description: string;
+  rule_id: string;
+  rule_name: string;
+}
+
+/**
+ * Resolve all extra_lines from matched rules into concrete amounts + accounts.
+ * Returns null if any validation fails (caller falls back to standard journal).
+ * Validation errors are pushed into `errors` so the caller can log them.
+ */
+function resolveExtraLines(
+  matchedRules: Array<{ rule_id: string; rule_name: string; actions: any }>,
+  netAmount: number,
+  acctByCode: Map<string, string>,
+  errors: string[],
+): {
+  debit: ResolvedExtraLine[];
+  credit: ResolvedExtraLine[];
+  replaceMainDebit: boolean;
+  replaceMainCredit: boolean;
+} {
+  const out = { debit: [] as ResolvedExtraLine[], credit: [] as ResolvedExtraLine[], replaceMainDebit: false, replaceMainCredit: false };
+  const MAX = 10;
+  let total = 0;
+
+  for (const rule of matchedRules) {
+    const a = rule.actions || {};
+    const lines: ExtraLineSpec[] = Array.isArray(a.extra_lines) ? a.extra_lines : [];
+    if (lines.length === 0) continue;
+    if (a.replace_main_debit) out.replaceMainDebit = true;
+    if (a.replace_main_credit) out.replaceMainCredit = true;
+
+    // Group this rule's lines by side for percent/remainder math
+    const sums = { debit: { pct: 0, fixed: 0, hasRemainder: false }, credit: { pct: 0, fixed: 0, hasRemainder: false } };
+    for (const l of lines) {
+      if (l.split?.type === "percent") sums[l.side].pct += Number(l.split.value) || 0;
+      else if (l.split?.type === "fixed") sums[l.side].fixed += Number(l.split.value) || 0;
+      else if (l.split?.type === "remainder") sums[l.side].hasRemainder = true;
+    }
+    if (sums.debit.pct > 100 || sums.credit.pct > 100) {
+      errors.push(`Regla "${rule.rule_name}": suma de % > 100 en un lado; se omiten líneas extra`);
+      continue;
+    }
+
+    // Resolve each line to an amount
+    for (const l of lines) {
+      total++;
+      if (total > MAX) {
+        errors.push(`Regla "${rule.rule_name}": >${MAX} líneas extra; se omiten las restantes`);
+        break;
+      }
+      if (!l.account_code || (l.side !== "debit" && l.side !== "credit") || !l.split?.type) {
+        errors.push(`Regla "${rule.rule_name}": forma de línea inválida`);
+        continue;
+      }
+      const accountId = acctByCode.get(l.account_code);
+      if (!accountId) {
+        errors.push(`Regla "${rule.rule_name}": cuenta "${l.account_code}" no existe o no permite asientos`);
+        continue;
+      }
+      let amount = 0;
+      if (l.split.type === "percent") {
+        amount = (netAmount * Number(l.split.value)) / 100;
+      } else if (l.split.type === "fixed") {
+        amount = Number(l.split.value);
+      } else if (l.split.type === "remainder") {
+        const usedPctShare = (netAmount * sums[l.side].pct) / 100;
+        amount = netAmount - usedPctShare - sums[l.side].fixed;
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        errors.push(`Regla "${rule.rule_name}": monto calculado inválido para cuenta ${l.account_code}`);
+        continue;
+      }
+      const cc = l.cost_center ? ` [${l.cost_center === "agricultural" ? "Agrícola" : l.cost_center === "industrial" ? "Industrial" : "General"}]` : "";
+      const desc = (l.description || rule.rule_name) + cc;
+      out[l.side].push({
+        account_id: accountId,
+        side: l.side,
+        amount: Math.round(amount * 100) / 100,
+        description: desc,
+        rule_id: rule.rule_id,
+        rule_name: rule.rule_name,
+      });
+    }
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -276,18 +384,48 @@ Deno.serve(async (req) => {
         const netAmount = txn.amount - itbisAmount;
         const lines: any[] = [];
 
+        // ── PHASE 2: evaluate posting rules + resolve extra lines ──
+        let matchedRules: Array<{ rule_id: string; rule_name: string; actions: any }> = [];
+        try {
+          const { data: rulesData } = await db.rpc("evaluate_posting_rules", {
+            p_entity_id: txn.entity_id,
+            p_payload: {
+              vendor: (txn as any).name ?? null,
+              description: txn.description,
+              document: (txn as any).document ?? null,
+              amount: txn.amount,
+              currency: txn.currency || "DOP",
+              transaction_type: txn.transaction_direction,
+              context: "transaction_entry",
+            },
+          });
+          matchedRules = (rulesData || []) as any[];
+        } catch (rErr: any) {
+          console.warn(`[generate-journals] rule eval failed for txn ${txn.id}: ${rErr?.message}`);
+        }
+
+        const ruleErrors: string[] = [];
+        const extras = resolveExtraLines(matchedRules, netAmount, acctByCode, ruleErrors);
+        const debitExtrasTotal = extras.debit.reduce((s, l) => s + l.amount, 0);
+        const creditExtrasTotal = extras.credit.reduce((s, l) => s + l.amount, 0);
+
         if (isSale) {
           // ── SALE: Debit bank/cash, Credit revenue + ITBIS por Pagar ──
-          lines.push({
-            journal_id: journalId, account_id: payAccountId,
-            debit: txn.amount, credit: 0, created_by: userId,
-            description: `Cobro venta${costCenterLabel(txn.cost_center)}`,
-          });
-          lines.push({
-            journal_id: journalId, account_id: mainAccountId,
-            debit: 0, credit: netAmount, created_by: userId,
-            description: `Ingreso venta`,
-          });
+          // For sales, replace_main_debit affects the bank/cash line; replace_main_credit affects revenue.
+          if (!extras.replaceMainDebit) {
+            lines.push({
+              journal_id: journalId, account_id: payAccountId,
+              debit: txn.amount, credit: 0, created_by: userId,
+              description: `Cobro venta${costCenterLabel(txn.cost_center)}`,
+            });
+          }
+          if (!extras.replaceMainCredit) {
+            lines.push({
+              journal_id: journalId, account_id: mainAccountId,
+              debit: 0, credit: netAmount, created_by: userId,
+              description: `Ingreso venta`,
+            });
+          }
           if (itbisAmount > 0 && itbisPorPagarId) {
             lines.push({
               journal_id: journalId, account_id: itbisPorPagarId,
@@ -295,13 +433,22 @@ Deno.serve(async (req) => {
               description: "ITBIS por Pagar",
             });
           }
+          // Splice extras
+          for (const e of extras.debit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: e.amount, credit: 0, created_by: userId, description: e.description });
+          }
+          for (const e of extras.credit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: 0, credit: e.amount, created_by: userId, description: e.description });
+          }
         } else {
           // ── PURCHASE: Debit expense + ITBIS pagado, Credit bank/cash ──
-          lines.push({
-            journal_id: journalId, account_id: mainAccountId,
-            debit: netAmount, credit: 0, created_by: userId,
-            description: `Gasto${costCenterLabel(txn.cost_center)}`,
-          });
+          if (!extras.replaceMainDebit) {
+            lines.push({
+              journal_id: journalId, account_id: mainAccountId,
+              debit: netAmount, credit: 0, created_by: userId,
+              description: `Gasto${costCenterLabel(txn.cost_center)}`,
+            });
+          }
           if (itbisAmount > 0 && itbisPagadoId) {
             lines.push({
               journal_id: journalId, account_id: itbisPagadoId,
@@ -330,11 +477,32 @@ Deno.serve(async (req) => {
             bankCredit -= isrRetenido;
           }
 
-          lines.push({
-            journal_id: journalId, account_id: payAccountId,
-            debit: 0, credit: Math.max(0, bankCredit), created_by: userId,
-            description: `Pago`,
-          });
+          // Splice debit extras (e.g. cost-center splits)
+          for (const e of extras.debit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: e.amount, credit: 0, created_by: userId, description: e.description });
+          }
+          // Splice credit extras (e.g. ISR accrual) — these reduce what's left to credit to bank
+          for (const e of extras.credit) {
+            lines.push({ journal_id: journalId, account_id: e.account_id, debit: 0, credit: e.amount, created_by: userId, description: e.description });
+            bankCredit -= e.amount;
+          }
+          // If credit extras don't replace the bank line, post the (reduced) bank line.
+          if (!extras.replaceMainCredit) {
+            lines.push({
+              journal_id: journalId, account_id: payAccountId,
+              debit: 0, credit: Math.max(0, bankCredit), created_by: userId,
+              description: `Pago`,
+            });
+          }
+        }
+
+        // ── BALANCE GUARD ──
+        const totalD = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+        const totalC = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+        if (Math.abs(totalD - totalC) > 0.01) {
+          await db.from("journals").delete().eq("id", journalId);
+          skipped.push(`${label}: asiento desbalanceado D=${totalD.toFixed(2)} C=${totalC.toFixed(2)} (revisar reglas con líneas extra)`);
+          continue;
         }
 
         const { error: lErr } = await db.from("journal_lines").insert(lines);
@@ -343,6 +511,41 @@ Deno.serve(async (req) => {
           skipped.push(`${label}: líneas: ${lErr.message}`);
         } else {
           created++;
+
+          // ── PHASE 2: log rule applications + any extras errors ──
+          if (matchedRules.length > 0) {
+            try {
+              const extrasByRule = new Map<string, number>();
+              for (const e of [...extras.debit, ...extras.credit]) {
+                extrasByRule.set(e.rule_id, (extrasByRule.get(e.rule_id) || 0) + 1);
+              }
+              const appRows = matchedRules.map(r => ({
+                rule_id: r.rule_id,
+                transaction_id: txn.id,
+                context: "journal_generation",
+                applied_fields: {
+                  ...(extrasByRule.get(r.rule_id) ? { extra_lines: extrasByRule.get(r.rule_id) } : {}),
+                  ...(extras.replaceMainDebit ? { replace_main_debit: true } : {}),
+                  ...(extras.replaceMainCredit ? { replace_main_credit: true } : {}),
+                },
+                applied_by: userId,
+              }));
+              await db.from("posting_rule_applications").insert(appRows);
+            } catch (logErr: any) {
+              console.warn(`[generate-journals] PRA log failed: ${logErr?.message}`);
+            }
+          }
+          if (ruleErrors.length > 0) {
+            try {
+              await db.from("app_error_log").insert(
+                ruleErrors.map(msg => ({
+                  user_id: userId,
+                  component_name: "generate-journals/extra_lines",
+                  error_message: `Txn ${txn.id}: ${msg}`,
+                }))
+              );
+            } catch { /* never block */ }
+          }
 
           // ── INTERCOMPANY DETECTION ──
           // Check if pay_method bank account belongs to a different entity in the same group

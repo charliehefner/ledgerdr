@@ -32,6 +32,19 @@ interface RuleConditions {
   transaction_type?: string[];
 }
 
+type ExtraSplit =
+  | { type: "percent"; value: number }
+  | { type: "fixed"; value: number }
+  | { type: "remainder" };
+
+interface ExtraLine {
+  account_code: string;
+  side: "debit" | "credit";
+  split: ExtraSplit;
+  cost_center?: "general" | "agricultural" | "industrial";
+  description?: string;
+}
+
 interface RuleActions {
   master_account_code?: string;
   credit_account_code?: string;
@@ -39,6 +52,9 @@ interface RuleActions {
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";
   append_note?: string;
+  extra_lines?: ExtraLine[];
+  replace_main_debit?: boolean;
+  replace_main_credit?: boolean;
 }
 
 interface PostingRule {
@@ -52,6 +68,27 @@ interface PostingRule {
   actions: RuleActions;
   applies_to: "transaction_entry" | "bank_quick_entry" | "both";
 }
+
+const MAX_EXTRA_LINES = 10;
+
+// Form representation of an extra line (string inputs for editor)
+type ExtraLineDraft = {
+  account_code: string;
+  side: "debit" | "credit";
+  split_type: "percent" | "fixed" | "remainder";
+  split_value: string;        // string in form, parsed on save
+  cost_center: "" | "general" | "agricultural" | "industrial";
+  description: string;
+};
+
+const emptyExtraLine = (): ExtraLineDraft => ({
+  account_code: "",
+  side: "debit",
+  split_type: "percent",
+  split_value: "",
+  cost_center: "",
+  description: "",
+});
 
 const emptyForm = {
   name: "",
@@ -75,10 +112,15 @@ const emptyForm = {
   cbs_code: "",
   cost_center: "" as "" | "general" | "agricultural" | "industrial",
   append_note: "",
+  // extra lines (Phase 2)
+  extra_lines: [] as ExtraLineDraft[],
+  replace_main_debit: false,
+  replace_main_credit: false,
 };
 
-// Action fields used for conflict detection (in display order).
-const ACTION_FIELD_LABELS: Record<keyof RuleActions, string> = {
+// Action fields used for conflict detection (string-valued only — extras/flags excluded).
+type ConflictField = "master_account_code" | "credit_account_code" | "project_code" | "cbs_code" | "cost_center" | "append_note";
+const ACTION_FIELD_LABELS: Record<ConflictField, string> = {
   master_account_code: "Cuenta de débito",
   credit_account_code: "Cuenta de crédito",
   project_code: "Proyecto",
@@ -129,7 +171,7 @@ export function PostingRulesManager() {
       append_note: form.append_note.trim() || undefined,
     };
 
-    const out: { rule: PostingRule; fields: { field: keyof RuleActions; theirs: string; mine: string }[] }[] = [];
+    const out: { rule: PostingRule; fields: { field: ConflictField; theirs: string; mine: string }[] }[] = [];
     for (const r of rules) {
       if (!r.is_active) continue;
       if (editing && r.id === editing.id) continue;
@@ -138,8 +180,8 @@ export function PostingRulesManager() {
       if ((r.entity_id ?? null) !== (formScopeEntity ?? null)) continue;
 
       const theirActions = r.actions || {};
-      const fieldHits: { field: keyof RuleActions; theirs: string; mine: string }[] = [];
-      (Object.keys(ACTION_FIELD_LABELS) as (keyof RuleActions)[]).forEach(field => {
+      const fieldHits: { field: ConflictField; theirs: string; mine: string }[] = [];
+      (Object.keys(ACTION_FIELD_LABELS) as ConflictField[]).forEach(field => {
         const theirs = theirActions[field];
         const mine = currentActions[field];
         if (theirs && mine && String(theirs) !== String(mine)) {
@@ -185,6 +227,16 @@ export function PostingRulesManager() {
       cbs_code: rule.actions?.cbs_code || "",
       cost_center: (rule.actions?.cost_center as any) || "",
       append_note: rule.actions?.append_note || "",
+      extra_lines: (rule.actions?.extra_lines || []).map((l): ExtraLineDraft => ({
+        account_code: l.account_code || "",
+        side: l.side === "credit" ? "credit" : "debit",
+        split_type: l.split?.type || "percent",
+        split_value: l.split?.type === "remainder" ? "" : String((l.split as any)?.value ?? ""),
+        cost_center: (l.cost_center as any) || "",
+        description: l.description || "",
+      })),
+      replace_main_debit: !!rule.actions?.replace_main_debit,
+      replace_main_credit: !!rule.actions?.replace_main_credit,
     });
     setDialogOpen(true);
   };
@@ -229,6 +281,56 @@ export function PostingRulesManager() {
     if (form.cbs_code) actions.cbs_code = form.cbs_code;
     if (form.cost_center) actions.cost_center = form.cost_center as any;
     if (form.append_note.trim()) actions.append_note = form.append_note.trim();
+
+    // Phase 2: validate + serialize extra lines
+    if (form.extra_lines.length > MAX_EXTRA_LINES) {
+      toast.error(`Máximo ${MAX_EXTRA_LINES} líneas adicionales por regla`);
+      return;
+    }
+    const extras: ExtraLine[] = [];
+    let pctDebit = 0, pctCredit = 0, remDebit = 0, remCredit = 0;
+    for (let i = 0; i < form.extra_lines.length; i++) {
+      const l = form.extra_lines[i];
+      if (!l.account_code) {
+        toast.error(`Línea adicional #${i + 1}: falta cuenta`);
+        return;
+      }
+      let split: ExtraSplit;
+      if (l.split_type === "remainder") {
+        split = { type: "remainder" };
+        if (l.side === "debit") remDebit++; else remCredit++;
+      } else {
+        const v = Number(l.split_value);
+        if (!Number.isFinite(v) || v <= 0) {
+          toast.error(`Línea adicional #${i + 1}: valor inválido`);
+          return;
+        }
+        if (l.split_type === "percent") {
+          if (v > 100) {
+            toast.error(`Línea adicional #${i + 1}: porcentaje > 100`);
+            return;
+          }
+          if (l.side === "debit") pctDebit += v; else pctCredit += v;
+          split = { type: "percent", value: v };
+        } else {
+          split = { type: "fixed", value: v };
+        }
+      }
+      extras.push({
+        account_code: l.account_code,
+        side: l.side,
+        split,
+        ...(l.cost_center ? { cost_center: l.cost_center } : {}),
+        ...(l.description.trim() ? { description: l.description.trim() } : {}),
+      });
+    }
+    if (pctDebit > 100) { toast.error(`Suma de % en débito = ${pctDebit} (máx 100)`); return; }
+    if (pctCredit > 100) { toast.error(`Suma de % en crédito = ${pctCredit} (máx 100)`); return; }
+    if (remDebit > 1) { toast.error("Solo se permite un 'Resto' por lado (débito)"); return; }
+    if (remCredit > 1) { toast.error("Solo se permite un 'Resto' por lado (crédito)"); return; }
+    if (extras.length > 0) actions.extra_lines = extras;
+    if (form.replace_main_debit && extras.some(e => e.side === "debit")) actions.replace_main_debit = true;
+    if (form.replace_main_credit && extras.some(e => e.side === "credit")) actions.replace_main_credit = true;
 
     if (Object.keys(conditions).length === 0) {
       toast.error("Define al menos una condición (sino la regla coincidiría con todo)");
@@ -318,8 +420,52 @@ export function PostingRulesManager() {
     if (a.cbs_code) parts.push(`CBS ${a.cbs_code}`);
     if (a.cost_center) parts.push(`CC ${a.cost_center}`);
     if (a.append_note) parts.push(`Nota`);
+    if (a.extra_lines?.length) parts.push(`+${a.extra_lines.length} líneas`);
     return parts.length ? parts.join(" · ") : "—";
   };
+
+  // Helpers for the extras editor
+  const addExtraLine = () => {
+    setForm(f => f.extra_lines.length >= MAX_EXTRA_LINES
+      ? f
+      : { ...f, extra_lines: [...f.extra_lines, emptyExtraLine()] });
+  };
+  const updateExtraLine = (idx: number, patch: Partial<ExtraLineDraft>) => {
+    setForm(f => ({
+      ...f,
+      extra_lines: f.extra_lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)),
+    }));
+  };
+  const removeExtraLine = (idx: number) => {
+    setForm(f => ({ ...f, extra_lines: f.extra_lines.filter((_, i) => i !== idx) }));
+  };
+
+  // Live validation summary for the extras editor
+  const extrasValidation = useMemo(() => {
+    let pctD = 0, pctC = 0, remD = 0, remC = 0, hasD = false, hasC = false;
+    const errors: string[] = [];
+    form.extra_lines.forEach((l, i) => {
+      if (l.side === "debit") hasD = true; else hasC = true;
+      if (l.split_type === "remainder") {
+        if (l.side === "debit") remD++; else remC++;
+      } else {
+        const v = Number(l.split_value);
+        if (l.split_value !== "" && (!Number.isFinite(v) || v <= 0)) {
+          errors.push(`Línea ${i + 1}: valor inválido`);
+        } else if (l.split_type === "percent") {
+          if (l.side === "debit") pctD += v || 0; else pctC += v || 0;
+        }
+      }
+      if (!l.account_code) errors.push(`Línea ${i + 1}: falta cuenta`);
+    });
+    if (pctD > 100) errors.push(`% débito = ${pctD} (máx 100)`);
+    if (pctC > 100) errors.push(`% crédito = ${pctC} (máx 100)`);
+    if (remD > 1) errors.push("Más de un 'Resto' en débito");
+    if (remC > 1) errors.push("Más de un 'Resto' en crédito");
+    return { pctD, pctC, hasD, hasC, errors };
+  }, [form.extra_lines]);
+
+
 
   const accountLabel = (code: string) => {
     const acct = accounts.find((a: any) => a.code === code);
@@ -628,6 +774,153 @@ export function PostingRulesManager() {
               </div>
             </div>
           </div>
+
+          {/* === Phase 2: extra journal lines === */}
+          <details className="rounded-md border p-3 mt-2">
+            <summary className="cursor-pointer font-semibold text-sm flex items-center gap-2">
+              Líneas adicionales (avanzado)
+              {form.extra_lines.length > 0 && (
+                <Badge variant="secondary">{form.extra_lines.length} línea{form.extra_lines.length === 1 ? "" : "s"}</Badge>
+              )}
+            </summary>
+            <div className="pt-3 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Agrega líneas extra al asiento generado. Útil para auto-divisiones de centro de costo (ej. 70% Agrícola / 30% Industrial), retenciones automáticas (ej. 1% ISR sobre B11) o recargos por proveedor. Las reglas se aplican al generar el asiento desde la transacción.
+              </p>
+
+              {form.extra_lines.length > 0 && (
+                <div className="rounded border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs w-[35%]">Cuenta</TableHead>
+                        <TableHead className="text-xs">Lado</TableHead>
+                        <TableHead className="text-xs">Tipo</TableHead>
+                        <TableHead className="text-xs w-[100px]">Valor</TableHead>
+                        <TableHead className="text-xs">CC</TableHead>
+                        <TableHead className="text-xs">Descripción</TableHead>
+                        <TableHead className="w-[40px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {form.extra_lines.map((l, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="p-1">
+                            <Select value={l.account_code}
+                              onValueChange={v => updateExtraLine(idx, { account_code: v })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                              <SelectContent className="bg-popover max-h-[280px]">
+                                {accounts.map((a: any) => (
+                                  <SelectItem key={a.code} value={a.code}>
+                                    {a.code} - {getDescription(a)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Select value={l.side}
+                              onValueChange={v => updateExtraLine(idx, { side: v as "debit" | "credit" })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="debit">Débito</SelectItem>
+                                <SelectItem value="credit">Crédito</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Select value={l.split_type}
+                              onValueChange={v => updateExtraLine(idx, { split_type: v as any, split_value: v === "remainder" ? "" : l.split_value })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="percent">% del monto</SelectItem>
+                                <SelectItem value="fixed">Monto fijo</SelectItem>
+                                <SelectItem value="remainder">Resto</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            {l.split_type === "remainder" ? (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            ) : (
+                              <Input type="number" className="h-8 text-xs"
+                                value={l.split_value}
+                                onChange={e => updateExtraLine(idx, { split_value: e.target.value })}
+                                placeholder={l.split_type === "percent" ? "70" : "0.00"} />
+                            )}
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Select value={l.cost_center || "__none__"}
+                              onValueChange={v => updateExtraLine(idx, { cost_center: v === "__none__" ? "" : (v as any) })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-popover">
+                                <SelectItem value="__none__">—</SelectItem>
+                                <SelectItem value="general">General</SelectItem>
+                                <SelectItem value="agricultural">Agrícola</SelectItem>
+                                <SelectItem value="industrial">Industrial</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Input className="h-8 text-xs" value={l.description}
+                              onChange={e => updateExtraLine(idx, { description: e.target.value })}
+                              placeholder="(opcional)" />
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => removeExtraLine(idx)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button type="button" size="sm" variant="outline"
+                  onClick={addExtraLine}
+                  disabled={form.extra_lines.length >= MAX_EXTRA_LINES}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Agregar línea
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={form.replace_main_debit}
+                    onCheckedChange={v => setForm(f => ({ ...f, replace_main_debit: v }))}
+                    disabled={!extrasValidation.hasD} />
+                  <Label className="text-xs">Reemplazar débito principal</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={form.replace_main_credit}
+                    onCheckedChange={v => setForm(f => ({ ...f, replace_main_credit: v }))}
+                    disabled={!extrasValidation.hasC} />
+                  <Label className="text-xs">Reemplazar crédito principal</Label>
+                </div>
+              </div>
+
+              {form.extra_lines.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Suma %: débito = <strong>{extrasValidation.pctD}%</strong> · crédito = <strong>{extrasValidation.pctC}%</strong>
+                </div>
+              )}
+
+              {extrasValidation.errors.length > 0 && (
+                <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive space-y-1">
+                  {extrasValidation.errors.map((err, i) => <div key={i}>· {err}</div>)}
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+                <div><strong>Ejemplos:</strong></div>
+                <div>· <em>División 70/30:</em> dos líneas débito a la misma cuenta, 70% Agrícola + 30% Industrial, marca "Reemplazar débito principal".</div>
+                <div>· <em>Retención 1% ISR:</em> una línea crédito a la cuenta 2170 con 1%. No reemplaza nada — se suma al asiento estándar y reduce el crédito al banco.</div>
+                <div>· <em>Recargo fijo:</em> una línea con tipo "Monto fijo".</div>
+              </div>
+            </div>
+          </details>
 
 
           {conflicts.length > 0 && (

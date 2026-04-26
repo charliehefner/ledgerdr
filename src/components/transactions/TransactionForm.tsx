@@ -454,7 +454,76 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     }
   };
 
+  // Posting-rules trigger fields. Changes to these fields re-evaluate rules.
+  const RULE_TRIGGER_FIELDS = new Set<keyof typeof form>([
+    'name', 'description', 'document', 'amount', 'currency', 'transaction_direction',
+  ]);
+
+  /**
+   * Evaluate posting rules against the given form snapshot and silently
+   * apply matching actions to empty fields. Stores matched rules and any
+   * credit-account override on refs for use at submit time.
+   */
+  const runPostingRules = async (snapshot: typeof form) => {
+    try {
+      const rules = await evaluatePostingRules(selectedEntityId || null, {
+        vendor: snapshot.name || null,
+        description: snapshot.description || null,
+        document: snapshot.document || null,
+        amount: snapshot.amount ? parseFloat(snapshot.amount) : null,
+        currency: snapshot.currency || null,
+        transaction_type: snapshot.transaction_direction || null,
+        context: 'transaction_entry',
+      });
+      if (!rules.length) return;
+      const merged = mergeRuleActions(rules);
+      const applied: Record<string, unknown> = {};
+
+      // Apply only to empty fields. Manual user edits always win.
+      setForm(prev => {
+        const upd = { ...prev };
+        if (merged.master_account_code && !prev.master_acct_code) {
+          upd.master_acct_code = merged.master_account_code;
+          applied.master_acct_code = merged.master_account_code;
+        }
+        if (merged.project_code && !prev.project_code) {
+          upd.project_code = merged.project_code;
+          applied.project_code = merged.project_code;
+        }
+        if (merged.cbs_code && !prev.cbs_code) {
+          upd.cbs_code = merged.cbs_code;
+          applied.cbs_code = merged.cbs_code;
+        }
+        if (merged.cost_center && prev.cost_center === 'general') {
+          // Only overwrite the default; user-changed cost centers are respected.
+          upd.cost_center = merged.cost_center;
+          applied.cost_center = merged.cost_center;
+        }
+        if (merged.append_note) {
+          // Only append if note isn't already present, to avoid duplicates on re-eval.
+          if (!prev.comments?.includes(merged.append_note)) {
+            upd.comments = (prev.comments ? prev.comments + ' · ' : '') + merged.append_note;
+            applied.append_note = merged.append_note;
+          }
+        }
+        return upd;
+      });
+
+      // Credit-account override: stored on a ref, persisted post-insert.
+      if (merged.credit_account_code) {
+        pendingCreditCodeRef.current = merged.credit_account_code;
+        applied.manual_credit_account_code = merged.credit_account_code;
+      }
+
+      matchedPostingRulesRef.current = rules;
+      ruleAppliedFieldsRef.current = applied;
+    } catch (e) {
+      console.warn('[postingRules] eval failed (non-blocking):', e);
+    }
+  };
+
   const updateField = <K extends keyof typeof form>(field: K, value: typeof form[K]) => {
+    let nextSnapshot: typeof form | null = null;
     setForm(prev => {
       const updated = { ...prev, [field]: value };
 
@@ -477,7 +546,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           updated.rnc = matchingTx.rnc;
         }
 
-        // Auto-fill from vendor rules
+        // Auto-fill from legacy vendor rules
         const upperName = value.trim().toUpperCase();
         const rule = vendorRules.find(
           (r: any) => upperName.includes(r.vendor_name) || r.vendor_name.includes(upperName)
@@ -489,9 +558,15 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           if (!prev.description && rule.description_template) updated.description = rule.description_template;
         }
       }
-      
+
+      nextSnapshot = updated;
       return updated;
     });
+
+    // Re-evaluate posting rules when a trigger field changed.
+    if (RULE_TRIGGER_FIELDS.has(field) && nextSnapshot) {
+      void runPostingRules(nextSnapshot);
+    }
   };
 
   const handleOcrResult = async (result: OcrResult) => {

@@ -45,6 +45,13 @@ interface ExtraLine {
   description?: string;
 }
 
+interface AmortizeSpec {
+  months: number;
+  start_date: string;
+  expense_account_code?: string;
+  prepaid_account_code?: string;
+}
+
 interface RuleActions {
   master_account_code?: string;
   credit_account_code?: string;
@@ -55,6 +62,7 @@ interface RuleActions {
   extra_lines?: ExtraLine[];
   replace_main_debit?: boolean;
   replace_main_credit?: boolean;
+  amortize?: AmortizeSpec;
 }
 
 interface PostingRule {

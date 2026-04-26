@@ -1,75 +1,71 @@
-# Phase 1: Posting Rules Engine (Silent Auto-Apply)
+# Posting Rules — Phase 1.5: Credit Account + Conflict Detection
 
-## Principle
-Rules fill fields silently on the transaction form, exactly as if the user had typed them. The person entering already visually confirms every field before saving, so no "suggested by rule" chips, tooltips, or confirmation prompts are added. Accountants verify correctness at the Journal stage, where rule provenance is available for audit.
+## A. Optional credit account on rule actions
 
-## Scope
+**Why:** ~95% of transactions auto-resolve the credit side correctly (bank for cash purchases, AP for B01 credit purchases, AR for sales). But for **reclassifications**, **specific accruals**, or **non-standard liability postings**, accountants need to direct *both* sides via a rule.
 
-### 1. Database — new migration
-- **`posting_rules`** table
-  - `id`, `entity_id` (nullable = global), `name`, `priority` (int, lower = first), `is_active`
-  - `conditions jsonb` — supports: `vendor_regex`, `description_regex`, `ncf_prefix` (e.g. B01, B11, B14), `amount_min`, `amount_max`, `currency`, `transaction_type` (purchase/sale/transfer)
-  - `actions jsonb` — supports: `master_account_code`, `project_id`, `cost_center`, `cbs_code`, `append_note`
-  - `created_by`, `created_at`, `updated_at`
-  - RLS: read for Accountant+/Admin/Mgmt within entity scope; write for Admin/Accountant only
-- **`posting_rule_applications`** audit table
-  - `id`, `transaction_id`, `rule_id`, `applied_fields jsonb`, `applied_at`
-  - Written silently by the form when a rule fills a field
-- **`evaluate_posting_rules(p_entity_id, p_payload jsonb)` RPC**
-  - Returns ordered list of `{ rule_id, actions }` matching the payload
-  - Stable, security definer, scoped by entity_id
+**Migration**
+- New column `transactions.manual_credit_account_code TEXT NULL` — set by the rule engine at entry time, honored by `generate-journals`.
+- `actions` JSONB gains an optional `credit_account_code` key (no schema change — JSONB).
+- `evaluate_posting_rules` RPC: pass `credit_account_code` through in returned actions.
 
-### 2. Settings UI — `src/components/settings/PostingRulesManager.tsx` (new)
-- List rules grouped by entity (or "Global")
-- Create/edit dialog with condition + action builders
-- Drag-to-reorder priority
-- "Test against recent transactions" panel — paste or pick a recent transaction, see which rules match
-- Toggle active/inactive
-- Visible only to Admin and Accountant roles
+**Manager UI — `PostingRulesManager.tsx`**
+- Rename "Cuenta maestra" → **"Cuenta de débito"**.
+- Add **"Cuenta de crédito (opcional)"** input below it.
+- Help text: *"Déjelo vacío para usar la cuenta automática (banco / cuentas por pagar / cuentas por cobrar según el tipo de transacción)."*
 
-### 3. Client evaluator — `src/lib/postingRules.ts` (new)
-- Thin wrapper around the RPC
-- Called on blur/change of trigger fields: vendor, description, NCF/document, amount, currency
-- Returns merged actions (highest-priority rule wins per field)
+**Client wrapper — `src/lib/postingRules.ts`**
+- Add `credit_account_code?: string` to `PostingRuleAction`.
+- Update `mergeRuleActions` to merge it (first-match-wins, like other fields).
 
-### 4. Transaction form integration — `src/components/transactions/TransactionForm.tsx`
-- On relevant field change, call evaluator
-- Apply returned actions only to fields the user has not manually edited (track `dirtyFields`)
-- No new visible UI elements
-- Log applied rule IDs to `posting_rule_applications` on successful submit
+**Transaction form — `src/components/transactions/TransactionForm.tsx`**
+- **No new visible field.** When a matching rule provides `credit_account_code`, store it silently into `manual_credit_account_code` on the transaction row. The data-entry person never sees this — it's an accountant-side directive.
 
-### 5. Quick Entry refactor — `src/components/accounting/QuickEntryDialog.tsx`
-- Remove hardcoded `AUTO_RULES` regex constant
-- Call the same evaluator
-- Seed migration inserts the four existing hardcoded rules (COMISIÓN→6520, IMPUESTO LEY→6530, ITBIS→1650, INTERÉS→6510) as global `posting_rules` rows so behavior is preserved
+**Edge function — `supabase/functions/generate-journals/index.ts`**
+- When generating journal lines, if `transaction.manual_credit_account_code` is set:
+  - Validate the account exists in `chart_of_accounts`.
+  - If valid → use it as the credit side instead of the auto-resolved bank/AP/AR.
+  - If missing → fall back to auto and write a warning to `error_logs` (don't block the journal).
 
-### 6. i18n
-- Add Spanish/English keys only for Settings → Posting Rules manager (table headers, condition/action labels, buttons). No new keys on the transaction form since no new UI is added there.
+## B. Conflict detection — design time, not entry time
 
-## Out of scope for Phase 1
-- Generating extra journal lines from rules (Phase 2)
-- Rule execution inside `generate-journals` edge function (Phase 2)
-- "Why this account?" tooltip on Journal view (Phase 3 — uses the audit table written in Phase 1)
+**Why not at entry time:** the user already chose silent auto-fill specifically to keep entry friction-free. Data-entry staff aren't accountants and shouldn't be asked to arbitrate rule conflicts. Real conflicts are a *rule-design bug*, best caught where the accountant builds rules.
 
-## Limitations & guardrails
-- **Manual override always wins.** Once a user edits a field, rules cannot retouch it within that form session.
-- **No bypass of validation.** Rules can only set values that the user could have typed; all existing form validations still run.
-- **No silent account creation.** Rule actions referencing a missing account code are skipped and logged, not auto-created.
-- **Performance.** Evaluator is called on field blur/change, not on every keystroke. RPC is `STABLE` and indexed by `entity_id` + `priority`.
-- **Conflict between rules.** Resolved strictly by `priority`, then by `created_at`. Documented in the manager UI.
+**Manager UI — `PostingRulesManager.tsx`**
+- On save (create or edit), run a client-side conflict check:
+  - Find all other *active* rules at the **same `priority`** with **overlapping `entity_id` scope** (same entity, or both global).
+  - For each action field (`master_account_code`, `credit_account_code`, `project_code`, `cbs_code`, `cost_center`), if two rules set the same field to different values → flag.
+- Display an inline warning banner before save:
+  - Lists the conflicting rule(s) by name and the colliding field(s).
+  - Two actions: **"Continuar de todas formas"** (soft override — save) or **"Cambiar prioridad"** (focus the priority field with a suggested gap).
+- Soft warning, never a hard block — the accountant has final authority.
+
+**No changes** to `TransactionForm` or `QuickEntryDialog`. Entry-time silent auto-apply behavior is unchanged.
+
+## C. Phase 3 preview (not in this round)
+
+To set expectations for the next round:
+- Journal view will gain a **"⚠ Multiple rules matched"** badge per line and a **"Why this account?"** tooltip reading from `posting_rule_applications`.
+- That's where the accountant gets full conflict visibility during journal review and posting — the right moment, the right person.
 
 ## Files
-- `supabase/migrations/<timestamp>_posting_rules.sql` *(new)*
-- `src/components/settings/PostingRulesManager.tsx` *(new)*
-- `src/lib/postingRules.ts` *(new)*
-- `src/components/transactions/TransactionForm.tsx` *(modify)*
-- `src/components/accounting/QuickEntryDialog.tsx` *(modify — remove hardcoded regex)*
-- `src/pages/Settings.tsx` *(modify — add Posting Rules tab)*
-- `src/i18n/es.ts`, `src/i18n/en.ts` *(modify — Settings keys only)*
+- `supabase/migrations/<ts>_posting_rules_credit_overrides.sql` *(new — `manual_credit_account_code` column + verify RPC passes credit code through)*
+- `src/lib/postingRules.ts` *(modify — add `credit_account_code` to interface and merge logic)*
+- `src/components/settings/PostingRulesManager.tsx` *(modify — credit account input + conflict detector)*
+- `src/components/transactions/TransactionForm.tsx` *(modify — silently persist `manual_credit_account_code` when rule provides it)*
+- `supabase/functions/generate-journals/index.ts` *(modify — honor `manual_credit_account_code` with validation + fallback)*
+- `src/i18n/es.ts`, `src/i18n/en.ts` *(modify — new manager labels only)*
 
-## Validation after build
-1. Create a rule: vendor matches `/EDESUR/i` → master account `6110` (Electricidad).
-2. Enter a new purchase from EDESUR → account field auto-fills to 6110, no badge shown.
-3. Manually change account to 6120 → save. Verify the manual choice persisted.
-4. Open Journal generated from this transaction → verify it posted to 6120 (manual override respected).
-5. Query `posting_rule_applications` → verify the rule application was logged even though it was overridden (useful for "rule fired but user changed it" analytics later).
+## Validation
+1. Create rule "Reclasificación EDESUR mal clasificado" → debit=`6110`, credit=`6190`. Save.
+2. Enter a purchase that matches → check the journal: debit `6110`, credit `6190` (not the bank).
+3. Enter a normal EDESUR purchase paid from bank → standard rule (no credit override) applies → debit `6110`, credit = bank account. No regression.
+4. Create a second rule at the **same priority** that also sets `master_account_code` for an overlapping vendor pattern → manager shows conflict warning naming both rules and field.
+5. Lower the new rule's priority → warning disappears, save proceeds clean.
+6. Set `credit_account_code` to a non-existent code → enter matching transaction → journal posts with the auto credit (fallback) and an entry appears in `error_logs`.
+
+## Limitations
+- Credit override is only visible in the **journal**, not the transaction list. By design — accountants work from journals.
+- Conflict detection is heuristic: it catches **same-priority, same-field** collisions. It cannot predict overlapping regex matches across *different* priorities — priority is the documented tiebreaker for that case.
+- We deliberately do **not** add a credit-account field on the entry form. Only rules (or an accountant editing the journal directly in Phase 3) can set it.
+- Manual user override on the **debit** account still wins over rules in the entry form, exactly as today.

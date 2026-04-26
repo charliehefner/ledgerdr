@@ -4950,6 +4950,7 @@ export type Database = {
           itbis_override_reason: string | null
           itbis_retenido: number | null
           legacy_id: number | null
+          manual_credit_account_code: string | null
           master_acct_code: string | null
           name: string | null
           pay_method: string | null
@@ -4993,6 +4994,7 @@ export type Database = {
           itbis_override_reason?: string | null
           itbis_retenido?: number | null
           legacy_id?: number | null
+          manual_credit_account_code?: string | null
           master_acct_code?: string | null
           name?: string | null
           pay_method?: string | null
@@ -5036,6 +5038,7 @@ export type Database = {
           itbis_override_reason?: string | null
           itbis_retenido?: number | null
           legacy_id?: number | null
+          manual_credit_account_code?: string | null
           master_acct_code?: string | null
           name?: string | null
           pay_method?: string | null

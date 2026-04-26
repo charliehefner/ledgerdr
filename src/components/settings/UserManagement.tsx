@@ -248,6 +248,10 @@ export function UserManagement() {
     const entityId = editScopeType === "entity" ? editEntityId : null;
     const entityGroupId = editScopeType === "group" ? editGroupId : null;
 
+    if (editScopeType === "global" && requiresScopedAccess(editRole)) {
+      toast.error("Este rol debe asignarse a una entidad o grupo");
+      return;
+    }
     if (editScopeType === "entity" && !entityId) {
       toast.error("Seleccione una entidad");
       return;

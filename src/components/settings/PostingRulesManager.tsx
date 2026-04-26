@@ -115,11 +115,13 @@ export function PostingRulesManager() {
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm });
+    setOverrideConflicts(false);
     setDialogOpen(true);
   };
 
   const openEdit = (rule: PostingRule) => {
     setEditing(rule);
+    setOverrideConflicts(false);
     setForm({
       name: rule.name,
       description: rule.description || "",

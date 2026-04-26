@@ -239,6 +239,15 @@ export function PostingRulesManager() {
       return;
     }
 
+    // Soft conflict gate — block first attempt, allow override on second click.
+    if (conflicts.length > 0 && !overrideConflicts) {
+      toast.warning(
+        `Conflicto con ${conflicts.length} regla(s) activa(s) en la misma prioridad. Revise el aviso o presione Guardar de nuevo para continuar.`
+      );
+      setOverrideConflicts(true);
+      return;
+    }
+
     const payload = {
       name: form.name.trim(),
       description: form.description.trim() || null,

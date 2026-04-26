@@ -61,6 +61,114 @@ function resolvePayAccountId(
   return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2: posting-rule extra lines
+// ─────────────────────────────────────────────────────────────────────────────
+type ExtraSplit =
+  | { type: "percent"; value: number }
+  | { type: "fixed"; value: number }
+  | { type: "remainder" };
+
+interface ExtraLineSpec {
+  account_code: string;
+  side: "debit" | "credit";
+  split: ExtraSplit;
+  cost_center?: "general" | "agricultural" | "industrial";
+  description?: string;
+}
+
+interface ResolvedExtraLine {
+  account_id: string;
+  side: "debit" | "credit";
+  amount: number;            // > 0
+  description: string;
+  rule_id: string;
+  rule_name: string;
+}
+
+/**
+ * Resolve all extra_lines from matched rules into concrete amounts + accounts.
+ * Returns null if any validation fails (caller falls back to standard journal).
+ * Validation errors are pushed into `errors` so the caller can log them.
+ */
+function resolveExtraLines(
+  matchedRules: Array<{ rule_id: string; rule_name: string; actions: any }>,
+  netAmount: number,
+  acctByCode: Map<string, string>,
+  errors: string[],
+): {
+  debit: ResolvedExtraLine[];
+  credit: ResolvedExtraLine[];
+  replaceMainDebit: boolean;
+  replaceMainCredit: boolean;
+} {
+  const out = { debit: [] as ResolvedExtraLine[], credit: [] as ResolvedExtraLine[], replaceMainDebit: false, replaceMainCredit: false };
+  const MAX = 10;
+  let total = 0;
+
+  for (const rule of matchedRules) {
+    const a = rule.actions || {};
+    const lines: ExtraLineSpec[] = Array.isArray(a.extra_lines) ? a.extra_lines : [];
+    if (lines.length === 0) continue;
+    if (a.replace_main_debit) out.replaceMainDebit = true;
+    if (a.replace_main_credit) out.replaceMainCredit = true;
+
+    // Group this rule's lines by side for percent/remainder math
+    const sums = { debit: { pct: 0, fixed: 0, hasRemainder: false }, credit: { pct: 0, fixed: 0, hasRemainder: false } };
+    for (const l of lines) {
+      if (l.split?.type === "percent") sums[l.side].pct += Number(l.split.value) || 0;
+      else if (l.split?.type === "fixed") sums[l.side].fixed += Number(l.split.value) || 0;
+      else if (l.split?.type === "remainder") sums[l.side].hasRemainder = true;
+    }
+    if (sums.debit.pct > 100 || sums.credit.pct > 100) {
+      errors.push(`Regla "${rule.rule_name}": suma de % > 100 en un lado; se omiten líneas extra`);
+      continue;
+    }
+
+    // Resolve each line to an amount
+    for (const l of lines) {
+      total++;
+      if (total > MAX) {
+        errors.push(`Regla "${rule.rule_name}": >${MAX} líneas extra; se omiten las restantes`);
+        break;
+      }
+      if (!l.account_code || (l.side !== "debit" && l.side !== "credit") || !l.split?.type) {
+        errors.push(`Regla "${rule.rule_name}": forma de línea inválida`);
+        continue;
+      }
+      const accountId = acctByCode.get(l.account_code);
+      if (!accountId) {
+        errors.push(`Regla "${rule.rule_name}": cuenta "${l.account_code}" no existe o no permite asientos`);
+        continue;
+      }
+      let amount = 0;
+      if (l.split.type === "percent") {
+        amount = (netAmount * Number(l.split.value)) / 100;
+      } else if (l.split.type === "fixed") {
+        amount = Number(l.split.value);
+      } else if (l.split.type === "remainder") {
+        const usedPctShare = (netAmount * sums[l.side].pct) / 100;
+        amount = netAmount - usedPctShare - sums[l.side].fixed;
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        errors.push(`Regla "${rule.rule_name}": monto calculado inválido para cuenta ${l.account_code}`);
+        continue;
+      }
+      const cc = l.cost_center ? ` [${l.cost_center === "agricultural" ? "Agrícola" : l.cost_center === "industrial" ? "Industrial" : "General"}]` : "";
+      const desc = (l.description || rule.rule_name) + cc;
+      out[l.side].push({
+        account_id: accountId,
+        side: l.side,
+        amount: Math.round(amount * 100) / 100,
+        description: desc,
+        rule_id: rule.rule_id,
+        rule_name: rule.rule_name,
+      });
+    }
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

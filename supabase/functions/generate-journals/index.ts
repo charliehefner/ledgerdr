@@ -300,6 +300,7 @@ Deno.serve(async (req) => {
       db.from("transactions")
         .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate, entity_id, manual_credit_account_code")
         .eq("is_void", false)
+        .in("approval_status", ["auto_approved", "approved"])
         .order("transaction_date", { ascending: true })
         .limit(10000),
       db.from("intercompany_account_config").select("group_id, receivable_account_id, payable_account_id"),

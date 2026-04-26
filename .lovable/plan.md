@@ -1,29 +1,59 @@
-## Problem
 
-The Cronograma grid wraps every cell edited by anyone *other than* `cedenojord` or the `instructor` user (hardcoded IDs in `CronogramaGrid.tsx` lines 49–50) with a solid orange ring + orange dot indicator. Iramaia is not in that allowlist, so **100% of her entries get this treatment**, making her own text appear cramped against the ring and visually obscured by the corner dot — which matches the photo exactly.
+## Goal
+Bring `calculate_prestaciones` RPC fully in line with the Dominican Republic Labor Code (Arts. 80 & 177) so all employees — not just Jose Luis — get the legally correct settlement.
 
-This is by design (an audit trail of "who edited what"), but the visual treatment is too aggressive for legitimate editors and degrades readability of the text they just typed.
+## Findings (current vs. law)
 
-## Proposed fix (3 small changes to `src/components/cronograma/CronogramaGrid.tsx`)
+| Concept | Current code | Law / Ministry | Fix needed? |
+|---|---|---|---|
+| Preaviso (Art. 76) | 7 / 14 / 28 days by tenure band | Same | ✅ correct |
+| **Cesantía (Art. 80)** | Counts only **complete years** × 21 or 23 days. Partial-year band only applied when total service < 1 year. | Complete years × 21/23 **PLUS** an extra band for the **last incomplete year** (6 days if 3–6 months, 13 days if 6+ months) | ❌ **Fix** |
+| **Vacation pay (Art. 177)** | Uses **full-history weighted average** salary | Must use **average ordinary salary of last 12 months** (or period worked, if shorter) | ❌ **Fix** |
+| Vacation entitlement days (Art. 177) | 14 days < 5 yrs, 18 days ≥ 5 yrs (with 95% rounding) | Same | ✅ correct |
+| Regalía (Law 16-92) | Sum of monthly salary in current calendar year ÷ 12 | Same | ✅ correct |
+| Loans / manual adj. | Pass-through | n/a | ✅ correct |
 
-### 1. Add Iramaia (and any future "trusted editor") to the allowlist
-Promote the hardcoded IDs into a list and add Iramaia's user_id so her edits don't get the orange ring at all (treated like cedenojord's edits — the schedule owner). I'll need her user_id; I can pull it from the database or you can confirm her username.
+## Changes
 
-### 2. Soften the visual when the ring IS shown
-Even for non-allowlisted users, improve text legibility:
-- Change `ring-2 ring-inset` → `ring-1` with a small inner padding so the text isn't flush against the colored border
-- Move the corner dot from `top-0 right-0` to `-top-1 -right-1` (outside the cell) so it never overlaps text
-- Slightly lighten the ring color (`ring-orange-300` instead of `ring-orange-400`) so it's an indicator, not a frame
+### 1. Cesantía — add partial-year tail (Art. 80)
+Replace lines 158–171 of the RPC with logic that:
+- Computes complete years (`v_service_years`) AND the **remainder months in the last partial year**.
+- Adds the daily band for the remainder on top of the years calculation:
+  - remainder ≥ 6 months → +13 days
+  - 3 ≤ remainder < 6 months → +6 days
+  - < 3 months → +0
+- Day rate per complete year stays 21 (1–4 yrs) or 23 (≥ 5 yrs).
 
-### 3. (Optional) Make the highlight respect a setting
-Add a small `localStorage` toggle ("Show edit indicators") so each user can hide the orange rings on their own machine without affecting others. Useful since the indicators are mainly meaningful to the schedule owner reviewing changes — not to the person doing the editing.
+Verification target — Jose Luis Cespedes (1 yr 6 mo, daily ≈ RD$1,129.09):
+- Days: 21 + 13 = **34**
+- Amount: 34 × 1,129.09 ≈ **RD$38,389** (matches Ministry document)
 
-## Files to edit
-- `src/components/cronograma/CronogramaGrid.tsx` — allowlist + ring/dot styling (lines 48–51, 1023–1028, 1119–1162)
+### 2. Vacation salary basis — last 12 months only (Art. 177)
+Add a second weighted-average calculation that restricts segments to the window `GREATEST(date_of_hire, p_termination_date - INTERVAL '12 months')` … `p_termination_date`.
 
-## What I need from you
-- Confirm Iramaia should be in the "trusted editor" list (i.e. her edits should NOT be flagged) — or if her edits should still be flagged but just rendered more legibly (option 2 only).
-- If yes to allowlist, I'll look up her user_id from the database (no need for you to provide it).
+- Introduce `v_avg_monthly_salary_12m` and `v_daily_salary_vacation`.
+- Use `v_daily_salary_vacation` **only** for `v_vacation_amount`.
+- Keep `v_daily_salary` (full-history weighted average) for cesantía / preaviso, which is the standard practice for severance basis.
+
+### 3. Response payload (transparency)
+Extend `salary_basis` JSON with:
+- `average_monthly_12m`
+- `daily_salary_vacation`
+- `cesantia_breakdown`: `{ complete_years, remainder_months, days_from_years, days_from_remainder }`
+
+This lets the UI explain the calculation if questioned by an employee or the Ministry.
+
+### 4. UI — `PrestacionesCalculatorDialog.tsx`
+- Show the new vacation daily-rate line (small caption under the vacation row): "Base vacacional: promedio últimos 12 meses".
+- Show cesantía breakdown ("21 d × 1 año + 13 d (6 meses)") when partial-year band applies.
+- No behavioral changes to overrides — user can still manually adjust pending vacation days.
+
+## Implementation steps
+1. **Migration** — `CREATE OR REPLACE FUNCTION public.calculate_prestaciones(...)` with the two changes above. Signature unchanged.
+2. **UI tweak** in `src/components/hr/PrestacionesCalculatorDialog.tsx` to render the new fields.
+3. **Smoke check** by re-running the Jose Luis scenario from the calculator and confirming the total lands at ≈ RD$87,454 (matching the Ministry PDF).
 
 ## Out of scope
-- This is purely a styling/allowlist change. The audit trail in the database (`updated_by`, `updated_at`) is unaffected — the Audit Log will still show every edit she made.
+- Recomputing/restating any previously settled employees. Fix is forward-looking — applies to all future calculations regardless of employee.
+- No schema changes (function body only).
+- No change to preaviso, regalía, loan, or override logic.

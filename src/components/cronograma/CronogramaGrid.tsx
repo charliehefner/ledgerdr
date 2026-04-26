@@ -187,6 +187,15 @@ export function CronogramaGrid() {
   const [additionalRows, setAdditionalRows] = useState<WorkerRow[]>([]);
   const [copiedTask, setCopiedTask] = useState<string | null>(null);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showIndicators, setShowIndicators] = useState<boolean>(() => getShowIndicatorsPref());
+
+  const toggleIndicators = useCallback(() => {
+    setShowIndicators(prev => {
+      const next = !prev;
+      try { localStorage.setItem(HIGHLIGHT_PREF_KEY, String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
   
   // Debounce timer ref for mutations
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

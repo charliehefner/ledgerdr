@@ -24,6 +24,13 @@ export interface PostingRulePayload {
 
 export interface PostingRuleAction {
   master_account_code?: string;
+  /**
+   * Optional explicit credit account. When set, generate-journals will use it
+   * instead of the auto-resolved bank/AP/AR account on the credit side.
+   * Useful for reclassifications and non-standard liability postings.
+   * Leave empty for normal flow (~95% of cases).
+   */
+  credit_account_code?: string;
   project_code?: string;
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";
@@ -76,6 +83,8 @@ export function mergeRuleActions(rules: MatchedRule[]): PostingRuleAction {
     const a = rule.actions || {};
     if (a.master_account_code && !merged.master_account_code)
       merged.master_account_code = a.master_account_code;
+    if (a.credit_account_code && !merged.credit_account_code)
+      merged.credit_account_code = a.credit_account_code;
     if (a.project_code && !merged.project_code) merged.project_code = a.project_code;
     if (a.cbs_code && !merged.cbs_code) merged.cbs_code = a.cbs_code;
     if (a.cost_center && !merged.cost_center) merged.cost_center = a.cost_center;

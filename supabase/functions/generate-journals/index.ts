@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       db.from("bank_accounts").select("id, chart_account_id, currency, entity_id, is_shared"),
       db.from("journals").select("transaction_source_id").not("transaction_source_id", "is", null).is("deleted_at", null).limit(10000),
       db.from("transactions")
-        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate, entity_id")
+        .select("id, transaction_date, description, amount, itbis, itbis_retenido, isr_retenido, master_acct_code, account_id, pay_method, cost_center, transaction_direction, destination_acct_code, destination_amount, currency, exchange_rate, entity_id, manual_credit_account_code")
         .eq("is_void", false)
         .order("transaction_date", { ascending: true })
         .limit(10000),
@@ -234,7 +234,21 @@ Deno.serve(async (req) => {
         // Prefer UUID FK (account_id) over legacy text code lookup
         const mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
         // Finding 1 fix: resolve pay_method via legacy mapping OR bank_accounts UUID
-        const payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
+        let payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
+
+        // Posting-rule override: when a rule set manual_credit_account_code,
+        // use that account instead of the auto-resolved bank/AP/AR account.
+        // (For purchases this overrides the credit side; for sales the debit/cash side.)
+        const manualCreditCode: string | null = (txn as any).manual_credit_account_code || null;
+        if (manualCreditCode) {
+          const overrideId = acctByCode.get(manualCreditCode);
+          if (overrideId) {
+            payAccountId = overrideId;
+          } else {
+            // Don't block — fall back silently to auto, log to console for ops visibility.
+            console.warn(`[generate-journals] manual_credit_account_code "${manualCreditCode}" not found in chart_of_accounts (txn ${txn.id}); using auto.`);
+          }
+        }
 
         if (!mainAccountId) { skipped.push(`${label}: cuenta "${txn.master_acct_code}" no encontrada (account_id nulo)`); continue; }
         if (!payAccountId) { skipped.push(`${label}: método pago "${txn.pay_method}" sin mapeo`); continue; }

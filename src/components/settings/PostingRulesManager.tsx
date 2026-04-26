@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Power, PowerOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, PowerOff, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAccounts, fetchProjects, fetchCbsCodes } from "@/lib/api";
 import { getDescription } from "@/lib/getDescription";
@@ -34,6 +34,7 @@ interface RuleConditions {
 
 interface RuleActions {
   master_account_code?: string;
+  credit_account_code?: string;
   project_code?: string;
   cbs_code?: string;
   cost_center?: "general" | "agricultural" | "industrial";
@@ -69,10 +70,21 @@ const emptyForm = {
   transaction_type: [] as string[],
   // actions
   master_account_code: "",
+  credit_account_code: "",
   project_code: "",
   cbs_code: "",
   cost_center: "" as "" | "general" | "agricultural" | "industrial",
   append_note: "",
+};
+
+// Action fields used for conflict detection (in display order).
+const ACTION_FIELD_LABELS: Record<keyof RuleActions, string> = {
+  master_account_code: "Cuenta de débito",
+  credit_account_code: "Cuenta de crédito",
+  project_code: "Proyecto",
+  cbs_code: "CBS",
+  cost_center: "Centro de costo",
+  append_note: "Nota",
 };
 
 export function PostingRulesManager() {
@@ -81,6 +93,7 @@ export function PostingRulesManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PostingRule | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [overrideConflicts, setOverrideConflicts] = useState(false);
 
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ["postingRules"],
@@ -99,14 +112,59 @@ export function PostingRulesManager() {
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
   const { data: cbsCodes = [] } = useQuery({ queryKey: ["cbsCodes"], queryFn: fetchCbsCodes });
 
+  /**
+   * Conflict detection: another active rule at the same priority with overlapping
+   * scope (same entity, or both global) that sets the SAME action field to a
+   * DIFFERENT value than the current form. Soft warning only — accountant can override.
+   */
+  const conflicts = useMemo(() => {
+    if (!dialogOpen) return [];
+    const formScopeEntity = form.scope === "entity" ? selectedEntityId : null;
+    const currentActions: RuleActions = {
+      master_account_code: form.master_account_code || undefined,
+      credit_account_code: form.credit_account_code || undefined,
+      project_code: form.project_code || undefined,
+      cbs_code: form.cbs_code || undefined,
+      cost_center: (form.cost_center as any) || undefined,
+      append_note: form.append_note.trim() || undefined,
+    };
+
+    const out: { rule: PostingRule; fields: { field: keyof RuleActions; theirs: string; mine: string }[] }[] = [];
+    for (const r of rules) {
+      if (!r.is_active) continue;
+      if (editing && r.id === editing.id) continue;
+      if (r.priority !== Number(form.priority)) continue;
+      // Scope overlap: identical entity (both null = both global)
+      if ((r.entity_id ?? null) !== (formScopeEntity ?? null)) continue;
+
+      const theirActions = r.actions || {};
+      const fieldHits: { field: keyof RuleActions; theirs: string; mine: string }[] = [];
+      (Object.keys(ACTION_FIELD_LABELS) as (keyof RuleActions)[]).forEach(field => {
+        const theirs = theirActions[field];
+        const mine = currentActions[field];
+        if (theirs && mine && String(theirs) !== String(mine)) {
+          fieldHits.push({ field, theirs: String(theirs), mine: String(mine) });
+        }
+      });
+      if (fieldHits.length) out.push({ rule: r, fields: fieldHits });
+    }
+    return out;
+  }, [
+    dialogOpen, rules, editing, form.priority, form.scope, selectedEntityId,
+    form.master_account_code, form.credit_account_code, form.project_code,
+    form.cbs_code, form.cost_center, form.append_note,
+  ]);
+
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm });
+    setOverrideConflicts(false);
     setDialogOpen(true);
   };
 
   const openEdit = (rule: PostingRule) => {
     setEditing(rule);
+    setOverrideConflicts(false);
     setForm({
       name: rule.name,
       description: rule.description || "",
@@ -122,6 +180,7 @@ export function PostingRulesManager() {
       currency: rule.conditions?.currency || [],
       transaction_type: rule.conditions?.transaction_type || [],
       master_account_code: rule.actions?.master_account_code || "",
+      credit_account_code: rule.actions?.credit_account_code || "",
       project_code: rule.actions?.project_code || "",
       cbs_code: rule.actions?.cbs_code || "",
       cost_center: (rule.actions?.cost_center as any) || "",
@@ -165,6 +224,7 @@ export function PostingRulesManager() {
 
     const actions: RuleActions = {};
     if (form.master_account_code) actions.master_account_code = form.master_account_code;
+    if (form.credit_account_code) actions.credit_account_code = form.credit_account_code;
     if (form.project_code) actions.project_code = form.project_code;
     if (form.cbs_code) actions.cbs_code = form.cbs_code;
     if (form.cost_center) actions.cost_center = form.cost_center as any;
@@ -176,6 +236,15 @@ export function PostingRulesManager() {
     }
     if (Object.keys(actions).length === 0) {
       toast.error("Define al menos una acción (sino la regla no haría nada)");
+      return;
+    }
+
+    // Soft conflict gate — block first attempt, allow override on second click.
+    if (conflicts.length > 0 && !overrideConflicts) {
+      toast.warning(
+        `Conflicto con ${conflicts.length} regla(s) activa(s) en la misma prioridad. Revise el aviso o presione Guardar de nuevo para continuar.`
+      );
+      setOverrideConflicts(true);
       return;
     }
 
@@ -243,7 +312,8 @@ export function PostingRulesManager() {
 
   const actionsSummary = (a: RuleActions): string => {
     const parts: string[] = [];
-    if (a.master_account_code) parts.push(`Cta ${a.master_account_code}`);
+    if (a.master_account_code) parts.push(`Db ${a.master_account_code}`);
+    if (a.credit_account_code) parts.push(`Cr ${a.credit_account_code}`);
     if (a.project_code) parts.push(`Proy ${a.project_code}`);
     if (a.cbs_code) parts.push(`CBS ${a.cbs_code}`);
     if (a.cost_center) parts.push(`CC ${a.cost_center}`);
@@ -473,11 +543,12 @@ export function PostingRulesManager() {
               <p className="text-xs text-muted-foreground">Solo se aplican a campos vacíos en el formulario.</p>
 
               <div className="space-y-2">
-                <Label className="text-xs">Cuenta principal</Label>
+                <Label className="text-xs">Cuenta de débito</Label>
                 <Select value={form.master_account_code}
-                  onValueChange={v => setForm(f => ({ ...f, master_account_code: v }))}>
+                  onValueChange={v => setForm(f => ({ ...f, master_account_code: v === "__clear__" ? "" : v }))}>
                   <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent className="bg-popover max-h-[300px]">
+                    <SelectItem value="__clear__">— Ninguna —</SelectItem>
                     {accounts.map((a: any) => (
                       <SelectItem key={a.code} value={a.code}>
                         {a.code} - {getDescription(a)}
@@ -485,6 +556,25 @@ export function PostingRulesManager() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">Cuenta de crédito (opcional)</Label>
+                <Select value={form.credit_account_code}
+                  onValueChange={v => setForm(f => ({ ...f, credit_account_code: v === "__clear__" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="— Auto (banco / CxP / CxC) —" /></SelectTrigger>
+                  <SelectContent className="bg-popover max-h-[300px]">
+                    <SelectItem value="__clear__">— Auto (banco / CxP / CxC) —</SelectItem>
+                    {accounts.map((a: any) => (
+                      <SelectItem key={a.code} value={a.code}>
+                        {a.code} - {getDescription(a)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Déjelo vacío para usar la cuenta automática según el tipo de transacción y método de pago. Use esto para reclasificaciones o asientos no estándar.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -539,9 +629,38 @@ export function PostingRulesManager() {
             </div>
           </div>
 
+
+          {conflicts.length > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 space-y-2 mt-2">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-semibold text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                Conflicto detectado con {conflicts.length} regla{conflicts.length === 1 ? "" : "s"} activa{conflicts.length === 1 ? "" : "s"} en la misma prioridad ({form.priority})
+              </div>
+              <ul className="text-xs space-y-1 ml-6 list-disc">
+                {conflicts.map(c => (
+                  <li key={c.rule.id}>
+                    <span className="font-medium">{c.rule.name}</span>
+                    {c.fields.map(f => (
+                      <span key={f.field} className="block ml-2 text-muted-foreground">
+                        · {ACTION_FIELD_LABELS[f.field]}: esta regla = <code>{f.mine}</code> · existente = <code>{f.theirs}</code>
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                Sugerencia: cambie la prioridad para que esta regla gane (menor número) o pierda (mayor número), o ajuste los valores. Si igual quiere guardar, presione <strong>Guardar</strong> de nuevo.
+              </p>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Actualizar" : "Crear"}</Button>
+            <Button onClick={handleSave} variant={conflicts.length > 0 && overrideConflicts ? "destructive" : "default"}>
+              {conflicts.length > 0 && overrideConflicts
+                ? "Guardar de todos modos"
+                : editing ? "Actualizar" : "Crear"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

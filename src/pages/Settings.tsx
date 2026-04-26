@@ -46,6 +46,7 @@ import { OperationTypesView } from "@/components/operations/OperationTypesView";
 import { QRCodeManager } from "@/components/settings/QRCodeManager";
 import { FollowUpRulesManager } from "@/components/settings/FollowUpRulesManager";
 import { VendorAccountRules } from "@/components/settings/VendorAccountRules";
+import { PostingRulesManager } from "@/components/settings/PostingRulesManager";
 import { GPSLinkingManager } from "@/components/settings/GPSLinkingManager";
 import { ChartOfAccountsView } from "@/components/accounting/ChartOfAccountsView";
 import { TractorOperatorsManager } from "@/components/settings/TractorOperatorsManager";
@@ -132,6 +133,12 @@ export default function Settings() {
               <TabsTrigger value="vendor-rules">
                 <Store className="h-4 w-4 mr-2" />
                 {t("settings.vendorRules")}
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="posting-rules">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Reglas Contab.
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -355,6 +362,14 @@ export default function Settings() {
             <TabsContent value="vendor-rules" className="mt-6">
               <div className="max-w-4xl">
                 <VendorAccountRules />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="posting-rules" className="mt-6">
+              <div className="max-w-6xl">
+                <PostingRulesManager />
               </div>
             </TabsContent>
           )}

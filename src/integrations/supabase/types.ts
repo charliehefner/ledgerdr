@@ -3665,6 +3665,111 @@ export type Database = {
           },
         ]
       }
+      posting_rule_applications: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          applied_fields: Json
+          context: string
+          id: string
+          rule_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          applied_fields?: Json
+          context?: string
+          id?: string
+          rule_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          applied_fields?: Json
+          context?: string
+          id?: string
+          rule_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posting_rule_applications_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "posting_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_rule_applications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_rule_applications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posting_rules: {
+        Row: {
+          actions: Json
+          applies_to: string
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          entity_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          applies_to?: string
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          applies_to?: string
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posting_rules_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prestaciones_parameters: {
         Row: {
           created_at: string
@@ -5674,6 +5779,15 @@ export type Database = {
       dgii_fmt_amount: { Args: { p_amount: number }; Returns: string }
       dgii_id_type: { Args: { p_rnc: string }; Returns: string }
       dgii_pay_method: { Args: { p_method: string }; Returns: string }
+      evaluate_posting_rules: {
+        Args: { p_entity_id: string; p_payload: Json }
+        Returns: {
+          actions: Json
+          priority: number
+          rule_id: string
+          rule_name: string
+        }[]
+      }
       foreign_currency_balances: {
         Args: { p_end: string; p_start: string }
         Returns: {

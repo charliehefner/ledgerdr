@@ -381,6 +381,7 @@ export function JournalView() {
                               <FileText className="h-3 w-3 mr-0.5" />Txn
                             </Badge>
                           )}
+                          <JournalRuleBadge transactionSourceId={j.transaction_source_id} />
                         </div>
                       </TableCell>
                     </TableRow>

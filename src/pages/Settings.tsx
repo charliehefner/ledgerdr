@@ -136,6 +136,12 @@ export default function Settings() {
               </TabsTrigger>
             )}
             {canModifySettings && (
+              <TabsTrigger value="posting-rules">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Reglas Contab.
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
               <TabsTrigger value="gps">
                 <Satellite className="h-4 w-4 mr-2" />
                 GPS

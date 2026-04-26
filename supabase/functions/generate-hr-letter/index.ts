@@ -519,11 +519,7 @@ function generateBankLetterPdf(data: BankLetterData): Uint8Array {
   y -= 15;
   lines.push({ text: data.signer_title || "Gerente General", x: lm, y, size: 10 });
 
-  // Footer
-  if (data.company_address) {
-    y -= 40;
-    lines.push({ text: data.company_address, x: lm, y, size: 8 });
-  }
+  // Address footer is provided by the letterhead image.
 
   return buildPdf(lines);
 }

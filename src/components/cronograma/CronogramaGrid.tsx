@@ -941,6 +941,7 @@ export function CronogramaGrid() {
                               entry={morningEntry}
                               userEmailMap={userEmailMap}
                               language={language}
+                              showIndicators={showIndicators}
                             />
                             <CronogramaCellMemo
                               key={`${rowIdx}-${dayIdx}-pm`}

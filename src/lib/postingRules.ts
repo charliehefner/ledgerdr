@@ -83,6 +83,8 @@ export function mergeRuleActions(rules: MatchedRule[]): PostingRuleAction {
     const a = rule.actions || {};
     if (a.master_account_code && !merged.master_account_code)
       merged.master_account_code = a.master_account_code;
+    if (a.credit_account_code && !merged.credit_account_code)
+      merged.credit_account_code = a.credit_account_code;
     if (a.project_code && !merged.project_code) merged.project_code = a.project_code;
     if (a.cbs_code && !merged.cbs_code) merged.cbs_code = a.cbs_code;
     if (a.cost_center && !merged.cost_center) merged.cost_center = a.cost_center;

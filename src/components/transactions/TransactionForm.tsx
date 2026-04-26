@@ -113,6 +113,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   // (a) set manual_credit_account_code on the new transaction row, and
   // (b) write audit rows to posting_rule_applications.
   const matchedPostingRulesRef = useRef<MatchedRule[]>([]);
+  const [ruleConflicts, setRuleConflicts] = useState<RuleConflict[]>([]);
   const pendingCreditCodeRef = useRef<string | null>(null);
   const ruleAppliedFieldsRef = useRef<Record<string, unknown>>({});
 

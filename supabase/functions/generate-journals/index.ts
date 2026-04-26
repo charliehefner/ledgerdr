@@ -512,6 +512,41 @@ Deno.serve(async (req) => {
         } else {
           created++;
 
+          // ── PHASE 2: log rule applications + any extras errors ──
+          if (matchedRules.length > 0) {
+            try {
+              const extrasByRule = new Map<string, number>();
+              for (const e of [...extras.debit, ...extras.credit]) {
+                extrasByRule.set(e.rule_id, (extrasByRule.get(e.rule_id) || 0) + 1);
+              }
+              const appRows = matchedRules.map(r => ({
+                rule_id: r.rule_id,
+                transaction_id: txn.id,
+                context: "journal_generation",
+                applied_fields: {
+                  ...(extrasByRule.get(r.rule_id) ? { extra_lines: extrasByRule.get(r.rule_id) } : {}),
+                  ...(extras.replaceMainDebit ? { replace_main_debit: true } : {}),
+                  ...(extras.replaceMainCredit ? { replace_main_credit: true } : {}),
+                },
+                applied_by: userId,
+              }));
+              await db.from("posting_rule_applications").insert(appRows);
+            } catch (logErr: any) {
+              console.warn(`[generate-journals] PRA log failed: ${logErr?.message}`);
+            }
+          }
+          if (ruleErrors.length > 0) {
+            try {
+              await db.from("app_error_log").insert(
+                ruleErrors.map(msg => ({
+                  user_id: userId,
+                  component_name: "generate-journals/extra_lines",
+                  error_message: `Txn ${txn.id}: ${msg}`,
+                }))
+              );
+            } catch { /* never block */ }
+          }
+
           // ── INTERCOMPANY DETECTION ──
           // Check if pay_method bank account belongs to a different entity in the same group
           const bankAcct = txn.pay_method ? bankAccountMap.get(txn.pay_method) : null;

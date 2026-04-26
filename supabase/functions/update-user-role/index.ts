@@ -89,11 +89,16 @@ serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // If assigning global admin (entity_id = null), verify caller is global admin
+    // If assigning global access, verify the role supports it and caller is global admin
     const newEntityId = entity_id === undefined ? undefined : (entity_id || null);
     const newEntityGroupId = entity_group_id === undefined ? undefined : (entity_group_id || null);
+    const requestedGlobalAccess = newEntityId === null && !newEntityGroupId;
 
-    if (newEntityId === null && !newEntityGroupId) {
+    if (requestedGlobalAccess && !GLOBAL_ACCESS_ROLES.includes(role)) {
+      throw new Error(`Role "${role}" cannot be assigned global access. Please select an entity or group.`);
+    }
+
+    if (requestedGlobalAccess) {
       const { data: callerGlobalRole } = await adminClient
         .from("user_roles")
         .select("entity_id")

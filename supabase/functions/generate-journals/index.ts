@@ -169,6 +169,74 @@ function resolveExtraLines(
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2.5: amortization scheduler
+// ─────────────────────────────────────────────────────────────────────────────
+interface AmortizeSpec {
+  months: number;
+  start_date: string;
+  expense_account_code?: string;
+  prepaid_account_code?: string;
+}
+
+interface PeriodLookup {
+  id: string;
+  start_date: string;
+  end_date: string;
+  status: string;       // 'open' | 'closed' | 'reported' | 'locked'
+  is_closed: boolean | null;
+}
+
+/** Pull `amortize` from the highest-priority matched rule that defines it. */
+function findAmortizeAction(
+  matchedRules: Array<{ rule_id: string; rule_name: string; actions: any }>,
+): { spec: AmortizeSpec; rule_id: string; rule_name: string } | null {
+  for (const r of matchedRules) {
+    const a = r.actions?.amortize;
+    if (a && Number.isFinite(a.months) && a.months >= 2 && a.start_date) {
+      return { spec: a as AmortizeSpec, rule_id: r.rule_id, rule_name: r.rule_name };
+    }
+  }
+  return null;
+}
+
+/**
+ * Build N slice dates: same day-of-month as start_date, advancing one calendar
+ * month at a time. Day clamps to month-end (e.g., Jan-31 → Feb-28).
+ */
+function buildSliceDates(startISO: string, months: number): string[] {
+  const [y, m, d] = startISO.split("-").map(Number);
+  const out: string[] = [];
+  for (let i = 0; i < months; i++) {
+    const dt = new Date(Date.UTC(y, m - 1 + i, 1));
+    const lastDay = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
+    const day = Math.min(d, lastDay);
+    out.push(`${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+/** Find the open accounting period containing `dateISO`. Returns null if none / closed. */
+function findOpenPeriodForDate(dateISO: string, periods: PeriodLookup[]): PeriodLookup | null {
+  for (const p of periods) {
+    if (dateISO >= p.start_date && dateISO <= p.end_date) {
+      const blocked = p.is_closed === true || p.status === "closed" || p.status === "reported" || p.status === "locked";
+      return blocked ? null : p;
+    }
+  }
+  return null;
+}
+
+/** Split `total` into N equal slices of 2 decimals, with rounding remainder absorbed into the last slice. */
+function splitAmount(total: number, n: number): number[] {
+  const base = Math.floor((total / n) * 100) / 100;
+  const slices = new Array(n).fill(base);
+  const sum = base * n;
+  const remainder = Math.round((total - sum) * 100) / 100;
+  slices[n - 1] = Math.round((slices[n - 1] + remainder) * 100) / 100;
+  return slices;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -224,7 +292,7 @@ Deno.serve(async (req) => {
     }
 
     // --- Fetch lookup data ---
-    const [mappingsRes, accountsRes, bankRes, linkedRes, txnsRes, icConfigRes, entitiesRes] = await Promise.all([
+    const [mappingsRes, accountsRes, bankRes, linkedRes, txnsRes, icConfigRes, entitiesRes, periodsRes] = await Promise.all([
       db.from("payment_method_accounts").select("pay_method, account_id"),
       db.from("chart_of_accounts").select("id, account_code").eq("allow_posting", true).is("deleted_at", null),
       db.from("bank_accounts").select("id, chart_account_id, currency, entity_id, is_shared"),
@@ -236,6 +304,7 @@ Deno.serve(async (req) => {
         .limit(10000),
       db.from("intercompany_account_config").select("group_id, receivable_account_id, payable_account_id"),
       db.from("entities").select("id, entity_group_id"),
+      db.from("accounting_periods").select("id, start_date, end_date, status, is_closed").is("deleted_at", null),
     ]);
 
     if (mappingsRes.error) throw mappingsRes.error;
@@ -253,6 +322,7 @@ Deno.serve(async (req) => {
       (bankRes.data || []).map((b: any) => [b.id, b as BankAccountLookup])
     );
     const linkedIds = new Set((linkedRes.data || []).map((j: any) => j.transaction_source_id));
+    const periodsList: PeriodLookup[] = (periodsRes.data || []) as PeriodLookup[];
 
     // Intercompany config maps
     const icConfigByGroup = new Map<string, IntercompanyConfig>(
@@ -340,7 +410,7 @@ Deno.serve(async (req) => {
         }
 
         // Prefer UUID FK (account_id) over legacy text code lookup
-        const mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
+        let mainAccountId = txn.account_id || (txn.master_acct_code ? acctByCode.get(txn.master_acct_code) : null);
         // Finding 1 fix: resolve pay_method via legacy mapping OR bank_accounts UUID
         let payAccountId = resolvePayAccountId(txn.pay_method, mappingMap, bankAccountMap);
 
@@ -408,6 +478,73 @@ Deno.serve(async (req) => {
         const extras = resolveExtraLines(matchedRules, netAmount, acctByCode, ruleErrors);
         const debitExtrasTotal = extras.debit.reduce((s, l) => s + l.amount, 0);
         const creditExtrasTotal = extras.credit.reduce((s, l) => s + l.amount, 0);
+
+        // ── PHASE 2.5: amortization (purchase only) ──
+        // If a rule with `amortize` matched and this is a purchase, validate target
+        // periods are open, swap the main debit to the prepaid account, and queue
+        // N monthly DR Expense / CR Prepaid slice journals to post after the original.
+        let amortizePlan: {
+          rule_id: string;
+          rule_name: string;
+          expenseAccountId: string;
+          prepaidAccountId: string;
+          slices: Array<{ date: string; amount: number; period_id: string }>;
+        } | null = null;
+
+        if (!isSale && !isTransfer) {
+          const am = findAmortizeAction(matchedRules);
+          if (am) {
+            const months = Math.max(2, Math.min(60, Math.floor(am.spec.months)));
+            const expenseCode = am.spec.expense_account_code || txn.master_acct_code || "";
+            const prepaidCode = am.spec.prepaid_account_code || "1480";
+            const expenseAccountId = expenseCode ? acctByCode.get(expenseCode) : undefined;
+            const prepaidAccountId = acctByCode.get(prepaidCode);
+
+            // Helper: clean up the original journal we just created (rolls back row + sequence)
+            const rollbackOriginal = async () => { await db.from("journals").delete().eq("id", journalId); };
+
+            if (!expenseAccountId) {
+              await rollbackOriginal();
+              skipped.push(`${label}: amortización - cuenta de gasto "${expenseCode}" no permite asientos`);
+              continue;
+            }
+            if (!prepaidAccountId) {
+              await rollbackOriginal();
+              skipped.push(`${label}: amortización - cuenta de prepago "${prepaidCode}" no permite asientos`);
+              continue;
+            }
+            if (expenseAccountId === prepaidAccountId) {
+              await rollbackOriginal();
+              skipped.push(`${label}: amortización - cuenta de gasto y prepago son la misma`);
+              continue;
+            }
+
+            const sliceDates = buildSliceDates(am.spec.start_date, months);
+            const sliceAmounts = splitAmount(netAmount, months);
+            const slicePlan: Array<{ date: string; amount: number; period_id: string }> = [];
+            let blocked: string | null = null;
+            for (let i = 0; i < months; i++) {
+              const period = findOpenPeriodForDate(sliceDates[i], periodsList);
+              if (!period) {
+                blocked = sliceDates[i];
+                break;
+              }
+              slicePlan.push({ date: sliceDates[i], amount: sliceAmounts[i], period_id: period.id });
+            }
+            if (blocked) {
+              await rollbackOriginal();
+              skipped.push(`${label}: amortización bloqueada — el mes ${blocked} cae en un período cerrado o inexistente`);
+              continue;
+            }
+
+            amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
+
+            // Swap the master debit account so the original journal posts as DR Prepaid / CR Bank
+            mainAccountId = prepaidAccountId;
+
+            amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
+          }
+        }
 
         if (isSale) {
           // ── SALE: Debit bank/cash, Credit revenue + ITBIS por Pagar ──
@@ -512,6 +649,69 @@ Deno.serve(async (req) => {
         } else {
           created++;
 
+          // ── PHASE 2.5: amortization slices ──
+          // Original journal posted as DR Prepaid / CR Bank. Now post N monthly
+          // DR Expense / CR Prepaid journals. Each slice is its own balanced
+          // GJ tied to the same transaction_source_id.
+          if (amortizePlan) {
+            const totalSlices = amortizePlan.slices.length;
+            for (let i = 0; i < totalSlices; i++) {
+              const slice = amortizePlan.slices[i];
+              try {
+                const sliceDescr = `Amortización ${i + 1}/${totalSlices} — ${txn.description || "Gasto"}${costCenterLabel(txn.cost_center)}`;
+                const { data: sliceJournalId, error: sjErr } = await db.rpc("create_journal_from_transaction", {
+                  p_transaction_id: txn.id,
+                  p_date: slice.date,
+                  p_description: sliceDescr,
+                  p_created_by: userId,
+                  p_journal_type: "GJ",
+                });
+                if (sjErr || !sliceJournalId) {
+                  await db.from("app_error_log").insert({
+                    user_id: userId,
+                    component_name: "generate-journals/amortize",
+                    error_message: `Txn ${txn.id} slice ${i + 1}/${totalSlices} (${slice.date}): ${sjErr?.message || "no id"}`,
+                  });
+                  continue;
+                }
+                await db.from("journals").update({
+                  currency: txn.currency || "DOP",
+                  exchange_rate: exchangeRate,
+                  period_id: slice.period_id,
+                  ...(txn.entity_id ? { entity_id: txn.entity_id } : {}),
+                }).eq("id", sliceJournalId);
+
+                const sliceLines = [
+                  {
+                    journal_id: sliceJournalId,
+                    account_id: amortizePlan.expenseAccountId,
+                    debit: slice.amount, credit: 0, created_by: userId,
+                    description: `Gasto amortizado${costCenterLabel(txn.cost_center)}`,
+                  },
+                  {
+                    journal_id: sliceJournalId,
+                    account_id: amortizePlan.prepaidAccountId,
+                    debit: 0, credit: slice.amount, created_by: userId,
+                    description: `Liberación prepago`,
+                  },
+                ];
+                const { error: slErr } = await db.from("journal_lines").insert(sliceLines);
+                if (slErr) {
+                  await db.from("journals").delete().eq("id", sliceJournalId);
+                  await db.from("app_error_log").insert({
+                    user_id: userId,
+                    component_name: "generate-journals/amortize",
+                    error_message: `Txn ${txn.id} slice ${i + 1}/${totalSlices}: ${slErr.message}`,
+                  });
+                } else {
+                  created++;
+                }
+              } catch (e: any) {
+                console.warn(`[generate-journals/amortize] slice ${i + 1} error: ${e?.message}`);
+              }
+            }
+          }
+
           // ── PHASE 2: log rule applications + any extras errors ──
           if (matchedRules.length > 0) {
             try {
@@ -527,6 +727,7 @@ Deno.serve(async (req) => {
                   ...(extrasByRule.get(r.rule_id) ? { extra_lines: extrasByRule.get(r.rule_id) } : {}),
                   ...(extras.replaceMainDebit ? { replace_main_debit: true } : {}),
                   ...(extras.replaceMainCredit ? { replace_main_credit: true } : {}),
+                  ...(amortizePlan && amortizePlan.rule_id === r.rule_id ? { amortize: amortizePlan.slices.length } : {}),
                 },
                 applied_by: userId,
               }));

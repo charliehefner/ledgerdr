@@ -45,6 +45,13 @@ interface ExtraLine {
   description?: string;
 }
 
+interface AmortizeSpec {
+  months: number;
+  start_date: string;
+  expense_account_code?: string;
+  prepaid_account_code?: string;
+}
+
 interface RuleActions {
   master_account_code?: string;
   credit_account_code?: string;
@@ -55,6 +62,7 @@ interface RuleActions {
   extra_lines?: ExtraLine[];
   replace_main_debit?: boolean;
   replace_main_credit?: boolean;
+  amortize?: AmortizeSpec;
 }
 
 interface PostingRule {
@@ -116,6 +124,12 @@ const emptyForm = {
   extra_lines: [] as ExtraLineDraft[],
   replace_main_debit: false,
   replace_main_credit: false,
+  // amortization (Phase 2.5)
+  amortize_enabled: false,
+  amortize_months: "12",
+  amortize_start_date: "",
+  amortize_expense_account_code: "",   // empty = use master
+  amortize_prepaid_account_code: "1480",
 };
 
 // Action fields used for conflict detection (string-valued only — extras/flags excluded).
@@ -237,6 +251,11 @@ export function PostingRulesManager() {
       })),
       replace_main_debit: !!rule.actions?.replace_main_debit,
       replace_main_credit: !!rule.actions?.replace_main_credit,
+      amortize_enabled: !!rule.actions?.amortize,
+      amortize_months: rule.actions?.amortize?.months != null ? String(rule.actions.amortize.months) : "12",
+      amortize_start_date: rule.actions?.amortize?.start_date || "",
+      amortize_expense_account_code: rule.actions?.amortize?.expense_account_code || "",
+      amortize_prepaid_account_code: rule.actions?.amortize?.prepaid_account_code || "1480",
     });
     setDialogOpen(true);
   };
@@ -332,6 +351,35 @@ export function PostingRulesManager() {
     if (form.replace_main_debit && extras.some(e => e.side === "debit")) actions.replace_main_debit = true;
     if (form.replace_main_credit && extras.some(e => e.side === "credit")) actions.replace_main_credit = true;
 
+    // Phase 2.5: amortization
+    if (form.amortize_enabled) {
+      const months = Number(form.amortize_months);
+      if (!Number.isInteger(months) || months < 2 || months > 60) {
+        toast.error("Amortización: meses debe ser un entero entre 2 y 60");
+        return;
+      }
+      if (!form.amortize_start_date) {
+        toast.error("Amortización: fecha de inicio es requerida");
+        return;
+      }
+      const expense = form.amortize_expense_account_code || form.master_account_code;
+      const prepaid = form.amortize_prepaid_account_code || "1480";
+      if (!expense) {
+        toast.error("Amortización: define una cuenta de gasto (o cuenta principal de débito)");
+        return;
+      }
+      if (expense === prepaid) {
+        toast.error("Amortización: la cuenta de gasto y la cuenta de prepago deben ser distintas");
+        return;
+      }
+      actions.amortize = {
+        months,
+        start_date: form.amortize_start_date,
+        ...(form.amortize_expense_account_code ? { expense_account_code: form.amortize_expense_account_code } : {}),
+        ...(prepaid !== "1480" ? { prepaid_account_code: prepaid } : { prepaid_account_code: "1480" }),
+      };
+    }
+
     if (Object.keys(conditions).length === 0) {
       toast.error("Define al menos una condición (sino la regla coincidiría con todo)");
       return;
@@ -421,6 +469,7 @@ export function PostingRulesManager() {
     if (a.cost_center) parts.push(`CC ${a.cost_center}`);
     if (a.append_note) parts.push(`Nota`);
     if (a.extra_lines?.length) parts.push(`+${a.extra_lines.length} líneas`);
+    if (a.amortize?.months) parts.push(`Amort ${a.amortize.months}×`);
     return parts.length ? parts.join(" · ") : "—";
   };
 
@@ -918,6 +967,78 @@ export function PostingRulesManager() {
                 <div>· <em>División 70/30:</em> dos líneas débito a la misma cuenta, 70% Agrícola + 30% Industrial, marca "Reemplazar débito principal".</div>
                 <div>· <em>Retención 1% ISR:</em> una línea crédito a la cuenta 2170 con 1%. No reemplaza nada — se suma al asiento estándar y reduce el crédito al banco.</div>
                 <div>· <em>Recargo fijo:</em> una línea con tipo "Monto fijo".</div>
+              </div>
+            </div>
+          </details>
+
+          {/* === Phase 2.5: amortization === */}
+          <details className="rounded-md border p-3 mt-2" open={form.amortize_enabled}>
+            <summary className="cursor-pointer font-semibold text-sm flex items-center gap-2">
+              Amortización (avanzado)
+              {form.amortize_enabled && (
+                <Badge variant="secondary">{form.amortize_months || "?"} meses</Badge>
+              )}
+            </summary>
+            <div className="pt-3 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Distribuye un gasto pagado por adelantado (alquiler, seguros, suscripciones) en N asientos mensuales. La transacción original se contabiliza como <em>DR Pagado por Adelantado / CR Banco</em>; luego se generan N asientos automáticos <em>DR Gasto / CR Pagado por Adelantado</em> empezando en la fecha de inicio. Solo aplica a compras.
+              </p>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={form.amortize_enabled}
+                  onCheckedChange={v => setForm(f => ({ ...f, amortize_enabled: v }))} />
+                <Label className="text-xs">Habilitar amortización para esta regla</Label>
+              </div>
+
+              {form.amortize_enabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Meses (2–60)</Label>
+                    <Input type="number" min={2} max={60} className="h-8 text-xs"
+                      value={form.amortize_months}
+                      onChange={e => setForm(f => ({ ...f, amortize_months: e.target.value }))}
+                      placeholder="12" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Fecha de inicio</Label>
+                    <Input type="date" className="h-8 text-xs"
+                      value={form.amortize_start_date}
+                      onChange={e => setForm(f => ({ ...f, amortize_start_date: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cuenta de gasto</Label>
+                    <Select value={form.amortize_expense_account_code || "__master__"}
+                      onValueChange={v => setForm(f => ({ ...f, amortize_expense_account_code: v === "__master__" ? "" : v }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover max-h-[280px]">
+                        <SelectItem value="__master__">— Usar cuenta principal ({form.master_account_code || "no definida"})</SelectItem>
+                        {accounts.map((a: any) => (
+                          <SelectItem key={a.code} value={a.code}>{a.code} - {getDescription(a)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cuenta de prepago (activo)</Label>
+                    <Select value={form.amortize_prepaid_account_code || "1480"}
+                      onValueChange={v => setForm(f => ({ ...f, amortize_prepaid_account_code: v }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover max-h-[280px]">
+                        {accounts.map((a: any) => (
+                          <SelectItem key={a.code} value={a.code}>{a.code} - {getDescription(a)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+                <div><strong>Ejemplo:</strong> Alquiler 12 meses pagado por adelantado en mayo, servicio inicia 1 julio:</div>
+                <div>· Asiento original: <code>DR 1480 Prepago / CR Banco</code> (monto total)</div>
+                <div>· 12 asientos mensuales: <code>DR 6310 Alquileres / CR 1480 Prepago</code> (monto/12 cada uno, fecha jul-1, ago-1, …)</div>
+                <div className="text-amber-700 dark:text-amber-400">⚠ Si algún mes cae en un período cerrado, la transacción no se procesa.</div>
               </div>
             </div>
           </details>

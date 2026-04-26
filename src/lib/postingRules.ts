@@ -40,6 +40,23 @@ export interface PostingRuleExtraLine {
   description?: string;
 }
 
+/**
+ * Phase 2.5: multi-period amortization spec.
+ * When present on a purchase rule, `generate-journals` posts the original
+ * transaction as DR Prepaid / CR Bank and then creates N additional monthly
+ * journals (DR Expense / CR Prepaid) starting on `start_date`.
+ */
+export interface PostingRuleAmortize {
+  /** Number of monthly slices, 2..60. */
+  months: number;
+  /** First slice date (ISO yyyy-mm-dd). Subsequent slices fall on the same day-of-month of following months. */
+  start_date: string;
+  /** Account that receives the monthly expense. Defaults to `master_account_code`. */
+  expense_account_code?: string;
+  /** Asset account that holds the prepaid balance. Defaults to "1480". */
+  prepaid_account_code?: string;
+}
+
 export interface PostingRuleAction {
   master_account_code?: string;
   /**
@@ -59,6 +76,8 @@ export interface PostingRuleAction {
   replace_main_debit?: boolean;
   /** When true and any credit extras exist, suppress the default bank/AP/AR credit line. */
   replace_main_credit?: boolean;
+  /** Phase 2.5 — multi-period amortization. Purchase transactions only. */
+  amortize?: PostingRuleAmortize;
 }
 
 export interface MatchedRule {

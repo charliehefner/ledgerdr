@@ -186,6 +186,20 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
     for (const l of pageLines) {
       const fontRef = l.bold ? "/F2" : "/F1";
       content += `BT ${fontRef} ${l.size} Tf ${l.x} ${l.y} Td (${escapePdf(l.text)}) Tj ET\n`;
+  // Build content streams per page (with letterhead drawn first)
+  const topY = pageH - topImgH; // top edge of top image
+  const bottomY = 0;            // bottom image flush with bottom
+  const letterheadOps =
+    `q ${pageW} 0 0 ${topImgH} 0 ${topY} cm /ImTop Do Q\n` +
+    `q ${pageW} 0 0 ${bottomImgH} 0 ${bottomY} cm /ImBot Do Q\n`;
+
+  const pageContents: string[] = [];
+  for (let p = 0; p < totalPages; p++) {
+    let content = letterheadOps;
+    const pageLines = rendered.filter((l) => l.page === p);
+    for (const l of pageLines) {
+      const fontRef = l.bold ? "/F2" : "/F1";
+      content += `BT ${fontRef} ${l.size} Tf ${l.x} ${l.y} Td (${escapePdf(l.text)}) Tj ET\n`;
       if (l.underline) {
         const textWidth = l.text.length * l.size * (l.bold ? 0.6 : 0.52);
         content += `0.5 w ${l.x} ${l.y - 2} m ${l.x + textWidth} ${l.y - 2} l S\n`;
@@ -204,6 +218,10 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
     objects.push(b);
     pos += b.length;
   }
+  function writeBytes(b: Uint8Array) {
+    objects.push(b);
+    pos += b.length;
+  }
 
   function obj(id: number, content: string) {
     offsets[id] = pos;
@@ -212,8 +230,11 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
 
   write("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
 
-  // Object layout: 1=catalog, 2=pages, 3=font-regular, 4=font-bold, then page+content pairs
-  const firstPageObjId = 5;
+  // Object layout:
+  //   1=catalog, 2=pages, 3=font-regular, 4=font-bold,
+  //   5=ImTop XObject, 6=ImBot XObject,
+  //   then page+content pairs starting at 7
+  const firstPageObjId = 7;
   const numObjs = firstPageObjId + totalPages * 2;
 
   obj(1, `<< /Type /Catalog /Pages 2 0 R >>`);
@@ -226,12 +247,23 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
   obj(3, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`);
   obj(4, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`);
 
+  // Letterhead JPEG XObjects (DCTDecode = JPEG)
+  offsets[5] = pos;
+  write(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${LETTERHEAD_TOP_W} /Height ${LETTERHEAD_TOP_H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${LETTERHEAD_TOP_BYTES.length} >>\nstream\n`);
+  writeBytes(LETTERHEAD_TOP_BYTES);
+  write(`\nendstream\nendobj\n`);
+
+  offsets[6] = pos;
+  write(`6 0 obj\n<< /Type /XObject /Subtype /Image /Width ${LETTERHEAD_BOTTOM_W} /Height ${LETTERHEAD_BOTTOM_H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${LETTERHEAD_BOTTOM_BYTES.length} >>\nstream\n`);
+  writeBytes(LETTERHEAD_BOTTOM_BYTES);
+  write(`\nendstream\nendobj\n`);
+
   for (let p = 0; p < totalPages; p++) {
     const pageObjId = firstPageObjId + p * 2;
     const contentObjId = pageObjId + 1;
     const contentBytes = encoder.encode(pageContents[p]);
 
-    obj(pageObjId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents ${contentObjId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>`);
+    obj(pageObjId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents ${contentObjId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /ImTop 5 0 R /ImBot 6 0 R >> >> >>`);
 
     offsets[contentObjId] = pos;
     write(`${contentObjId} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);

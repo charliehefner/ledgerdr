@@ -23,7 +23,9 @@ import {
   evaluatePostingRules,
   mergeRuleActions,
   logRuleApplications,
+  detectRuleConflicts,
   type MatchedRule,
+  type RuleConflict,
 } from '@/lib/postingRules';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';

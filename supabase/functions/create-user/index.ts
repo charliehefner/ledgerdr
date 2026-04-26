@@ -13,11 +13,13 @@ const USERNAME_EMAIL_DOMAIN = "internal.jord.local";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_ROLES = ["admin", "management", "accountant", "supervisor", "viewer", "driver", "office"];
+const GLOBAL_ACCESS_ROLES = ["admin", "management"];
 
 function sanitizeError(error: Error): string {
   console.error("Operation failed:", error);
   const msg = error.message?.toLowerCase() || "";
   if (msg.includes("password")) return error.message;
+  if (msg.includes("global access") || msg.includes("entity assignment")) return error.message;
   if (msg.includes("already") || msg.includes("unique") || msg.includes("duplicate")) return "User already exists";
   if (msg.includes("unauthorized") || msg.includes("no authorization")) return "Unauthorized";
   if (msg.includes("admin access")) return "Admin access required";
@@ -127,13 +129,20 @@ serve(async (req) => {
     // Use service role to create new user
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Only global admins can create other global admins (entity_id = null)
-    if (!entity_id) {
+    const requestedGlobalAccess = !entity_id && !entity_group_id;
+
+    if (requestedGlobalAccess && !GLOBAL_ACCESS_ROLES.includes(role)) {
+      throw new Error(`Role "${role}" cannot be assigned global access. Please select an entity or group.`);
+    }
+
+    // Only global admins can create users without an entity/group assignment
+    if (requestedGlobalAccess) {
       const { data: callerRole } = await adminClient
         .from("user_roles")
         .select("entity_id")
         .eq("user_id", user.id)
         .is("entity_id", null)
+        .is("entity_group_id", null)
         .limit(1)
         .maybeSingle();
       if (!callerRole) {

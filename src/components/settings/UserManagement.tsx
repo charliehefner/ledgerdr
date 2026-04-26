@@ -69,6 +69,8 @@ interface UserWithRole {
 
 const isUsernameAccount = (email: string) => email.endsWith("@internal.jord.local");
 const extractUsername = (email: string) => email.replace("@internal.jord.local", "");
+const GLOBAL_ACCESS_ROLES: AppRole[] = ["admin", "management"];
+const requiresScopedAccess = (role: AppRole) => !GLOBAL_ACCESS_ROLES.includes(role);
 
 export function UserManagement() {
   const queryClient = useQueryClient();
@@ -175,6 +177,10 @@ export function UserManagement() {
     const entityId = newUserScopeType === "entity" ? newUserEntityId : null;
     const entityGroupId = newUserScopeType === "group" ? newUserGroupId : null;
 
+    if (newUserScopeType === "global" && requiresScopedAccess(newUserRole)) {
+      toast.error("Este rol debe asignarse a una entidad o grupo");
+      return;
+    }
     if (newUserScopeType === "entity" && !entityId) {
       toast.error("Seleccione una entidad");
       return;
@@ -242,6 +248,10 @@ export function UserManagement() {
     const entityId = editScopeType === "entity" ? editEntityId : null;
     const entityGroupId = editScopeType === "group" ? editGroupId : null;
 
+    if (editScopeType === "global" && requiresScopedAccess(editRole)) {
+      toast.error("Este rol debe asignarse a una entidad o grupo");
+      return;
+    }
     if (editScopeType === "entity" && !entityId) {
       toast.error("Seleccione una entidad");
       return;
@@ -438,7 +448,13 @@ export function UserManagement() {
 
                 <div className="space-y-2">
                   <Label>Rol</Label>
-                  <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as AppRole)}>
+                  <Select value={newUserRole} onValueChange={(v) => {
+                    const role = v as AppRole;
+                    setNewUserRole(role);
+                    if (newUserScopeType === "global" && requiresScopedAccess(role)) {
+                      setNewUserScopeType("entity");
+                    }
+                  }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -459,7 +475,7 @@ export function UserManagement() {
                 <div className="space-y-2">
                   <Label>Asignación de Acceso</Label>
                   <div className="flex gap-2">
-                    {isGlobalAdmin && (
+                    {isGlobalAdmin && !requiresScopedAccess(newUserRole) && (
                       <Button type="button" size="sm" variant={newUserScopeType === "global" ? "default" : "outline"} onClick={() => setNewUserScopeType("global")}>
                         <Globe className="h-3 w-3 mr-1" /> Global
                       </Button>
@@ -651,7 +667,13 @@ export function UserManagement() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Rol</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+              <Select value={editRole} onValueChange={(v) => {
+                const role = v as AppRole;
+                setEditRole(role);
+                if (editScopeType === "global" && requiresScopedAccess(role)) {
+                  setEditScopeType("entity");
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -670,7 +692,7 @@ export function UserManagement() {
             <div className="space-y-2">
               <Label>Asignación de Acceso</Label>
               <div className="flex gap-2">
-                {isGlobalAdmin && (
+                {isGlobalAdmin && !requiresScopedAccess(editRole) && (
                   <Button type="button" size="sm" variant={editScopeType === "global" ? "default" : "outline"} onClick={() => setEditScopeType("global")}>
                     <Globe className="h-3 w-3 mr-1" /> Global
                   </Button>

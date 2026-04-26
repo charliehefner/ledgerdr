@@ -251,6 +251,11 @@ export function PostingRulesManager() {
       })),
       replace_main_debit: !!rule.actions?.replace_main_debit,
       replace_main_credit: !!rule.actions?.replace_main_credit,
+      amortize_enabled: !!rule.actions?.amortize,
+      amortize_months: rule.actions?.amortize?.months != null ? String(rule.actions.amortize.months) : "12",
+      amortize_start_date: rule.actions?.amortize?.start_date || "",
+      amortize_expense_account_code: rule.actions?.amortize?.expense_account_code || "",
+      amortize_prepaid_account_code: rule.actions?.amortize?.prepaid_account_code || "1480",
     });
     setDialogOpen(true);
   };

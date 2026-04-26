@@ -667,7 +667,13 @@ export function UserManagement() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Rol</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+              <Select value={editRole} onValueChange={(v) => {
+                const role = v as AppRole;
+                setEditRole(role);
+                if (editScopeType === "global" && requiresScopedAccess(role)) {
+                  setEditScopeType("entity");
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

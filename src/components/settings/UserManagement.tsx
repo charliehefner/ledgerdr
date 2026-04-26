@@ -448,7 +448,13 @@ export function UserManagement() {
 
                 <div className="space-y-2">
                   <Label>Rol</Label>
-                  <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as AppRole)}>
+                  <Select value={newUserRole} onValueChange={(v) => {
+                    const role = v as AppRole;
+                    setNewUserRole(role);
+                    if (newUserScopeType === "global" && requiresScopedAccess(role)) {
+                      setNewUserScopeType("entity");
+                    }
+                  }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

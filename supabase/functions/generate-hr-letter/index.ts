@@ -370,7 +370,7 @@ function generateHiringPdf(data: HiringData): Uint8Array {
   const biweeklyWords = numberToSpanish(biweekly);
 
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
 
@@ -427,15 +427,10 @@ function generateHiringPdf(data: HiringData): Uint8Array {
 
 function generateTerminationPdf(data: TerminationData): Uint8Array {
   const lines: PdfLine[] = [];
-  let y = 720;
+  let y = 685;
   const lm = 72;
   const mw = 468;
-
-  // Company header
-  lines.push({ text: data.company_name.toUpperCase(), x: lm, y, size: 12, bold: true });
-  y -= 16;
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: lm, y, size: 10 });
-  y -= 30;
+  // Company name + RNC are provided by the letterhead image.
 
   // Date line
   lines.push({ text: `SPM, ${formatDateDocLong(data.termination_date)}.`, x: lm, y, size: 11 });

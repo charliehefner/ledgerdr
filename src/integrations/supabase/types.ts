@@ -6167,6 +6167,7 @@ export type Database = {
         | "supervisor"
         | "viewer"
         | "driver"
+        | "office"
       inventory_function:
         | "fertilizer"
         | "fuel"
@@ -6315,6 +6316,7 @@ export const Constants = {
         "supervisor",
         "viewer",
         "driver",
+        "office",
       ],
       inventory_function: [
         "fertilizer",

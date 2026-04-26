@@ -93,6 +93,7 @@ export function PostingRulesManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PostingRule | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [overrideConflicts, setOverrideConflicts] = useState(false);
 
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ["postingRules"],

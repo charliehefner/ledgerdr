@@ -18,6 +18,7 @@ import {
 } from '@/lib/api';
 import { supabase } from '@/integrations/supabase/client';
 import { useEntity } from '@/contexts/EntityContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   evaluatePostingRules,
   mergeRuleActions,

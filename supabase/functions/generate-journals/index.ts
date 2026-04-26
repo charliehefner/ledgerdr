@@ -500,15 +500,21 @@ Deno.serve(async (req) => {
             const expenseAccountId = expenseCode ? acctByCode.get(expenseCode) : undefined;
             const prepaidAccountId = acctByCode.get(prepaidCode);
 
+            // Helper: clean up the original journal we just created (rolls back row + sequence)
+            const rollbackOriginal = async () => { await db.from("journals").delete().eq("id", journalId); };
+
             if (!expenseAccountId) {
+              await rollbackOriginal();
               skipped.push(`${label}: amortización - cuenta de gasto "${expenseCode}" no permite asientos`);
               continue;
             }
             if (!prepaidAccountId) {
+              await rollbackOriginal();
               skipped.push(`${label}: amortización - cuenta de prepago "${prepaidCode}" no permite asientos`);
               continue;
             }
             if (expenseAccountId === prepaidAccountId) {
+              await rollbackOriginal();
               skipped.push(`${label}: amortización - cuenta de gasto y prepago son la misma`);
               continue;
             }
@@ -526,9 +532,15 @@ Deno.serve(async (req) => {
               slicePlan.push({ date: sliceDates[i], amount: sliceAmounts[i], period_id: period.id });
             }
             if (blocked) {
+              await rollbackOriginal();
               skipped.push(`${label}: amortización bloqueada — el mes ${blocked} cae en un período cerrado o inexistente`);
               continue;
             }
+
+            amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
+
+            // Swap the master debit account so the original journal posts as DR Prepaid / CR Bank
+            (mainAccountId as any) = prepaidAccountId;
 
             amortizePlan = { rule_id: am.rule_id, rule_name: am.rule_name, expenseAccountId, prepaidAccountId, slices: slicePlan };
           }

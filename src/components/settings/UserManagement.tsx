@@ -475,7 +475,7 @@ export function UserManagement() {
                 <div className="space-y-2">
                   <Label>Asignación de Acceso</Label>
                   <div className="flex gap-2">
-                    {isGlobalAdmin && (
+                    {isGlobalAdmin && !requiresScopedAccess(newUserRole) && (
                       <Button type="button" size="sm" variant={newUserScopeType === "global" ? "default" : "outline"} onClick={() => setNewUserScopeType("global")}>
                         <Globe className="h-3 w-3 mr-1" /> Global
                       </Button>

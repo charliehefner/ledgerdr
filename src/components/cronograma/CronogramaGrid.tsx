@@ -314,6 +314,14 @@ export function CronogramaGrid() {
     retryDelay: 1500,
   });
 
+  // Stable signature for the user-email map so memoized cells re-render once
+  // the directory finishes loading (the Map identity alone is not enough — the
+  // cell comparator below must see a primitive change).
+  const userEmailMapVersion = useMemo(
+    () => `${isUserEmailMapLoading ? "L" : "R"}:${userEmailMap.size}`,
+    [userEmailMap, isUserEmailMapLoading]
+  );
+
   // Fetch week status
   const { data: weekStatus } = useQuery({
     queryKey: ["cronograma-week", weekEndingDate, selectedEntityId],
@@ -972,6 +980,7 @@ export function CronogramaGrid() {
                               t={t}
                               entry={morningEntry}
                               userEmailMap={userEmailMap}
+                              userEmailMapVersion={userEmailMapVersion}
                               isUserEmailMapLoading={isUserEmailMapLoading}
                               language={language}
                               showIndicators={showIndicators}
@@ -994,6 +1003,7 @@ export function CronogramaGrid() {
                               t={t}
                               entry={afternoonEntry}
                               userEmailMap={userEmailMap}
+                              userEmailMapVersion={userEmailMapVersion}
                               isUserEmailMapLoading={isUserEmailMapLoading}
                               language={language}
                               showIndicators={showIndicators}
@@ -1049,6 +1059,7 @@ type CronogramaCellProps = {
   t: (key: string) => string;
   entry?: CronogramaEntry;
   userEmailMap: Map<string, string>;
+  userEmailMapVersion: string;
   isUserEmailMapLoading: boolean;
   language: string;
   showIndicators: boolean;
@@ -1072,6 +1083,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   t,
   entry,
   userEmailMap,
+  userEmailMapVersion: _userEmailMapVersion,
   isUserEmailMapLoading,
   language,
   showIndicators,
@@ -1242,6 +1254,8 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     prevProps.showIndicators === nextProps.showIndicators &&
     prevProps.entry?.updated_by === nextProps.entry?.updated_by &&
     prevProps.entry?.updated_at === nextProps.entry?.updated_at &&
-    prevProps.entry?.task === nextProps.entry?.task
+    prevProps.entry?.task === nextProps.entry?.task &&
+    prevProps.isUserEmailMapLoading === nextProps.isUserEmailMapLoading &&
+    prevProps.userEmailMapVersion === nextProps.userEmailMapVersion
   );
 });

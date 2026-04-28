@@ -153,9 +153,12 @@ async function fetchUserEmails(): Promise<Map<string, string>> {
 
     const emailMap = new Map<string, string>();
     users.forEach((u: { id?: string; email?: string }) => {
-      if (u?.id && u?.email && u.email !== "Unknown") {
-        emailMap.set(u.id, u.email);
-      }
+      if (!u?.id) return;
+      // Keep every user, even when the email lookup returned "Unknown" or is
+      // missing — fall back to a short id prefix so the tooltip always shows
+      // something tied to the editor instead of getting stuck on "Cargando…".
+      const display = u.email && u.email !== "Unknown" ? u.email : `user:${u.id.slice(0, 8)}`;
+      emailMap.set(u.id, display);
     });
     return emailMap;
   } catch (e) {
@@ -302,11 +305,13 @@ export function CronogramaGrid() {
   // Fetch user emails for displaying in tooltips.
   // Stable key + long staleTime: directory is small, fetched once per session,
   // shared across week navigation. Prevents the "Usuario desconocido" flicker.
-  const { data: userEmailMap = new Map<string, string>() } = useQuery({
+  const { data: userEmailMap = new Map<string, string>(), isLoading: isUserEmailMapLoading } = useQuery({
     queryKey: ["all-user-emails"],
     queryFn: fetchUserEmails,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
+    retry: 1,
+    retryDelay: 1500,
   });
 
   // Fetch week status
@@ -967,6 +972,7 @@ export function CronogramaGrid() {
                               t={t}
                               entry={morningEntry}
                               userEmailMap={userEmailMap}
+                              isUserEmailMapLoading={isUserEmailMapLoading}
                               language={language}
                               showIndicators={showIndicators}
                             />
@@ -988,6 +994,7 @@ export function CronogramaGrid() {
                               t={t}
                               entry={afternoonEntry}
                               userEmailMap={userEmailMap}
+                              isUserEmailMapLoading={isUserEmailMapLoading}
                               language={language}
                               showIndicators={showIndicators}
                             />
@@ -1042,6 +1049,7 @@ type CronogramaCellProps = {
   t: (key: string) => string;
   entry?: CronogramaEntry;
   userEmailMap: Map<string, string>;
+  isUserEmailMapLoading: boolean;
   language: string;
   showIndicators: boolean;
 };
@@ -1064,6 +1072,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   t,
   entry,
   userEmailMap,
+  isUserEmailMapLoading,
   language,
   showIndicators,
 }: CronogramaCellProps) {
@@ -1125,7 +1134,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
     const userDisplay = modifierEmail
-      || (userEmailMap.size === 0
+      || (isUserEmailMapLoading
             ? (language === "es" ? "Cargando…" : "Loading…")
             : (language === "es" ? "Usuario desconocido" : "Unknown user"));
     

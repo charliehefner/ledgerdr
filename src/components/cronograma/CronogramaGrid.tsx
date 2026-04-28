@@ -1049,6 +1049,7 @@ type CronogramaCellProps = {
   t: (key: string) => string;
   entry?: CronogramaEntry;
   userEmailMap: Map<string, string>;
+  isUserEmailMapLoading: boolean;
   language: string;
   showIndicators: boolean;
 };

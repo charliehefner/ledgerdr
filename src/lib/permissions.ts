@@ -279,7 +279,7 @@ export const roleDescriptions: Record<UserRole, string> = {
   management: "Acceso total excepto configuración del sistema",
   accountant: "Transacciones, facturas, reportes y recursos humanos",
   supervisor: "Inventario, combustible, equipos y operaciones",
-  office: "Ingreso de transacciones y operaciones; solo lectura en contabilidad y tesorería (excepto caja chica)",
+  office: "Hoja de tiempo de nómina, transacciones, operaciones, directorio de empleados (cartas, vacaciones, documentos) y caja chica",
   viewer: "Solo lectura en secciones asignadas",
   driver: "Portal de combustible móvil para conductores",
 };

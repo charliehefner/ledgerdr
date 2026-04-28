@@ -15,20 +15,24 @@ export function TreasuryView() {
   return (
     <Tabs defaultValue={defaultTab} className="space-y-4">
       <TabsList>
-        <TabsTrigger value="reconciliation">{t("treasury.reconciliation")}</TabsTrigger>
-        <TabsTrigger value="bank-accounts">{t("treasury.bankAccounts")}</TabsTrigger>
-        <TabsTrigger value="credit-cards">{t("treasury.creditCards")}</TabsTrigger>
+        {!isOffice && <TabsTrigger value="reconciliation">{t("treasury.reconciliation")}</TabsTrigger>}
+        {!isOffice && <TabsTrigger value="bank-accounts">{t("treasury.bankAccounts")}</TabsTrigger>}
+        {!isOffice && <TabsTrigger value="credit-cards">{t("treasury.creditCards")}</TabsTrigger>}
         <TabsTrigger value="petty-cash">{t("treasury.pettyCash")}</TabsTrigger>
       </TabsList>
-      <TabsContent value="reconciliation">
-        <BankReconciliationView />
-      </TabsContent>
-      <TabsContent value="bank-accounts">
-        <BankAccountsList />
-      </TabsContent>
-      <TabsContent value="credit-cards">
-        <CreditCardsList />
-      </TabsContent>
+      {!isOffice && (
+        <>
+          <TabsContent value="reconciliation">
+            <BankReconciliationView />
+          </TabsContent>
+          <TabsContent value="bank-accounts">
+            <BankAccountsList />
+          </TabsContent>
+          <TabsContent value="credit-cards">
+            <CreditCardsList />
+          </TabsContent>
+        </>
+      )}
       <TabsContent value="petty-cash">
         <PettyCashView />
       </TabsContent>

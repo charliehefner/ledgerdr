@@ -1134,7 +1134,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
     const userDisplay = modifierEmail
-      || (userEmailMap.size === 0
+      || (isUserEmailMapLoading
             ? (language === "es" ? "Cargando…" : "Loading…")
             : (language === "es" ? "Usuario desconocido" : "Unknown user"));
     

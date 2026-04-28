@@ -62,7 +62,7 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    const allowedRoles = ["admin", "management", "accountant", "supervisor", "viewer"];
+    const allowedRoles = ["admin", "management", "accountant", "supervisor", "viewer", "office"];
     if (!roleData || !allowedRoles.includes(roleData.role)) {
       return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
         status: 403,

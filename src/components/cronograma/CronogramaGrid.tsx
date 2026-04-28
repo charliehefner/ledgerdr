@@ -1096,6 +1096,9 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   const highlightType = showIndicators ? rawHighlightType : null;
   const isHighlighted = highlightType !== null;
   const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
+  const modifierFallback = entry?.updated_by
+    ? `${language === "es" ? "Usuario" : "User"} ${entry.updated_by.slice(0, 8)}`
+    : (language === "es" ? "Usuario desconocido" : "Unknown user");
   const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
 
   // Softer indicator: thin outline + dot positioned outside the cell so it never overlaps text
@@ -1145,10 +1148,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     if (!isHighlighted || !modifiedAt) return null;
     
     const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
-    const userDisplay = modifierEmail
-      || (isUserEmailMapLoading
-            ? (language === "es" ? "Cargando…" : "Loading…")
-            : (language === "es" ? "Usuario desconocido" : "Unknown user"));
+    const userDisplay = modifierEmail || modifierFallback;
     
     const modTypeLabel = highlightType === "self-edit"
       ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")

@@ -305,11 +305,13 @@ export function CronogramaGrid() {
   // Fetch user emails for displaying in tooltips.
   // Stable key + long staleTime: directory is small, fetched once per session,
   // shared across week navigation. Prevents the "Usuario desconocido" flicker.
-  const { data: userEmailMap = new Map<string, string>() } = useQuery({
+  const { data: userEmailMap = new Map<string, string>(), isLoading: isUserEmailMapLoading } = useQuery({
     queryKey: ["all-user-emails"],
     queryFn: fetchUserEmails,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
+    retry: 1,
+    retryDelay: 1500,
   });
 
   // Fetch week status

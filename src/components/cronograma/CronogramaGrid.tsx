@@ -304,7 +304,7 @@ export function CronogramaGrid() {
   // shared across week navigation. Prevents the "Usuario desconocido" flicker.
   const { data: userEmailMap = new Map<string, string>() } = useQuery({
     queryKey: ["all-user-emails"],
-    queryFn: async () => fetchUserEmails([]),
+    queryFn: fetchUserEmails,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
   });

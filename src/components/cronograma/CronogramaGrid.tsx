@@ -994,6 +994,7 @@ export function CronogramaGrid() {
                               t={t}
                               entry={afternoonEntry}
                               userEmailMap={userEmailMap}
+                              isUserEmailMapLoading={isUserEmailMapLoading}
                               language={language}
                               showIndicators={showIndicators}
                             />

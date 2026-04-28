@@ -980,7 +980,7 @@ export function EmployeeDetailDialog({
                 Empleado desvinculado — no se permiten nuevos movimientos
               </div>
             )}
-            {canModifySettings && employee.is_active && (
+            {isHrWriter && employee.is_active && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -1043,7 +1043,7 @@ export function EmployeeDetailDialog({
                         <TableHead>Fecha de Fin</TableHead>
                         <TableHead className="text-right">Días</TableHead>
                         <TableHead>Notas</TableHead>
-                        {canModifySettings && <TableHead className="w-12" />}
+                        {isHrWriter && <TableHead className="w-12" />}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1061,7 +1061,7 @@ export function EmployeeDetailDialog({
                             <TableCell className="text-muted-foreground">
                               {vacation.notes || "—"}
                             </TableCell>
-                            {canModifySettings && (
+                            {isHrWriter && (
                               <TableCell>
                                 <Button
                                   variant="ghost"
@@ -1212,7 +1212,7 @@ export function EmployeeDetailDialog({
 
           {/* Documents Tab */}
           <TabsContent value="documents" className="space-y-4">
-            {canModifySettings && (
+            {isHrWriter && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -1290,7 +1290,7 @@ export function EmployeeDetailDialog({
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
-                              {canModifySettings && (
+                              {isHrWriter && (
                                 <>
                                   <Button
                                     variant="ghost"

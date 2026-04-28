@@ -67,7 +67,8 @@ export function VacationCountdownDialog({
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
   const queryClient = useQueryClient();
-  const { canModifySettings } = useAuth();
+  const { canWriteSection } = useAuth();
+  const canModifySettings = canWriteSection("hr");
   const { t, language } = useLanguage();
   const dateLocale = language === "en" ? enUS : es;
 

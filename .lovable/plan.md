@@ -1,41 +1,61 @@
-# Update Approval Policies
+## Problem
 
-## Changes to `approval_policies` table
+The "Failed to send request to Edge function" error when generating Edy Rodriguez's termination letter (and any other letter type — termination, contract, bank, vacation) is caused by the `generate-hr-letter` edge function failing to boot.
 
-For entity `30e1a5d7-e5c5-4f79-bf7d-202b62a52fcf`:
+### Root cause (confirmed via edge logs)
 
-1. **Delete** `accountant → transaction` (was 50,000) — accountants don't enter transactions in this workflow.
-2. **Delete** `accountant → journal` (was 50,000) — no approval gating on accountant journals.
-3. **Delete** `supervisor → transaction` (was 10,000) — supervisor will lose transaction access entirely (see step 5).
-4. **Insert** `office → transaction` at threshold **20,000**, approver = `management`.
-5. **Code change in `src/lib/permissions.ts`**: Remove `supervisor` from `transactions` in both `sectionPermissions` and `writePermissions` so supervisors can no longer view or write transactions.
-
-## SQL
-
-```sql
-DELETE FROM public.approval_policies
-WHERE entity_id = '30e1a5d7-e5c5-4f79-bf7d-202b62a52fcf'
-  AND (
-    (role_submitter = 'accountant' AND applies_to IN ('transaction','journal'))
-    OR (role_submitter = 'supervisor' AND applies_to = 'transaction')
-  );
-
-INSERT INTO public.approval_policies
-  (entity_id, role_submitter, applies_to, amount_threshold, approver_role, is_active)
-VALUES
-  ('30e1a5d7-e5c5-4f79-bf7d-202b62a52fcf', 'office', 'transaction', 20000, 'management', true);
+```
+event loop error: NotFound: path not found:
+/var/tmp/sb-compile-edge-runtime/generate-hr-letter/assets/top.jpg
+at file:///.../generate-hr-letter/index.ts:128:41
 ```
 
-## Resulting policy state for the entity
+The function does this at module init (lines 103–104):
 
-| Submitter | Applies to  | Threshold (RD$) | Approver   |
-|-----------|-------------|-----------------|------------|
-| office    | transaction | 20,000          | management |
+```ts
+const LETTERHEAD_TOP_BYTES = await Deno.readFile(new URL("./assets/top.jpg", import.meta.url));
+const LETTERHEAD_BOTTOM_BYTES = await Deno.readFile(new URL("./assets/bottom.jpg", import.meta.url));
+```
 
-(No other policies remain active.)
+Supabase Edge Runtime does **not** bundle sibling binary assets (`.jpg`, `.png`, etc.) when deploying. Only `.ts`/`.js` source is shipped. So `Deno.readFile` fails on every cold start → function never boots → client gets the generic "Failed to send request" error.
 
-## Verification
+This affects **all four letter types** (termination, contract, bank, vacation), since they all go through the same function.
 
-- Office user creates a transaction ≥ RD$20,000 → status `pending`, appears in Approvals queue.
-- Office user creates a transaction < RD$20,000 → posts directly.
-- Supervisor login no longer sees the Transactions tab in the sidebar.
+## Fix
+
+Embed the letterhead images directly into the source as base64 constants so they ship with the bundled `.ts` file — no filesystem reads needed.
+
+### Steps
+
+1. **Convert** the two existing assets to base64:
+   - `supabase/functions/generate-hr-letter/assets/top.jpg` → base64 string
+   - `supabase/functions/generate-hr-letter/assets/bottom.jpg` → base64 string
+
+2. **Create** `supabase/functions/generate-hr-letter/letterhead-assets.ts` exporting:
+   ```ts
+   export const LETTERHEAD_TOP_B64 = "...";
+   export const LETTERHEAD_BOTTOM_B64 = "...";
+   ```
+   Keeping it in a separate file keeps `index.ts` readable (the strings will be ~60 KB combined).
+
+3. **Update** `supabase/functions/generate-hr-letter/index.ts` (lines 101–108):
+   - Remove the `Deno.readFile` calls.
+   - Import the base64 constants.
+   - Decode them once at module init:
+     ```ts
+     import { LETTERHEAD_TOP_B64, LETTERHEAD_BOTTOM_B64 } from "./letterhead-assets.ts";
+     const LETTERHEAD_TOP_BYTES = Uint8Array.from(atob(LETTERHEAD_TOP_B64), c => c.charCodeAt(0));
+     const LETTERHEAD_BOTTOM_BYTES = Uint8Array.from(atob(LETTERHEAD_BOTTOM_B64), c => c.charCodeAt(0));
+     ```
+
+4. **Deploy** the function and retry termination letter for Edy Rodriguez to confirm.
+
+5. **Memory update**: Append a note to `mem://features/hr-module/letterhead-formatting` documenting that letterhead images must be embedded as base64 in source, not loaded from disk, because Edge Runtime does not bundle binary assets.
+
+### Files changed
+- `supabase/functions/generate-hr-letter/letterhead-assets.ts` (new)
+- `supabase/functions/generate-hr-letter/index.ts` (lines 101–108)
+- `mem://features/hr-module/letterhead-formatting` (note added)
+
+### Out of scope
+The local `assets/` folder can stay as the source-of-truth originals; we just won't load them at runtime. If the letterhead images ever change, regenerate the base64 file from the new images.

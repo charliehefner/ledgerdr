@@ -98,10 +98,12 @@ interface PdfLine {
   underline?: boolean;
 }
 
-// ─── Letterhead images (loaded once at module init) ───
+// ─── Letterhead images (embedded as base64 at module init) ───
 // Drawn full-width on every page. Top: 1920x275, Bottom: 1920x184.
-const LETTERHEAD_TOP_BYTES = await Deno.readFile(new URL("./assets/top.jpg", import.meta.url));
-const LETTERHEAD_BOTTOM_BYTES = await Deno.readFile(new URL("./assets/bottom.jpg", import.meta.url));
+// Embedded inline because Supabase Edge Runtime does not bundle binary sibling assets.
+import { LETTERHEAD_TOP_B64, LETTERHEAD_BOTTOM_B64 } from "./letterhead-assets.ts";
+const LETTERHEAD_TOP_BYTES = Uint8Array.from(atob(LETTERHEAD_TOP_B64), (c) => c.charCodeAt(0));
+const LETTERHEAD_BOTTOM_BYTES = Uint8Array.from(atob(LETTERHEAD_BOTTOM_B64), (c) => c.charCodeAt(0));
 const LETTERHEAD_TOP_W = 1920;
 const LETTERHEAD_TOP_H = 275;
 const LETTERHEAD_BOTTOM_W = 1920;

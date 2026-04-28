@@ -131,27 +131,35 @@ function isHoliday(dateStr: string): boolean {
   return HOLIDAYS_2025.includes(dateStr);
 }
 
-// Fetch user emails for tooltips
-async function fetchUserEmails(userIds: string[]): Promise<Map<string, string>> {
-  const uniqueIds = [...new Set(userIds.filter(Boolean))];
-  if (uniqueIds.length === 0) return new Map();
-  
+// Fetch all user emails for tooltips. The Cronograma displays "Modificado por…"
+// for many cells, so we fetch the full directory once per session and look up
+// emails by user_id from the resulting Map.
+async function fetchUserEmails(): Promise<Map<string, string>> {
   try {
     const { data, error } = await supabase.functions.invoke("get-users", {
       body: {},
     });
-    
-    if (error) return new Map();
-    
+
+    if (error) {
+      console.warn("[Cronograma] get-users invoke error:", error);
+      return new Map();
+    }
+
     const users = Array.isArray(data) ? data : data?.users;
-    if (!users) return new Map();
-    
+    if (!Array.isArray(users)) {
+      console.warn("[Cronograma] get-users returned unexpected payload:", data);
+      return new Map();
+    }
+
     const emailMap = new Map<string, string>();
-    users.forEach((u: { id: string; email: string }) => {
-      emailMap.set(u.id, u.email);
+    users.forEach((u: { id?: string; email?: string }) => {
+      if (u?.id && u?.email && u.email !== "Unknown") {
+        emailMap.set(u.id, u.email);
+      }
     });
     return emailMap;
-  } catch {
+  } catch (e) {
+    console.warn("[Cronograma] get-users threw:", e);
     return new Map();
   }
 }
@@ -296,7 +304,7 @@ export function CronogramaGrid() {
   // shared across week navigation. Prevents the "Usuario desconocido" flicker.
   const { data: userEmailMap = new Map<string, string>() } = useQuery({
     queryKey: ["all-user-emails"],
-    queryFn: async () => fetchUserEmails([]),
+    queryFn: fetchUserEmails,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
   });

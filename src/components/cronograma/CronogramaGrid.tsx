@@ -153,9 +153,12 @@ async function fetchUserEmails(): Promise<Map<string, string>> {
 
     const emailMap = new Map<string, string>();
     users.forEach((u: { id?: string; email?: string }) => {
-      if (u?.id && u?.email && u.email !== "Unknown") {
-        emailMap.set(u.id, u.email);
-      }
+      if (!u?.id) return;
+      // Keep every user, even when the email lookup returned "Unknown" or is
+      // missing — fall back to a short id prefix so the tooltip always shows
+      // something tied to the editor instead of getting stuck on "Cargando…".
+      const display = u.email && u.email !== "Unknown" ? u.email : `user:${u.id.slice(0, 8)}`;
+      emailMap.set(u.id, display);
     });
     return emailMap;
   } catch (e) {

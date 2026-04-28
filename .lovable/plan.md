@@ -1,54 +1,41 @@
-# Allow Office Role to Attach Documents to Transactions
+# Update Approval Policies
 
-## Problem
+## Changes to `approval_policies` table
 
-Users with the `office` role can create and edit transactions, but the paperclip attachment button fails silently when they try to upload an NCF, receipt, or quote. This is because two separate Row-Level Security layers exclude `office`:
+For entity `30e1a5d7-e5c5-4f79-bf7d-202b62a52fcf`:
 
-1. **`public.transaction_attachments` table** — policies only grant access to `admin`, `management`, `accountant`, and `viewer` (read-only). `office` cannot insert/update rows.
-2. **`storage.objects` for the `transaction-attachments` bucket** — INSERT and SELECT policies only allow `admin`, `management`, `accountant` (and `supervisor` for SELECT). `office` cannot upload or view files.
+1. **Delete** `accountant → transaction` (was 50,000) — accountants don't enter transactions in this workflow.
+2. **Delete** `accountant → journal` (was 50,000) — no approval gating on accountant journals.
+3. **Delete** `supervisor → transaction` (was 10,000) — supervisor will lose transaction access entirely (see step 5).
+4. **Insert** `office → transaction` at threshold **20,000**, approver = `management`.
+5. **Code change in `src/lib/permissions.ts`**: Remove `supervisor` from `transactions` in both `sectionPermissions` and `writePermissions` so supervisors can no longer view or write transactions.
 
-The frontend (`MultiAttachmentCell`) has no role gating, so this is purely a database-policy fix.
-
-## Fix
-
-Single migration that adds `office` to all relevant policies. No frontend changes needed.
-
-### 1. `public.transaction_attachments`
-
-Add a new policy:
+## SQL
 
 ```sql
-CREATE POLICY "Office full access" ON public.transaction_attachments
-FOR ALL TO authenticated
-USING (EXISTS (
-  SELECT 1 FROM transactions t
-  WHERE t.id = transaction_attachments.transaction_id
-    AND has_role_for_entity(auth.uid(), 'office'::app_role, t.entity_id)
-))
-WITH CHECK (EXISTS (
-  SELECT 1 FROM transactions t
-  WHERE t.id = transaction_attachments.transaction_id
-    AND has_role_for_entity(auth.uid(), 'office'::app_role, t.entity_id)
-));
+DELETE FROM public.approval_policies
+WHERE entity_id = '30e1a5d7-e5c5-4f79-bf7d-202b62a52fcf'
+  AND (
+    (role_submitter = 'accountant' AND applies_to IN ('transaction','journal'))
+    OR (role_submitter = 'supervisor' AND applies_to = 'transaction')
+  );
+
+INSERT INTO public.approval_policies
+  (entity_id, role_submitter, applies_to, amount_threshold, approver_role, is_active)
+VALUES
+  ('30e1a5d7-e5c5-4f79-bf7d-202b62a52fcf', 'office', 'transaction', 20000, 'management', true);
 ```
 
-### 2. `storage.objects` for `transaction-attachments` bucket
+## Resulting policy state for the entity
 
-Drop and recreate the upload + view policies to include `office`:
+| Submitter | Applies to  | Threshold (RD$) | Approver   |
+|-----------|-------------|-----------------|------------|
+| office    | transaction | 20,000          | management |
 
-- **"Authorized users can upload transaction attachments"** (INSERT): add `has_role(auth.uid(), 'office')`
-- **"Authorized roles can view transaction attachments"** (SELECT): add `has_role(auth.uid(), 'office')`
+(No other policies remain active.)
 
-Delete and update policies stay admin-only (matches the existing pattern where attachment deletion is restricted).
+## Verification
 
-## Scope (intentionally narrow)
-
-- Only the `transaction-attachments` bucket and `transaction_attachments` table are touched.
-- Office's existing permissions on `transactions` (already present in `src/lib/permissions.ts`) are unchanged.
-- No code changes to `MultiAttachmentCell.tsx`, `TransactionForm.tsx`, or `lib/permissions.ts` are required — the UI already exposes the button to office users; only the backend policies were blocking it.
-
-## Verification after deploy
-
-1. Log in as an `office` user.
-2. Open Transactions → click paperclip on any row → upload a PDF/image.
-3. Confirm: file uploads, appears in the dropdown, and the signed-URL preview opens.
+- Office user creates a transaction ≥ RD$20,000 → status `pending`, appears in Approvals queue.
+- Office user creates a transaction < RD$20,000 → posts directly.
+- Supervisor login no longer sees the Transactions tab in the sidebar.

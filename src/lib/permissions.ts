@@ -123,7 +123,7 @@ export const routeToSection: Record<string, Section> = {
 // Permission matrix: which roles can access which sections
 const sectionPermissions: Record<Section, UserRole[]> = {
   dashboard: ["admin", "management", "accountant", "viewer"],
-  transactions: ["admin", "management", "accountant", "office", "viewer"],
+  transactions: ["admin", "management", "accountant", "office", "viewer"], // supervisor intentionally excluded
   invoices: ["admin", "management", "accountant", "viewer"],
   reports: ["admin", "management", "accountant", "viewer"],
   analytics: ["admin", "management", "accountant", "viewer"],

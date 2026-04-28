@@ -1,22 +1,54 @@
-I found the likely reason it still did not work: the tooltip logic was fixed, but the memoized schedule cell is not allowed to re-render when the user email lookup finishes. The custom `React.memo` comparator ignores both `userEmailMap` and `isUserEmailMapLoading`, so cells can keep the first rendered tooltip text, e.g. `Cargando…`, even after the query resolves.
+# Allow Office Role to Attach Documents to Transactions
 
-Plan:
+## Problem
 
-1. Update the schedule cell memo comparator
-   - In `src/components/cronograma/CronogramaGrid.tsx`, include `isUserEmailMapLoading` in the custom comparator.
-   - This will force highlighted cells to re-render when the user-directory lookup changes from loading to loaded.
+Users with the `office` role can create and edit transactions, but the paperclip attachment button fails silently when they try to upload an NCF, receipt, or quote. This is because two separate Row-Level Security layers exclude `office`:
 
-2. Add a stable lookup version for the user map
-   - Because a `Map` object itself should not be compared deeply in every cell, compute a lightweight stable version/signature in the parent from the map contents.
-   - Pass that version into each cell.
-   - Include it in the memo comparator so cells also re-render when the loaded map content changes.
+1. **`public.transaction_attachments` table** — policies only grant access to `admin`, `management`, `accountant`, and `viewer` (read-only). `office` cannot insert/update rows.
+2. **`storage.objects` for the `transaction-attachments` bucket** — INSERT and SELECT policies only allow `admin`, `management`, `accountant` (and `supervisor` for SELECT). `office` cannot upload or view files.
 
-3. Make the fallback more definitive
-   - Keep `Cargando…` only while the lookup is actively loading.
-   - Once loading is complete, show the resolved email, `user:xxxxxxxx`, or `Usuario desconocido`.
+The frontend (`MultiAttachmentCell`) has no role gating, so this is purely a database-policy fix.
 
-4. Verification
-   - Re-open the schedule grid and check an already-highlighted old cell.
-   - Confirm the tooltip no longer remains stuck on `Cargando…` after the user lookup finishes.
+## Fix
 
-No database changes are needed.
+Single migration that adds `office` to all relevant policies. No frontend changes needed.
+
+### 1. `public.transaction_attachments`
+
+Add a new policy:
+
+```sql
+CREATE POLICY "Office full access" ON public.transaction_attachments
+FOR ALL TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM transactions t
+  WHERE t.id = transaction_attachments.transaction_id
+    AND has_role_for_entity(auth.uid(), 'office'::app_role, t.entity_id)
+))
+WITH CHECK (EXISTS (
+  SELECT 1 FROM transactions t
+  WHERE t.id = transaction_attachments.transaction_id
+    AND has_role_for_entity(auth.uid(), 'office'::app_role, t.entity_id)
+));
+```
+
+### 2. `storage.objects` for `transaction-attachments` bucket
+
+Drop and recreate the upload + view policies to include `office`:
+
+- **"Authorized users can upload transaction attachments"** (INSERT): add `has_role(auth.uid(), 'office')`
+- **"Authorized roles can view transaction attachments"** (SELECT): add `has_role(auth.uid(), 'office')`
+
+Delete and update policies stay admin-only (matches the existing pattern where attachment deletion is restricted).
+
+## Scope (intentionally narrow)
+
+- Only the `transaction-attachments` bucket and `transaction_attachments` table are touched.
+- Office's existing permissions on `transactions` (already present in `src/lib/permissions.ts`) are unchanged.
+- No code changes to `MultiAttachmentCell.tsx`, `TransactionForm.tsx`, or `lib/permissions.ts` are required — the UI already exposes the button to office users; only the backend policies were blocking it.
+
+## Verification after deploy
+
+1. Log in as an `office` user.
+2. Open Transactions → click paperclip on any row → upload a PDF/image.
+3. Confirm: file uploads, appears in the dropdown, and the signed-URL preview opens.

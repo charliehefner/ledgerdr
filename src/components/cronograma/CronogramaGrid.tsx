@@ -1072,6 +1072,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   t,
   entry,
   userEmailMap,
+  isUserEmailMapLoading,
   language,
   showIndicators,
 }: CronogramaCellProps) {

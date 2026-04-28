@@ -46,7 +46,7 @@ export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-
 
 // Which HR tabs each role can access
 const hrTabPermissions: Record<HrTab, UserRole[]> = {
-  payroll: ["admin", "management", "accountant"],
+  payroll: ["admin", "management", "accountant", "office"],
   "day-labor": ["admin", "management", "accountant", "supervisor", "office"],
   servicios: ["admin", "management", "accountant", "supervisor", "office"],
   jornaleros: ["admin", "management", "accountant", "supervisor", "office"],
@@ -58,7 +58,7 @@ const hrTabPermissions: Record<HrTab, UserRole[]> = {
 
 // Which HR tabs each role can write to (add/edit/delete)
 const hrTabWritePermissions: Record<HrTab, UserRole[]> = {
-  payroll: ["admin", "management", "accountant"],
+  payroll: ["admin", "management", "accountant", "office"],
   "day-labor": ["admin", "management", "accountant", "supervisor", "office"],
   servicios: ["admin", "management", "accountant", "supervisor", "office"],
   jornaleros: ["admin", "management", "accountant", "supervisor", "office"],
@@ -137,7 +137,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   cronograma: ["admin", "management", "supervisor", "office", "viewer"],
   alerts: ["admin", "management", "supervisor", "office"],
   settings: ["admin"],
-  accounting: ["admin", "management", "accountant", "office", "viewer"],
+  accounting: ["admin", "management", "accountant", "viewer"],
   "ap-ar": ["admin", "management", "accountant"],
   budget: ["admin"],
   treasury: ["admin", "management", "accountant", "office"],

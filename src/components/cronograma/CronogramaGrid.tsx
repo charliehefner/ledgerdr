@@ -314,6 +314,14 @@ export function CronogramaGrid() {
     retryDelay: 1500,
   });
 
+  // Stable signature for the user-email map so memoized cells re-render once
+  // the directory finishes loading (the Map identity alone is not enough — the
+  // cell comparator below must see a primitive change).
+  const userEmailMapVersion = useMemo(
+    () => `${isUserEmailMapLoading ? "L" : "R"}:${userEmailMap.size}`,
+    [userEmailMap, isUserEmailMapLoading]
+  );
+
   // Fetch week status
   const { data: weekStatus } = useQuery({
     queryKey: ["cronograma-week", weekEndingDate, selectedEntityId],

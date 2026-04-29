@@ -255,24 +255,44 @@ function pushSignature(
 function buildPdf(items: PdfItem[]): Uint8Array {
   const encoder = new TextEncoder();
 
-  // For now every letter fits on one page; we still bucket by page to keep the structure flexible.
-  // Pagination: any item whose y < BOTTOM_LIMIT moves to a new page (preserving its relative offset).
+  // Pagination: any item whose y < BOTTOM_LIMIT moves to a new page.
+  // Items sharing a `groupId` (e.g. signature blocks) page-break together: if any
+  // member would overflow, the entire group is shifted onto a new page.
   interface Placed { item: PdfItem; page: number }
   const placed: Placed[] = [];
   let page = 0;
-  let pageOffset = 0; // Y shift applied when items overflow
-
-  for (const it of items) {
-    const adjY = it.y + pageOffset;
-    if (adjY < BOTTOM_LIMIT) {
-      page++;
-      pageOffset = (TOP_BODY_Y - it.y);
+  let pageOffset = 0;
+  let i = 0;
+  while (i < items.length) {
+    const it = items[i];
+    if (it.groupId) {
+      // Collect contiguous group
+      const group: PdfItem[] = [];
+      let j = i;
+      while (j < items.length && items[j].groupId === it.groupId) {
+        group.push(items[j]);
+        j++;
+      }
+      const minY = Math.min(...group.map((g) => g.y + pageOffset));
+      if (minY < BOTTOM_LIMIT) {
+        page++;
+        // Shift the whole group so its TOP sits at TOP_BODY_Y
+        const groupTop = Math.max(...group.map((g) => g.y));
+        pageOffset = TOP_BODY_Y - groupTop;
+      }
+      for (const g of group) {
+        placed.push({ item: { ...g, y: g.y + pageOffset } as PdfItem, page });
+      }
+      i = j;
+    } else {
+      const adjY = it.y + pageOffset;
+      if (adjY < BOTTOM_LIMIT) {
+        page++;
+        pageOffset = TOP_BODY_Y - it.y;
+      }
+      placed.push({ item: { ...it, y: it.y + pageOffset } as PdfItem, page });
+      i++;
     }
-    const finalY = it.y + pageOffset;
-    placed.push({
-      item: { ...it, y: finalY } as PdfItem,
-      page,
-    });
   }
 
   const totalPages = page + 1;

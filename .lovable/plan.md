@@ -1,61 +1,98 @@
-## Problem
+## Goal
 
-The "Failed to send request to Edge function" error when generating Edy Rodriguez's termination letter (and any other letter type — termination, contract, bank, vacation) is caused by the `generate-hr-letter` edge function failing to boot.
+Make all four HR letters (Contrato, Terminación, Carta al Banco, Vacaciones) look like polished, professional documents:
 
-### Root cause (confirmed via edge logs)
+1. **Justified body text** — left and right margins aligned for every wrapped paragraph.
+2. **Clean signature blocks** — consistent, meaningful lines (no random underscore lengths or stray dashes).
+3. **Predictable spacing** — paragraph gaps follow a small, fixed set of values instead of arbitrary `y -= 30 / 50 / 60` jumps.
+4. **Vertically balanced page** — content and signatures distributed so the letter doesn't pile at the top with empty space at the bottom.
+
+All work is in `supabase/functions/generate-hr-letter/index.ts` plus a redeploy.
+
+## Changes
+
+### 1. Add a justified word-wrap renderer in `buildPdf`
+
+Replace the current word-wrap branch (lines ~139–169) with one that supports `align: "justify" | "left"` per `PdfLine`:
+
+- Wrap words into lines exactly as today, using the same width estimate.
+- For every wrapped line **except the last** of a paragraph: distribute the leftover horizontal space evenly between words by inserting extra glyph spacing.
+- In raw PDF this is done with the `Tw` (word-space) operator: `Tw <extraSpace> <text> Tj` then reset `Tw 0`. Compute `extraSpace = (maxWidth - estimatedWidth) / max(1, wordCount - 1)`, clamped to a sensible max (e.g. 6pt) so we don't get rivers of whitespace on short lines.
+- Last line of each paragraph and any line with a single word: render left-aligned (no `Tw`).
+- Default alignment for every body paragraph in the four letters becomes `"justify"`. Headings, dates, signatures, salutations stay left-aligned.
+
+### 2. Standardize spacing constants
+
+Introduce per-letter constants instead of ad-hoc numbers:
 
 ```
-event loop error: NotFound: path not found:
-/var/tmp/sb-compile-edge-runtime/generate-hr-letter/assets/top.jpg
-at file:///.../generate-hr-letter/index.ts:128:41
+const GAP_PARA = 14;     // between paragraphs
+const GAP_SECTION = 22;  // between sections (title → body, body → closing)
+const GAP_SIG = 70;      // space reserved above signature block
+const LINE_H = 15.4;     // current 11pt line height (unchanged)
 ```
 
-The function does this at module init (lines 103–104):
+Replace the scattered `y -= 20 / 25 / 30 / 40 / 50 / 60` with these. Result: rhythm becomes uniform across all letters.
 
-```ts
-const LETTERHEAD_TOP_BYTES = await Deno.readFile(new URL("./assets/top.jpg", import.meta.url));
-const LETTERHEAD_BOTTOM_BYTES = await Deno.readFile(new URL("./assets/bottom.jpg", import.meta.url));
+Also fix the wrap-height calculation. Today it uses `Math.ceil(text.length * 11 * 0.52 / mw)` to estimate lines, which under/overshoots. Change `buildPdf` to **return** the final `y` after rendering each wrapped line (or expose it via a small helper like `pushParagraph(lines, text, y, opts) → newY`). Each generator then uses the real consumed height instead of estimating twice.
+
+### 3. Redesign signature blocks
+
+A single helper used by all four letters:
+
+```
+function pushSignature(lines, x, y, name, subtitle?) {
+  // Solid 180pt rule, name centered under it, optional subtitle line below
+  lines.push({ kind: "rule", x, y, width: 180 });
+  lines.push({ text: name, x: x + (180 - estWidth(name)) / 2, y: y - 13, size: 10, bold: true });
+  if (subtitle) lines.push({ text: subtitle, x: x + (180 - estWidth(subtitle)) / 2, y: y - 26, size: 9 });
+}
 ```
 
-Supabase Edge Runtime does **not** bundle sibling binary assets (`.jpg`, `.png`, etc.) when deploying. Only `.ts`/`.js` source is shipped. So `Deno.readFile` fails on every cold start → function never boots → client gets the generic "Failed to send request" error.
+- Drop the underscore strings (`"___________________________"`) and draw a real horizontal line via a new `kind: "rule"` PdfLine handled in `buildPdf` with `m … l S` PDF ops. Eliminates the ragged underscore widths between letters.
+- Name is **bold** and **centered** under the rule; role/cédula is one smaller line beneath. No more three stacked left-aligned lines of varying length.
+- Two-column layouts (Contrato, Terminación, Vacaciones) use `x = 80` (left) and `x = 352` (right) so both blocks are symmetric around the page center.
 
-This affects **all four letter types** (termination, contract, bank, vacation), since they all go through the same function.
+### 4. Per-letter layout adjustments
 
-## Fix
+**Contrato (`generateHiringPdf`)**
+- All `ENTRE / PRIMERO / SEGUNDO / …` clauses rendered justified.
+- "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:" centered using measured width instead of hardcoded `x = 160`.
+- Signature row: left = company (name + RNC), right = employee (name + cédula), using `pushSignature`. Anchored at a computed `sigY` that leaves at least `GAP_SIG` below the closing paragraph but never below `marginBottom + 60`.
 
-Embed the letterhead images directly into the source as base64 constants so they ship with the bundled `.ts` file — no filesystem reads needed.
+**Terminación (`generateTerminationPdf`)**
+- Title centered via measured width (no more `titleX = 140 / 210` switch).
+- Body and "prestaciones" paragraph justified.
+- Signatures: employee bottom-left, manager bottom-right (currently both stacked on the left). Uses `pushSignature` for both.
 
-### Steps
+**Carta al Banco (`generateBankLetterPdf`)**
+- Body and request paragraph justified.
+- "Sin otro particular," and "Atentamente," collapsed into the same `GAP_PARA` rhythm.
+- Single centered signature block (not left-aligned).
 
-1. **Convert** the two existing assets to base64:
-   - `supabase/functions/generate-hr-letter/assets/top.jpg` → base64 string
-   - `supabase/functions/generate-hr-letter/assets/bottom.jpg` → base64 string
+**Vacaciones (`generateVacationPdf`)**
+- Date right-aligned by measured width against the right margin (currently hardcoded `x = 380`).
+- Body and closing line justified.
+- Two `pushSignature` blocks at symmetric x positions; remove the duplicated underscore lines.
 
-2. **Create** `supabase/functions/generate-hr-letter/letterhead-assets.ts` exporting:
-   ```ts
-   export const LETTERHEAD_TOP_B64 = "...";
-   export const LETTERHEAD_BOTTOM_B64 = "...";
-   ```
-   Keeping it in a separate file keeps `index.ts` readable (the strings will be ~60 KB combined).
+### 5. Vertical balance
 
-3. **Update** `supabase/functions/generate-hr-letter/index.ts` (lines 101–108):
-   - Remove the `Deno.readFile` calls.
-   - Import the base64 constants.
-   - Decode them once at module init:
-     ```ts
-     import { LETTERHEAD_TOP_B64, LETTERHEAD_BOTTOM_B64 } from "./letterhead-assets.ts";
-     const LETTERHEAD_TOP_BYTES = Uint8Array.from(atob(LETTERHEAD_TOP_B64), c => c.charCodeAt(0));
-     const LETTERHEAD_BOTTOM_BYTES = Uint8Array.from(atob(LETTERHEAD_BOTTOM_B64), c => c.charCodeAt(0));
-     ```
+After laying out the body, compute `remaining = currentY - (marginBottom + signatureBlockHeight)`. If `remaining > 40`, shift the signature block down by `remaining / 2` so the letter sits roughly centered between header and footer instead of crowding the top. Cap the shift so the block never crosses the bottom letterhead.
 
-4. **Deploy** the function and retry termination letter for Edy Rodriguez to confirm.
+### 6. QA
 
-5. **Memory update**: Append a note to `mem://features/hr-module/letterhead-formatting` documenting that letterhead images must be embedded as base64 in source, not loaded from disk, because Edge Runtime does not bundle binary assets.
+After redeploying `generate-hr-letter`, regenerate the four Edy Rodriguez sample PDFs by calling the edge function the same way as last round, then `pdftoppm` each to JPEG and visually inspect:
 
-### Files changed
-- `supabase/functions/generate-hr-letter/letterhead-assets.ts` (new)
-- `supabase/functions/generate-hr-letter/index.ts` (lines 101–108)
-- `mem://features/hr-module/letterhead-formatting` (note added)
+- Justified edges flush on the right margin.
+- Signature rules identical width across all letters.
+- Even paragraph rhythm.
+- No overlap with top/bottom letterhead images.
+- Vacation date sits at the right margin; titles are visually centered.
 
-### Out of scope
-The local `assets/` folder can stay as the source-of-truth originals; we just won't load them at runtime. If the letterhead images ever change, regenerate the base64 file from the new images.
+Iterate on spacing constants until all four pass. Replace the `Edy_Rodriguez_*.pdf` artifacts in `/mnt/documents/` with `_v2` versions for side-by-side comparison.
+
+## Out of scope
+
+- Wording/legal content of the letters (unchanged).
+- Letterhead images (unchanged).
+- Switching to a real PDF library — we keep the hand-rolled builder and just extend it with `Tw` justification and a `rule` primitive.

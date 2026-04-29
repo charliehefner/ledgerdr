@@ -233,18 +233,19 @@ function pushSignature(
   topY: number,
   name: string,
   subtitles: string[] = [],
+  groupId = "sig",
 ): number {
   const ruleX = centerX - SIG_RULE_W / 2;
-  items.push({ kind: "rule", x: ruleX, y: topY, width: SIG_RULE_W, thickness: 0.6 });
+  items.push({ kind: "rule", x: ruleX, y: topY, width: SIG_RULE_W, thickness: 0.6, groupId });
 
   let y = topY - 14;
   const nameW = estTextWidth(name, 10, true);
-  items.push({ kind: "text", text: name, x: centerX - nameW / 2, y, size: 10, bold: true });
+  items.push({ kind: "text", text: name, x: centerX - nameW / 2, y, size: 10, bold: true, groupId });
   y -= 13;
 
   for (const sub of subtitles) {
     const w = estTextWidth(sub, 9, false);
-    items.push({ kind: "text", text: sub, x: centerX - w / 2, y, size: 9 });
+    items.push({ kind: "text", text: sub, x: centerX - w / 2, y, size: 9, groupId });
     y -= 12;
   }
   return y;

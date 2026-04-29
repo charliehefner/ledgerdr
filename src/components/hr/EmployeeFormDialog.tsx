@@ -127,12 +127,12 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         name: employee.name,
         cedula: employee.cedula,
         position: (POSITIONS.includes(employee.position as typeof POSITIONS[number]) ? employee.position : "Servicios Generales") as typeof POSITIONS[number],
-        sex: (employee as any).sex || "",
+        sex: employee.sex || "",
         bank: employee.bank || "",
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
         date_of_hire: employee.date_of_hire,
-        date_of_termination: (employee as any).date_of_termination || "",
+        date_of_termination: employee.date_of_termination || "",
         salary: employee.salary,
         boot_size: employee.boot_size || "",
         pant_size: employee.pant_size || "",
@@ -161,7 +161,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
   const onSubmit = async (data: EmployeeFormData) => {
     try {
-      const entityId = ((employee as any)?.entity_id as string | undefined) ?? requireEntity();
+      const entityId = employee?.entity_id ?? requireEntity();
       if (!entityId) return;
 
       const payload = {

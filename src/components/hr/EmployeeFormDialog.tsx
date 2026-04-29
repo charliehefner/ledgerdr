@@ -127,12 +127,12 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         name: employee.name,
         cedula: employee.cedula,
         position: (POSITIONS.includes(employee.position as typeof POSITIONS[number]) ? employee.position : "Servicios Generales") as typeof POSITIONS[number],
-        sex: (employee as any).sex || "",
+        sex: employee.sex || "",
         bank: employee.bank || "",
         bank_account_number: employee.bank_account_number || "",
         date_of_birth: employee.date_of_birth || "",
         date_of_hire: employee.date_of_hire,
-        date_of_termination: (employee as any).date_of_termination || "",
+        date_of_termination: employee.date_of_termination || "",
         salary: employee.salary,
         boot_size: employee.boot_size || "",
         pant_size: employee.pant_size || "",
@@ -161,6 +161,9 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
   const onSubmit = async (data: EmployeeFormData) => {
     try {
+      const entityId = employee?.entity_id ?? requireEntity();
+      if (!entityId) return;
+
       const payload = {
         name: data.name,
         cedula: data.cedula,
@@ -189,6 +192,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         if (employee && employee.salary !== data.salary) {
           await supabase.from("employee_salary_history").insert({
             employee_id: employeeId,
+            entity_id: entityId,
             salary: data.salary,
             effective_date: new Date().toISOString().split("T")[0],
             notes: `Salario actualizado de ${employee.salary} a ${data.salary}`,
@@ -206,9 +210,6 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
         toast.success(t("empForm.employeeUpdated"));
       } else {
-        const entityId = requireEntity();
-        if (!entityId) return;
-
         const { data: newEmployee, error } = await supabase
           .from("employees")
           .insert({ ...payload, entity_id: entityId })
@@ -225,6 +226,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
         await supabase.from("employee_salary_history").insert({
           employee_id: newEmployee.id,
+          entity_id: entityId,
           salary: data.salary,
           effective_date: data.date_of_hire,
           notes: "Salario inicial",

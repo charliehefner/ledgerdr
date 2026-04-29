@@ -72,6 +72,7 @@ export function PlantHoursView() {
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
       const { error } = await supabase.from("industrial_plant_hours").insert({
         date: form.date || null,
         start_hour_meter: form.start_hour_meter ? Number(form.start_hour_meter) : null,
@@ -80,6 +81,7 @@ export function PlantHoursView() {
         estimated_diesel_liters: form.estimated_diesel_liters ? Number(form.estimated_diesel_liters) : null,
         notes: form.notes || null,
         created_by: user?.id,
+        entity_id: selectedEntityId,
       });
       if (error) throw error;
     },

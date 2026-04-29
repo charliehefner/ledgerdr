@@ -103,7 +103,8 @@ export function FuelTanksView() {
           .eq("id", editingTank.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("fuel_tanks").insert(payload);
+        if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
+        const { error } = await supabase.from("fuel_tanks").insert({ ...payload, entity_id: selectedEntityId });
         if (error) throw error;
       }
     },

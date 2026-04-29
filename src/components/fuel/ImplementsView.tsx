@@ -34,6 +34,7 @@ import { format } from "date-fns";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useColumnVisibility, ColumnConfig } from "@/hooks/useColumnVisibility";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 interface Implement {
   id: string;
@@ -78,6 +79,7 @@ export function ImplementsView() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { requireEntity } = useEntity();
 
   const implementColumns: ColumnConfig[] = useMemo(() => [
     { key: "name", label: t("equipment.col.name"), defaultVisible: true },
@@ -129,7 +131,9 @@ export function ImplementsView() {
           .eq("id", editingImplement.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("implements").insert(record);
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Selecciona una entidad antes de crear");
+        const { error } = await supabase.from("implements").insert({ ...record, entity_id: entityId });
         if (error) throw error;
       }
     },

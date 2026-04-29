@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 const CATEGORIES = [
   { value: "vehicle", label: "Vehículo" },
@@ -33,6 +34,7 @@ interface FixedAssetDialogProps {
 
 export function FixedAssetDialog({ open, onOpenChange, asset, onSaved }: FixedAssetDialogProps) {
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -139,7 +141,9 @@ export function FixedAssetDialog({ open, onOpenChange, asset, onSaved }: FixedAs
         if (error) throw error;
         toast.success("Activo actualizado");
       } else {
-        const { error } = await supabase.from("fixed_assets").insert(payload);
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Selecciona una entidad antes de crear");
+        const { error } = await supabase.from("fixed_assets").insert({ ...payload, entity_id: entityId });
         if (error) throw error;
         toast.success("Activo creado");
       }

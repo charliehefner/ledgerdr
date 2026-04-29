@@ -1,31 +1,95 @@
-## Sweep results
+## Goal
 
-Searched all `.from('<table>').insert(...)` calls into entity-scoped tables and identified files that omit `entity_id` for tables where the column is `NOT NULL`.
+Hide transactions whose description is exactly **"Contract Charles"** or **"Contract Iramaia"** from the **office** role only. Everywhere else (admin, management, accountant, supervisor, viewer, driver) sees them unchanged.
 
-### Already correct (no change needed)
-`EditTransactionDialog`, `EmployeeFormDialog`, `ServicesView`, `ServiceProvidersView`, `ReplenishmentDialog`, `InventoryItemDialog`, `EntitySetupWizard`, `ApArDocumentList` — already pass `entity_id` (sometimes via conditional spread, OK because target column is nullable or guarded upstream).
+The hide must hold in both the Transactions list and the Financial / Ledger views (journals + journal lines + drilldowns), and it must be enforced in the database so it can't be bypassed via the API.
 
-### Files to fix
+## Approach
 
-| File | Table | Source for entity_id |
-|---|---|---|
-| `src/hooks/useOfflineQueue.ts` | `fuel_transactions` | derive from tank (`fuel_tanks.entity_id`) — no UI context offline |
-| `src/components/hr/VacationCountdownDialog.tsx` | `employee_vacations` | `useEntity().requireEntity()` |
-| `src/components/hr/EmployeeLoansSection.tsx` | `employee_loans` | derive from employee (`employees.entity_id`) — accept optional `entityId` prop or fetch once |
-| `src/components/hr/EmployeeDetailDialog.tsx` | `employee_vacations`, `employee_incidents` | `(employee as any).entity_id` (already used for `employee_documents` in same file) |
-| `src/components/hr/DayLaborView.tsx` | `day_labor_entries` | `selectedEntityId` (already destructured) |
-| `src/components/operations/contracts/ContractDialog.tsx` | `service_contracts` | `useEntity().requireEntity()` |
-| `src/components/fuel/IndustryFuelView.tsx` | `fuel_transactions` (refill) | derive from `fuel_tanks.entity_id` for the chosen tank |
-| `src/components/fuel/AgricultureFuelView.tsx` | `fuel_transactions` (dispense) | derive from `fuel_tanks.entity_id` (already fetching the tank for `fuel_type`) |
-| `src/components/fuel/FuelTanksView.tsx` line 141 | `fuel_transactions` (transfer) | `selectedEntityId` (already destructured) |
-| `src/components/operations/FarmsFieldsView.tsx` | `farms` | `selectedEntityId` (already destructured). `fields` has no `entity_id` column — no change. |
+Pure RLS, no schema change, no UI change. We add SELECT policies that exclude the two exact descriptions when the viewer is an office user, and exclude their derived journals / journal lines as well.
 
-### Approach
+Match is **case-insensitive, trimmed, exact** — `lower(trim(description)) IN ('contract charles', 'contract iramaia')`. So:
 
-- Tables whose component already has UI entity context: pass `selectedEntityId` (with a guard that throws if null).
-- HR sub-records tied to an employee: prefer the employee's `entity_id` so a vacation/loan/incident always lives in the same entity as the employee, even if a global admin is viewing All Entities.
-- Offline queue and fuel transactions for a chosen tank: derive `entity_id` from the tank record (one extra select), so offline submissions don't depend on UI state.
+- Hidden: `Contract Charles`, `contract charles`, `Contract Iramaia` (exact wording, any case, surrounding spaces ignored)
+- NOT hidden: `Contrato Charles`, `Pago a Charles Hefner`, `Migración residencia Charles`, `Almuerzo … reembolso Charles`, `Contrato Iramaia`, etc.
 
-For `EmployeeLoansSection`, the parent (`EmployeeDetailDialog`) already has the employee object — we'll pass `entityId` as an optional prop so we don't need an extra fetch.
+If you later want any of those Spanish variants hidden too, we just add them to the list — one-line change.
 
-No DB migrations needed.
+## Step 1 — RLS on `transactions`
+
+Replace the office-applicable SELECT policy so office cannot see the two descriptions. Keep all other roles' policies untouched.
+
+```sql
+-- Drop the existing office SELECT (will be re-checked & named in the migration)
+-- then add:
+CREATE POLICY "Office hides confidential descriptions"
+ON public.transactions FOR SELECT
+TO authenticated
+USING (
+  NOT public.has_role(auth.uid(), 'office'::app_role)
+  OR lower(trim(description)) NOT IN ('contract charles', 'contract iramaia')
+);
+```
+
+## Step 2 — RLS on `journals`
+
+```sql
+CREATE POLICY "Office hides journals from confidential transactions"
+ON public.journals FOR SELECT
+TO authenticated
+USING (
+  NOT public.has_role(auth.uid(), 'office'::app_role)
+  OR NOT EXISTS (
+    SELECT 1 FROM public.transactions t
+    WHERE t.id = journals.transaction_source_id
+      AND lower(trim(t.description)) IN ('contract charles', 'contract iramaia')
+  )
+);
+```
+
+## Step 3 — RLS on `journal_lines`
+
+```sql
+CREATE POLICY "Office hides journal_lines from confidential transactions"
+ON public.journal_lines FOR SELECT
+TO authenticated
+USING (
+  NOT public.has_role(auth.uid(), 'office'::app_role)
+  OR NOT EXISTS (
+    SELECT 1
+    FROM public.journals j
+    JOIN public.transactions t ON t.id = j.transaction_source_id
+    WHERE j.id = journal_lines.journal_id
+      AND lower(trim(t.description)) IN ('contract charles', 'contract iramaia')
+  )
+);
+```
+
+Before writing the migration I'll inspect the existing policies on these three tables and replace only the office-relevant ones — other roles' access stays exactly as today.
+
+## Side effects (intended)
+
+For the office user, these transactions silently disappear from:
+
+- Transactions page + Recent Transactions
+- Approvals queue (if relevant)
+- Ledger account drilldowns
+- P&L / Cash Flow / Treasury totals (totals will be slightly lower than what admin sees — this is the intended behavior)
+- AI Search context
+- DGII 606/607/608 reports rendered for office
+- Backups exported by the office user
+
+Performance impact: negligible. The two `EXISTS` lookups are indexed lookups by `id`.
+
+## Verification
+
+After deploy, log in as the office user and confirm:
+
+1. Search for "Contract Charles" / "Contract Iramaia" in Transactions returns nothing.
+2. Direct URL to one of the row IDs returns "not found".
+3. Ledger drilldown for the contra account does not list the entries.
+4. Other transactions mentioning Charles or Iramaia (e.g. `Pago a Charles Hefner`, `Contrato Iramaia` in Spanish) ARE still visible — confirms the match is exact, not fuzzy.
+
+## Rollback
+
+Single migration drops the three policies and restores the prior ones — clean reversal.

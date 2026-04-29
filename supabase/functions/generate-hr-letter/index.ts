@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Number to Spanish words
+// ─── Number-to-Spanish helpers (unchanged) ───
 const UNITS = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
 const TEENS = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
 const TENS = ["", "diez", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
@@ -87,20 +87,7 @@ function escapePdf(text: string): string {
     .replace(/\$/g, "\\$");
 }
 
-// Multi-page PDF builder
-interface PdfLine {
-  text: string;
-  x: number;
-  y: number;
-  size: number;
-  bold?: boolean;
-  maxWidth?: number;
-  underline?: boolean;
-}
-
 // ─── Letterhead images (embedded as base64 at module init) ───
-// Drawn full-width on every page. Top: 1920x275, Bottom: 1920x184.
-// Embedded inline because Supabase Edge Runtime does not bundle binary sibling assets.
 import { LETTERHEAD_TOP_B64, LETTERHEAD_BOTTOM_B64 } from "./letterhead-assets.ts";
 const LETTERHEAD_TOP_BYTES = Uint8Array.from(atob(LETTERHEAD_TOP_B64), (c) => c.charCodeAt(0));
 const LETTERHEAD_BOTTOM_BYTES = Uint8Array.from(atob(LETTERHEAD_BOTTOM_B64), (c) => c.charCodeAt(0));
@@ -109,139 +96,230 @@ const LETTERHEAD_TOP_H = 275;
 const LETTERHEAD_BOTTOM_W = 1920;
 const LETTERHEAD_BOTTOM_H = 184;
 
-function buildPdf(lines: PdfLine[]): Uint8Array {
-  const encoder = new TextEncoder();
-  const pageW = 612;
-  const pageH = 792;
-  // Letterhead drawn full-width. Compute display heights.
-  const topImgH = (pageW * LETTERHEAD_TOP_H) / LETTERHEAD_TOP_W;     // ~88pt
-  const bottomImgH = (pageW * LETTERHEAD_BOTTOM_H) / LETTERHEAD_BOTTOM_W; // ~59pt
-  const marginBottom = bottomImgH + 20; // keep text clear of bottom letterhead
+// ─── Layout primitives ───
+// We render onto US Letter (612 x 792). Body region is between the top and bottom letterhead images.
+const PAGE_W = 612;
+const PAGE_H = 792;
+const LM = 72;             // left margin
+const RM = 72;             // right margin
+const MW = PAGE_W - LM - RM; // 468pt body width
+const TOP_IMG_H = (PAGE_W * LETTERHEAD_TOP_H) / LETTERHEAD_TOP_W;       // ~88pt
+const BOTTOM_IMG_H = (PAGE_W * LETTERHEAD_BOTTOM_H) / LETTERHEAD_BOTTOM_W; // ~59pt
+const TOP_BODY_Y = PAGE_H - TOP_IMG_H - 24;   // first usable Y (text baseline)
+const BOTTOM_LIMIT = BOTTOM_IMG_H + 36;        // do not draw text below this Y
 
-  // First pass: expand word-wrapped lines to determine actual Y positions and page breaks
-  interface RenderedLine {
-    text: string;
-    x: number;
-    y: number;
-    size: number;
-    bold?: boolean;
-    underline?: boolean;
-    page: number;
-  }
+// Spacing constants used by every letter generator
+const GAP_PARA = 12;       // between paragraphs
+const GAP_SECTION = 22;    // between sections (title → body, body → closing)
+const GAP_SIG_TOP = 60;    // gap from last paragraph to first signature rule
+const SIG_RULE_W = 200;    // width of every signature line
 
-  const rendered: RenderedLine[] = [];
-  let currentPage = 0;
-  let yOffset = 0; // cumulative offset from word-wrap expansions
+// Width helpers based on the same heuristic the wrapper uses
+const CHAR_W_REG = 0.52;   // Helvetica regular, em fraction
+const CHAR_W_BOLD = 0.6;   // Helvetica bold, em fraction
+function estTextWidth(text: string, size: number, bold = false): number {
+  return text.length * size * (bold ? CHAR_W_BOLD : CHAR_W_REG);
+}
 
-  for (const line of lines) {
-    const adjustedY = line.y + yOffset;
+interface PdfText {
+  kind: "text";
+  text: string;
+  x: number;
+  y: number;
+  size: number;
+  bold?: boolean;
+  underline?: boolean;
+  // Internal: word-spacing adjustment (pt) for justified lines
+  tw?: number;
+}
 
-    if (line.maxWidth) {
-      const words = line.text.split(" ");
-      let currentLine = "";
-      let currentY = adjustedY;
-      const lineHeight = line.size * 1.4;
+interface PdfRule {
+  kind: "rule";
+  x: number;
+  y: number;
+  width: number;
+  thickness?: number;
+}
 
-      for (const word of words) {
-        const testLine = currentLine ? currentLine + " " + word : word;
-        const estimatedWidth = testLine.length * line.size * (line.bold ? 0.6 : 0.52);
-        if (estimatedWidth > line.maxWidth && currentLine) {
-          if (currentY < marginBottom) {
-            currentPage++;
-            currentY = pageH - 72;
-          }
-          rendered.push({ text: currentLine, x: line.x, y: currentY, size: line.size, bold: line.bold, underline: line.underline, page: currentPage });
-          currentLine = word;
-          currentY -= lineHeight;
-        } else {
-          currentLine = testLine;
-        }
-      }
-      if (currentLine) {
-        if (currentY < marginBottom) {
-          currentPage++;
-          currentY = pageH - 72;
-        }
-        rendered.push({ text: currentLine, x: line.x, y: currentY, size: line.size, bold: line.bold, underline: line.underline, page: currentPage });
-        // Calculate how much extra Y space was consumed
-        const originalEndY = line.y - (line.maxWidth ? 0 : 0);
-        yOffset = currentY - line.y;
-      }
+type PdfItem = PdfText | PdfRule;
+
+// ─── Paragraph renderer ───
+// Wraps `text` to MW, justifies every line except the last, returns the new Y cursor.
+function pushParagraph(
+  items: PdfItem[],
+  text: string,
+  startY: number,
+  opts: { size?: number; bold?: boolean; align?: "left" | "justify" | "center"; x?: number; maxWidth?: number } = {},
+): number {
+  const size = opts.size ?? 11;
+  const bold = opts.bold ?? false;
+  const align = opts.align ?? "justify";
+  const x = opts.x ?? LM;
+  const maxWidth = opts.maxWidth ?? MW;
+  const lineHeight = size * 1.4;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  const wrapped: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const test = current ? current + " " + word : word;
+    if (estTextWidth(test, size, bold) > maxWidth && current) {
+      wrapped.push(current);
+      current = word;
     } else {
-      let finalY = adjustedY;
-      if (finalY < marginBottom) {
-        currentPage++;
-        finalY = pageH - 72;
-        yOffset = finalY - line.y;
-      }
-      rendered.push({ text: line.text, x: line.x, y: finalY, size: line.size, bold: line.bold, underline: line.underline, page: currentPage });
+      current = test;
     }
   }
+  if (current) wrapped.push(current);
 
-  const totalPages = currentPage + 1;
+  let y = startY;
+  for (let i = 0; i < wrapped.length; i++) {
+    const line = wrapped[i];
+    const isLast = i === wrapped.length - 1;
+    let lineX = x;
+    let tw = 0;
 
-  // Build content streams per page (with letterhead drawn first)
-  const topY = pageH - topImgH; // top edge of top image
-  const bottomY = 0;            // bottom image flush with bottom
+    if (align === "center") {
+      lineX = x + (maxWidth - estTextWidth(line, size, bold)) / 2;
+    } else if (align === "justify" && !isLast) {
+      const wordCount = line.split(" ").length;
+      if (wordCount > 1) {
+        const slack = maxWidth - estTextWidth(line, size, bold);
+        if (slack > 0) {
+          tw = Math.min(slack / (wordCount - 1), 6); // clamp at 6pt to avoid rivers
+        }
+      }
+    }
+
+    items.push({ kind: "text", text: line, x: lineX, y, size, bold, tw });
+    y -= lineHeight;
+  }
+
+  // Convert "next baseline" back into "current cursor"; caller will subtract its own gap.
+  return y + lineHeight - lineHeight; // = y; kept explicit for readability
+}
+
+// Single line of text (no wrapping). Returns new Y cursor (startY - lineHeight).
+function pushLine(
+  items: PdfItem[],
+  text: string,
+  startY: number,
+  opts: { size?: number; bold?: boolean; align?: "left" | "right" | "center"; x?: number; underline?: boolean } = {},
+): number {
+  const size = opts.size ?? 11;
+  const bold = opts.bold ?? false;
+  const align = opts.align ?? "left";
+  let x = opts.x ?? LM;
+
+  if (align === "center") {
+    x = LM + (MW - estTextWidth(text, size, bold)) / 2;
+  } else if (align === "right") {
+    x = PAGE_W - RM - estTextWidth(text, size, bold);
+  }
+
+  items.push({ kind: "text", text, x, y: startY, size, bold, underline: opts.underline });
+  return startY - size * 1.4;
+}
+
+// Signature block: horizontal rule + bold name centered + optional subtitle line(s).
+// Returns the bottom Y of the block.
+function pushSignature(
+  items: PdfItem[],
+  centerX: number,
+  topY: number,
+  name: string,
+  subtitles: string[] = [],
+): number {
+  const ruleX = centerX - SIG_RULE_W / 2;
+  items.push({ kind: "rule", x: ruleX, y: topY, width: SIG_RULE_W, thickness: 0.6 });
+
+  let y = topY - 14;
+  const nameW = estTextWidth(name, 10, true);
+  items.push({ kind: "text", text: name, x: centerX - nameW / 2, y, size: 10, bold: true });
+  y -= 13;
+
+  for (const sub of subtitles) {
+    const w = estTextWidth(sub, 9, false);
+    items.push({ kind: "text", text: sub, x: centerX - w / 2, y, size: 9 });
+    y -= 12;
+  }
+  return y;
+}
+
+// ─── PDF builder ───
+function buildPdf(items: PdfItem[]): Uint8Array {
+  const encoder = new TextEncoder();
+
+  // For now every letter fits on one page; we still bucket by page to keep the structure flexible.
+  // Pagination: any item whose y < BOTTOM_LIMIT moves to a new page (preserving its relative offset).
+  interface Placed { item: PdfItem; page: number }
+  const placed: Placed[] = [];
+  let page = 0;
+  let pageOffset = 0; // Y shift applied when items overflow
+
+  for (const it of items) {
+    const adjY = it.y + pageOffset;
+    if (adjY < BOTTOM_LIMIT) {
+      page++;
+      pageOffset = (TOP_BODY_Y - it.y);
+    }
+    const finalY = it.y + pageOffset;
+    placed.push({
+      item: { ...it, y: finalY } as PdfItem,
+      page,
+    });
+  }
+
+  const totalPages = page + 1;
+  const topY = PAGE_H - TOP_IMG_H;
   const letterheadOps =
-    `q ${pageW} 0 0 ${topImgH} 0 ${topY} cm /ImTop Do Q\n` +
-    `q ${pageW} 0 0 ${bottomImgH} 0 ${bottomY} cm /ImBot Do Q\n`;
+    `q ${PAGE_W} 0 0 ${TOP_IMG_H} 0 ${topY} cm /ImTop Do Q\n` +
+    `q ${PAGE_W} 0 0 ${BOTTOM_IMG_H} 0 0 cm /ImBot Do Q\n`;
 
   const pageContents: string[] = [];
   for (let p = 0; p < totalPages; p++) {
     let content = letterheadOps;
-    const pageLines = rendered.filter((l) => l.page === p);
-    for (const l of pageLines) {
-      const fontRef = l.bold ? "/F2" : "/F1";
-      content += `BT ${fontRef} ${l.size} Tf ${l.x} ${l.y} Td (${escapePdf(l.text)}) Tj ET\n`;
-      if (l.underline) {
-        const textWidth = l.text.length * l.size * (l.bold ? 0.6 : 0.52);
-        content += `0.5 w ${l.x} ${l.y - 2} m ${l.x + textWidth} ${l.y - 2} l S\n`;
+    for (const { item, page: pp } of placed) {
+      if (pp !== p) continue;
+      if (item.kind === "text") {
+        const fontRef = item.bold ? "/F2" : "/F1";
+        const tw = item.tw && item.tw > 0 ? `${item.tw.toFixed(3)} Tw ` : "";
+        const twReset = item.tw && item.tw > 0 ? ` 0 Tw` : "";
+        content += `BT ${fontRef} ${item.size} Tf ${tw}${item.x} ${item.y} Td (${escapePdf(item.text)}) Tj${twReset} ET\n`;
+        if (item.underline) {
+          const w = estTextWidth(item.text, item.size, item.bold);
+          content += `0.5 w ${item.x} ${item.y - 2} m ${item.x + w} ${item.y - 2} l S\n`;
+        }
+      } else if (item.kind === "rule") {
+        const t = item.thickness ?? 0.6;
+        content += `${t} w ${item.x} ${item.y} m ${item.x + item.width} ${item.y} l S\n`;
       }
     }
     pageContents.push(content);
   }
 
-  // Build PDF objects
+  // ── Assemble PDF objects ──
   const objects: Uint8Array[] = [];
   const offsets: number[] = [];
   let pos = 0;
 
-  function write(s: string) {
-    const b = encoder.encode(s);
-    objects.push(b);
-    pos += b.length;
-  }
-  function writeBytes(b: Uint8Array) {
-    objects.push(b);
-    pos += b.length;
-  }
-
-  function obj(id: number, content: string) {
-    offsets[id] = pos;
-    write(`${id} 0 obj\n${content}\nendobj\n`);
-  }
+  function write(s: string) { const b = encoder.encode(s); objects.push(b); pos += b.length; }
+  function writeBytes(b: Uint8Array) { objects.push(b); pos += b.length; }
+  function obj(id: number, content: string) { offsets[id] = pos; write(`${id} 0 obj\n${content}\nendobj\n`); }
 
   write("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
 
-  // Object layout:
-  //   1=catalog, 2=pages, 3=font-regular, 4=font-bold,
-  //   5=ImTop XObject, 6=ImBot XObject,
-  //   then page+content pairs starting at 7
   const firstPageObjId = 7;
   const numObjs = firstPageObjId + totalPages * 2;
 
   obj(1, `<< /Type /Catalog /Pages 2 0 R >>`);
-
-  const pageRefs = [];
-  for (let p = 0; p < totalPages; p++) {
-    pageRefs.push(`${firstPageObjId + p * 2} 0 R`);
-  }
+  const pageRefs: string[] = [];
+  for (let p = 0; p < totalPages; p++) pageRefs.push(`${firstPageObjId + p * 2} 0 R`);
   obj(2, `<< /Type /Pages /Kids [${pageRefs.join(" ")}] /Count ${totalPages} >>`);
   obj(3, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`);
   obj(4, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`);
 
-  // Letterhead JPEG XObjects (DCTDecode = JPEG)
   offsets[5] = pos;
   write(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${LETTERHEAD_TOP_W} /Height ${LETTERHEAD_TOP_H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${LETTERHEAD_TOP_BYTES.length} >>\nstream\n`);
   writeBytes(LETTERHEAD_TOP_BYTES);
@@ -256,9 +334,7 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
     const pageObjId = firstPageObjId + p * 2;
     const contentObjId = pageObjId + 1;
     const contentBytes = encoder.encode(pageContents[p]);
-
-    obj(pageObjId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents ${contentObjId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /ImTop 5 0 R /ImBot 6 0 R >> >> >>`);
-
+    obj(pageObjId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Contents ${contentObjId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /ImTop 5 0 R /ImBot 6 0 R >> >> >>`);
     offsets[contentObjId] = pos;
     write(`${contentObjId} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
     objects.push(contentBytes);
@@ -266,7 +342,6 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
     write(`\nendstream\nendobj\n`);
   }
 
-  // Cross-reference
   const xrefPos = pos;
   write(`xref\n0 ${numObjs}\n0000000000 65535 f \n`);
   for (let i = 1; i < numObjs; i++) {
@@ -276,16 +351,35 @@ function buildPdf(lines: PdfLine[]): Uint8Array {
 
   const total = objects.reduce((s, b) => s + b.length, 0);
   const result = new Uint8Array(total);
-  let offset = 0;
-  for (const b of objects) {
-    result.set(b, offset);
-    offset += b.length;
-  }
+  let off = 0;
+  for (const b of objects) { result.set(b, off); off += b.length; }
   return result;
 }
 
-// ─── Letter Interfaces ───
+// Once body+signature is laid out, optionally shift the signature group down
+// so the page is vertically balanced between header and footer.
+function balanceSignatures(items: PdfItem[], firstSigIndex: number, lastBodyY: number) {
+  const sigItems = items.slice(firstSigIndex);
+  if (sigItems.length === 0) return;
+  const sigTopY = Math.max(...sigItems.map((it) => it.y));
+  const sigBottomY = Math.min(...sigItems.map((it) => it.y));
+  const available = sigTopY - BOTTOM_LIMIT;       // free space below sig top
+  const aboveSig = lastBodyY - sigTopY;            // intentional gap to body
+  // Center the sig group within the leftover region (between body bottom and BOTTOM_LIMIT)
+  const region = lastBodyY - BOTTOM_LIMIT;
+  const sigHeight = sigTopY - sigBottomY;
+  const targetTop = BOTTOM_LIMIT + (region - sigHeight) / 2;
+  // Only shift down (never up into body); cap so we don't reduce body→sig gap below 40pt
+  const maxShift = aboveSig - 40;
+  const desiredShift = sigTopY - targetTop;        // positive => shift down
+  const shift = Math.max(0, Math.min(desiredShift, Math.max(0, maxShift)));
+  if (shift <= 0) return;
+  for (let i = firstSigIndex; i < items.length; i++) {
+    items[i] = { ...items[i], y: items[i].y - shift } as PdfItem;
+  }
+}
 
+// ─── Letter Interfaces ───
 interface HiringClause { title: string; body: string; }
 
 interface HiringData {
@@ -320,7 +414,6 @@ interface TerminationData {
   company_rnc: string;
   manager_name: string;
   manager_title: string;
-  // Legacy fields
   motive?: string;
   motive_detail?: string;
 }
@@ -356,33 +449,32 @@ interface VacationData {
   manager_title?: string;
 }
 
-// ─── PDF Generators ───
+// ─── Letter generators ───
+const COL_LEFT_CENTER = LM + SIG_RULE_W / 2 + 10;        // ~182
+const COL_RIGHT_CENTER = PAGE_W - RM - SIG_RULE_W / 2 - 10; // ~430
+const COL_SINGLE_CENTER = PAGE_W / 2;                     // 306
 
 function generateHiringPdf(data: HiringData): Uint8Array {
+  const items: PdfItem[] = [];
+  let y = TOP_BODY_Y;
+
+  y = pushLine(items, "CONTRATO DE TRABAJO", y, { size: 14, bold: true, align: "center" });
+  y -= GAP_SECTION;
+
   const salaryWords = numberToSpanish(data.salary);
   const biweekly = data.salary / 2;
   const biweeklyWords = numberToSpanish(biweekly);
 
-  const lines: PdfLine[] = [];
-  let y = 685;
-  const lm = 72;
-  const mw = 468;
-
-  lines.push({ text: "CONTRATO DE TRABAJO", x: 220, y, size: 14, bold: true });
-  y -= 40;
-
   const entreText = `ENTRE: ${data.company_name}, compañía comercial organizada de acuerdo a las leyes de la República Dominicana, con RNC No. ${data.company_rnc}, con RNL No. ${data.company_rnl}, con su domicilio social establecido en ${data.company_address}, debidamente representada en este acto por el señor ${data.representative_name}, ${data.representative_nationality}, mayor de edad, portador del ${data.representative_document} en su calidad de ${data.representative_title}; quien en lo que sigue del presente acto se denominará LA EMPRESA, y de la otra parte el señor ${data.employee_name}, dominicano, mayor de edad, portador de cédula # ${data.cedula} con su domicilio establecido en ${data.address || "República Dominicana"}, quien en lo que sigue del presente acto se denominará EL TRABAJADOR.`;
-  lines.push({ text: entreText, x: lm, y, size: 11, maxWidth: mw });
-  const entreLines = Math.ceil(entreText.length * 11 * 0.52 / mw);
-  y -= entreLines * 15.4 + 20;
+  y = pushParagraph(items, entreText, y);
+  y -= GAP_SECTION;
 
-  lines.push({ text: "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:", x: 160, y, size: 11, bold: true });
-  y -= 30;
+  y = pushLine(items, "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:", y, { size: 11, bold: true, align: "center" });
+  y -= GAP_PARA;
 
-  const primeroText = `PRIMERO: EL TRABAJADOR, laborará en calidad de ${data.position.toUpperCase()} en la empresa, a partir de la fecha de ${formatDateSpanish(data.start_date)}, con un salario de DOP ${formatCurrency(data.salary)} (${salaryWords} pesos) mensuales, totalizando RD$ ${formatCurrency(biweekly)} (${biweeklyWords} pesos) quincenales. Pagados por quincena.`;
-  lines.push({ text: primeroText, x: lm, y, size: 11, maxWidth: mw });
-  const primeroLines = Math.ceil(primeroText.length * 11 * 0.52 / mw);
-  y -= primeroLines * 15.4 + 15;
+  const primeroText = `PRIMERO: EL TRABAJADOR laborará en calidad de ${data.position.toUpperCase()} en la empresa, a partir de la fecha de ${formatDateSpanish(data.start_date)}, con un salario de DOP ${formatCurrency(data.salary)} (${salaryWords} pesos) mensuales, totalizando RD$ ${formatCurrency(biweekly)} (${biweeklyWords} pesos) quincenales. Pagados por quincena.`;
+  y = pushParagraph(items, primeroText, y);
+  y -= GAP_PARA;
 
   const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO", "UNDÉCIMO", "DUODÉCIMO"];
   const allClauses: HiringClause[] = data.clauses && data.clauses.length > 0
@@ -392,195 +484,153 @@ function generateHiringPdf(data: HiringData): Uint8Array {
   for (let i = 0; i < allClauses.length; i++) {
     const label = ordinals[i] || `CLÁUSULA ${i + 2}`;
     const clauseText = `${label}: ${allClauses[i].body}`;
-    lines.push({ text: clauseText, x: lm, y, size: 11, maxWidth: mw });
-    const clauseLines = Math.ceil(clauseText.length * 11 * 0.52 / mw);
-    y -= clauseLines * 15.4 + 15;
+    y = pushParagraph(items, clauseText, y);
+    y -= GAP_PARA;
   }
 
   if (data.trial_period_months > 0) {
     const trialLabel = ordinals[allClauses.length] || `CLÁUSULA ${allClauses.length + 2}`;
     const trialText = `${trialLabel}: EL TRABAJADOR hará un periodo de prueba de ${data.trial_period_months} meses.`;
-    lines.push({ text: trialText, x: lm, y, size: 11, maxWidth: mw });
-    y -= 30;
+    y = pushParagraph(items, trialText, y);
+    y -= GAP_PARA;
   }
 
-  y -= 10;
-  const closingText = `Hecho y firmado en tres (3) originales, uno para cada uno de las partes para los fines legales correspondientes. En ${data.company_address.split(",")[0]}, República Dominicana, ${formatDateLong(data.start_date)}.`;
-  lines.push({ text: closingText, x: lm, y, size: 11, maxWidth: mw });
-  const closingLines = Math.ceil(closingText.length * 11 * 0.52 / mw);
-  y -= closingLines * 15.4 + 40;
+  const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${data.company_address.split(",")[0]}, República Dominicana, ${formatDateLong(data.start_date)}.`;
+  y = pushParagraph(items, closingText, y);
 
-  const sigY = Math.max(y, 240);
-  lines.push({ text: data.company_name, x: 80, y: sigY - 15, size: 10 });
-  lines.push({ text: `RNC: ${data.company_rnc}`, x: 90, y: sigY - 28, size: 10 });
-  lines.push({ text: data.employee_name, x: 370, y: sigY - 15, size: 10 });
-  lines.push({ text: `Cédula: ${data.cedula}`, x: 370, y: sigY - 28, size: 10 });
+  const lastBodyY = y;
+  const sigY = y - GAP_SIG_TOP;
+  const sigStart = items.length;
+  pushSignature(items, COL_LEFT_CENTER, sigY, data.company_name, [`RNC: ${data.company_rnc}`, "LA EMPRESA"]);
+  pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [`Cédula: ${data.cedula}`, "EL TRABAJADOR"]);
+  balanceSignatures(items, sigStart, lastBodyY);
 
-  return buildPdf(lines);
+  return buildPdf(items);
 }
 
 function generateTerminationPdf(data: TerminationData): Uint8Array {
-  const lines: PdfLine[] = [];
-  let y = 685;
-  const lm = 72;
-  const mw = 468;
-  // Company name + RNC are provided by the letterhead image.
+  const items: PdfItem[] = [];
+  let y = TOP_BODY_Y;
 
-  // Date line
-  lines.push({ text: `SPM, ${formatDateDocLong(data.termination_date)}.`, x: lm, y, size: 11 });
-  y -= 30;
+  y = pushLine(items, `SPM, ${formatDateDocLong(data.termination_date)}.`, y, { align: "right" });
+  y -= GAP_SECTION;
 
-  lines.push({ text: "Distinguido señor,", x: lm, y, size: 11 });
-  y -= 30;
+  y = pushLine(items, "Distinguido señor,", y);
+  y -= GAP_SECTION;
 
-  // Title based on type
   const isPreaviso = data.desahucio_type === "preaviso";
-  const title = isPreaviso
-    ? "AVISO DE DESPIDO POR DESAHUCIO (PRE-AVISO)"
-    : "AVISO DE DESPIDO";
-  const titleX = isPreaviso ? 140 : 210;
-  lines.push({ text: title, x: titleX, y, size: 12, bold: true });
-  y -= 30;
+  const title = isPreaviso ? "AVISO DE DESPIDO POR DESAHUCIO (PRE-AVISO)" : "AVISO DE DESPIDO";
+  y = pushLine(items, title, y, { size: 12, bold: true, align: "center" });
+  y -= GAP_SECTION;
 
-  // Body text
-  let bodyText: string;
-  if (isPreaviso) {
-    bodyText = `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 76 del código del trabajo que, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula}, mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El señor deberá cumplir su preaviso trabajado por ${data.preaviso_days || 28} días, hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"} con derecho a dos medias jornadas por semana para buscar otro empleo.`;
-  } else {
-    bodyText = `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 75 del código del trabajo, que, en fecha, por motivo de conveniencia, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula} mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El mismo trabajador estará laborando hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}.`;
-  }
-  lines.push({ text: bodyText, x: lm, y, size: 11, maxWidth: mw });
-  const bodyLines = Math.ceil(bodyText.length * 11 * 0.52 / mw);
-  y -= bodyLines * 15.4 + 20;
+  const bodyText = isPreaviso
+    ? `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 76 del código del trabajo que, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula}, mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El señor deberá cumplir su preaviso trabajado por ${data.preaviso_days || 28} días, hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}, con derecho a dos medias jornadas por semana para buscar otro empleo.`
+    : `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 75 del código del trabajo, que, en fecha, por motivo de conveniencia, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula} mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El mismo trabajador estará laborando hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}.`;
+  y = pushParagraph(items, bodyText, y);
+  y -= GAP_PARA;
 
-  // Prestaciones declaration
   const prestText = "La empresa declara aún que pagará todas sus prestaciones laborales conforme el Cálculo de Prestaciones Laborales y Derechos Adquiridos del Ministerio del Trabajo.";
-  lines.push({ text: prestText, x: lm, y, size: 11, maxWidth: mw });
-  const prestLines = Math.ceil(prestText.length * 11 * 0.52 / mw);
-  y -= prestLines * 15.4 + 50;
+  y = pushParagraph(items, prestText, y);
 
-  // Signature blocks
-  const sigY = Math.max(y, 180);
+  const lastBodyY = y;
+  const sigY = y - GAP_SIG_TOP;
+  const sigStart = items.length;
+  pushSignature(items, COL_LEFT_CENTER, sigY, data.employee_name, [`Cédula # ${data.cedula}`, "EL TRABAJADOR"]);
+  pushSignature(items, COL_RIGHT_CENTER, sigY, data.manager_name || "________________", [
+    data.manager_title || "Gerente Operacional",
+    data.company_name.toUpperCase(),
+  ]);
+  balanceSignatures(items, sigStart, lastBodyY);
 
-  // Employee signature (left)
-  lines.push({ text: "___________________________", x: lm, y: sigY, size: 10 });
-  lines.push({ text: data.employee_name, x: lm, y: sigY - 15, size: 10 });
-  lines.push({ text: `Ced # ${data.cedula}`, x: lm, y: sigY - 28, size: 10 });
-
-  // Manager signature (right or below)
-  lines.push({ text: "___________________________", x: lm, y: sigY - 60, size: 10 });
-  lines.push({ text: data.manager_name || "___________________", x: lm, y: sigY - 75, size: 10 });
-  lines.push({ text: `${data.manager_title || "Gerente operacional"} ${data.company_name.toUpperCase()}`, x: lm, y: sigY - 88, size: 10 });
-
-  return buildPdf(lines);
+  return buildPdf(items);
 }
 
 function generateBankLetterPdf(data: BankLetterData): Uint8Array {
-  const lines: PdfLine[] = [];
-  let y = 685;
-  const lm = 72;
-  const mw = 468;
-  // Company name + RNC are provided by the letterhead image.
+  const items: PdfItem[] = [];
+  let y = TOP_BODY_Y;
 
-  // Date and addressee
-  lines.push({ text: `SPM, R.D. ${formatDateDoc(data.letter_date)}`, x: lm, y, size: 11 });
-  y -= 25;
-  lines.push({ text: `A ${data.bank_name.toUpperCase()}:`, x: lm, y, size: 11, bold: true });
-  y -= 25;
+  y = pushLine(items, `SPM, R.D. ${formatDateDoc(data.letter_date)}`, y, { align: "right" });
+  y -= GAP_SECTION;
 
-  // Body - matching uploaded format
+  y = pushLine(items, `A ${data.bank_name.toUpperCase()}:`, y, { bold: true });
+  y -= GAP_SECTION;
+
   const salaryWords = numberToSpanish(data.salary);
-  const biweekly = data.salary / 2;
-  const bodyText = `Por medio de la presente les informamos que el señor ${data.employee_name}, portador de la Cedula de identidad y electoral No. ${data.cedula}, es empleado de nuestra empresa desde el día ${formatDateDoc(data.start_date)}, desempeñando el puesto de ${data.position}, devengando un salario mensual de ${salaryWords} pesos dominicanos (RD$ ${formatCurrency(data.salary)}) pagados mensualmente dividido por quincena.`;
-  lines.push({ text: bodyText, x: lm, y, size: 11, maxWidth: mw });
-  const bodyLines = Math.ceil(bodyText.length * 11 * 0.52 / mw);
-  y -= bodyLines * 15.4 + 20;
+  const bodyText = `Por medio de la presente les informamos que el señor ${data.employee_name}, portador de la Cédula de Identidad y Electoral No. ${data.cedula}, es empleado de nuestra empresa desde el día ${formatDateDoc(data.start_date)}, desempeñando el puesto de ${data.position}, devengando un salario mensual de ${salaryWords} pesos dominicanos (RD$ ${formatCurrency(data.salary)}), pagados mensualmente dividido por quincena.`;
+  y = pushParagraph(items, bodyText, y);
+  y -= GAP_PARA;
 
-  // Account opening request
   const requestText = `Solicitamos la apertura de una cuenta bancaria del ${data.bank_name} para recibir su sueldo.`;
-  lines.push({ text: requestText, x: lm, y, size: 11, maxWidth: mw });
-  y -= 30;
+  y = pushParagraph(items, requestText, y);
+  y -= GAP_SECTION;
 
-  lines.push({ text: "Sin otro particular,", x: lm, y, size: 11 });
-  y -= 20;
-  lines.push({ text: "Atentamente,", x: lm, y, size: 11 });
-  y -= 50;
+  y = pushLine(items, "Sin otro particular,", y);
+  y -= GAP_PARA;
+  y = pushLine(items, "Atentamente,", y);
 
-  // Signature
-  lines.push({ text: "_______________________________", x: lm, y, size: 10 });
-  y -= 15;
-  lines.push({ text: data.signer_name || "___________________", x: lm, y, size: 10 });
-  y -= 15;
-  lines.push({ text: data.signer_title || "Gerente General", x: lm, y, size: 10 });
+  const lastBodyY = y;
+  const sigY = y - GAP_SIG_TOP;
+  const sigStart = items.length;
+  pushSignature(items, COL_SINGLE_CENTER, sigY, data.signer_name || "________________", [
+    data.signer_title || "Gerente General",
+    data.company_name,
+  ]);
+  balanceSignatures(items, sigStart, lastBodyY);
 
-  // Address footer is provided by the letterhead image.
-
-  return buildPdf(lines);
+  return buildPdf(items);
 }
 
 function generateVacationPdf(data: VacationData): Uint8Array {
-  const lines: PdfLine[] = [];
-  let y = 685;
-  const lm = 72;
-  const mw = 468;
-  // Company name + RNC are provided by the letterhead image.
+  const items: PdfItem[] = [];
+  let y = TOP_BODY_Y;
 
-  // Date (right-aligned style, but we place at right)
-  const dateFormatted = formatDateDoc(data.letter_date);
-  lines.push({ text: dateFormatted, x: 380, y, size: 11 });
-  y -= 30;
+  y = pushLine(items, `SPM, ${formatDateDoc(data.letter_date)}`, y, { align: "right" });
+  y -= GAP_SECTION;
 
-  // Salutation
-  lines.push({ text: "Señor,", x: lm, y, size: 11 });
-  y -= 20;
+  y = pushLine(items, "Señor,", y);
+  y -= GAP_PARA;
+  y = pushLine(items, data.employee_name, y, { bold: true });
+  y -= 4;
+  y = pushLine(items, `Cédula ${data.cedula}`, y);
+  y -= GAP_SECTION;
 
-  // Employee name and cedula (bold)
-  lines.push({ text: data.employee_name, x: lm, y, size: 11, bold: true });
-  y -= 16;
-  lines.push({ text: `Cédula ${data.cedula}`, x: lm, y, size: 11 });
-  y -= 25;
+  y = pushLine(items, "Asunto: Autorización de vacaciones", y, { bold: true });
+  y -= GAP_PARA;
 
-  // Subject line
-  lines.push({ text: "Asunto: Autorización de vacaciones", x: lm, y, size: 11, bold: true });
-  y -= 25;
+  y = pushLine(items, "Apreciado colaborador:", y);
+  y -= GAP_PARA;
 
-  lines.push({ text: "Apreciado colaborador:", x: lm, y, size: 11 });
-  y -= 25;
-
-  // Body text matching uploaded format
   const days = data.vacation_days || 14;
   const daysWords = numberToSpanish(days);
   const period = data.vacation_period || "";
   const periodText = period ? ` correspondiente al período ${period}` : "";
-  const returnText = data.vacation_return_date ? `, incorporándose a sus funciones el día ${formatDateDoc(data.vacation_return_date)}` : "";
+  const returnText = data.vacation_return_date
+    ? `, incorporándose a sus funciones el día ${formatDateDoc(data.vacation_return_date)}`
+    : "";
 
   const bodyText = `Mediante la presente, queremos informarle y para que quede documentado, que la empresa ${data.company_name.toUpperCase()}, autoriza sus vacaciones en tiempo${periodText}, iniciando el día ${formatDateDoc(data.vacation_start)} hasta el día ${formatDateDoc(data.vacation_end)}, por ${daysWords} (${days}) días laborables${returnText}.`;
-  lines.push({ text: bodyText, x: lm, y, size: 11, maxWidth: mw });
-  const bodyLines = Math.ceil(bodyText.length * 11 * 0.52 / mw);
-  y -= bodyLines * 15.4 + 20;
+  y = pushParagraph(items, bodyText, y);
+  y -= GAP_PARA;
 
-  lines.push({ text: "Agradeciendo su atención y esperando que aproveche su descanso, quedamos a la orden.", x: lm, y, size: 11, maxWidth: mw });
-  y -= 30;
+  y = pushParagraph(items, "Agradeciendo su atención y esperando que aproveche su descanso, quedamos a la orden.", y);
+  y -= GAP_PARA;
 
-  lines.push({ text: "Le saluda atentamente,", x: lm, y, size: 11 });
-  y -= 60;
+  y = pushLine(items, "Le saluda atentamente,", y);
 
-  // Two signature blocks side by side
-  // Manager (left)
-  lines.push({ text: "_______________________________", x: lm, y, size: 10 });
-  lines.push({ text: "_______________________________", x: 340, y, size: 10 });
-  y -= 15;
-  lines.push({ text: data.manager_name || "___________________", x: lm, y, size: 10 });
-  lines.push({ text: data.employee_name, x: 340, y, size: 10 });
-  y -= 15;
-  lines.push({ text: data.manager_title || "Gerente operacional", x: lm, y, size: 10 });
-  lines.push({ text: data.position, x: 340, y, size: 10 });
+  const lastBodyY = y;
+  const sigY = y - GAP_SIG_TOP;
+  const sigStart = items.length;
+  pushSignature(items, COL_LEFT_CENTER, sigY, data.manager_name || "________________", [
+    data.manager_title || "Gerente Operacional",
+    "Por la empresa",
+  ]);
+  pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [data.position, "El colaborador"]);
+  balanceSignatures(items, sigStart, lastBodyY);
 
-  return buildPdf(lines);
+  return buildPdf(items);
 }
 
 // ─── Main Handler ───
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -648,7 +698,6 @@ Deno.serve(async (req: Request) => {
 
     console.log("PDF generated, uploading to storage:", fileName);
 
-    // Upload to storage
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceRoleKey) {
       console.error("SUPABASE_SERVICE_ROLE_KEY not set");
@@ -671,9 +720,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    console.log("Upload successful, inserting document record");
-
-    // Insert record
     const { data: docRecord, error: dbError } = await serviceClient
       .from("employee_documents")
       .insert({
@@ -696,11 +742,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    console.log("Document record created:", docRecord.id);
-
     return new Response(
       JSON.stringify({ success: true, document_id: docRecord.id, storage_path: fileName }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("Unhandled error in generate-hr-letter:", e.message, e.stack);

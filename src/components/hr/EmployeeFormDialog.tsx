@@ -33,6 +33,7 @@ import { UserPlus, Save } from "lucide-react";
 import { EmployeeLoansSection } from "./EmployeeLoansSection";
 import { ScanCedulaButton, CedulaOcrResult } from "./ScanCedulaButton";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia", "Administrativa", "Volteador", "Sereno"] as const;
 
@@ -81,6 +82,7 @@ const BANKS = [
 export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeFormDialogProps) {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
   const isEditing = !!employeeId;
 
   const form = useForm<EmployeeFormData>({
@@ -204,9 +206,12 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
         toast.success(t("empForm.employeeUpdated"));
       } else {
+        const entityId = requireEntity();
+        if (!entityId) return;
+
         const { data: newEmployee, error } = await supabase
           .from("employees")
-          .insert(payload)
+          .insert({ ...payload, entity_id: entityId })
           .select()
           .single();
 

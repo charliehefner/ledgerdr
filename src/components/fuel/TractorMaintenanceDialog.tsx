@@ -58,6 +58,7 @@ export function TractorMaintenanceDialog({
   onOpenChange,
 }: TractorMaintenanceDialogProps) {
   const { t } = useLanguage();
+  const { requireEntity } = useEntity();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("status");
   
@@ -94,12 +95,15 @@ export function TractorMaintenanceDialog({
   // Add maintenance mutation
   const addMutation = useMutation({
     mutationFn: async () => {
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Selecciona una entidad antes de crear");
       const { error } = await supabase.from("tractor_maintenance").insert({
         tractor_id: tractorId,
         maintenance_date: maintenanceDate,
         hour_meter_reading: parseFloat(hourMeterReading),
         maintenance_type: maintenanceType,
         notes: notes || null,
+        entity_id: entityId,
       });
       if (error) throw error;
     },

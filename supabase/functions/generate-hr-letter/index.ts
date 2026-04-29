@@ -598,7 +598,7 @@ function generateBankLetterPdf(data: BankLetterData): Uint8Array {
   pushSignature(items, COL_SINGLE_CENTER, sigY, data.signer_name || "________________", [
     data.signer_title || "Gerente General",
     data.company_name,
-  ]);
+  ], "sig");
   balanceSignatures(items, sigStart, lastBodyY);
 
   return buildPdf(items);

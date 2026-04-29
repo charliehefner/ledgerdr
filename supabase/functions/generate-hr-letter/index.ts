@@ -131,6 +131,8 @@ interface PdfText {
   underline?: boolean;
   // Internal: word-spacing adjustment (pt) for justified lines
   tw?: number;
+  // Items sharing a groupId page-break together (used for signature blocks)
+  groupId?: string;
 }
 
 interface PdfRule {
@@ -139,6 +141,7 @@ interface PdfRule {
   y: number;
   width: number;
   thickness?: number;
+  groupId?: string;
 }
 
 type PdfItem = PdfText | PdfRule;

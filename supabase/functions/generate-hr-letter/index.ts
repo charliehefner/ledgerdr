@@ -106,12 +106,12 @@ const MW = PAGE_W - LM - RM; // 468pt body width
 const TOP_IMG_H = (PAGE_W * LETTERHEAD_TOP_H) / LETTERHEAD_TOP_W;       // ~88pt
 const BOTTOM_IMG_H = (PAGE_W * LETTERHEAD_BOTTOM_H) / LETTERHEAD_BOTTOM_W; // ~59pt
 const TOP_BODY_Y = PAGE_H - TOP_IMG_H - 24;   // first usable Y (text baseline)
-const BOTTOM_LIMIT = BOTTOM_IMG_H + 36;        // do not draw text below this Y
+const BOTTOM_LIMIT = BOTTOM_IMG_H + 18;        // do not draw text below this Y
 
 // Spacing constants used by every letter generator
 const GAP_PARA = 12;       // between paragraphs
 const GAP_SECTION = 22;    // between sections (title → body, body → closing)
-const GAP_SIG_TOP = 60;    // gap from last paragraph to first signature rule
+const GAP_SIG_TOP = 50;    // gap from last paragraph to first signature rule
 const SIG_RULE_W = 200;    // width of every signature line
 
 // Width helpers based on the same heuristic the wrapper uses

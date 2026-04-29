@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// ─── Standard company identity (edit here to update across all letters) ───
+const COMPANY_DEFAULTS = {
+  company_name: "Jord Dominicana, srl",
+  company_rnc: "1-32-21404-8",
+  company_rnl: "",
+  company_address: "Calle Principal #1, Paraje La Yeguada, San José de Los Llanos, SPM",
+};
+
 // ─── Number-to-Spanish helpers (unchanged) ───
 const UNITS = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
 const TEENS = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];

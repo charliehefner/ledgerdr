@@ -567,179 +567,187 @@ const COL_RIGHT_CENTER = PAGE_W - RM - SIG_RULE_W / 2 - 10; // ~430
 const COL_SINGLE_CENTER = PAGE_W / 2;                     // 306
 
 function generateHiringPdf(data: HiringData): Uint8Array {
-  const items: PdfItem[] = [];
-  let y = TOP_BODY_Y;
+  return renderWithOrphanRetry(() => {
+    const items: PdfItem[] = [];
+    let y = TOP_BODY_Y;
 
-  y = pushLine(items, "CONTRATO DE TRABAJO", y, { size: 14, bold: true, align: "center" });
-  y -= GAP_SECTION;
+    y = pushLine(items, "CONTRATO DE TRABAJO", y, { size: 14, bold: true, align: "center" });
+    y -= GAP_SECTION;
 
-  const salaryWords = numberToSpanish(data.salary);
-  const biweekly = data.salary / 2;
-  const biweeklyWords = numberToSpanish(biweekly);
+    const salaryWords = numberToSpanish(data.salary);
+    const biweekly = data.salary / 2;
+    const biweeklyWords = numberToSpanish(biweekly);
 
-  const entreText = `ENTRE: ${data.company_name}, compañía comercial organizada de acuerdo a las leyes de la República Dominicana, con RNC No. ${data.company_rnc}, con RNL No. ${data.company_rnl}, con su domicilio social establecido en ${data.company_address}, debidamente representada en este acto por el señor ${data.representative_name}, ${data.representative_nationality}, mayor de edad, portador del ${data.representative_document} en su calidad de ${data.representative_title}; quien en lo que sigue del presente acto se denominará LA EMPRESA, y de la otra parte el señor ${data.employee_name}, dominicano, mayor de edad, portador de cédula # ${data.cedula} con su domicilio establecido en ${data.address || "República Dominicana"}, quien en lo que sigue del presente acto se denominará EL TRABAJADOR.`;
-  y = pushParagraph(items, entreText, y);
-  y -= GAP_SECTION;
+    const entreText = `ENTRE: ${data.company_name}, compañía comercial organizada de acuerdo a las leyes de la República Dominicana, con RNC No. ${data.company_rnc}, con RNL No. ${data.company_rnl}, con su domicilio social establecido en ${data.company_address}, debidamente representada en este acto por el señor ${data.representative_name}, ${data.representative_nationality}, mayor de edad, portador del ${data.representative_document} en su calidad de ${data.representative_title}; quien en lo que sigue del presente acto se denominará LA EMPRESA, y de la otra parte el señor ${data.employee_name}, dominicano, mayor de edad, portador de cédula # ${data.cedula} con su domicilio establecido en ${data.address || "República Dominicana"}, quien en lo que sigue del presente acto se denominará EL TRABAJADOR.`;
+    y = pushParagraph(items, entreText, y);
+    y -= GAP_SECTION;
 
-  y = pushLine(items, "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:", y, { size: 11, bold: true, align: "center" });
-  y -= GAP_PARA;
-
-  const primeroText = `PRIMERO: EL TRABAJADOR laborará en calidad de ${data.position.toUpperCase()} en la empresa, a partir de la fecha de ${formatDateSpanish(data.start_date)}, con un salario de DOP ${formatCurrency(data.salary)} (${salaryWords} pesos) mensuales, totalizando RD$ ${formatCurrency(biweekly)} (${biweeklyWords} pesos) quincenales. Pagados por quincena.`;
-  y = pushParagraph(items, primeroText, y);
-  y -= GAP_PARA;
-
-  const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO", "UNDÉCIMO", "DUODÉCIMO"];
-  const allClauses: HiringClause[] = data.clauses && data.clauses.length > 0
-    ? data.clauses
-    : data.benefits ? [{ title: "Beneficios", body: data.benefits }] : [];
-
-  for (let i = 0; i < allClauses.length; i++) {
-    const label = ordinals[i] || `CLÁUSULA ${i + 2}`;
-    const clauseText = `${label}: ${allClauses[i].body}`;
-    y = pushParagraph(items, clauseText, y);
+    y = pushLine(items, "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:", y, { size: 11, bold: true, align: "center" });
     y -= GAP_PARA;
-  }
 
-  if (data.trial_period_months > 0) {
-    const trialLabel = ordinals[allClauses.length] || `CLÁUSULA ${allClauses.length + 2}`;
-    const trialText = `${trialLabel}: EL TRABAJADOR hará un periodo de prueba de ${data.trial_period_months} meses.`;
-    y = pushParagraph(items, trialText, y);
+    const primeroText = `PRIMERO: EL TRABAJADOR laborará en calidad de ${data.position.toUpperCase()} en la empresa, a partir de la fecha de ${formatDateSpanish(data.start_date)}, con un salario de DOP ${formatCurrency(data.salary)} (${salaryWords} pesos) mensuales, totalizando RD$ ${formatCurrency(biweekly)} (${biweeklyWords} pesos) quincenales. Pagados por quincena.`;
+    y = pushParagraph(items, primeroText, y);
     y -= GAP_PARA;
-  }
 
-  const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${data.company_address.split(",")[0]}, República Dominicana, ${formatDateLong(data.start_date)}.`;
-  y = pushParagraph(items, closingText, y);
+    const ordinals = ["SEGUNDO", "TERCERO", "CUARTO", "QUINTO", "SEXTO", "SÉPTIMO", "OCTAVO", "NOVENO", "DÉCIMO", "UNDÉCIMO", "DUODÉCIMO"];
+    const allClauses: HiringClause[] = data.clauses && data.clauses.length > 0
+      ? data.clauses
+      : data.benefits ? [{ title: "Beneficios", body: data.benefits }] : [];
 
-  const lastBodyY = y;
-  const sigY = y - GAP_SIG_TOP;
-  const sigStart = items.length;
-  pushSignature(items, COL_LEFT_CENTER, sigY, data.company_name, [`RNC: ${data.company_rnc}`, "LA EMPRESA"], "sig");
-  pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [`Cédula: ${data.cedula}`, "EL TRABAJADOR"], "sig");
-  balanceSignatures(items, sigStart, lastBodyY);
+    for (let i = 0; i < allClauses.length; i++) {
+      const label = ordinals[i] || `CLÁUSULA ${i + 2}`;
+      const clauseText = `${label}: ${allClauses[i].body}`;
+      y = pushParagraph(items, clauseText, y);
+      y -= GAP_PARA;
+    }
 
-  return buildPdf(items);
+    if (data.trial_period_months > 0) {
+      const trialLabel = ordinals[allClauses.length] || `CLÁUSULA ${allClauses.length + 2}`;
+      const trialText = `${trialLabel}: EL TRABAJADOR hará un periodo de prueba de ${data.trial_period_months} meses.`;
+      y = pushParagraph(items, trialText, y);
+      y -= GAP_PARA;
+    }
+
+    const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${data.company_address.split(",")[0]}, República Dominicana, ${formatDateLong(data.start_date)}.`;
+    y = pushParagraph(items, closingText, y);
+
+    const lastBodyY = y;
+    const sigY = y - GAP_SIG_TOP;
+    const sigStart = items.length;
+    pushSignature(items, COL_LEFT_CENTER, sigY, data.company_name, [`RNC: ${data.company_rnc}`, "LA EMPRESA"], "sig");
+    pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [`Cédula: ${data.cedula}`, "EL TRABAJADOR"], "sig");
+    balanceSignatures(items, sigStart, lastBodyY);
+
+    return items;
+  });
 }
 
 function generateTerminationPdf(data: TerminationData): Uint8Array {
-  const items: PdfItem[] = [];
-  let y = TOP_BODY_Y;
+  return renderWithOrphanRetry(() => {
+    const items: PdfItem[] = [];
+    let y = TOP_BODY_Y;
 
-  y = pushLine(items, `SPM, ${formatDateDocLong(data.termination_date)}.`, y, { align: "right" });
-  y -= GAP_SECTION;
+    y = pushLine(items, `SPM, ${formatDateDocLong(data.termination_date)}.`, y, { align: "right" });
+    y -= GAP_SECTION;
 
-  y = pushLine(items, "Distinguido señor,", y);
-  y -= GAP_SECTION;
+    y = pushLine(items, "Distinguido señor,", y);
+    y -= GAP_SECTION;
 
-  const isPreaviso = data.desahucio_type === "preaviso";
-  const title = isPreaviso ? "AVISO DE DESPIDO POR DESAHUCIO (PRE-AVISO)" : "AVISO DE DESPIDO";
-  y = pushLine(items, title, y, { size: 12, bold: true, align: "center" });
-  y -= GAP_SECTION;
+    const isPreaviso = data.desahucio_type === "preaviso";
+    const title = isPreaviso ? "AVISO DE DESPIDO POR DESAHUCIO (PRE-AVISO)" : "AVISO DE DESPIDO";
+    y = pushLine(items, title, y, { size: 12, bold: true, align: "center" });
+    y -= GAP_SECTION;
 
-  const bodyText = isPreaviso
-    ? `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 76 del código del trabajo que, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula}, mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El señor deberá cumplir su preaviso trabajado por ${data.preaviso_days || 28} días, hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}, con derecho a dos medias jornadas por semana para buscar otro empleo.`
-    : `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 75 del código del trabajo, que, en fecha, por motivo de conveniencia, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula} mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El mismo trabajador estará laborando hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}.`;
-  y = pushParagraph(items, bodyText, y);
-  y -= GAP_PARA;
+    const bodyText = isPreaviso
+      ? `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 76 del código del trabajo que, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula}, mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El señor deberá cumplir su preaviso trabajado por ${data.preaviso_days || 28} días, hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}, con derecho a dos medias jornadas por semana para buscar otro empleo.`
+      : `Por medio de la presente, la empresa ${data.company_name.toUpperCase()}, procede a notificar, a los fines de dar cumplimiento a las disposiciones contenidas en el artículo 75 del código del trabajo, que, en fecha, por motivo de conveniencia, la empresa decidió dar término al contrato de trabajo suscrito con el señor ${data.employee_name}, cédula # ${data.cedula} mediante el ejercicio del DESPIDO por desahucio por no más necesitar de sus labores. El mismo trabajador estará laborando hasta el día ${data.last_working_day ? formatDateDoc(data.last_working_day) : "___"}.`;
+    y = pushParagraph(items, bodyText, y);
+    y -= GAP_PARA;
 
-  const prestText = "La empresa declara aún que pagará todas sus prestaciones laborales conforme el Cálculo de Prestaciones Laborales y Derechos Adquiridos del Ministerio del Trabajo.";
-  y = pushParagraph(items, prestText, y);
+    const prestText = "La empresa declara aún que pagará todas sus prestaciones laborales conforme el Cálculo de Prestaciones Laborales y Derechos Adquiridos del Ministerio del Trabajo.";
+    y = pushParagraph(items, prestText, y);
 
-  const lastBodyY = y;
-  const sigY = y - GAP_SIG_TOP;
-  const sigStart = items.length;
-  pushSignature(items, COL_LEFT_CENTER, sigY, data.employee_name, [`Cédula # ${data.cedula}`, "EL TRABAJADOR"], "sig");
-  pushSignature(items, COL_RIGHT_CENTER, sigY, data.manager_name || "________________", [
-    data.manager_title || "Gerente Operacional",
-    data.company_name.toUpperCase(),
-  ], "sig");
-  balanceSignatures(items, sigStart, lastBodyY);
+    const lastBodyY = y;
+    const sigY = y - GAP_SIG_TOP;
+    const sigStart = items.length;
+    pushSignature(items, COL_LEFT_CENTER, sigY, data.employee_name, [`Cédula # ${data.cedula}`, "EL TRABAJADOR"], "sig");
+    pushSignature(items, COL_RIGHT_CENTER, sigY, data.manager_name || "________________", [
+      data.manager_title || "Gerente Operacional",
+      data.company_name.toUpperCase(),
+    ], "sig");
+    balanceSignatures(items, sigStart, lastBodyY);
 
-  return buildPdf(items);
+    return items;
+  });
 }
 
 function generateBankLetterPdf(data: BankLetterData): Uint8Array {
-  const items: PdfItem[] = [];
-  let y = TOP_BODY_Y;
+  return renderWithOrphanRetry(() => {
+    const items: PdfItem[] = [];
+    let y = TOP_BODY_Y;
 
-  y = pushLine(items, `SPM, R.D. ${formatDateDoc(data.letter_date)}`, y, { align: "right" });
-  y -= GAP_SECTION;
+    y = pushLine(items, `SPM, R.D. ${formatDateDoc(data.letter_date)}`, y, { align: "right" });
+    y -= GAP_SECTION;
 
-  y = pushLine(items, `A ${data.bank_name.toUpperCase()}:`, y, { bold: true });
-  y -= GAP_SECTION;
+    y = pushLine(items, `A ${data.bank_name.toUpperCase()}:`, y, { bold: true });
+    y -= GAP_SECTION;
 
-  const salaryWords = numberToSpanish(data.salary);
-  const bodyText = `Por medio de la presente les informamos que el señor ${data.employee_name}, portador de la Cédula de Identidad y Electoral No. ${data.cedula}, es empleado de nuestra empresa desde el día ${formatDateDoc(data.start_date)}, desempeñando el puesto de ${data.position}, devengando un salario mensual de ${salaryWords} pesos dominicanos (RD$ ${formatCurrency(data.salary)}), pagados mensualmente dividido por quincena.`;
-  y = pushParagraph(items, bodyText, y);
-  y -= GAP_PARA;
+    const salaryWords = numberToSpanish(data.salary);
+    const bodyText = `Por medio de la presente les informamos que el señor ${data.employee_name}, portador de la Cédula de Identidad y Electoral No. ${data.cedula}, es empleado de nuestra empresa desde el día ${formatDateDoc(data.start_date)}, desempeñando el puesto de ${data.position}, devengando un salario mensual de ${salaryWords} pesos dominicanos (RD$ ${formatCurrency(data.salary)}), pagados mensualmente dividido por quincena.`;
+    y = pushParagraph(items, bodyText, y);
+    y -= GAP_PARA;
 
-  const requestText = `Solicitamos la apertura de una cuenta bancaria del ${data.bank_name} para recibir su sueldo.`;
-  y = pushParagraph(items, requestText, y);
-  y -= GAP_SECTION;
+    const requestText = `Solicitamos la apertura de una cuenta bancaria del ${data.bank_name} para recibir su sueldo.`;
+    y = pushParagraph(items, requestText, y);
+    y -= GAP_SECTION;
 
-  y = pushLine(items, "Sin otro particular,", y);
-  y -= GAP_PARA;
-  y = pushLine(items, "Atentamente,", y);
+    y = pushLine(items, "Sin otro particular,", y);
+    y -= GAP_PARA;
+    y = pushLine(items, "Atentamente,", y);
 
-  const lastBodyY = y;
-  const sigY = y - GAP_SIG_TOP;
-  const sigStart = items.length;
-  pushSignature(items, COL_SINGLE_CENTER, sigY, data.signer_name || "________________", [
-    data.signer_title || "Gerente General",
-    data.company_name,
-  ], "sig");
-  balanceSignatures(items, sigStart, lastBodyY);
+    const lastBodyY = y;
+    const sigY = y - GAP_SIG_TOP;
+    const sigStart = items.length;
+    pushSignature(items, COL_SINGLE_CENTER, sigY, data.signer_name || "________________", [
+      data.signer_title || "Gerente General",
+      data.company_name,
+    ], "sig");
+    balanceSignatures(items, sigStart, lastBodyY);
 
-  return buildPdf(items);
+    return items;
+  });
 }
 
 function generateVacationPdf(data: VacationData): Uint8Array {
-  const items: PdfItem[] = [];
-  let y = TOP_BODY_Y;
+  return renderWithOrphanRetry(() => {
+    const items: PdfItem[] = [];
+    let y = TOP_BODY_Y;
 
-  y = pushLine(items, `SPM, ${formatDateDoc(data.letter_date)}`, y, { align: "right" });
-  y -= GAP_SECTION;
+    y = pushLine(items, `SPM, ${formatDateDoc(data.letter_date)}`, y, { align: "right" });
+    y -= GAP_SECTION;
 
-  y = pushLine(items, "Señor,", y);
-  y -= GAP_PARA;
-  y = pushLine(items, data.employee_name, y, { bold: true });
-  y -= 4;
-  y = pushLine(items, `Cédula ${data.cedula}`, y);
-  y -= GAP_SECTION;
+    y = pushLine(items, "Señor,", y);
+    y -= GAP_PARA;
+    y = pushLine(items, data.employee_name, y, { bold: true });
+    y -= 4;
+    y = pushLine(items, `Cédula ${data.cedula}`, y);
+    y -= GAP_SECTION;
 
-  y = pushLine(items, "Asunto: Autorización de vacaciones", y, { bold: true });
-  y -= GAP_PARA;
+    y = pushLine(items, "Asunto: Autorización de vacaciones", y, { bold: true });
+    y -= GAP_PARA;
 
-  y = pushLine(items, "Apreciado colaborador:", y);
-  y -= GAP_PARA;
+    y = pushLine(items, "Apreciado colaborador:", y);
+    y -= GAP_PARA;
 
-  const days = data.vacation_days || 14;
-  const daysWords = numberToSpanish(days);
-  const period = data.vacation_period || "";
-  const periodText = period ? ` correspondiente al período ${period}` : "";
-  const returnText = data.vacation_return_date
-    ? `, incorporándose a sus funciones el día ${formatDateDoc(data.vacation_return_date)}`
-    : "";
+    const days = data.vacation_days || 14;
+    const daysWords = numberToSpanish(days);
+    const period = data.vacation_period || "";
+    const periodText = period ? ` correspondiente al período ${period}` : "";
+    const returnText = data.vacation_return_date
+      ? `, incorporándose a sus funciones el día ${formatDateDoc(data.vacation_return_date)}`
+      : "";
 
-  const bodyText = `Mediante la presente, queremos informarle y para que quede documentado, que la empresa ${data.company_name.toUpperCase()}, autoriza sus vacaciones en tiempo${periodText}, iniciando el día ${formatDateDoc(data.vacation_start)} hasta el día ${formatDateDoc(data.vacation_end)}, por ${daysWords} (${days}) días laborables${returnText}.`;
-  y = pushParagraph(items, bodyText, y);
-  y -= GAP_PARA;
+    const bodyText = `Mediante la presente, queremos informarle y para que quede documentado, que la empresa ${data.company_name.toUpperCase()}, autoriza sus vacaciones en tiempo${periodText}, iniciando el día ${formatDateDoc(data.vacation_start)} hasta el día ${formatDateDoc(data.vacation_end)}, por ${daysWords} (${days}) días laborables${returnText}.`;
+    y = pushParagraph(items, bodyText, y);
+    y -= GAP_PARA;
 
-  y = pushParagraph(items, "Agradeciendo su atención y esperando que aproveche su descanso, quedamos a la orden.", y);
-  y -= GAP_PARA;
+    y = pushParagraph(items, "Agradeciendo su atención y esperando que aproveche su descanso, quedamos a la orden.", y);
+    y -= GAP_PARA;
 
-  y = pushLine(items, "Le saluda atentamente,", y);
+    y = pushLine(items, "Le saluda atentamente,", y);
 
-  const lastBodyY = y;
-  const sigY = y - GAP_SIG_TOP;
-  const sigStart = items.length;
-  pushSignature(items, COL_LEFT_CENTER, sigY, data.manager_name || "________________", [
-    data.manager_title || "Gerente Operacional",
-    "Por la empresa",
-  ], "sig");
-  pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [data.position, "El colaborador"], "sig");
-  balanceSignatures(items, sigStart, lastBodyY);
+    const lastBodyY = y;
+    const sigY = y - GAP_SIG_TOP;
+    const sigStart = items.length;
+    pushSignature(items, COL_LEFT_CENTER, sigY, data.manager_name || "________________", [
+      data.manager_title || "Gerente Operacional",
+      "Por la empresa",
+    ], "sig");
+    pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [data.position, "El colaborador"], "sig");
+    balanceSignatures(items, sigStart, lastBodyY);
 
-  return buildPdf(items);
+    return items;
+  });
 }
 
 // ─── Main Handler ───

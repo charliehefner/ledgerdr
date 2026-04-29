@@ -616,7 +616,9 @@ function generateHiringPdf(data: HiringData): Uint8Array {
       y -= GAP_PARA;
     }
 
-    const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${data.company_address.split(",")[0]}, República Dominicana, ${formatDateLong(data.start_date)}.`;
+    const addrParts = data.company_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+    const cityForClosing = addrParts.length >= 3 ? addrParts[addrParts.length - 2] : addrParts[0];
+    const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${cityForClosing}, República Dominicana, ${formatDateLong(data.start_date)}.`;
     y = pushParagraph(items, closingText, y);
 
     const lastBodyY = y;

@@ -589,7 +589,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         {/* Loans section - only shown when editing */}
         {isEditing && employeeId && (
           <div className="mt-6 pt-6 border-t">
-            <EmployeeLoansSection employeeId={employeeId} />
+            <EmployeeLoansSection employeeId={employeeId} entityId={(employee as any)?.entity_id} />
           </div>
         )}
       </DialogContent>

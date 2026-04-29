@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { toast } from "sonner";
 import { ServiceContract } from "../ContractedServicesView";
 
@@ -69,6 +70,7 @@ const UNIT_TYPES = [
 
 export function ContractDialog({ open, onOpenChange, contract }: ContractDialogProps) {
   const { language, t } = useLanguage();
+  const { requireEntity } = useEntity();
   const queryClient = useQueryClient();
 
   const form = useForm<FormData>({
@@ -159,7 +161,9 @@ export function ContractDialog({ open, onOpenChange, contract }: ContractDialogP
           .eq("id", contract.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("service_contracts").insert(payload);
+        const entityId = requireEntity();
+        if (!entityId) throw new Error("Selecciona una entidad antes de crear");
+        const { error } = await supabase.from("service_contracts").insert({ ...payload, entity_id: entityId });
         if (error) throw error;
       }
     },

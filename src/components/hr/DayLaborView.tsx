@@ -132,6 +132,7 @@ export function DayLaborView() {
 
   const addEntry = useMutation({
     mutationFn: async (entry: typeof newEntry) => {
+      if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
       const { error } = await supabase.from("day_labor_entries").insert({
         work_date: entry.work_date,
         week_ending_date: formatDateLocal(selectedFriday),
@@ -140,6 +141,7 @@ export function DayLaborView() {
         workers_count: parseInt(entry.workers_count) || 1,
         field_name: entry.field_name || null,
         amount: parseFloat(entry.amount) || 0,
+        entity_id: selectedEntityId,
       });
       if (error) throw error;
     },

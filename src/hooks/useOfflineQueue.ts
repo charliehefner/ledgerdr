@@ -99,6 +99,14 @@ export function useOfflineQueue() {
         throw new Error("No authenticated user");
       }
 
+      // Derive entity from the tank (offline queue has no UI context)
+      const { data: tankRow } = await supabase
+        .from("fuel_tanks")
+        .select("entity_id")
+        .eq("id", submission.tankId)
+        .maybeSingle();
+      if (!tankRow?.entity_id) throw new Error("Could not determine entity for tank");
+
       // Calculate gallons per hour
       const hoursWorked = submission.hourMeterReading - submission.previousHourMeter;
       const gallonsPerHour = hoursWorked > 0 ? submission.gallons / hoursWorked : null;
@@ -116,6 +124,7 @@ export function useOfflineQueue() {
         gallons_per_hour: gallonsPerHour,
         submitted_by: user.id,
         submission_source: "portal",
+        entity_id: tankRow.entity_id,
       });
 
       if (error) throw error;

@@ -647,8 +647,8 @@ function generateVacationPdf(data: VacationData): Uint8Array {
   pushSignature(items, COL_LEFT_CENTER, sigY, data.manager_name || "________________", [
     data.manager_title || "Gerente Operacional",
     "Por la empresa",
-  ]);
-  pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [data.position, "El colaborador"]);
+  ], "sig");
+  pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [data.position, "El colaborador"], "sig");
   balanceSignatures(items, sigStart, lastBodyY);
 
   return buildPdf(items);

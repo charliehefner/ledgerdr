@@ -64,6 +64,7 @@ export function CarretasView() {
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
       const { error } = await supabase.from("industrial_carretas").insert({
         datetime_out: form.datetime_out || null,
         datetime_in: form.datetime_in || null,
@@ -73,6 +74,7 @@ export function CarretasView() {
         identifier: form.identifier || null,
         notes: form.notes || null,
         created_by: user?.id,
+        entity_id: selectedEntityId,
       });
       if (error) throw error;
     },

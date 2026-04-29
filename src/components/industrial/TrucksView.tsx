@@ -64,6 +64,7 @@ export function TrucksView() {
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
       const { error } = await supabase.from("industrial_trucks").insert({
         datetime_in: form.datetime_in || null,
         datetime_out: form.datetime_out || null,
@@ -74,6 +75,7 @@ export function TrucksView() {
         identifier: form.identifier || null,
         notes: form.notes || null,
         created_by: user?.id,
+        entity_id: selectedEntityId,
       });
       if (error) throw error;
     },

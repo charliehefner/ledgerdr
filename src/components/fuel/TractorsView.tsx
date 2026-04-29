@@ -191,7 +191,8 @@ export function TractorsView() {
           .eq("id", editingTractor.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("fuel_equipment").insert(record);
+        if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
+        const { error } = await supabase.from("fuel_equipment").insert({ ...record, entity_id: selectedEntityId });
         if (error) throw error;
       }
     },

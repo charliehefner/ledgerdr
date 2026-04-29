@@ -55,25 +55,32 @@ interface EmployeeListProps {
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
 
-const useEmployeeColumns = (t: (key: string) => string): ColumnConfig[] => [
-  { key: "name", label: t("empList.col.name"), defaultVisible: true },
-  { key: "cedula", label: t("empList.col.cedula"), defaultVisible: true },
-  { key: "position", label: t("empList.col.position"), defaultVisible: true },
-  { key: "date_of_hire", label: t("empList.col.hireDate"), defaultVisible: true },
-  { key: "vacations", label: t("empList.col.vacations"), defaultVisible: true },
-  { key: "salary", label: t("empList.col.salary"), defaultVisible: true },
-  { key: "bank", label: t("empList.col.bank"), defaultVisible: false },
-  { key: "bank_account_number", label: t("empList.col.accountNumber"), defaultVisible: false },
-  { key: "date_of_birth", label: t("empList.col.birthDate"), defaultVisible: false },
-  { key: "shirt_size", label: t("empList.col.shirtSize"), defaultVisible: false },
-  { key: "pant_size", label: t("empList.col.pantSize"), defaultVisible: false },
-  { key: "boot_size", label: t("empList.col.bootSize"), defaultVisible: false },
-  { key: "is_active", label: t("empList.col.status"), defaultVisible: true },
-];
+const EMPLOYEE_COLUMN_KEYS = [
+  ["name", "empList.col.name", true],
+  ["cedula", "empList.col.cedula", true],
+  ["position", "empList.col.position", true],
+  ["date_of_hire", "empList.col.hireDate", true],
+  ["vacations", "empList.col.vacations", true],
+  ["salary", "empList.col.salary", true],
+  ["bank", "empList.col.bank", false],
+  ["bank_account_number", "empList.col.accountNumber", false],
+  ["date_of_birth", "empList.col.birthDate", false],
+  ["shirt_size", "empList.col.shirtSize", false],
+  ["pant_size", "empList.col.pantSize", false],
+  ["boot_size", "empList.col.bootSize", false],
+  ["is_active", "empList.col.status", true],
+] as const;
 
 export function EmployeeList({ onEdit }: EmployeeListProps) {
   const { t } = useLanguage();
-  const EMPLOYEE_COLUMNS = useEmployeeColumns(t);
+  const EMPLOYEE_COLUMNS = useMemo<ColumnConfig[]>(
+    () => EMPLOYEE_COLUMN_KEYS.map(([key, labelKey, defaultVisible]) => ({
+      key,
+      label: t(labelKey),
+      defaultVisible,
+    })),
+    [t]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [showActive, setShowActive] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);

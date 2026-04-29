@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 interface VacationRecord {
   id: string;

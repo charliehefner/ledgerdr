@@ -161,6 +161,9 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
   const onSubmit = async (data: EmployeeFormData) => {
     try {
+      const entityId = ((employee as any)?.entity_id as string | undefined) ?? requireEntity();
+      if (!entityId) return;
+
       const payload = {
         name: data.name,
         cedula: data.cedula,
@@ -189,6 +192,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
         if (employee && employee.salary !== data.salary) {
           await supabase.from("employee_salary_history").insert({
             employee_id: employeeId,
+            entity_id: entityId,
             salary: data.salary,
             effective_date: new Date().toISOString().split("T")[0],
             notes: `Salario actualizado de ${employee.salary} a ${data.salary}`,
@@ -206,9 +210,6 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
         toast.success(t("empForm.employeeUpdated"));
       } else {
-        const entityId = requireEntity();
-        if (!entityId) return;
-
         const { data: newEmployee, error } = await supabase
           .from("employees")
           .insert({ ...payload, entity_id: entityId })
@@ -225,6 +226,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
         await supabase.from("employee_salary_history").insert({
           employee_id: newEmployee.id,
+          entity_id: entityId,
           salary: data.salary,
           effective_date: data.date_of_hire,
           notes: "Salario inicial",

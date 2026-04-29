@@ -66,10 +66,10 @@ export function EmployeeLetterDialog({
   const [address, setAddress] = useState("");
   const [clauses, setClauses] = useState<Clause[]>([]);
   const [trialMonths, setTrialMonths] = useState("3");
-  const [companyName, setCompanyName] = useState("");
-  const [companyRnc, setCompanyRnc] = useState("");
+  const [companyName, setCompanyName] = useState("Jord Dominicana, srl");
+  const [companyRnc, setCompanyRnc] = useState("1-32-21404-8");
   const [companyRnl, setCompanyRnl] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("Calle Principal #1, Paraje La Yeguada, San José de Los Llanos, SPM");
   const [repName, setRepName] = useState("");
   const [repNationality, setRepNationality] = useState("");
   const [repDocument, setRepDocument] = useState("");

@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// ─── Standard company identity (edit here to update across all letters) ───
+const COMPANY_DEFAULTS = {
+  company_name: "Jord Dominicana, srl",
+  company_rnc: "1-32-21404-8",
+  company_rnl: "",
+  company_address: "Calle Principal #1, Paraje La Yeguada, San José de Los Llanos, SPM",
+};
+
 // ─── Number-to-Spanish helpers (unchanged) ───
 const UNITS = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
 const TEENS = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
@@ -578,7 +586,8 @@ function generateHiringPdf(data: HiringData): Uint8Array {
     const biweekly = data.salary / 2;
     const biweeklyWords = numberToSpanish(biweekly);
 
-    const entreText = `ENTRE: ${data.company_name}, compañía comercial organizada de acuerdo a las leyes de la República Dominicana, con RNC No. ${data.company_rnc}, con RNL No. ${data.company_rnl}, con su domicilio social establecido en ${data.company_address}, debidamente representada en este acto por el señor ${data.representative_name}, ${data.representative_nationality}, mayor de edad, portador del ${data.representative_document} en su calidad de ${data.representative_title}; quien en lo que sigue del presente acto se denominará LA EMPRESA, y de la otra parte el señor ${data.employee_name}, dominicano, mayor de edad, portador de cédula # ${data.cedula} con su domicilio establecido en ${data.address || "República Dominicana"}, quien en lo que sigue del presente acto se denominará EL TRABAJADOR.`;
+    const rnlClause = data.company_rnl ? `, con RNL No. ${data.company_rnl}` : "";
+    const entreText = `ENTRE: ${data.company_name}, compañía comercial organizada de acuerdo a las leyes de la República Dominicana, con RNC No. ${data.company_rnc}${rnlClause}, con su domicilio social establecido en ${data.company_address}, debidamente representada en este acto por el señor ${data.representative_name}, ${data.representative_nationality}, mayor de edad, portador del ${data.representative_document} en su calidad de ${data.representative_title}; quien en lo que sigue del presente acto se denominará LA EMPRESA, y de la otra parte el señor ${data.employee_name}, dominicano, mayor de edad, portador de cédula # ${data.cedula} con su domicilio establecido en ${data.address || "República Dominicana"}, quien en lo que sigue del presente acto se denominará EL TRABAJADOR.`;
     y = pushParagraph(items, entreText, y);
     y -= GAP_SECTION;
 
@@ -608,7 +617,9 @@ function generateHiringPdf(data: HiringData): Uint8Array {
       y -= GAP_PARA;
     }
 
-    const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${data.company_address.split(",")[0]}, República Dominicana, ${formatDateLong(data.start_date)}.`;
+    const addrParts = data.company_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+    const cityForClosing = addrParts.length >= 3 ? addrParts[addrParts.length - 2] : addrParts[0];
+    const closingText = `Hecho y firmado en tres (3) originales, uno para cada una de las partes para los fines legales correspondientes. En ${cityForClosing}, República Dominicana, ${formatDateLong(data.start_date)}.`;
     y = pushParagraph(items, closingText, y);
 
     const lastBodyY = y;
@@ -781,7 +792,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { letter_type, employee_id, entity_id, ...letterData } = body;
+    const { letter_type, employee_id, entity_id, ...rawLetterData } = body;
+    // Apply standard company identity (overrides any caller-supplied values)
+    const letterData = { ...rawLetterData, ...COMPANY_DEFAULTS };
     console.log("Generating letter:", letter_type, "for employee:", employee_id, "entity:", entity_id);
 
     let pdfBytes: Uint8Array;

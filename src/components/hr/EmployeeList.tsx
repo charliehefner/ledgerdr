@@ -104,12 +104,11 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     queryKey: ["employees", selectedEntityId],
     queryFn: async () => {
       // Use employees_safe view to mask sensitive PII for non-admin users
-      let query: any = supabase
+      const query = supabase
         .from("employees_safe")
         .select("*")
         .order("name");
-      query = applyEntityFilter(query);
-      const { data, error } = await query;
+      const { data, error } = await applyEntityFilter(query);
       if (error) throw error;
       return data as Employee[];
     },

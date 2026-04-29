@@ -789,7 +789,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { letter_type, employee_id, entity_id, ...letterData } = body;
+    const { letter_type, employee_id, entity_id, ...rawLetterData } = body;
+    // Apply standard company identity (overrides any caller-supplied values)
+    const letterData = { ...rawLetterData, ...COMPANY_DEFAULTS };
     console.log("Generating letter:", letter_type, "for employee:", employee_id, "entity:", entity_id);
 
     let pdfBytes: Uint8Array;

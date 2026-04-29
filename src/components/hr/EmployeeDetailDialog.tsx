@@ -406,6 +406,7 @@ export function EmployeeDetailDialog({
 
       const { error: dbError } = await supabase.from("employee_documents").insert({
         employee_id: employeeId,
+        entity_id: (employee as any)?.entity_id,
         document_name: file.name,
         document_type: file.type,
         storage_path: fileName,

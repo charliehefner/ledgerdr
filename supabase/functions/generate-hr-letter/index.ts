@@ -424,6 +424,73 @@ function balanceSignatures(items: PdfItem[], firstSigIndex: number, lastBodyY: n
   }
 }
 
+// ─── Pagination preview (no rendering) ───
+// Returns the number of pages the items will occupy and whether every item on
+// the LAST page belongs to the signature group ("sig"). Used by the orphan-retry
+// pass to decide whether tightening gaps would let the signature fit on the
+// previous page.
+function previewPagination(items: PdfItem[]): { pages: number; lastPageSigOnly: boolean } {
+  interface Placed { item: PdfItem; page: number }
+  const placed: Placed[] = [];
+  let page = 0;
+  let pageOffset = 0;
+  let i = 0;
+  while (i < items.length) {
+    const it = items[i];
+    if (it.groupId) {
+      const group: PdfItem[] = [];
+      let j = i;
+      while (j < items.length && items[j].groupId === it.groupId) {
+        group.push(items[j]); j++;
+      }
+      const minY = Math.min(...group.map((g) => g.y + pageOffset));
+      if (minY < BOTTOM_LIMIT) {
+        page++;
+        const groupTop = Math.max(...group.map((g) => g.y));
+        pageOffset = TOP_BODY_Y - groupTop;
+      }
+      for (const g of group) placed.push({ item: g, page });
+      i = j;
+    } else {
+      const adjY = it.y + pageOffset;
+      if (adjY < BOTTOM_LIMIT) {
+        page++;
+        pageOffset = TOP_BODY_Y - it.y;
+      }
+      placed.push({ item: it, page });
+      i++;
+    }
+  }
+  const totalPages = page + 1;
+  const lastPageItems = placed.filter((p) => p.page === page);
+  const lastPageSigOnly = lastPageItems.length > 0 &&
+    lastPageItems.every((p) => p.item.groupId === "sig");
+  return { pages: totalPages, lastPageSigOnly };
+}
+
+// Run a layout function with default gaps; if the only thing spilling onto a
+// new page is the signature group, retry once with compact gaps. Falls back to
+// the default render if compact still doesn't fit on one fewer page.
+function renderWithOrphanRetry(layout: () => PdfItem[]): Uint8Array {
+  setGaps("default");
+  const defaultItems = layout();
+  const defaultPreview = previewPagination(defaultItems);
+
+  if (defaultPreview.pages > 1 && defaultPreview.lastPageSigOnly) {
+    setGaps("compact");
+    try {
+      const compactItems = layout();
+      const compactPreview = previewPagination(compactItems);
+      if (compactPreview.pages < defaultPreview.pages) {
+        return buildPdf(compactItems);
+      }
+    } finally {
+      setGaps("default");
+    }
+  }
+  return buildPdf(defaultItems);
+}
+
 // ─── Letter Interfaces ───
 interface HiringClause { title: string; body: string; }
 

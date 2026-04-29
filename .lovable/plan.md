@@ -1,95 +1,78 @@
-## Goal
+## Vacation Day Rounding — Findings & Proposed Fix
 
-Hide transactions whose description is exactly **"Contract Charles"** or **"Contract Iramaia"** from the **office** role only. Everywhere else (admin, management, accountant, supervisor, viewer, driver) sees them unchanged.
+### What the calculator does today
+The `calculate_prestaciones` SQL RPC computes pending vacation as:
 
-The hide must hold in both the Transactions list and the Financial / Ledger views (journals + journal lines + drilldowns), and it must be enforced in the database so it can't be bypassed via the API.
-
-## Approach
-
-Pure RLS, no schema change, no UI change. We add SELECT policies that exclude the two exact descriptions when the viewer is an office user, and exclude their derived journals / journal lines as well.
-
-Match is **case-insensitive, trimmed, exact** — `lower(trim(description)) IN ('contract charles', 'contract iramaia')`. So:
-
-- Hidden: `Contract Charles`, `contract charles`, `Contract Iramaia` (exact wording, any case, surrounding spaces ignored)
-- NOT hidden: `Contrato Charles`, `Pago a Charles Hefner`, `Migración residencia Charles`, `Almuerzo … reembolso Charles`, `Contrato Iramaia`, etc.
-
-If you later want any of those Spanish variants hidden too, we just add them to the list — one-line change.
-
-## Step 1 — RLS on `transactions`
-
-Replace the office-applicable SELECT policy so office cannot see the two descriptions. Keep all other roles' policies untouched.
-
-```sql
--- Drop the existing office SELECT (will be re-checked & named in the migration)
--- then add:
-CREATE POLICY "Office hides confidential descriptions"
-ON public.transactions FOR SELECT
-TO authenticated
-USING (
-  NOT public.has_role(auth.uid(), 'office'::app_role)
-  OR lower(trim(description)) NOT IN ('contract charles', 'contract iramaia')
-);
+```
+entitlement = 14 days  (or 18 if ≥ 5 years of service)
+pending = entitlement × (days_since_anchor / 365)   -- rounded to 2 decimals
+if pending ≥ 95% of entitlement → snap up to full entitlement
 ```
 
-## Step 2 — RLS on `journals`
+So for a worker who is, say, ~6.4 months into the cycle, the screen shows fractional days like **7.40**. That is a pure proportional formula — it does not match the way the Dominican Labour Code is normally liquidated.
+
+### What Dominican legislation says (Código de Trabajo, Art. 177 + Art. 180)
+
+Vacations accrue on a **per-completed-month basis**, not per-day. The fixed scale is:
+
+| Completed months of service in the year | Vacation days payable |
+|---|---|
+| < 5 months | 0 (no fractional accrual under Art. 177) |
+| 5 months | 6 days |
+| 6 months | 7 days |
+| 7 months | 8 days |
+| 8 months | 9 days |
+| 9 months | 10 days |
+| 10 months | 11 days |
+| 11 months | 12 days |
+| 1 full year | 14 days |
+| ≥ 5 full years | 18 days |
+
+Art. 180 then says that on termination, any vacation **not yet enjoyed** must be paid in cash, using this same scale (proportional to months actually worked in the current vacation cycle). Fractional days are **not** part of the statutory table — Suprema Corte and Ministerio de Trabajo guidance liquidate by whole days using the table above.
+
+### Conclusion
+The "7.4 days" you saw is a math artifact, not a legally compliant figure. The legally clean output for ~6 months in the cycle is **7 days** flat.
+
+### Proposed change (single SQL migration, no UI changes)
+
+Rewrite the vacation-days block inside `public.calculate_prestaciones` to use the statutory table:
 
 ```sql
-CREATE POLICY "Office hides journals from confidential transactions"
-ON public.journals FOR SELECT
-TO authenticated
-USING (
-  NOT public.has_role(auth.uid(), 'office'::app_role)
-  OR NOT EXISTS (
-    SELECT 1 FROM public.transactions t
-    WHERE t.id = journals.transaction_source_id
-      AND lower(trim(t.description)) IN ('contract charles', 'contract iramaia')
-  )
-);
+-- months completed in the current vacation cycle
+v_cycle_months := FLOOR( (p_termination_date - v_vacation_anchor + 1) / 30.4375 );
+
+IF v_total_service_months >= 60 THEN
+   -- ≥ 5 years: full cycle = 18 days, prorated linearly by completed months
+   v_pending_vacation_days := CASE
+     WHEN v_cycle_months >= 12 THEN 18
+     WHEN v_cycle_months >=  5 THEN FLOOR(18 * v_cycle_months / 12.0)
+     ELSE 0
+   END;
+ELSE
+   -- < 5 years: statutory table (Art. 177)
+   v_pending_vacation_days := CASE
+     WHEN v_cycle_months >= 12 THEN 14
+     WHEN v_cycle_months = 11 THEN 12
+     WHEN v_cycle_months = 10 THEN 11
+     WHEN v_cycle_months =  9 THEN 10
+     WHEN v_cycle_months =  8 THEN 9
+     WHEN v_cycle_months =  7 THEN 8
+     WHEN v_cycle_months =  6 THEN 7
+     WHEN v_cycle_months =  5 THEN 6
+     ELSE 0
+   END;
+END IF;
 ```
 
-## Step 3 — RLS on `journal_lines`
+Notes:
+- Manual override (`p_pending_vacation_days`) is preserved exactly as today — accountant can still type any number.
+- Result is always an integer number of days → no more "7.4".
+- Vacation amount keeps using the 12-month average daily salary (already correct per Art. 177).
+- The 95%-snap rule becomes unnecessary and is removed.
 
-```sql
-CREATE POLICY "Office hides journal_lines from confidential transactions"
-ON public.journal_lines FOR SELECT
-TO authenticated
-USING (
-  NOT public.has_role(auth.uid(), 'office'::app_role)
-  OR NOT EXISTS (
-    SELECT 1
-    FROM public.journals j
-    JOIN public.transactions t ON t.id = j.transaction_source_id
-    WHERE j.id = journal_lines.journal_id
-      AND lower(trim(t.description)) IN ('contract charles', 'contract iramaia')
-  )
-);
-```
+### Out of scope
+- No UI changes; the dialog already accepts integers fine.
+- Cesantía and preaviso day calculations are unchanged (those are already on a discrete-days statutory scale).
 
-Before writing the migration I'll inspect the existing policies on these three tables and replace only the office-relevant ones — other roles' access stays exactly as today.
-
-## Side effects (intended)
-
-For the office user, these transactions silently disappear from:
-
-- Transactions page + Recent Transactions
-- Approvals queue (if relevant)
-- Ledger account drilldowns
-- P&L / Cash Flow / Treasury totals (totals will be slightly lower than what admin sees — this is the intended behavior)
-- AI Search context
-- DGII 606/607/608 reports rendered for office
-- Backups exported by the office user
-
-Performance impact: negligible. The two `EXISTS` lookups are indexed lookups by `id`.
-
-## Verification
-
-After deploy, log in as the office user and confirm:
-
-1. Search for "Contract Charles" / "Contract Iramaia" in Transactions returns nothing.
-2. Direct URL to one of the row IDs returns "not found".
-3. Ledger drilldown for the contra account does not list the entries.
-4. Other transactions mentioning Charles or Iramaia (e.g. `Pago a Charles Hefner`, `Contrato Iramaia` in Spanish) ARE still visible — confirms the match is exact, not fuzzy.
-
-## Rollback
-
-Single migration drops the three policies and restores the prior ones — clean reversal.
+### Risk
+Low. The function is only called from the Benefits dialog, and saved cases keep their stored `pending_vacation_days` value — only **future** calculations will round to whole days.

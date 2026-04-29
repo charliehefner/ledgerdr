@@ -559,11 +559,11 @@ function generateTerminationPdf(data: TerminationData): Uint8Array {
   const lastBodyY = y;
   const sigY = y - GAP_SIG_TOP;
   const sigStart = items.length;
-  pushSignature(items, COL_LEFT_CENTER, sigY, data.employee_name, [`Cédula # ${data.cedula}`, "EL TRABAJADOR"]);
+  pushSignature(items, COL_LEFT_CENTER, sigY, data.employee_name, [`Cédula # ${data.cedula}`, "EL TRABAJADOR"], "sig");
   pushSignature(items, COL_RIGHT_CENTER, sigY, data.manager_name || "________________", [
     data.manager_title || "Gerente Operacional",
     data.company_name.toUpperCase(),
-  ]);
+  ], "sig");
   balanceSignatures(items, sigStart, lastBodyY);
 
   return buildPdf(items);

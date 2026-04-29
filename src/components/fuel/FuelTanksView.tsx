@@ -138,12 +138,14 @@ export function FuelTanksView() {
       }
 
       // Insert transfer transaction
+      if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
       const { error: txError } = await supabase.from("fuel_transactions").insert({
         tank_id: data.source_tank_id,
         destination_tank_id: data.destination_tank_id,
         transaction_type: "transfer",
         gallons,
         notes: data.notes || `Transfer: ${sourceTank.name} → ${destTank.name}`,
+        entity_id: selectedEntityId,
       });
       if (txError) throw txError;
 

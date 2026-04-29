@@ -97,7 +97,8 @@ export function FarmsFieldsView() {
         const { error } = await supabase.from("farms").update({ name: data.name }).eq("id", editingFarm.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("farms").insert({ name: data.name });
+        if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
+        const { error } = await supabase.from("farms").insert({ name: data.name, entity_id: selectedEntityId });
         if (error) throw error;
       }
     },

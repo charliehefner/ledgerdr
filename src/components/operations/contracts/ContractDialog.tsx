@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { toast } from "sonner";
 import { ServiceContract } from "../ContractedServicesView";
 

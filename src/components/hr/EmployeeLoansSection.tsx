@@ -37,9 +37,10 @@ interface EmployeeLoan {
 
 interface EmployeeLoansSectionProps {
   employeeId: string;
+  entityId?: string;
 }
 
-export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) {
+export function EmployeeLoansSection({ employeeId, entityId }: EmployeeLoansSectionProps) {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -93,6 +94,11 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
     const paymentAmount = Math.round((amount / payments) * 100) / 100;
     setIsSubmitting(true);
     try {
+      if (!entityId) {
+        toast.error("Empleado sin entidad asociada");
+        setIsSubmitting(false);
+        return;
+      }
       const { error } = await supabase.from("employee_loans").insert({
         employee_id: employeeId,
         loan_date: loanDate,
@@ -102,6 +108,7 @@ export function EmployeeLoansSection({ employeeId }: EmployeeLoansSectionProps) 
         payment_amount: paymentAmount,
         notes: notes || null,
         is_active: true,
+        entity_id: entityId,
       });
       if (error) throw error;
       toast.success(t("loans.registeredSuccess"));

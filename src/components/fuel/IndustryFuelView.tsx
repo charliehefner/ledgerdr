@@ -142,11 +142,18 @@ export function IndustryFuelView() {
   const refillMutation = useMutation({
     mutationFn: async (data: typeof refillForm) => {
       const gallons = parseFloat(data.gallons);
+      const { data: tankRow } = await supabase
+        .from("fuel_tanks")
+        .select("entity_id")
+        .eq("id", data.tank_id)
+        .maybeSingle();
+      if (!tankRow?.entity_id) throw new Error("Tanque sin entidad asociada");
       const { error } = await supabase.from("fuel_transactions").insert({
         tank_id: data.tank_id,
         transaction_type: "refill",
         gallons,
         notes: data.notes || null,
+        entity_id: tankRow.entity_id,
       });
       if (error) throw error;
     },

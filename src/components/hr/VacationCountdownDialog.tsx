@@ -71,6 +71,7 @@ export function VacationCountdownDialog({
   const { canWriteSection } = useAuth();
   const canModifySettings = canWriteSection("hr");
   const { t, language } = useLanguage();
+  const { requireEntity } = useEntity();
   const dateLocale = language === "en" ? enUS : es;
 
   const { data: vacationHistory = [], isLoading } = useQuery({
@@ -101,11 +102,14 @@ export function VacationCountdownDialog({
   const addVacationMutation = useMutation({
     mutationFn: async () => {
       if (!employeeId) throw new Error("No employee selected");
+      const entityId = requireEntity();
+      if (!entityId) throw new Error("Selecciona una entidad antes de crear");
       const { error } = await supabase.from("employee_vacations").insert({
         employee_id: employeeId,
         start_date: startDate,
         end_date: endDate,
         notes: notes || null,
+        entity_id: entityId,
       });
       if (error) throw error;
     },

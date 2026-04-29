@@ -309,11 +309,14 @@ export function EmployeeDetailDialog({
     }
 
     try {
+      const entityId = (employee as any)?.entity_id;
+      if (!entityId) throw new Error("Empleado sin entidad asociada");
       const { error } = await supabase.from("employee_vacations").insert({
         employee_id: employeeId,
         start_date: vacationStart,
         end_date: vacationEnd,
         notes: vacationNotes || null,
+        entity_id: entityId,
       });
 
       if (error) throw error;
@@ -353,12 +356,15 @@ export function EmployeeDetailDialog({
     }
 
     try {
+      const entityId = (employee as any)?.entity_id;
+      if (!entityId) throw new Error("Empleado sin entidad asociada");
       const { error } = await supabase.from("employee_incidents").insert({
         employee_id: employeeId,
         incident_date: incidentDate,
         description: incidentDesc,
         severity: incidentSeverity || null,
         resolution: incidentResolution || null,
+        entity_id: entityId,
       });
 
       if (error) throw error;

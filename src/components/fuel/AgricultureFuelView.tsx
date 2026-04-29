@@ -217,9 +217,10 @@ export function AgricultureFuelView() {
       // Get tank's fuel type to match with inventory
       const { data: tankData } = await supabase
         .from("fuel_tanks")
-        .select("fuel_type")
+        .select("fuel_type, entity_id")
         .eq("id", data.tank_id)
         .maybeSingle();
+      if (!tankData?.entity_id) throw new Error("Tanque sin entidad asociada");
 
       // Insert transaction
       const { error: txError } = await supabase.from("fuel_transactions").insert({
@@ -232,6 +233,7 @@ export function AgricultureFuelView() {
         hour_meter_reading: hourMeter,
         previous_hour_meter: equipment?.current_hour_meter || 0,
         notes: data.notes || null,
+        entity_id: tankData.entity_id,
       });
       if (txError) throw txError;
 

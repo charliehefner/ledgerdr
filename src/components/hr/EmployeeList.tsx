@@ -91,7 +91,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
   } | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "name", direction: "asc" });
   const { canModifySettings } = useAuth();
-  const { applyEntityFilter, selectedEntityId } = useEntityFilter();
+  const { selectedEntityId, isAllEntities } = useEntityFilter();
 
   const {
     visibility,
@@ -108,7 +108,10 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
         .from("employees_safe")
         .select("*")
         .order("name");
-      const { data, error } = await applyEntityFilter(query);
+      const scopedQuery = !isAllEntities && selectedEntityId
+        ? query.eq("entity_id", selectedEntityId)
+        : query;
+      const { data, error } = await scopedQuery;
       if (error) throw error;
       return data as Employee[];
     },

@@ -89,6 +89,7 @@ function escapePdf(text: string): string {
 
 // ─── Letterhead images (embedded as base64 at module init) ───
 import { LETTERHEAD_TOP_B64, LETTERHEAD_BOTTOM_B64 } from "./letterhead-assets.ts";
+import { HELV_W, HELV_BOLD_W } from "./helvetica-widths.ts";
 const LETTERHEAD_TOP_BYTES = Uint8Array.from(atob(LETTERHEAD_TOP_B64), (c) => c.charCodeAt(0));
 const LETTERHEAD_BOTTOM_BYTES = Uint8Array.from(atob(LETTERHEAD_BOTTOM_B64), (c) => c.charCodeAt(0));
 const LETTERHEAD_TOP_W = 1920;
@@ -108,17 +109,37 @@ const BOTTOM_IMG_H = (PAGE_W * LETTERHEAD_BOTTOM_H) / LETTERHEAD_BOTTOM_W; // ~5
 const TOP_BODY_Y = PAGE_H - TOP_IMG_H - 24;   // first usable Y (text baseline)
 const BOTTOM_LIMIT = BOTTOM_IMG_H + 18;        // do not draw text below this Y
 
-// Spacing constants used by every letter generator
-const GAP_PARA = 12;       // between paragraphs
-const GAP_SECTION = 22;    // between sections (title → body, body → closing)
-const GAP_SIG_TOP = 50;    // gap from last paragraph to first signature rule
+// Spacing constants used by every letter generator. Mutable so the
+// orphan-retry pass can switch to a tighter set when only the signature
+// would otherwise spill onto a second page.
+const DEFAULT_GAPS = { para: 12, section: 22, sigTop: 50 };
+const COMPACT_GAPS = { para: 8, section: 14, sigTop: 30 };
+let GAP_PARA = DEFAULT_GAPS.para;
+let GAP_SECTION = DEFAULT_GAPS.section;
+let GAP_SIG_TOP = DEFAULT_GAPS.sigTop;
+function setGaps(mode: "default" | "compact"): void {
+  const g = mode === "compact" ? COMPACT_GAPS : DEFAULT_GAPS;
+  GAP_PARA = g.para; GAP_SECTION = g.section; GAP_SIG_TOP = g.sigTop;
+}
 const SIG_RULE_W = 200;    // width of every signature line
 
-// Width helpers based on the same heuristic the wrapper uses
-const CHAR_W_REG = 0.52;   // Helvetica regular, em fraction
-const CHAR_W_BOLD = 0.6;   // Helvetica bold, em fraction
+// Map a Unicode codepoint to its WinAnsi byte (mirrors escapePdf).
+const UNI_TO_WINANSI: Record<number, number> = {
+  0xE1: 0xE1, 0xE9: 0xE9, 0xED: 0xED, 0xF3: 0xF3, 0xFA: 0xFA, 0xF1: 0xF1, 0xFC: 0xFC,
+  0xC1: 0xC1, 0xC9: 0xC9, 0xCD: 0xCD, 0xD3: 0xD3, 0xDA: 0xDA, 0xD1: 0xD1,
+  0x2013: 0x2D, // en dash → hyphen (matches escapePdf)
+};
+
+// Real WinAnsi-based width using Adobe Core14 Helvetica metrics (1/1000 em).
 function estTextWidth(text: string, size: number, bold = false): number {
-  return text.length * size * (bold ? CHAR_W_BOLD : CHAR_W_REG);
+  const widths = bold ? HELV_BOLD_W : HELV_W;
+  let w = 0;
+  for (let i = 0; i < text.length; i++) {
+    const cp = text.codePointAt(i)!;
+    const byte = cp < 0x80 ? cp : (UNI_TO_WINANSI[cp] ?? 0x20);
+    w += widths[byte] || widths[0x20];
+  }
+  return (w * size) / 1000;
 }
 
 interface PdfText {

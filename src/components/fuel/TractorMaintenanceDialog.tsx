@@ -28,6 +28,7 @@ import { es } from "date-fns/locale";
 import { parseDateLocal } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntity } from "@/contexts/EntityContext";
 
 interface TractorMaintenanceDialogProps {
   tractorId: string | null;

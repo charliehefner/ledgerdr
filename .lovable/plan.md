@@ -1,37 +1,42 @@
-## Vacation Day Calculation — Align with Ministerio de Trabajo
+## Problem
 
-### Problem
-Yesterday's migration applied the Article 180 monthly scale (6 to 12 days) to everyone. That scale is only meant for employees with less than 1 year of continuous service (Art. 179). The Ministry's official calculator (and Articles 177 + 184) instead pay the **full** statutory entitlement at termination for any employee with 1+ year of service.
+The HR → Payroll period summary table is blank because the "Preview" RPC call fails silently (the React component swallows the RPC error into `rpcError` state and returns `[]`).
 
-For Reynaldo Cedeño this produced 12 days / RD$50,230 instead of the Ministry's 14 days / RD$58,602 — a RD$8,372 underpayment. The same flaw affects every long-tenure employee mid-cycle.
+## Root cause
 
-### Fix
-Single SQL migration to `calculate_prestaciones`. New vacation-day rules, applied to **all** employees:
+There are **two overloaded versions** of `calculate_payroll_for_period` in the database with the same parameter names but in different positions:
 
-1. **Manual override** typed by the accountant — always respected.
-2. **Cycle already enjoyed** (termination before the next anchor) — 0 days.
-3. **Service ≥ 1 year** — full Article 177 entitlement: **14 days**, or **18 days** if total service ≥ 5 years. Not prorated by months in the current cycle. This matches the Ministry's calculator.
-4. **Service < 1 year** — Article 179 + 180 monthly scale (5m=6, 6m=7, …, 11m=12 days).
+1. `(p_period_id uuid, p_commit boolean, p_entity_id uuid)` — older signature
+2. `(p_period_id uuid, p_entity_id uuid, p_commit boolean)` — newer signature
 
-Vacation amount continues to use the 12-month average daily salary (already correct per Art. 177).
-
-### Other behaviour preserved
-- Preaviso, cesantía, regalía, loan deductions and manual adjustments untouched.
-- All other parts of the function unchanged.
-- No UI changes required.
-
-### Verification
-After deploy, recalculating Reynaldo (hire 1 Apr 2024, termination 30 Apr 2026) returns:
-
-```text
-Preaviso       28 days   RD$117,205.20
-Cesantía       42 days   RD$175,807.81
-Vacation       14 days   RD$ 58,602.60
-Regalía         4 months RD$ 33,250.00
-TOTAL                    RD$384,865.61
+The client calls it with named parameters:
+```ts
+supabase.rpc("calculate_payroll_for_period",
+  { p_period_id, p_commit: false, p_entity_id })
 ```
 
-— matching the Ministerio de Trabajo PDF exactly.
+PostgREST cannot disambiguate between two overloads that accept the exact same set of named parameters, and returns `PGRST203` ("Could not choose the best candidate function"). The component catches this, sets `rpcError`, and shows an empty table.
 
-### Risk
-Low. Function is only called from the Benefits Calculator dialog. Saved liquidations keep their stored values; only future calculations use the new rule.
+## Fix
+
+Drop the older/duplicate overload so only one version remains. Inspecting both bodies, version #2 (oid 109514) is the newer one but has a different return signature. Version #1 (oid 108907) matches the columns the React component (`PayrollRpcRow`) expects (`employee_id, employee_name, salary, base_pay, …, committed`), so we keep #1 and drop #2.
+
+```sql
+DROP FUNCTION IF EXISTS public.calculate_payroll_for_period(
+  uuid, uuid, boolean
+);
+```
+
+This restores a single, unambiguous function callable by named parameters.
+
+## Verification steps after migration
+
+1. Open HR → Payroll → select a period → click "Vista Previa".
+2. Confirm the summary table populates with employees, gross, TSS, ISR, net.
+3. Re-test on a closed period to ensure snapshots still display (unchanged path).
+4. Confirm "Comprometer Nómina" still works on an open period.
+
+## Files / objects touched
+
+- New migration: `DROP FUNCTION public.calculate_payroll_for_period(uuid, uuid, boolean)`.
+- No application code changes required.

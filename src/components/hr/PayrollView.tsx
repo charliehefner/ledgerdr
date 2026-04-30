@@ -51,7 +51,6 @@ export function PayrollView() {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
   const { user } = useAuth();
-  const isOffice = user?.role === "office";
   const { applyEntityFilter, selectedEntityId } = useEntityFilter();
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);

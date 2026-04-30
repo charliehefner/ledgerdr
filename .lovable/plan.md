@@ -1,42 +1,64 @@
-## Problem
+Two unrelated issues surfaced under Ana Estrella's account.
 
-The HR → Payroll period summary table is blank because the "Preview" RPC call fails silently (the React component swallows the RPC error into `rpcError` state and returns `[]`).
+## Issue 1 — Prestaciones won't calculate (data, not code)
 
-## Root cause
+Her employee record has:
+- `date_of_hire` = **01 MAY 2026** (correct — she starts tomorrow)
+- `date_of_termination` = **30 APR 2026** (wrong — she has not been terminated)
+- `is_active` = **false** (wrong — she's onboarding)
 
-There are **two overloaded versions** of `calculate_payroll_for_period` in the database with the same parameter names but in different positions:
+`calculate_prestaciones` correctly throws "Termination date cannot be before hire date", which surfaces as "could not calculate". Even setting that aside, she should never have a termination date in the first place — she's a new hire.
 
-1. `(p_period_id uuid, p_commit boolean, p_entity_id uuid)` — older signature
-2. `(p_period_id uuid, p_entity_id uuid, p_commit boolean)` — newer signature
-
-The client calls it with named parameters:
-```ts
-supabase.rpc("calculate_payroll_for_period",
-  { p_period_id, p_commit: false, p_entity_id })
-```
-
-PostgREST cannot disambiguate between two overloads that accept the exact same set of named parameters, and returns `PGRST203` ("Could not choose the best candidate function"). The component catches this, sets `rpcError`, and shows an empty table.
-
-## Fix
-
-Drop the older/duplicate overload so only one version remains. Inspecting both bodies, version #2 (oid 109514) is the newer one but has a different return signature. Version #1 (oid 108907) matches the columns the React component (`PayrollRpcRow`) expects (`employee_id, employee_name, salary, base_pay, …, committed`), so we keep #1 and drop #2.
+**Fix:** Clear her termination data and reactivate her record.
 
 ```sql
-DROP FUNCTION IF EXISTS public.calculate_payroll_for_period(
-  uuid, uuid, boolean
-);
+UPDATE public.employees
+SET date_of_termination = NULL,
+    is_active = true
+WHERE id = 'ba5fb29d-874d-447c-ae9e-2d76673c649c';
 ```
 
-This restores a single, unambiguous function callable by named parameters.
+After this, prestaciones for her simply shouldn't be calculated at all (she's active with no termination), which matches reality.
 
-## Verification steps after migration
+## Issue 2 — Letter download fails for `office` role
 
-1. Open HR → Payroll → select a period → click "Vista Previa".
-2. Confirm the summary table populates with employees, gross, TSS, ISR, net.
-3. Re-test on a closed period to ensure snapshots still display (unchanged path).
-4. Confirm "Comprometer Nómina" still works on an open period.
+Root cause: storage RLS on the `employee-documents` bucket only allows `admin / management / accountant / supervisor` to SELECT. The `office` role (which Ana has) is missing, so when her UI tries to fetch the signed URL or read the PDF, storage returns no rows and the download errors out.
 
-## Files / objects touched
+The `employee_documents` **table** policies already include `office` (so she sees the row in the list), but the **storage bucket** policies were never updated when `office` was added as a 7th role. Same gap likely affects INSERT (uploading new letters).
 
-- New migration: `DROP FUNCTION public.calculate_payroll_for_period(uuid, uuid, boolean)`.
-- No application code changes required.
+**Fix:** Update the two storage policies to include `office`:
+
+```sql
+DROP POLICY "Authorized roles can view employee documents" ON storage.objects;
+CREATE POLICY "Authorized roles can view employee documents"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'employee-documents'
+  AND (
+    has_role(auth.uid(), 'admin')
+    OR has_role(auth.uid(), 'management')
+    OR has_role(auth.uid(), 'accountant')
+    OR has_role(auth.uid(), 'supervisor')
+    OR has_role(auth.uid(), 'office')
+  )
+);
+
+-- And mirror on the INSERT policy ("Authorized users can upload employee documents")
+-- so office users can also generate new letters.
+```
+
+I'll also audit the other HR-adjacent buckets (e.g. `payroll-receipts`, `day-labor-receipts` if present) for the same `office` gap and patch any I find — but only those; no other policy changes.
+
+## Why this happened
+
+When the `office` role was added as a 7th role, the app-layer permissions in `src/lib/permissions.ts` and the table-level RLS for `employee_documents` were updated, but the storage bucket policies were missed. Classic split-brain between table RLS and storage RLS.
+
+## Out of scope
+
+- No changes to `calculate_prestaciones` permission list — `office` users shouldn't be calculating severance for others (that stays admin/management/accountant), and Ana's own record won't need it now that she's active with no termination date.
+- No schema changes.
+
+## Files / migrations
+
+- 1 data update (Ana's employee row) — via insert tool
+- 1 migration for storage RLS (drop + recreate the SELECT and INSERT policies on `storage.objects` for `employee-documents`, plus any sibling HR buckets found to have the same gap)

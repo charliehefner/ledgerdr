@@ -5356,7 +5356,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          bank?: never
+          bank?: string | null
           bank_account_number?: never
           boot_size?: string | null
           cedula?: never
@@ -5376,7 +5376,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          bank?: never
+          bank?: string | null
           bank_account_number?: never
           boot_size?: string | null
           cedula?: never

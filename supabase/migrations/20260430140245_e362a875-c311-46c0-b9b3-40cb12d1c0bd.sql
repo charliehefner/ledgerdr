@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.calculate_payroll_for_period(uuid, uuid, boolean);

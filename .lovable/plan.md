@@ -1,78 +1,37 @@
-## Vacation Day Rounding — Findings & Proposed Fix
+## Vacation Day Calculation — Align with Ministerio de Trabajo
 
-### What the calculator does today
-The `calculate_prestaciones` SQL RPC computes pending vacation as:
+### Problem
+Yesterday's migration applied the Article 180 monthly scale (6 to 12 days) to everyone. That scale is only meant for employees with less than 1 year of continuous service (Art. 179). The Ministry's official calculator (and Articles 177 + 184) instead pay the **full** statutory entitlement at termination for any employee with 1+ year of service.
 
-```
-entitlement = 14 days  (or 18 if ≥ 5 years of service)
-pending = entitlement × (days_since_anchor / 365)   -- rounded to 2 decimals
-if pending ≥ 95% of entitlement → snap up to full entitlement
-```
+For Reynaldo Cedeño this produced 12 days / RD$50,230 instead of the Ministry's 14 days / RD$58,602 — a RD$8,372 underpayment. The same flaw affects every long-tenure employee mid-cycle.
 
-So for a worker who is, say, ~6.4 months into the cycle, the screen shows fractional days like **7.40**. That is a pure proportional formula — it does not match the way the Dominican Labour Code is normally liquidated.
+### Fix
+Single SQL migration to `calculate_prestaciones`. New vacation-day rules, applied to **all** employees:
 
-### What Dominican legislation says (Código de Trabajo, Art. 177 + Art. 180)
+1. **Manual override** typed by the accountant — always respected.
+2. **Cycle already enjoyed** (termination before the next anchor) — 0 days.
+3. **Service ≥ 1 year** — full Article 177 entitlement: **14 days**, or **18 days** if total service ≥ 5 years. Not prorated by months in the current cycle. This matches the Ministry's calculator.
+4. **Service < 1 year** — Article 179 + 180 monthly scale (5m=6, 6m=7, …, 11m=12 days).
 
-Vacations accrue on a **per-completed-month basis**, not per-day. The fixed scale is:
+Vacation amount continues to use the 12-month average daily salary (already correct per Art. 177).
 
-| Completed months of service in the year | Vacation days payable |
-|---|---|
-| < 5 months | 0 (no fractional accrual under Art. 177) |
-| 5 months | 6 days |
-| 6 months | 7 days |
-| 7 months | 8 days |
-| 8 months | 9 days |
-| 9 months | 10 days |
-| 10 months | 11 days |
-| 11 months | 12 days |
-| 1 full year | 14 days |
-| ≥ 5 full years | 18 days |
+### Other behaviour preserved
+- Preaviso, cesantía, regalía, loan deductions and manual adjustments untouched.
+- All other parts of the function unchanged.
+- No UI changes required.
 
-Art. 180 then says that on termination, any vacation **not yet enjoyed** must be paid in cash, using this same scale (proportional to months actually worked in the current vacation cycle). Fractional days are **not** part of the statutory table — Suprema Corte and Ministerio de Trabajo guidance liquidate by whole days using the table above.
+### Verification
+After deploy, recalculating Reynaldo (hire 1 Apr 2024, termination 30 Apr 2026) returns:
 
-### Conclusion
-The "7.4 days" you saw is a math artifact, not a legally compliant figure. The legally clean output for ~6 months in the cycle is **7 days** flat.
-
-### Proposed change (single SQL migration, no UI changes)
-
-Rewrite the vacation-days block inside `public.calculate_prestaciones` to use the statutory table:
-
-```sql
--- months completed in the current vacation cycle
-v_cycle_months := FLOOR( (p_termination_date - v_vacation_anchor + 1) / 30.4375 );
-
-IF v_total_service_months >= 60 THEN
-   -- ≥ 5 years: full cycle = 18 days, prorated linearly by completed months
-   v_pending_vacation_days := CASE
-     WHEN v_cycle_months >= 12 THEN 18
-     WHEN v_cycle_months >=  5 THEN FLOOR(18 * v_cycle_months / 12.0)
-     ELSE 0
-   END;
-ELSE
-   -- < 5 years: statutory table (Art. 177)
-   v_pending_vacation_days := CASE
-     WHEN v_cycle_months >= 12 THEN 14
-     WHEN v_cycle_months = 11 THEN 12
-     WHEN v_cycle_months = 10 THEN 11
-     WHEN v_cycle_months =  9 THEN 10
-     WHEN v_cycle_months =  8 THEN 9
-     WHEN v_cycle_months =  7 THEN 8
-     WHEN v_cycle_months =  6 THEN 7
-     WHEN v_cycle_months =  5 THEN 6
-     ELSE 0
-   END;
-END IF;
+```text
+Preaviso       28 days   RD$117,205.20
+Cesantía       42 days   RD$175,807.81
+Vacation       14 days   RD$ 58,602.60
+Regalía         4 months RD$ 33,250.00
+TOTAL                    RD$384,865.61
 ```
 
-Notes:
-- Manual override (`p_pending_vacation_days`) is preserved exactly as today — accountant can still type any number.
-- Result is always an integer number of days → no more "7.4".
-- Vacation amount keeps using the 12-month average daily salary (already correct per Art. 177).
-- The 95%-snap rule becomes unnecessary and is removed.
-
-### Out of scope
-- No UI changes; the dialog already accepts integers fine.
-- Cesantía and preaviso day calculations are unchanged (those are already on a discrete-days statutory scale).
+— matching the Ministerio de Trabajo PDF exactly.
 
 ### Risk
-Low. The function is only called from the Benefits dialog, and saved cases keep their stored `pending_vacation_days` value — only **future** calculations will round to whole days.
+Low. Function is only called from the Benefits Calculator dialog. Saved liquidations keep their stored values; only future calculations use the new rule.

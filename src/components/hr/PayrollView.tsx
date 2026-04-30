@@ -155,9 +155,7 @@ export function PayrollView() {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="w-full justify-between">
                   <TabsTrigger value="timesheet">{t("payroll.timesheet")}</TabsTrigger>
-                  {!isOffice && (
-                    <TabsTrigger value="summary">{t("payroll.summaryAndClose")}</TabsTrigger>
-                  )}
+                  <TabsTrigger value="summary">{t("payroll.summaryAndClose")}</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="timesheet" className="mt-4">
@@ -169,18 +167,16 @@ export function PayrollView() {
                   />
                 </TabsContent>
                 
-                {!isOffice && (
-                  <TabsContent value="summary" className="mt-4">
-                    <PayrollSummary
-                      periodId={periodData.id}
-                      periodStatus={periodData.status}
-                      startDate={selectedPeriod.startDate}
-                      endDate={selectedPeriod.endDate}
-                      nominaNumber={nominaNumber}
-                      onPeriodClosed={() => setActiveTab("timesheet")}
-                    />
-                  </TabsContent>
-                )}
+                <TabsContent value="summary" className="mt-4">
+                  <PayrollSummary
+                    periodId={periodData.id}
+                    periodStatus={periodData.status}
+                    startDate={selectedPeriod.startDate}
+                    endDate={selectedPeriod.endDate}
+                    nominaNumber={nominaNumber}
+                    onPeriodClosed={() => setActiveTab("timesheet")}
+                  />
+                </TabsContent>
               </Tabs>
             </div>
           )}

@@ -284,7 +284,7 @@ export function TractorHistoryView() {
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
           {tractorSummaries.map((summary) => {
             const isOpen = expandedTractor === summary.tractorId;
-            const recent = (closedByTractor.get(summary.tractorId) ?? []).slice(0, 3);
+            const recent = (closedByTractor.get(summary.tractorId) ?? []).slice(0, 5);
             return (
               <Card key={summary.tractorId}>
                 <Collapsible
@@ -330,7 +330,7 @@ export function TractorHistoryView() {
                     <CollapsibleContent className="pt-3">
                       <div className="border-t pt-3">
                         <p className="mb-2 text-xs font-semibold text-muted-foreground">
-                          Últimos 3 intervalos / Last 3 intervals
+                          Últimos 5 intervalos / Last 5 intervals
                         </p>
                         {recent.length === 0 ? (
                           <p className="text-xs text-muted-foreground">

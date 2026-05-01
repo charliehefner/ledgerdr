@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       _user_id: userId 
     });
     
-    if (!roleData || !['admin', 'management', 'accountant', 'supervisor', 'viewer', 'driver'].includes(roleData)) {
+    if (!roleData || !['admin', 'management', 'accountant', 'supervisor', 'office', 'viewer', 'driver'].includes(roleData)) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

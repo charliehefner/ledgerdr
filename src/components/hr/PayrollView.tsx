@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, startOfMonth, setDate, endOfMonth, differenceInMonths } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +56,7 @@ export function PayrollView() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("timesheet");
+  const [autoOpenedSummaryForPeriod, setAutoOpenedSummaryForPeriod] = useState<string | null>(null);
 
   const { data: periodData, isLoading: periodLoading } = useQuery({
     queryKey: [
@@ -107,6 +108,13 @@ export function PayrollView() {
   };
 
   const nominaNumber = calculateNominaNumber(selectedPeriod.startDate);
+
+  useEffect(() => {
+    if (periodData?.status === "closed" && periodData.id !== autoOpenedSummaryForPeriod) {
+      setActiveTab("summary");
+      setAutoOpenedSummaryForPeriod(periodData.id);
+    }
+  }, [periodData?.id, periodData?.status, autoOpenedSummaryForPeriod]);
 
   return (
     <div className="space-y-4">

@@ -538,8 +538,18 @@ export function EmployeeDetailDialog({
         throw dbError;
       }
 
-      // 3. Best-effort delete of the old object (admin-only — silently ignored otherwise)
-      await supabase.storage.from("employee-documents").remove([storagePath]);
+      // 3. Best-effort delete of the old object — never let cleanup failure
+      // surface as a user-facing error, since the replacement already succeeded.
+      try {
+        const { error: removeError } = await supabase.storage
+          .from("employee-documents")
+          .remove([storagePath]);
+        if (removeError) {
+          console.warn("Old document cleanup skipped:", removeError);
+        }
+      } catch (cleanupErr) {
+        console.warn("Old document cleanup skipped:", cleanupErr);
+      }
 
       toast.success("Documento reemplazado exitosamente");
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });

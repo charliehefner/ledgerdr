@@ -400,12 +400,29 @@ export function EmployeeDetailDialog({
     }
   };
 
+  const sanitizeStorageFilename = (name: string): string => {
+    const lastDot = name.lastIndexOf(".");
+    const rawBase = lastDot > 0 ? name.slice(0, lastDot) : name;
+    const rawExt = lastDot > 0 ? name.slice(lastDot + 1) : "";
+    const clean = (s: string) =>
+      s
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "") // strip accents
+        .replace(/[^a-zA-Z0-9._-]+/g, "-") // safe chars only
+        .replace(/-+/g, "-")
+        .replace(/^[-.]+|[-.]+$/g, "");
+    const base = clean(rawBase) || "documento";
+    const ext = clean(rawExt).toLowerCase();
+    return ext ? `${base}.${ext}` : base;
+  };
+
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !employeeId) return;
 
     try {
-      const fileName = `${employeeId}/${Date.now()}_${file.name}`;
+      const safeName = sanitizeStorageFilename(file.name);
+      const fileName = `${employeeId}/${Date.now()}_${safeName}`;
       const entityId = (employee as any)?.entity_id || selectedEntityId;
 
       if (!entityId) {
@@ -414,7 +431,7 @@ export function EmployeeDetailDialog({
 
       const { error: uploadError } = await supabase.storage
         .from("employee-documents")
-        .upload(fileName, file);
+        .upload(fileName, file, { contentType: file.type || undefined });
 
       if (uploadError) throw uploadError;
 
@@ -520,8 +537,13 @@ export function EmployeeDetailDialog({
       // Using a new path keeps the operation atomic — if anything fails, the original file is untouched.
       const lastSlash = storagePath.lastIndexOf("/");
       const folder = lastSlash >= 0 ? storagePath.slice(0, lastSlash) : "";
-      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
-      const newPath = `${folder ? folder + "/" : ""}${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+      const rawExt = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".") + 1) : "";
+      const safeExt = rawExt
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "")
+        .toLowerCase();
+      const newPath = `${folder ? folder + "/" : ""}${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt ? "." + safeExt : ""}`;
 
       // 1. Upload new file to a new path (INSERT — allowed)
       const { error: uploadError } = await supabase.storage

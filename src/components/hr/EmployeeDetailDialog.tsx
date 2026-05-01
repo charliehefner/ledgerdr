@@ -508,8 +508,8 @@ export function EmployeeDetailDialog({
     if (!file) return;
 
     try {
-      // Storage policy forbids UPDATE on employee-documents — must delete then re-upload.
-      // Use a fresh path so we never collide with a lingering object if delete is delayed.
+      // Replace strategy: upload to a fresh path, repoint the DB record, then remove the old object.
+      // Using a new path keeps the operation atomic — if anything fails, the original file is untouched.
       const lastSlash = storagePath.lastIndexOf("/");
       const folder = lastSlash >= 0 ? storagePath.slice(0, lastSlash) : "";
       const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";

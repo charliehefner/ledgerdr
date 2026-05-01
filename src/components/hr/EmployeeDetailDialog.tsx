@@ -52,6 +52,7 @@ import { parseDateLocal } from "@/lib/dateUtils";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEntity } from "@/contexts/EntityContext";
 import { PrestacionesCalculatorDialog } from "./PrestacionesCalculatorDialog";
 import { EmployeeLetterDialog } from "./EmployeeLetterDialog";
 
@@ -76,6 +77,7 @@ export function EmployeeDetailDialog({
 }: EmployeeDetailDialogProps) {
   const queryClient = useQueryClient();
   const { canModifySettings, canWriteSection, user } = useAuth();
+  const { selectedEntityId } = useEntity();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("info");
   const [prestacionesOpen, setPrestacionesOpen] = useState(false);
@@ -404,6 +406,12 @@ export function EmployeeDetailDialog({
 
     try {
       const fileName = `${employeeId}/${Date.now()}_${file.name}`;
+      const entityId = (employee as any)?.entity_id || selectedEntityId;
+
+      if (!entityId) {
+        throw new Error("No entity selected for employee document upload");
+      }
+
       const { error: uploadError } = await supabase.storage
         .from("employee-documents")
         .upload(fileName, file);
@@ -412,7 +420,7 @@ export function EmployeeDetailDialog({
 
       const { error: dbError } = await supabase.from("employee_documents").insert({
         employee_id: employeeId,
-        entity_id: (employee as any)?.entity_id,
+        entity_id: entityId,
         document_name: file.name,
         document_type: file.type,
         storage_path: fileName,

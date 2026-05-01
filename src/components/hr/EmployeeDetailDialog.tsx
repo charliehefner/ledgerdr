@@ -508,23 +508,38 @@ export function EmployeeDetailDialog({
     if (!file) return;
 
     try {
-      // Upload replacement file to same path (overwrite)
+      // Storage policy forbids UPDATE on employee-documents — must delete then re-upload.
+      // Use a fresh path so we never collide with a lingering object if delete is delayed.
+      const lastSlash = storagePath.lastIndexOf("/");
+      const folder = lastSlash >= 0 ? storagePath.slice(0, lastSlash) : "";
+      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+      const newPath = `${folder ? folder + "/" : ""}${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+
+      // 1. Upload new file to a new path (INSERT — allowed)
       const { error: uploadError } = await supabase.storage
         .from("employee-documents")
-        .upload(storagePath, file, { upsert: true });
+        .upload(newPath, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 
-      // Update document record with new name/type
+      // 2. Update document record to point at new file
       const { error: dbError } = await supabase
         .from("employee_documents")
         .update({
           document_name: file.name,
           document_type: file.type,
+          storage_path: newPath,
         })
         .eq("id", docId);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        // Roll back the upload if the DB update fails
+        await supabase.storage.from("employee-documents").remove([newPath]);
+        throw dbError;
+      }
+
+      // 3. Best-effort delete of the old object (admin-only — silently ignored otherwise)
+      await supabase.storage.from("employee-documents").remove([storagePath]);
 
       toast.success("Documento reemplazado exitosamente");
       queryClient.invalidateQueries({ queryKey: ["employee-documents", employeeId] });

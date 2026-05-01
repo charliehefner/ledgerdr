@@ -740,7 +740,7 @@ export function PayrollSummary({
         <h3 className="text-lg font-semibold">{t("payrollSummary.title")}</h3>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Preview button — only when no committed snapshots, or admin re-run */}
-          {canManagePayroll && isOpen && !hasCommittedSnapshots && (
+          {canPreviewPayroll && isOpen && !hasCommittedSnapshots && (
             <Button
               variant="outline"
               onClick={() => refetchPreview()}

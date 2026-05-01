@@ -1,35 +1,30 @@
 ## Problem
 
-Office role can open the Payroll timesheet, but RLS blocks her writes to `employee_timesheets` and `payroll_periods`. UI permissions already allow office; only the database is rejecting.
+Ana ('office') opens **Payroll → Resumen y Cierre** but doesn't see the Export / Receipts buttons usable. Code review shows:
+
+- The buttons themselves render, but they are `disabled` whenever `payrollData.length === 0`.
+- For an **open** period, `payrollData` is populated only after clicking the **"Vista Previa"** button, which is gated by `canManagePayroll` (admin / management / accountant only).
+- Office is excluded from `canManagePayroll`, so she can never trigger preview → buttons stay disabled → effectively "no export button".
+- Closed periods auto-load snapshots, so those should already work after today's earlier RLS fix; the broken case is the open / current period.
 
 ## Fix
 
-One migration adding `office` write policies, scoped by `entity_id` via `has_role_for_entity`:
+Single small change in `src/components/hr/PayrollSummary.tsx`:
 
-1. **`employee_timesheets`** — FOR ALL (insert/update/delete) so office can enter start/end times, mark absent/holiday, clear cells.
-2. **`payroll_periods`** — FOR ALL so office can click "Create period" on a new fortnight.
+1. Add a new flag `canPreviewPayroll = canManagePayroll || user?.role === "office"`.
+2. Use `canPreviewPayroll` (instead of `canManagePayroll`) to gate the **Preview** button and the **Re-run preview** button visibility for office.
+3. Keep `canManagePayroll` for the destructive actions: **Confirm and Save** (commit) and **Close Period** — office stays excluded from those.
+4. Export dropdown and Receipts button stay as-is (already unconditional in the UI; their disabled state will resolve once Ana can run preview).
 
-Pattern (matches existing entity-scoped policies):
-```sql
-CREATE POLICY "entity_office_employee_timesheets"
-ON public.employee_timesheets FOR ALL
-TO authenticated
-USING (has_role_for_entity(auth.uid(), 'office'::app_role, entity_id))
-WITH CHECK (has_role_for_entity(auth.uid(), 'office'::app_role, entity_id));
+No DB / RLS changes needed — RLS already grants office read access to all required tables (verified earlier).
 
-CREATE POLICY "entity_office_payroll_periods"
-ON public.payroll_periods FOR ALL
-TO authenticated
-USING (has_role_for_entity(auth.uid(), 'office'::app_role, entity_id))
-WITH CHECK (has_role_for_entity(auth.uid(), 'office'::app_role, entity_id));
-```
+## Result
+
+- Office sees **Vista Previa Nómina** on open periods → clicks it → grid populates → **Exportar** dropdown and **Recibos PDF** become enabled.
+- Office still cannot **commit** or **close** the period.
+- Closed-period receipts continue to work via auto-loaded snapshots.
 
 ## Out of scope
 
-- No write policies for `employee_benefits` or `employee_vacations`.
-- No UI changes (`permissions.ts` already allows office).
-- No change to period close/lock logic — existing triggers still guard locked periods.
-
-## Verification
-
-Login as Ana (office) → Payroll → enter a start/end time → saves; click "Create period" on an unopened fortnight → succeeds.
+- No other role gates change.
+- No new RLS policies.

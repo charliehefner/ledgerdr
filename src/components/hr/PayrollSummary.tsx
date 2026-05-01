@@ -110,6 +110,8 @@ export function PayrollSummary({
   const isOpen = periodStatus === "open";
   const isAdmin = user?.role === "admin";
   const canManagePayroll = user?.role === "admin" || user?.role === "management" || user?.role === "accountant";
+  // Office can preview/export/print receipts but cannot commit or close periods
+  const canPreviewPayroll = canManagePayroll || user?.role === "office";
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({

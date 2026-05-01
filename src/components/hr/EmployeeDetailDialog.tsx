@@ -537,8 +537,13 @@ export function EmployeeDetailDialog({
       // Using a new path keeps the operation atomic — if anything fails, the original file is untouched.
       const lastSlash = storagePath.lastIndexOf("/");
       const folder = lastSlash >= 0 ? storagePath.slice(0, lastSlash) : "";
-      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
-      const newPath = `${folder ? folder + "/" : ""}${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+      const rawExt = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".") + 1) : "";
+      const safeExt = rawExt
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "")
+        .toLowerCase();
+      const newPath = `${folder ? folder + "/" : ""}${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt ? "." + safeExt : ""}`;
 
       // 1. Upload new file to a new path (INSERT — allowed)
       const { error: uploadError } = await supabase.storage

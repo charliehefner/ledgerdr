@@ -1,62 +1,70 @@
-## Goal
+## Problem
 
-In **Fuel → Tractor History**, add an expandable panel per tractor (in the per-tractor summary cards) that shows the **gal/hr for the last 3 completed fueling intervals**.
+When office or management users upload a new document and then replace it in HR → Employee Directory, the operation actually **succeeds** (file uploaded, DB record updated), but they still see "Error al reemplazar documento". The same false error appears when they try to delete a document.
 
-Drop the previously-proposed change to Equipment → Tractors.
+## Root Cause
 
-## The corrected calculation
+The storage policies for `employee-documents` bucket are:
 
-A fueling interval is only "complete" when the **next** fueling occurs (because that next fueling reveals how many gallons were burned). So the gal/hr attributed to fueling N requires fueling N+1 to exist:
+| Operation | Allowed roles |
+|-----------|---------------|
+| INSERT (upload)   | admin, management, office |
+| UPDATE (replace)  | admin, management, office |
+| SELECT (view)     | admin, management, accountant, supervisor, office |
+| **DELETE**        | **admin only** |
 
+In `EmployeeDetailDialog.tsx`:
+
+- `handleReplaceDocument` does: upload new file → update DB row → **`storage.remove(oldPath)`**. For office/management users that final `remove()` is rejected by RLS, the catch block fires, and the user sees an error toast even though the replacement is complete.
+- `handleDeleteDocument` does: `storage.remove(path)` → DB delete. For non-admin users, `remove()` silently returns an empty array (it does not throw — but currently it works for admins; for office/management the DB delete itself is also blocked because there is no DELETE row policy on `employee_documents` for them either — needs verification, but the immediate visible bug is the replace error).
+
+## Fix
+
+Two-part fix:
+
+### 1. Database migration — allow office & management to delete storage objects
+
+Add an UPDATE to the storage DELETE policy so office and management can remove files (needed both for clean replacement and for genuine deletion when authorized):
+
+```sql
+DROP POLICY IF EXISTS "Admins can delete employee documents" ON storage.objects;
+
+CREATE POLICY "Authorized users can delete employee documents"
+ON storage.objects FOR DELETE TO authenticated
+USING (
+  bucket_id = 'employee-documents'
+  AND (
+    public.has_role(auth.uid(), 'admin')
+    OR public.has_role(auth.uid(), 'management')
+    OR public.has_role(auth.uid(), 'office')
+  )
+);
 ```
-interval_hours   = fueling[N+1].hour_meter_reading − fueling[N].hour_meter_reading
-interval_gallons = fueling[N+1].gallons        // gallons added to refill what N consumed
-gal_per_hour     = interval_gallons / interval_hours    (when interval_hours > 0)
+
+Also verify the `employee_documents` table has a matching DELETE RLS policy for the same roles; add one if missing.
+
+### 2. Make the old-file cleanup non-fatal in `handleReplaceDocument`
+
+Even with the policy fix, treat the old-file cleanup as best-effort so a future RLS quirk never causes a false error after a successful replace:
+
+```ts
+// 3. Best-effort delete of the old object — never let it fail the replace
+try {
+  await supabase.storage.from("employee-documents").remove([storagePath]);
+} catch (cleanupErr) {
+  console.warn("Old file cleanup skipped:", cleanupErr);
+}
+
+toast.success("Documento reemplazado exitosamente");
 ```
 
-Display the result against fueling **N** (the start of the interval), labeled with both the **start date** (fueling N) and **closed-by date** (fueling N+1).
+(The Supabase client's `.remove()` returns `{ error }` rather than throwing for RLS denials, so additionally check `if (error) console.warn(...)` instead of throwing — and ensure no `throw` is reached after the DB update has already succeeded.)
 
-## Fix the existing per-row "Gal/Hr" column too
+## Files affected
 
-The current table column in `TractorHistoryView` computes `gallons / (hour_meter_reading − previous_hour_meter)` on the **same** row, which mixes the gallons added now with the hours worked since the prior fueling — economically meaningless, as you noted.
+- New migration under `supabase/migrations/` to replace the storage DELETE policy.
+- `src/components/hr/EmployeeDetailDialog.tsx` — make cleanup in `handleReplaceDocument` non-fatal; mirror in `handleDeleteDocument` so the DB row is removed even if storage removal is delayed/denied.
 
-Fix: shift the calculation by one. For each row N (sorted ascending by hour meter / date), gal/hr = `nextFueling.gallons / (nextFueling.hour_meter_reading − N.hour_meter_reading)`. The most recent fueling shows `—` (pending — no closing fueling yet). Tooltip on `—`: "Awaiting next fueling to close the interval."
+## Result
 
-This applies to:
-- The **per-row "Gal/Hr" column** in the transactions table.
-- The **per-tractor summary card** average (sum of closed-interval gallons ÷ sum of closed-interval hours, ignoring the still-open last fueling).
-- The **new expandable panel** showing the last 3 closed intervals.
-
-## Expandable panel UI
-
-Each summary card (top of the page) gets a chevron button in its header. Clicking expands the card to reveal a compact sub-table of the **last 3 closed intervals** for that tractor:
-
-| Interval start | Closed by | Hours | Gallons added | Gal/Hr |
-|---|---|---|---|---|
-
-- Newest first.
-- Color: `> 5 gal/hr` destructive, otherwise primary (matches existing convention).
-- Empty state when fewer than 1 closed interval exists: "Need at least 2 fuelings to compute consumption."
-
-State: `useState<string | null>(expandedTractorId)` so only one card expands at a time. Use existing `Collapsible` from `@/components/ui/collapsible.tsx`.
-
-## Implementation details
-
-All work happens in `src/components/fuel/TractorHistoryView.tsx` — no DB, no migration, no other files.
-
-1. **Build a per-tractor sorted history** (ascending by `hour_meter_reading`, then `transaction_date`) from the `transactions` query already loaded.
-2. **Pair each fueling N with N+1** to derive `closedIntervals[]` = `{ startDate, closedDate, hours, gallons, galPerHour }[]` per tractor.
-3. **Update `transactionsWithStats`** so the row's `consumptionRate` is now sourced from the closing-interval lookup (map by `tx.id` → galPerHour). The most recent row per tractor → `null`.
-4. **Update `tractorSummaries`** — `totalGallons`/`totalHours`/`avgConsumption` come from `closedIntervals`, not from raw rows.
-5. **Render** the chevron + Collapsible content inside each `<Card>`.
-
-## Edge cases
-
-- Date filtering: closed-interval pairing must use the **unfiltered** per-tractor history (otherwise filters break interval pairing); date filter still narrows the visible **table** rows but the panel + summary always reflect the latest data for that tractor.
-- Skip intervals where `interval_hours ≤ 0` (bad meter entries) — exclude from average and panel, but keep the row visible in the table with `—`.
-- Round gal/hr to 2 decimals; round hours to 1 decimal (matches existing formatting & Core memory's float-rounding rule).
-
-## Files to change
-
-- `src/components/fuel/TractorHistoryView.tsx` — only file touched.
-- (Optional) `src/i18n/es.ts`, `src/i18n/en.ts` — labels for the new panel ("Last 3 fuelings", "Closed by", "Awaiting next fueling"). Strings will be added to both locales.
+Office and management users can replace and delete employee documents without seeing spurious errors, and orphaned files are still cleaned up when permissions allow.

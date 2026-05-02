@@ -71,7 +71,9 @@ type HighlightType = "other" | "self-edit" | null;
 
 type CronogramaEntry = {
   id: string;
+  cronograma_week_id?: string;
   week_ending_date: string;
+  entity_id?: string;
   worker_type: "employee" | "jornalero";
   worker_id: string | null;
   worker_name: string;
@@ -91,6 +93,19 @@ type WorkerRow = {
   id: string | null;
   name: string;
   isTemp?: boolean;
+};
+
+type CronogramaMutationPayload = {
+  week_ending_date: string;
+  entity_id: string;
+  worker_type: "employee" | "jornalero";
+  worker_id: string | null;
+  worker_name: string;
+  day_of_week: number;
+  time_slot: "morning" | "afternoon";
+  task: string | null;
+  is_vacation: boolean;
+  is_holiday: boolean;
 };
 
 // Get Saturday of the week for a given date
@@ -168,8 +183,8 @@ async function fetchUserEmails(): Promise<Map<string, string>> {
 }
 
 // Build a lookup key for the entry map
-function entryKey(workerName: string, workerType: string, dayOfWeek: number, timeSlot: string): string {
-  return `${workerName}|${workerType}|${dayOfWeek}|${timeSlot}`;
+function cellKey(workerType: string, workerId: string | null | undefined, workerName: string, dayOfWeek: number, timeSlot: string): string {
+  return `${workerType}|${workerId || workerName}|${dayOfWeek}|${timeSlot}`;
 }
 
 /**
@@ -208,9 +223,6 @@ export function CronogramaGrid() {
     });
   }, []);
   
-  // Debounce timer ref for mutations
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const weekEndingDate = formatDateLocal(selectedSaturday);
   const weekStart = getMondayOfWeek(selectedSaturday);
   const weekDays = eachDayOfInterval({ start: weekStart, end: selectedSaturday });
@@ -297,7 +309,11 @@ export function CronogramaGrid() {
   const entryMap = useMemo(() => {
     const map = new Map<string, CronogramaEntry>();
     for (const e of entries) {
-      map.set(entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot), e);
+      const key = cellKey(e.worker_type, e.worker_id, e.worker_name, e.day_of_week, e.time_slot);
+      const current = map.get(key);
+      if (!current || new Date(e.updated_at).getTime() >= new Date(current.updated_at).getTime()) {
+        map.set(key, e);
+      }
     }
     return map;
   }, [entries]);
@@ -360,15 +376,9 @@ export function CronogramaGrid() {
 
   // Mutation for upserting entries
   const upsertMutation = useMutation({
-    mutationFn: async (entry: Partial<CronogramaEntry> & { 
-      week_ending_date: string;
-      worker_type: "employee" | "jornalero";
-      worker_name: string;
-      day_of_week: number;
-      time_slot: "morning" | "afternoon";
-    }) => {
+    mutationFn: async (entry: CronogramaMutationPayload) => {
       const currentUserId = user?.id || null;
-      const entityId = requireEntity();
+      const entityId = entry.entity_id;
       if (!entityId) throw new Error("Seleccione una entidad antes de guardar.");
 
       // Ensure week row exists before inserting entry (FK constraint)
@@ -394,19 +404,30 @@ export function CronogramaGrid() {
       }
 
       // Re-read latest cache to find existing row (avoids stale entryMap closure)
-      const queryKey = ["cronograma-entries", entry.week_ending_date, selectedEntityId];
+      const queryKey = ["cronograma-entries", entry.week_ending_date, entityId];
       const cached = queryClient.getQueryData<CronogramaEntry[]>(queryKey) || [];
-      const lookupKey = entryKey(
-        entry.worker_name,
-        entry.worker_type,
-        entry.day_of_week,
-        entry.time_slot
-      );
-      const existing = cached.find(
+      const lookupKey = cellKey(entry.worker_type, entry.worker_id, entry.worker_name, entry.day_of_week, entry.time_slot);
+      let existing = cached.find(
         (e) =>
           !e.id.startsWith("optimistic-") &&
-          entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === lookupKey
+          cellKey(e.worker_type, e.worker_id, e.worker_name, e.day_of_week, e.time_slot) === lookupKey
       );
+
+      if (!existing) {
+        const { data: existingRows, error: existingEntryError } = await supabase
+          .from("cronograma_entries")
+          .select("id")
+          .eq("week_ending_date", entry.week_ending_date)
+          .eq("entity_id", entityId)
+          .eq("worker_type", entry.worker_type)
+          .eq(entry.worker_id ? "worker_id" : "worker_name", entry.worker_id || entry.worker_name)
+          .eq("day_of_week", entry.day_of_week)
+          .eq("time_slot", entry.time_slot)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        if (existingEntryError) throw existingEntryError;
+        existing = existingRows?.[0] as CronogramaEntry | undefined;
+      }
 
       if (existing) {
         const { error } = await supabase
@@ -433,13 +454,38 @@ export function CronogramaGrid() {
             updated_by: currentUserId,
             entity_id: entityId,
           });
-        if (error) throw error;
+        if (error) {
+          if ((error as { code?: string }).code === "23505") {
+            const { data: retryRows, error: retryReadError } = await supabase
+              .from("cronograma_entries")
+              .select("id")
+              .eq("week_ending_date", entry.week_ending_date)
+              .eq("entity_id", entityId)
+              .eq("worker_type", entry.worker_type)
+              .eq(entry.worker_id ? "worker_id" : "worker_name", entry.worker_id || entry.worker_name)
+              .eq("day_of_week", entry.day_of_week)
+              .eq("time_slot", entry.time_slot)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+            if (retryReadError) throw retryReadError;
+            const retryId = retryRows?.[0]?.id;
+            if (retryId) {
+              const { error: retryUpdateError } = await supabase
+                .from("cronograma_entries")
+                .update({ task: entry.task, updated_by: currentUserId })
+                .eq("id", retryId);
+              if (retryUpdateError) throw retryUpdateError;
+              return;
+            }
+          }
+          throw error;
+        }
       }
     },
     onSettled: (_data, _err, variables) => {
       if (variables) {
         queryClient.invalidateQueries({
-          queryKey: ["cronograma-entries", variables.week_ending_date, selectedEntityId],
+          queryKey: ["cronograma-entries", variables.week_ending_date, variables.entity_id],
         });
       }
     },
@@ -496,23 +542,8 @@ export function CronogramaGrid() {
     });
   }, [vacations]);
 
-  // Pending payload kept alongside the debounce timer so we can flush it on
-  // unmount, week change, or entity change without losing keystrokes.
-  const pendingPayloadRef = useRef<Parameters<typeof upsertMutation.mutate>[0] | null>(null);
-
-  const flushPending = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-    if (pendingPayloadRef.current) {
-      const payload = pendingPayloadRef.current;
-      pendingPayloadRef.current = null;
-      upsertMutation.mutate(payload);
-    }
-  }, [upsertMutation]);
-
-  // Optimistic + debounced cell change handler
+  // Optimistic cell change handler. Each edited cell is sent immediately on
+  // blur/paste so rapid edits across several cells cannot overwrite each other.
   const handleCellChange = useCallback((
     worker: WorkerRow,
     dayOfWeek: number,
@@ -525,8 +556,9 @@ export function CronogramaGrid() {
       return;
     }
     
-    const mutationPayload = {
+    const mutationPayload: CronogramaMutationPayload = {
       week_ending_date: weekEndingDate,
+      entity_id: selectedEntityId,
       worker_type: worker.type,
       worker_id: worker.id,
       worker_name: worker.name,
@@ -543,8 +575,8 @@ export function CronogramaGrid() {
     const queryKey = ["cronograma-entries", weekEndingDate, selectedEntityId];
     queryClient.setQueryData<CronogramaEntry[]>(queryKey, (old) => {
       const list = old ? [...old] : [];
-      const key = entryKey(worker.name, worker.type, dayOfWeek, timeSlot);
-      const idx = list.findIndex(e => entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === key);
+      const key = cellKey(worker.type, worker.id, worker.name, dayOfWeek, timeSlot);
+      const idx = list.findIndex(e => cellKey(e.worker_type, e.worker_id, e.worker_name, e.day_of_week, e.time_slot) === key);
       const nowIso = new Date().toISOString();
       if (idx >= 0) {
         list[idx] = { ...list[idx], task: value || null, updated_at: nowIso, updated_by: user?.id || list[idx].updated_by };
@@ -569,41 +601,8 @@ export function CronogramaGrid() {
       return list;
     });
 
-    // Debounce the actual network mutation (300ms). Keep the latest payload so
-    // a flush (blur, week-change, unmount) can still send it.
-    pendingPayloadRef.current = mutationPayload;
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      const payload = pendingPayloadRef.current;
-      pendingPayloadRef.current = null;
-      debounceTimerRef.current = null;
-      if (payload) upsertMutation.mutate(payload);
-    }, 300);
+    upsertMutation.mutate(mutationPayload);
   }, [isWeekClosed, weekEndingDate, selectedEntityId, queryClient, upsertMutation, user?.id]);
-
-  // Flush on unmount so a partial keystroke isn't lost when navigating away
-  useEffect(() => {
-    return () => { flushPending(); };
-  }, [flushPending]);
-
-  // Flush when entity changes — mutation is bound to the previous entity
-  const prevEntityRef = useRef(selectedEntityId);
-  useEffect(() => {
-    if (prevEntityRef.current !== selectedEntityId) {
-      flushPending();
-      prevEntityRef.current = selectedEntityId;
-    }
-  }, [selectedEntityId, flushPending]);
-
-  // Flush when the visible week changes — pending payload is keyed to the
-  // previous week_ending_date and would land in the wrong cache otherwise.
-  const prevWeekRef = useRef(weekEndingDate);
-  useEffect(() => {
-    if (prevWeekRef.current !== weekEndingDate) {
-      flushPending();
-      prevWeekRef.current = weekEndingDate;
-    }
-  }, [weekEndingDate, flushPending]);
 
 
   const handleCopy = useCallback((value: string) => {
@@ -722,8 +721,8 @@ export function CronogramaGrid() {
       const rowData = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
-        const amEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
-        const pmEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+        const amEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
+        const pmEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
         rowData.push(amEntry?.task || "");
         rowData.push(pmEntry?.task || "");
       });
@@ -797,8 +796,8 @@ export function CronogramaGrid() {
       const row = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
-        const amEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
-        const pmEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+        const amEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
+        const pmEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
         row.push(amEntry?.task || "");
         row.push(pmEntry?.task || "");
       });
@@ -1035,8 +1034,8 @@ export function CronogramaGrid() {
                         const dayNum = dayIdx + 1;
                         const isOnVacation = worker.type === "employee" && worker.id ? isEmployeeOnVacation(worker.id, day) : false;
 
-                        const morningEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
-                        const afternoonEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+                        const morningEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
+                        const afternoonEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
 
                         return (
                           <>

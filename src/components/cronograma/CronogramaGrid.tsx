@@ -183,10 +183,6 @@ async function fetchUserEmails(): Promise<Map<string, string>> {
 }
 
 // Build a lookup key for the entry map
-function entryKey(workerName: string, workerType: string, dayOfWeek: number, timeSlot: string): string {
-  return `${workerName}|${workerType}|${dayOfWeek}|${timeSlot}`;
-}
-
 function cellKey(workerType: string, workerId: string | null | undefined, workerName: string, dayOfWeek: number, timeSlot: string): string {
   return `${workerType}|${workerId || workerName}|${dayOfWeek}|${timeSlot}`;
 }
@@ -725,8 +721,8 @@ export function CronogramaGrid() {
       const rowData = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
-        const amEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
-        const pmEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+        const amEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
+        const pmEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
         rowData.push(amEntry?.task || "");
         rowData.push(pmEntry?.task || "");
       });
@@ -800,8 +796,8 @@ export function CronogramaGrid() {
       const row = [worker.name];
       weekDays.forEach((day, idx) => {
         const dayNum = idx + 1;
-        const amEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
-        const pmEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+        const amEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
+        const pmEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
         row.push(amEntry?.task || "");
         row.push(pmEntry?.task || "");
       });
@@ -1038,8 +1034,8 @@ export function CronogramaGrid() {
                         const dayNum = dayIdx + 1;
                         const isOnVacation = worker.type === "employee" && worker.id ? isEmployeeOnVacation(worker.id, day) : false;
 
-                        const morningEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "morning"));
-                        const afternoonEntry = entryMap.get(entryKey(worker.name, worker.type, dayNum, "afternoon"));
+                        const morningEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
+                        const afternoonEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
 
                         return (
                           <>

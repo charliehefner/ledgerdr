@@ -1077,8 +1077,12 @@ export function CronogramaGrid() {
                         const dayNum = dayIdx + 1;
                         const isOnVacation = worker.type === "employee" && worker.id ? isEmployeeOnVacation(worker.id, day) : false;
 
-                        const morningEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
-                        const afternoonEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
+                        const morningKey = cellKey(worker.type, worker.id, worker.name, dayNum, "morning");
+                        const afternoonKey = cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon");
+                        const morningEntry = entryMap.get(morningKey);
+                        const afternoonEntry = entryMap.get(afternoonKey);
+                        const morningAudit = auditMap.get(morningKey);
+                        const afternoonAudit = auditMap.get(afternoonKey);
 
                         return (
                           <>

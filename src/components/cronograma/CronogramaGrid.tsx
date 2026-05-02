@@ -1186,6 +1186,8 @@ type CronogramaCellProps = {
   isLastOfDay: boolean;
   t: (key: string) => string;
   entry?: CronogramaEntry;
+  auditEntries?: CronogramaAuditRow[];
+  auditMapVersion: string;
   userEmailMap: Map<string, string>;
   userEmailMapVersion: string;
   isUserEmailMapLoading: boolean;

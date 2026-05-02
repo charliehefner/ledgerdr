@@ -1178,6 +1178,7 @@ export function CronogramaGrid() {
 
       {/* Schedule Grid */}
       <TooltipProvider delayDuration={300}>
+       <DragFillContext.Provider value={dragFillCtx}>
         <div className="w-full overflow-x-auto overflow-y-visible">
           <div className="min-w-[900px]">
             <table className="w-full border-collapse text-sm" style={{ borderSpacing: 0 }}>

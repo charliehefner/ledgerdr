@@ -1435,6 +1435,10 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     prevProps.entry?.updated_at === nextProps.entry?.updated_at &&
     prevProps.entry?.task === nextProps.entry?.task &&
     prevProps.isUserEmailMapLoading === nextProps.isUserEmailMapLoading &&
-    prevProps.userEmailMapVersion === nextProps.userEmailMapVersion
+    prevProps.userEmailMapVersion === nextProps.userEmailMapVersion &&
+    prevProps.auditMapVersion === nextProps.auditMapVersion &&
+    (prevProps.auditEntries?.length ?? 0) === (nextProps.auditEntries?.length ?? 0) &&
+    (prevProps.auditEntries?.[prevProps.auditEntries.length - 1]?.changed_at ?? null) ===
+      (nextProps.auditEntries?.[nextProps.auditEntries.length - 1]?.changed_at ?? null)
   );
 });

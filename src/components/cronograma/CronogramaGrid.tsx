@@ -187,10 +187,6 @@ function entryKey(workerName: string, workerType: string, dayOfWeek: number, tim
   return `${workerName}|${workerType}|${dayOfWeek}|${timeSlot}`;
 }
 
-function payloadKey(payload: Pick<CronogramaMutationPayload, "week_ending_date" | "entity_id" | "worker_name" | "worker_type" | "day_of_week" | "time_slot">): string {
-  return `${payload.week_ending_date}|${payload.entity_id}|${entryKey(payload.worker_name, payload.worker_type, payload.day_of_week, payload.time_slot)}`;
-}
-
 /**
  * Determine the highlight type for an entry based on who edited it and when.
  */

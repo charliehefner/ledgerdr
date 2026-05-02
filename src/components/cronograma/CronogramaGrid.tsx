@@ -579,8 +579,8 @@ export function CronogramaGrid() {
     const queryKey = ["cronograma-entries", weekEndingDate, selectedEntityId];
     queryClient.setQueryData<CronogramaEntry[]>(queryKey, (old) => {
       const list = old ? [...old] : [];
-      const key = entryKey(worker.name, worker.type, dayOfWeek, timeSlot);
-      const idx = list.findIndex(e => entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === key);
+      const key = cellKey(worker.type, worker.id, worker.name, dayOfWeek, timeSlot);
+      const idx = list.findIndex(e => cellKey(e.worker_type, e.worker_id, e.worker_name, e.day_of_week, e.time_slot) === key);
       const nowIso = new Date().toISOString();
       if (idx >= 0) {
         list[idx] = { ...list[idx], task: value || null, updated_at: nowIso, updated_by: user?.id || list[idx].updated_by };

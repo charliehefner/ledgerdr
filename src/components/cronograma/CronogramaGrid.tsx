@@ -187,6 +187,10 @@ function entryKey(workerName: string, workerType: string, dayOfWeek: number, tim
   return `${workerName}|${workerType}|${dayOfWeek}|${timeSlot}`;
 }
 
+function cellKey(workerType: string, workerId: string | null | undefined, workerName: string, dayOfWeek: number, timeSlot: string): string {
+  return `${workerType}|${workerId || workerName}|${dayOfWeek}|${timeSlot}`;
+}
+
 /**
  * Determine the highlight type for an entry based on who edited it and when.
  */

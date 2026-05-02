@@ -459,7 +459,32 @@ export function CronogramaGrid() {
             updated_by: currentUserId,
             entity_id: entityId,
           });
-        if (error) throw error;
+        if (error) {
+          if ((error as { code?: string }).code === "23505") {
+            const { data: retryRows, error: retryReadError } = await supabase
+              .from("cronograma_entries")
+              .select("id")
+              .eq("week_ending_date", entry.week_ending_date)
+              .eq("entity_id", entityId)
+              .eq("worker_type", entry.worker_type)
+              .eq("worker_name", entry.worker_name)
+              .eq("day_of_week", entry.day_of_week)
+              .eq("time_slot", entry.time_slot)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+            if (retryReadError) throw retryReadError;
+            const retryId = retryRows?.[0]?.id;
+            if (retryId) {
+              const { error: retryUpdateError } = await supabase
+                .from("cronograma_entries")
+                .update({ task: entry.task, updated_by: currentUserId })
+                .eq("id", retryId);
+              if (retryUpdateError) throw retryUpdateError;
+              return;
+            }
+          }
+          throw error;
+        }
       }
     },
     onSettled: (_data, _err, variables) => {

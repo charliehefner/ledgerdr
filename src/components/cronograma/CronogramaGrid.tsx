@@ -227,9 +227,6 @@ export function CronogramaGrid() {
     });
   }, []);
   
-  // Debounce timer ref for mutations
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const weekEndingDate = formatDateLocal(selectedSaturday);
   const weekStart = getMondayOfWeek(selectedSaturday);
   const weekDays = eachDayOfInterval({ start: weekStart, end: selectedSaturday });
@@ -363,7 +360,6 @@ export function CronogramaGrid() {
   });
 
   const isWeekClosed = weekStatus?.is_closed ?? false;
-  const pendingPayloadsRef = useRef<Map<string, CronogramaMutationPayload>>(new Map());
 
   // Initialize additional rows from entries that are jornaleros
   useEffect(() => {
@@ -530,23 +526,8 @@ export function CronogramaGrid() {
     });
   }, [vacations]);
 
-  // Pending payload kept alongside the debounce timer so we can flush it on
-  // unmount, week change, or entity change without losing keystrokes.
-  const pendingPayloadRef = useRef<Parameters<typeof upsertMutation.mutate>[0] | null>(null);
-
-  const flushPending = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-    if (pendingPayloadRef.current) {
-      const payload = pendingPayloadRef.current;
-      pendingPayloadRef.current = null;
-      upsertMutation.mutate(payload);
-    }
-  }, [upsertMutation]);
-
-  // Optimistic + debounced cell change handler
+  // Optimistic cell change handler. Each edited cell is sent immediately on
+  // blur/paste so rapid edits across several cells cannot overwrite each other.
   const handleCellChange = useCallback((
     worker: WorkerRow,
     dayOfWeek: number,
@@ -559,8 +540,9 @@ export function CronogramaGrid() {
       return;
     }
     
-    const mutationPayload = {
+    const mutationPayload: CronogramaMutationPayload = {
       week_ending_date: weekEndingDate,
+      entity_id: selectedEntityId,
       worker_type: worker.type,
       worker_id: worker.id,
       worker_name: worker.name,
@@ -603,41 +585,8 @@ export function CronogramaGrid() {
       return list;
     });
 
-    // Debounce the actual network mutation (300ms). Keep the latest payload so
-    // a flush (blur, week-change, unmount) can still send it.
-    pendingPayloadRef.current = mutationPayload;
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      const payload = pendingPayloadRef.current;
-      pendingPayloadRef.current = null;
-      debounceTimerRef.current = null;
-      if (payload) upsertMutation.mutate(payload);
-    }, 300);
+    upsertMutation.mutate(mutationPayload);
   }, [isWeekClosed, weekEndingDate, selectedEntityId, queryClient, upsertMutation, user?.id]);
-
-  // Flush on unmount so a partial keystroke isn't lost when navigating away
-  useEffect(() => {
-    return () => { flushPending(); };
-  }, [flushPending]);
-
-  // Flush when entity changes — mutation is bound to the previous entity
-  const prevEntityRef = useRef(selectedEntityId);
-  useEffect(() => {
-    if (prevEntityRef.current !== selectedEntityId) {
-      flushPending();
-      prevEntityRef.current = selectedEntityId;
-    }
-  }, [selectedEntityId, flushPending]);
-
-  // Flush when the visible week changes — pending payload is keyed to the
-  // previous week_ending_date and would land in the wrong cache otherwise.
-  const prevWeekRef = useRef(weekEndingDate);
-  useEffect(() => {
-    if (prevWeekRef.current !== weekEndingDate) {
-      flushPending();
-      prevWeekRef.current = weekEndingDate;
-    }
-  }, [weekEndingDate, flushPending]);
 
 
   const handleCopy = useCallback((value: string) => {

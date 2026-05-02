@@ -1125,6 +1125,69 @@ export type Database = {
           },
         ]
       }
+      cronograma_entries_audit: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          day_of_week: number
+          entity_id: string | null
+          entry_id: string
+          id: string
+          new_is_holiday: boolean | null
+          new_is_vacation: boolean | null
+          new_task: string | null
+          old_is_holiday: boolean | null
+          old_is_vacation: boolean | null
+          old_task: string | null
+          time_slot: string
+          week_ending_date: string
+          worker_id: string | null
+          worker_name: string
+          worker_type: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          day_of_week: number
+          entity_id?: string | null
+          entry_id: string
+          id?: string
+          new_is_holiday?: boolean | null
+          new_is_vacation?: boolean | null
+          new_task?: string | null
+          old_is_holiday?: boolean | null
+          old_is_vacation?: boolean | null
+          old_task?: string | null
+          time_slot: string
+          week_ending_date: string
+          worker_id?: string | null
+          worker_name: string
+          worker_type: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          day_of_week?: number
+          entity_id?: string | null
+          entry_id?: string
+          id?: string
+          new_is_holiday?: boolean | null
+          new_is_vacation?: boolean | null
+          new_task?: string | null
+          old_is_holiday?: boolean | null
+          old_is_vacation?: boolean | null
+          old_task?: string | null
+          time_slot?: string
+          week_ending_date?: string
+          worker_id?: string | null
+          worker_name?: string
+          worker_type?: string
+        }
+        Relationships: []
+      }
       cronograma_weeks: {
         Row: {
           closed_at: string | null

@@ -1,40 +1,75 @@
-## What I found
+## Goals
 
-I checked the database directly. Your entries **are** being saved successfully:
+1. Replace the cedenojord-specific highlighting rule in the Schedule (Cronograma) with a universal rule that applies to every user.
+2. Add a proper audit trail so every change is recorded and viewable on hover, even when no highlight is shown.
+3. Remove `cedenojord` as an active user of the app.
 
-- Week ending **2026-05-09** (next Saturday) just received 6 entries with `task = "Feriado"` (Monday AM) between 12:01:16 – 12:01:35 today — your most recent edits.
-- Week ending **2026-05-02** received 88 entries today, latest at 11:59:59.
-- All saved under your user id and the correct entity.
+---
 
-So the upsert (`CronogramaGrid.tsx` lines 362–439) is working. The "Failed to fetch" errors in the console are **token-refresh** failures (transient network blips on `_refreshAccessToken`), not save failures.
+## New highlighting rule (universal)
 
-## Most likely reasons it *looks* like nothing saves
+- **Original input** into a previously blank cell by **any** user → no orange/blue ring, no dot. The change is silently recorded in the audit trail and visible in the hover tooltip.
+- **Edits to a cell that already has content**:
+  - Within **24 hours** of the cell's original creation → no highlight (treated as a normal correction). Still recorded in audit + tooltip.
+  - **24 hours or more** after original creation → highlight the cell with a subtle ring + dot, and identify the user in the hover tooltip.
+- The current "trusted editors" allowlist (Iramaia, instructor) becomes obsolete and is removed — the 24h rule applies uniformly.
+- The per-device "show indicators" toggle is preserved.
 
-1. **Optimistic update only patches existing entries.** In `handleCellChange` (lines 510–522), the cache patcher uses `findIndex` and only updates when an entry already exists. For brand-new cells the typed text is **not** added to the cache — it relies on the server round-trip + `invalidateQueries` to repaint. If the 300 ms debounce is interrupted (you click into another cell, navigate weeks, or the tab refetches before the network reply arrives), the cell visually "snaps back" to empty even though the row was inserted server-side.
-2. **No success feedback.** Unlike errors (which `toast.error`), successful saves are silent, so there is no confirmation the data landed.
-3. **Debounced mutation can be lost on unmount/navigation.** `debounceTimerRef` is a 300 ms `setTimeout`. If you change weeks, switch entity, or close the tab within 300 ms of the last keystroke, the pending mutation is dropped (the timer is cleared on the next change but the previous payload is gone).
+## Audit trail
 
-## Plan to fix
+Today the table only stores the latest `updated_by`/`updated_at`. A real audit trail requires a history table.
 
-### 1. Make optimistic updates handle inserts, not just updates
-In `handleCellChange`, when no existing entry is found, append a synthetic entry to the cache so the cell stays populated until the server confirms. On error rollback to previous snapshot.
+- New table `public.cronograma_entries_audit`:
+  - `id uuid pk`, `entry_id uuid`, `entity_id uuid`, `week_ending_date date`
+  - `worker_type`, `worker_id`, `worker_name`, `day_of_week`, `time_slot`
+  - `action text` ('insert' | 'update' | 'delete')
+  - `old_task text`, `new_task text`
+  - `old_is_vacation bool`, `new_is_vacation bool`
+  - `old_is_holiday bool`, `new_is_holiday bool`
+  - `changed_by uuid`, `changed_at timestamptz default now()`
+- Trigger `tg_cronograma_entries_audit` on `cronograma_entries` for INSERT/UPDATE/DELETE that writes one row per change. Skip when nothing meaningful changed (same task, same flags).
+- RLS: select restricted to admin/management roles for the entry's entity (mirrors existing cronograma policies). Inserts only via the trigger (security definer).
 
-### 2. Flush pending debounced mutation on cell-blur and on unmount
-- Add a `flush()` helper that immediately fires the pending mutation if a timer is active.
-- Call it on input `onBlur`, on week navigation, on entity change, and inside a `useEffect` cleanup.
+## Hover tooltip — always on
 
-### 3. Add lightweight save feedback
-- Per-cell "saving…" indicator (small dot) while the mutation is in flight, switching to a green check for 1 s on success.
-- Keep the existing toast for errors.
+- Tooltip is shown for **every cell that has any audit history**, not just highlighted ones.
+- Content:
+  - Most recent change: "Última edición: {user} — {date hh:mm}".
+  - If older edits exist: an expandable mini-list of the last up to 5 entries (user + timestamp + short delta like "added text" / "changed text" / "cleared").
+  - Highlighted cells additionally show "Editado >24h después de la creación" / "Edited >24h after creation".
+- A new lightweight query (`useCronogramaAudit`) fetches audit rows for the visible week+entity in one round trip and indexes them by `cellKey` for the tooltip.
 
-### 4. Use proper React-Query optimistic pattern
-Convert `upsertMutation` to use `onMutate` / `onError` / `onSettled` so cache updates and rollbacks live with the mutation, not in `handleCellChange`. This removes the duplication and the snap-back behavior.
+## Code changes
 
-### 5. Guard against the "All Entities" mode silently blocking writes
-`requireEntity()` returns `null` in All-Entities mode and the mutation throws `"Seleccione una entidad antes de guardar."`. Today that toast appears once but the cell still shows the typed text optimistically, suggesting it saved. Disable the input (and show a banner) when no entity is selected, instead of letting the user type and only seeing an error toast.
+`src/components/cronograma/CronogramaGrid.tsx`
+- Remove `CEDENOJORD_ID`, `INSTRUCTOR_ID`, `TRUSTED_EDITOR_IDS`, `SELF_EDIT_HIGHLIGHT_HOURS`.
+- Rewrite `getHighlightType(entry)`:
+  - Return `null` if `created_at === updated_at` (original input, never highlighted).
+  - Return `null` if `updated_at - created_at < 24h`.
+  - Otherwise return `"late-edit"` (single highlight type — orange ring + dot).
+- Rewrite tooltip builder to read from the audit query when available, falling back to `updated_by/updated_at` if audit not yet loaded.
+- Always render the cell inside a `Tooltip` when there is any audit history (not gated on `isHighlighted`). Keep the dot/ring gated on `isHighlighted && showIndicators`.
+- Update memo comparator to include audit-row count/last-change for the cell.
 
-## Files to change
-- `src/components/cronograma/CronogramaGrid.tsx` — items 1-5 above.
+`supabase/migrations/<new>.sql`
+- Create table, indexes (`entry_id`, `(entity_id, week_ending_date)`), enable RLS, add policies, create trigger function + trigger.
+- Backfill: insert one synthetic 'insert' audit row per existing `cronograma_entries` using `created_by`/`created_at`, plus an 'update' row when `updated_at <> created_at` using `updated_by`/`updated_at`. This preserves history for existing data.
 
-## Out of scope
-- The `Failed to fetch` token-refresh errors — those are transient network issues unrelated to Schedule saves and should not be chased now.
+## Remove cedenojord as a user
+
+- Use the existing `delete-user` edge function (admin-only) to schedule deletion of `cedenojord@internal.jord.local` (`3976a9b9-…`). It is deferred to next midnight by default; we will pass `immediate: true` so processing runs right away.
+- The deletion only removes the auth user + `user_roles`. Existing `cronograma_entries.created_by/updated_by` references stay (they are uuid columns, not FKs to auth.users), so historical attributions remain intact and the audit trail keeps working — the tooltip will show "user: 3976a9b9" for past edits where the email is no longer resolvable, which is acceptable.
+
+## Out of scope / not changing
+
+- `cronograma_entries` schema itself (columns unchanged).
+- Save/persistence logic fixed in the previous round.
+- The per-device indicator toggle behavior.
+
+## QA checklist
+
+1. New cell typed into → no highlight, hover shows "Creado por X — fecha".
+2. Same cell edited within 24h by a different user → no highlight, hover shows both entries.
+3. Same cell edited 24h+ later by any user → orange ring + dot, hover shows full history.
+4. Old cells from cedenojord still display correctly (backfilled audit row).
+5. After deleting cedenojord, login fails for that account; existing schedule data unchanged; tooltips still render with id-prefix fallback.

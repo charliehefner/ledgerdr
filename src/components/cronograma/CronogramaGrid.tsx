@@ -1444,6 +1444,52 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   const ringClass = "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
   const dotClass = "bg-orange-400";
 
+  // Drag-to-fill: subscribe to the grid-level context and decide whether this
+  // cell is currently selected as a target / acts as the drag source.
+  const dragFill = useDragFill();
+  const myKey = cellKey(worker.type, worker.id, worker.name, dayOfWeek, timeSlot);
+  const isDragSource = dragFill?.sourceKey === myKey;
+  const isDragTarget = dragFill?.targetKeys.has(myKey) ?? false;
+  const dragSelectionClass = isDragTarget && !isDragSource
+    ? "ring-2 ring-dashed ring-primary"
+    : isDragSource
+    ? "ring-2 ring-primary"
+    : "";
+  const longPressTimerRef = useRef<number | null>(null);
+
+  const handleFillPointerDown = (e: React.PointerEvent) => {
+    if (!dragFill || dragFill.weekClosed || isDisabled || isVacation) return;
+    // Mouse: start immediately. Touch/pen: require long-press to avoid stealing scrolls.
+    if (e.pointerType === "mouse") {
+      dragFill.beginDrag(myKey, localValue, e);
+      return;
+    }
+    e.preventDefault();
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      dragFill.beginDrag(myKey, localValue, e);
+    }, LONG_PRESS_MS);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const fillHandle = dragFill && !dragFill.weekClosed && !isDisabled && !isVacation ? (
+    <span
+      onPointerDown={handleFillPointerDown}
+      onPointerUp={cancelLongPress}
+      onPointerCancel={cancelLongPress}
+      onPointerLeave={cancelLongPress}
+      className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-sm opacity-0 group-hover:opacity-100 hover:opacity-100 cursor-crosshair touch-none z-10 ring-1 ring-background"
+      title="Arrastrar para llenar / Drag to fill"
+      aria-label="Drag to fill"
+    />
+  ) : null;
+
+
   const autoResize = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';

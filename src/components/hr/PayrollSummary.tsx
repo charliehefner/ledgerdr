@@ -109,9 +109,12 @@ export function PayrollSummary({
   const isClosed = periodStatus === "closed";
   const isOpen = periodStatus === "open";
   const isAdmin = user?.role === "admin";
+  // Commit / close / re-run preview — management chain only
   const canManagePayroll = user?.role === "admin" || user?.role === "management" || user?.role === "accountant";
-  // Office can preview/export/print receipts but cannot commit or close periods
+  // Preview an OPEN period — management chain plus office
   const canPreviewPayroll = canManagePayroll || user?.role === "office";
+  // Read-only export & receipt download (Excel / PDF / Recibos PDF). Office included.
+  const canExportPayroll = canManagePayroll || user?.role === "office";
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({

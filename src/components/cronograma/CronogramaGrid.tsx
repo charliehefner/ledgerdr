@@ -316,7 +316,11 @@ export function CronogramaGrid() {
   const entryMap = useMemo(() => {
     const map = new Map<string, CronogramaEntry>();
     for (const e of entries) {
-      map.set(entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot), e);
+      const key = entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot);
+      const current = map.get(key);
+      if (!current || new Date(e.updated_at).getTime() >= new Date(current.updated_at).getTime()) {
+        map.set(key, e);
+      }
     }
     return map;
   }, [entries]);
@@ -359,6 +363,7 @@ export function CronogramaGrid() {
   });
 
   const isWeekClosed = weekStatus?.is_closed ?? false;
+  const pendingPayloadsRef = useRef<Map<string, CronogramaMutationPayload>>(new Map());
 
   // Initialize additional rows from entries that are jornaleros
   useEffect(() => {
@@ -379,15 +384,9 @@ export function CronogramaGrid() {
 
   // Mutation for upserting entries
   const upsertMutation = useMutation({
-    mutationFn: async (entry: Partial<CronogramaEntry> & { 
-      week_ending_date: string;
-      worker_type: "employee" | "jornalero";
-      worker_name: string;
-      day_of_week: number;
-      time_slot: "morning" | "afternoon";
-    }) => {
+    mutationFn: async (entry: CronogramaMutationPayload) => {
       const currentUserId = user?.id || null;
-      const entityId = requireEntity();
+      const entityId = entry.entity_id;
       if (!entityId) throw new Error("Seleccione una entidad antes de guardar.");
 
       // Ensure week row exists before inserting entry (FK constraint)
@@ -413,7 +412,7 @@ export function CronogramaGrid() {
       }
 
       // Re-read latest cache to find existing row (avoids stale entryMap closure)
-      const queryKey = ["cronograma-entries", entry.week_ending_date, selectedEntityId];
+      const queryKey = ["cronograma-entries", entry.week_ending_date, entityId];
       const cached = queryClient.getQueryData<CronogramaEntry[]>(queryKey) || [];
       const lookupKey = entryKey(
         entry.worker_name,
@@ -421,11 +420,27 @@ export function CronogramaGrid() {
         entry.day_of_week,
         entry.time_slot
       );
-      const existing = cached.find(
+      let existing = cached.find(
         (e) =>
           !e.id.startsWith("optimistic-") &&
           entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === lookupKey
       );
+
+      if (!existing) {
+        const { data: existingRows, error: existingEntryError } = await supabase
+          .from("cronograma_entries")
+          .select("id")
+          .eq("week_ending_date", entry.week_ending_date)
+          .eq("entity_id", entityId)
+          .eq("worker_type", entry.worker_type)
+          .eq("worker_name", entry.worker_name)
+          .eq("day_of_week", entry.day_of_week)
+          .eq("time_slot", entry.time_slot)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        if (existingEntryError) throw existingEntryError;
+        existing = existingRows?.[0] as CronogramaEntry | undefined;
+      }
 
       if (existing) {
         const { error } = await supabase
@@ -458,7 +473,7 @@ export function CronogramaGrid() {
     onSettled: (_data, _err, variables) => {
       if (variables) {
         queryClient.invalidateQueries({
-          queryKey: ["cronograma-entries", variables.week_ending_date, selectedEntityId],
+          queryKey: ["cronograma-entries", variables.week_ending_date, variables.entity_id],
         });
       }
     },

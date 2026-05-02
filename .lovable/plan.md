@@ -1,79 +1,118 @@
+# Add `RESTORE.md` to the repo
+
 ## Goal
 
-Add an Excel-style "drag handle" to each Schedule cell so users can fill the **task text** of adjacent cells in a straight line (horizontal across days/slots, or vertical across workers). Target cells are **overwritten** regardless of prior content. Each filled cell still goes through the existing save path, so audit and the 24h highlight rule keep working unchanged.
+Document, in one file checked into the repo, the exact steps to restore a
+**Settings → Backup** ZIP into a plain **PostgreSQL + PostGIS** install on a
+laptop — so the backup is a usable cold copy even if Lovable Cloud is
+unreachable.
 
-## Behavior
+The file is documentation only. No code changes, no schema changes.
 
-**Desktop (mouse)**
-- A small fill handle (4×4 px square, accent color) appears at the bottom-right of the **focused / hovered** cell when the week is editable.
-- Mouse-down on the handle starts a fill drag. Moving the mouse over other cells extends a dashed selection rectangle from the source cell along **one axis only** — whichever axis the cursor has moved further along (horizontal vs vertical), locked once chosen.
-  - Horizontal axis = same worker row, across morning/afternoon slots and days (Mon AM, Mon PM, Tue AM, …).
-  - Vertical axis = same day + slot column, across workers (in the order currently rendered).
-- Mouse-up commits: the source cell's task string is written to every target cell in the selection, overwriting whatever was there.
-- Esc during drag cancels.
+## Where it goes
 
-**Tablet (touch)**
-- Long-press (~500 ms) on the fill handle activates fill mode (haptic-style visual pulse on the handle).
-- Dragging the finger highlights cells along the locked axis, same as mouse.
-- Lift to commit, tap outside or press Esc-equivalent (back gesture / tap source cell) to cancel.
-- Plain taps and short presses on the handle do nothing (so accidental taps don't fill).
+New file at the repo root: `RESTORE.md` (sibling of `README.md`, `package.json`).
 
-**Scope of what is copied**
-- Only the `task` text. `is_vacation` and `is_holiday` flags on target cells are preserved.
-- Empty source → fills targets with empty (acts as a bulk clear along the axis). This is consistent with overwrite semantics; if you'd rather block empty-source drags, say so and I'll add a guard.
+## Outline of the contents
 
-**Cells that are skipped even when in the selection**
-- Cells in rows/columns that are read-only because the week is closed (`isWeekClosed`) — drag handle won't appear at all in that case.
-- Cells flagged as vacation or holiday for that worker/day — these are already non-editable in the grid; they will be visually included in the dashed rectangle but skipped on commit, with a small toast like "3 celdas omitidas (vacaciones/feriado)".
+1. **What this is / what it isn't**
+   - It's a cold, read-only backup on plain Postgres.
+   - It is NOT a live mirror — no auth, no RLS enforcement, no edge functions,
+     no realtime, no storage API. Use a GUI (DBeaver / pgAdmin / TablePlus) or
+     `psql` to read it.
 
-## Save pipeline & audit
+2. **What's in the backup ZIP** (matches the actual `DatabaseBackup.tsx` output)
+   ```text
+   00_schema.sql        -- tables, enums, functions
+   01_data.sql          -- INSERTs with ON CONFLICT DO NOTHING (idempotent)
+   02_rls_policies.sql  -- SKIP on plain Postgres (uses auth.uid / has_role)
+   03_triggers.sql      -- mostly OK; a few reference auth — see notes
+   04_storage.sql       -- SKIP (Supabase storage schema only)
+   backup.json          -- full data dump in JSON
+   tables/*.json        -- per-table JSON
+   attachments/
+     transactions/...   -- NCF files
+     employees/...      -- HR documents
+   metadata.json        -- export summary
+   README.md            -- auto-generated summary
+   ```
 
-- Each target cell is written via the existing `handleCellChange(worker, dayOfWeek, timeSlot, value)` function. No new mutation, no new RLS surface, no schema change.
-- Writes are dispatched in a tight loop (await-less, since `upsertMutation.mutate` is fire-and-forget and already debounced/queued). Optimistic cache updates already handled by `handleCellChange` keep the UI snappy.
-- The audit trigger logs one row per cell automatically.
-- The 24h highlight rule applies per cell as usual: a freshly filled cell whose underlying row was created >24h ago will highlight; a brand-new row will not. (This is intentional and consistent with single-cell editing.)
+3. **Prerequisites on the laptop**
+   - PostgreSQL 15+ and PostGIS installed
+   - `psql` on the PATH
+   - A GUI of choice (DBeaver recommended — free, handles PostGIS)
 
-## Technical changes
+4. **One-time setup**
+   ```sh
+   createdb ledgerdr_backup
+   psql ledgerdr_backup -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+   psql ledgerdr_backup -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+   psql ledgerdr_backup -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+   # Stub auth.uid() so triggers/functions that reference it still load:
+   psql ledgerdr_backup <<'SQL'
+   CREATE SCHEMA IF NOT EXISTS auth;
+   CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
+     LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+   CREATE OR REPLACE FUNCTION auth.role() RETURNS text
+     LANGUAGE sql STABLE AS $$ SELECT 'postgres'::text $$;
+   SQL
+   ```
 
-Single file: `src/components/cronograma/CronogramaGrid.tsx`.
+5. **Loading a backup ZIP**
+   ```sh
+   unzip ledgerdr-backup-YYYY-MM-DD.zip -d ./backup
+   cd backup
+   psql ledgerdr_backup -v ON_ERROR_STOP=0 -f 00_schema.sql
+   psql ledgerdr_backup -v ON_ERROR_STOP=0 -f 01_data.sql
+   # Skip 02_rls_policies.sql and 04_storage.sql on plain Postgres.
+   # 03_triggers.sql: load it; ignore errors on triggers that depend on auth.
+   psql ledgerdr_backup -v ON_ERROR_STOP=0 -f 03_triggers.sql
+   ```
+   Note: `01_data.sql` uses `ON CONFLICT DO NOTHING`, so you can re-run it
+   later with a fresher ZIP to top up new rows without breaking existing ones.
 
-1. **New local state** at the grid level:
-   - `fillSource: { workerKey, dayOfWeek, timeSlot, task } | null`
-   - `fillTargets: Set<string>` (cell keys currently in the dashed rectangle)
-   - `fillAxis: "horizontal" | "vertical" | null`
+6. **Restoring attachments**
+   - Move the `attachments/` folder somewhere stable, e.g.
+     `~/ledgerdr-backup/attachments/`.
+   - The `transaction_attachments.attachment_url` column still points at the
+     cloud URL. To resolve a file locally, strip the prefix
+     `https://<project>.supabase.co/storage/v1/object/public/transaction-attachments/`
+     and look under `attachments/transactions/`. Same idea for
+     `employee-documents` → `attachments/employees/`.
+   - Optional helper SQL view example (included in the doc) that exposes a
+     `local_path` column for convenience.
 
-2. **Cell ordering refs** for axis traversal:
-   - Build a memoized ordered list of `(workerKey, dayOfWeek, timeSlot)` tuples in render order. Used to compute the inclusive range from source to current hover along the locked axis.
+7. **Browsing the data**
+   - `psql ledgerdr_backup` for ad-hoc queries.
+   - DBeaver / pgAdmin / TablePlus for spreadsheet-style browsing, CSV export,
+     ER diagrams.
+   - Common queries cheat-sheet (last N transactions, journal totals by
+     account, payroll for a period, etc.) — 4–5 examples.
 
-3. **Fill handle UI**: tiny absolutely-positioned `<span>` in the bottom-right of each editable cell wrapper; visible on hover/focus and during a drag from that cell.
-   - `onMouseDown` → start fill, capture pointer.
-   - `onTouchStart` + 500 ms timer → start fill on long-press; cancel timer on touchmove > a few px before threshold or touchend.
+8. **Refreshing the backup**
+   - Weekly: download a new ZIP from **Settings → Backup**, re-run step 5.
+   - Old attachments are kept; new ones added on top.
+   - Schema drift: if `00_schema.sql` adds new tables/columns, they'll be
+     created; existing tables are left as-is (the schema script uses
+     `CREATE TABLE IF NOT EXISTS`).
 
-4. **Global drag listeners** (window level, attached only while a drag is active):
-   - `mousemove`/`touchmove`: hit-test the cell under the pointer using `document.elementFromPoint`, read `data-cell-key` from the cell wrapper, recompute axis lock + target set.
-   - `mouseup`/`touchend`: commit, then clear state.
-   - `keydown` Esc: cancel.
+9. **What is NOT restored (and why)**
+   - `auth.users`, sessions, passwords (Supabase-managed).
+   - RLS policies (depend on `auth.uid()` / `has_role()`).
+   - Storage bucket policies.
+   - Edge function secrets — keep these in a password manager.
+   - Realtime publications.
 
-5. **Commit**: iterate the target keys, look up each `(worker, day, slot)` from existing maps, call `handleCellChange(...)` with the source task. Skip vacation/holiday cells. Show one summary toast.
-
-6. **Cell wrappers** get `data-cell-key={cellKey(...)}` and `position: relative` so the handle and dashed overlay anchor correctly. The dashed selection is drawn by adding a Tailwind `ring-2 ring-dashed ring-accent` (or equivalent) class to cells whose key is in `fillTargets`.
-
-7. **Performance**: hit-testing on every move would be expensive with 100+ cells. Throttle `mousemove`/`touchmove` to `requestAnimationFrame`. Memoize the cell-key → index map.
-
-8. **No DB / migrations / edge function changes.**
+10. **If you ever want a live local copy**
+    - Pointer to `mem://technical/migration/digitalocean-blueprint` and to the
+      Supabase self-hosting docs. Out of scope for this file.
 
 ## Out of scope
 
-- Diagonal / rectangular fills (Excel-style 2D selection).
-- Drag-fill across vacation rows that are entirely read-only (grayed out).
-- Undo for the whole fill as a single action (each cell still individually undoable through normal edit + audit history).
+- Modifying the backup export itself (no changes to
+  `src/components/settings/backup/*` or `DatabaseBackup.tsx`).
+- Adding a "plain-Postgres-friendly" SQL variant to the export.
+- Building any local viewer UI.
 
-## QA checklist
-
-1. Hover a cell → small handle appears bottom-right; disappears when week is closed.
-2. Drag horizontally across 4 cells → all 4 take the source task; audit shows 4 update rows.
-3. Drag vertically across 5 workers in the same column → all 5 filled; vacation rows skipped with toast.
-4. Drag in an L-shape → axis locks to whichever direction the cursor moved more first, ignores the other.
-5. Esc during drag → no writes, dashed rectangle disappears.
-6. Long-press handle on iPad → drag mode activates; quick tap does nothing.
-7. After fill, cells edited 24h+ after their row's `created_at` show the orange highlight; freshly-created rows do not — consistent with single-cell rule.
+If you later want a pre-stripped, plain-Postgres-friendly schema variant added
+to the export ZIP, that's a separate follow-up.

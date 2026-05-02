@@ -1451,9 +1451,9 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   const isDragSource = dragFill?.sourceKey === myKey;
   const isDragTarget = dragFill?.targetKeys.has(myKey) ?? false;
   const dragSelectionClass = isDragTarget && !isDragSource
-    ? "ring-2 ring-dashed ring-primary"
+    ? "outline outline-2 outline-dashed outline-primary -outline-offset-2"
     : isDragSource
-    ? "ring-2 ring-primary"
+    ? "outline outline-2 outline-primary -outline-offset-2"
     : "";
   const longPressTimerRef = useRef<number | null>(null);
 

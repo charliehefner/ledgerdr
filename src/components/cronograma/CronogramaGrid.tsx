@@ -1356,6 +1356,7 @@ export function CronogramaGrid() {
             </table>
           </div>
         </div>
+       </DragFillContext.Provider>
       </TooltipProvider>
 
       {/* Close Week Confirmation */}

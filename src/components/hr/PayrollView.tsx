@@ -55,7 +55,7 @@ export function PayrollView() {
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("timesheet");
+  const [activeTab, setActiveTab] = useState(user?.role === "office" ? "summary" : "timesheet");
   const [autoOpenedSummaryForPeriod, setAutoOpenedSummaryForPeriod] = useState<string | null>(null);
 
   const { data: periodData, isLoading: periodLoading } = useQuery({

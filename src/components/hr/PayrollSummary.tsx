@@ -109,9 +109,12 @@ export function PayrollSummary({
   const isClosed = periodStatus === "closed";
   const isOpen = periodStatus === "open";
   const isAdmin = user?.role === "admin";
+  // Commit / close / re-run preview — management chain only
   const canManagePayroll = user?.role === "admin" || user?.role === "management" || user?.role === "accountant";
-  // Office can preview/export/print receipts but cannot commit or close periods
+  // Preview an OPEN period — management chain plus office
   const canPreviewPayroll = canManagePayroll || user?.role === "office";
+  // Read-only export & receipt download (Excel / PDF / Recibos PDF). Office included.
+  const canExportPayroll = canManagePayroll || user?.role === "office";
 
   // Fetch employees with bank info (needed for exports/receipts)
   const { data: employees = [] } = useQuery({
@@ -787,24 +790,28 @@ export function PayrollSummary({
             </Button>
           )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isExporting || payrollData.length === 0}>
-                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                {t("payrollSummary.export")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-popover">
-              <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="mr-2 h-4 w-4" />{t("payrollSummary.exportExcel")}</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF}><FileText className="mr-2 h-4 w-4" />{t("payrollSummary.exportPdf")}</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportMonthly}><Calendar className="mr-2 h-4 w-4" />{t("payrollSummary.exportMonthly")}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canExportPayroll && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isExporting || payrollData.length === 0}>
+                  {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                  {t("payrollSummary.export")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover">
+                <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="mr-2 h-4 w-4" />{t("payrollSummary.exportExcel")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}><FileText className="mr-2 h-4 w-4" />{t("payrollSummary.exportPdf")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportMonthly}><Calendar className="mr-2 h-4 w-4" />{t("payrollSummary.exportMonthly")}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-          <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
-            {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-            {t("payrollSummary.receiptsPdf")}
-          </Button>
+          {canExportPayroll && (
+            <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
+              {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+              {t("payrollSummary.receiptsPdf")}
+            </Button>
+          )}
 
           {!isClosed && canManagePayroll && (
             <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0 || !hasCommittedSnapshots}>
@@ -843,9 +850,13 @@ export function PayrollSummary({
         </div>
       ) : payrollData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {hasCommittedSnapshots
-            ? "Cargando datos de nómina comprometida..."
-            : "No hay datos de nómina. Haga clic en \"Vista Previa Nómina\" para calcular."}
+          {isClosed
+            ? (snapshotsLoading
+                ? "Cargando datos de nómina cerrada..."
+                : "Este período está cerrado pero no tiene datos de nómina guardados.")
+            : hasCommittedSnapshots
+              ? "Cargando datos de nómina comprometida..."
+              : "No hay datos de nómina. Haga clic en \"Vista Previa Nómina\" para calcular."}
         </div>
       ) : (
         <div className="overflow-auto border rounded-lg max-h-[70vh] relative">

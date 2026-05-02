@@ -330,6 +330,37 @@ export function CronogramaGrid() {
     return map;
   }, [entries]);
 
+  // Fetch audit history for the visible week+entity. Indexed by cellKey for tooltips.
+  const entryIds = useMemo(() => entries.map(e => e.id).filter(Boolean), [entries]);
+  const entryIdsKey = useMemo(() => entryIds.slice().sort().join(","), [entryIds]);
+  const { data: auditRows = [] } = useQuery({
+    queryKey: ["cronograma-audit", weekEndingDate, selectedEntityId, entryIdsKey],
+    enabled: entryIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cronograma_entries_audit")
+        .select("id, entry_id, worker_type, worker_id, worker_name, day_of_week, time_slot, action, old_task, new_task, changed_by, changed_at")
+        .in("entry_id", entryIds)
+        .order("changed_at", { ascending: true });
+      if (error) throw error;
+      return (data || []) as CronogramaAuditRow[];
+    },
+  });
+
+  // Audit rows grouped by cellKey, oldest → newest.
+  const auditMap = useMemo(() => {
+    const map = new Map<string, CronogramaAuditRow[]>();
+    for (const a of auditRows) {
+      const key = cellKey(a.worker_type, a.worker_id, a.worker_name, a.day_of_week, a.time_slot);
+      const list = map.get(key) || [];
+      list.push(a);
+      map.set(key, list);
+    }
+    return map;
+  }, [auditRows]);
+
+  const auditMapVersion = useMemo(() => `${auditRows.length}`, [auditRows]);
+
   // Fetch user emails for displaying in tooltips.
   // Stable key + long staleTime: directory is small, fetched once per session,
   // shared across week navigation. Prevents the "Usuario desconocido" flicker.

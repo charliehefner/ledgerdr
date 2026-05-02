@@ -1372,16 +1372,18 @@ const CronogramaCellMemo = memo(function CronogramaCell({
         isLastOfDay && "border-r-[3px]",
         isHighlighted && ringClass
       )}>
-        {isHighlighted ? (
+        {hasHistory ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="relative">
                 {cellContent}
-                <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+                {isHighlighted && (
+                  <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+                )}
               </div>
             </TooltipTrigger>
-            <TooltipContent className="whitespace-pre-line text-xs">
-              {getTooltipContent()}
+            <TooltipContent className="text-xs max-w-xs">
+              {getTooltipNode()}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -1398,16 +1400,18 @@ const CronogramaCellMemo = memo(function CronogramaCell({
       isLastOfDay && "border-r-[3px]",
       isHighlighted && ringClass
     )}>
-      {isHighlighted ? (
+      {hasHistory ? (
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="relative">
               {cellContent}
-              <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+              {isHighlighted && (
+                <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+              )}
             </div>
           </TooltipTrigger>
-          <TooltipContent className="whitespace-pre-line text-xs">
-            {getTooltipContent()}
+          <TooltipContent className="text-xs max-w-xs">
+            {getTooltipNode()}
           </TooltipContent>
         </Tooltip>
       ) : (

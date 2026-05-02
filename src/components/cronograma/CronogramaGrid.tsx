@@ -313,7 +313,7 @@ export function CronogramaGrid() {
   const entryMap = useMemo(() => {
     const map = new Map<string, CronogramaEntry>();
     for (const e of entries) {
-      const key = entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot);
+      const key = cellKey(e.worker_type, e.worker_id, e.worker_name, e.day_of_week, e.time_slot);
       const current = map.get(key);
       if (!current || new Date(e.updated_at).getTime() >= new Date(current.updated_at).getTime()) {
         map.set(key, e);
@@ -410,16 +410,11 @@ export function CronogramaGrid() {
       // Re-read latest cache to find existing row (avoids stale entryMap closure)
       const queryKey = ["cronograma-entries", entry.week_ending_date, entityId];
       const cached = queryClient.getQueryData<CronogramaEntry[]>(queryKey) || [];
-      const lookupKey = entryKey(
-        entry.worker_name,
-        entry.worker_type,
-        entry.day_of_week,
-        entry.time_slot
-      );
+      const lookupKey = cellKey(entry.worker_type, entry.worker_id, entry.worker_name, entry.day_of_week, entry.time_slot);
       let existing = cached.find(
         (e) =>
           !e.id.startsWith("optimistic-") &&
-          entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === lookupKey
+          cellKey(e.worker_type, e.worker_id, e.worker_name, e.day_of_week, e.time_slot) === lookupKey
       );
 
       if (!existing) {
@@ -429,7 +424,7 @@ export function CronogramaGrid() {
           .eq("week_ending_date", entry.week_ending_date)
           .eq("entity_id", entityId)
           .eq("worker_type", entry.worker_type)
-          .eq("worker_name", entry.worker_name)
+          .eq(entry.worker_id ? "worker_id" : "worker_name", entry.worker_id || entry.worker_name)
           .eq("day_of_week", entry.day_of_week)
           .eq("time_slot", entry.time_slot)
           .order("updated_at", { ascending: false })
@@ -471,7 +466,7 @@ export function CronogramaGrid() {
               .eq("week_ending_date", entry.week_ending_date)
               .eq("entity_id", entityId)
               .eq("worker_type", entry.worker_type)
-              .eq("worker_name", entry.worker_name)
+              .eq(entry.worker_id ? "worker_id" : "worker_name", entry.worker_id || entry.worker_name)
               .eq("day_of_week", entry.day_of_week)
               .eq("time_slot", entry.time_slot)
               .order("updated_at", { ascending: false })

@@ -45,15 +45,10 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// User IDs for highlight logic
-const CEDENOJORD_ID = "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80"; // Schedule owner
-const INSTRUCTOR_ID = "7ce0dff1-c2b3-4506-b6eb-c61d9ca50121"; // Never highlighted
-// Trusted editors whose edits do NOT trigger the orange-ring "other editor" indicator
-const TRUSTED_EDITOR_IDS = new Set<string>([
-  INSTRUCTOR_ID,
-  "b2a33a75-b63c-48e1-a252-7ab843f559d5", // Iramaia Bassoi (irabassoi@gmail.com)
-]);
-const SELF_EDIT_HIGHLIGHT_HOURS = 8; // Hours after creation before cedenojord edits are highlighted
+// Universal highlight rule: edits made 24h+ after the cell's original creation
+// are flagged. The original input by any user is never highlighted; it is
+// silently captured in the audit trail and shown in the hover tooltip.
+const LATE_EDIT_HIGHLIGHT_HOURS = 24;
 
 // Per-device toggle: hide edit indicators on this machine
 const HIGHLIGHT_PREF_KEY = "cronograma.showEditIndicators";
@@ -67,7 +62,23 @@ function getShowIndicatorsPref(): boolean {
 }
 
 // Highlight types for visual differentiation
-type HighlightType = "other" | "self-edit" | null;
+type HighlightType = "late-edit" | null;
+
+// One row from the cronograma_entries_audit table
+type CronogramaAuditRow = {
+  id: string;
+  entry_id: string;
+  worker_type: string;
+  worker_id: string | null;
+  worker_name: string;
+  day_of_week: number;
+  time_slot: string;
+  action: "insert" | "update" | "delete";
+  old_task: string | null;
+  new_task: string | null;
+  changed_by: string | null;
+  changed_at: string;
+};
 
 type CronogramaEntry = {
   id: string;
@@ -188,18 +199,19 @@ function cellKey(workerType: string, workerId: string | null | undefined, worker
 }
 
 /**
- * Determine the highlight type for an entry based on who edited it and when.
+ * Universal highlight rule:
+ * - Original input (created_at == updated_at) is never highlighted.
+ * - Edits made within 24h of creation are not highlighted (treated as a normal correction).
+ * - Edits made 24h+ after creation are flagged as a "late-edit" regardless of which user made them.
  */
 function getHighlightType(entry?: CronogramaEntry): HighlightType {
-  if (!entry?.updated_by) return null;
-  if (TRUSTED_EDITOR_IDS.has(entry.updated_by)) return null;
-  if (entry.updated_by === CEDENOJORD_ID) {
-    const createdAt = new Date(entry.created_at);
-    const updatedAt = new Date(entry.updated_at);
-    const hoursDiff = (updatedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    return hoursDiff >= SELF_EDIT_HIGHLIGHT_HOURS ? "self-edit" : null;
-  }
-  return "other";
+  if (!entry?.updated_at || !entry?.created_at) return null;
+  const createdAt = new Date(entry.created_at).getTime();
+  const updatedAt = new Date(entry.updated_at).getTime();
+  if (!Number.isFinite(createdAt) || !Number.isFinite(updatedAt)) return null;
+  if (updatedAt <= createdAt) return null; // original input
+  const hoursDiff = (updatedAt - createdAt) / (1000 * 60 * 60);
+  return hoursDiff >= LATE_EDIT_HIGHLIGHT_HOURS ? "late-edit" : null;
 }
 
 export function CronogramaGrid() {
@@ -317,6 +329,37 @@ export function CronogramaGrid() {
     }
     return map;
   }, [entries]);
+
+  // Fetch audit history for the visible week+entity. Indexed by cellKey for tooltips.
+  const entryIds = useMemo(() => entries.map(e => e.id).filter(Boolean), [entries]);
+  const entryIdsKey = useMemo(() => entryIds.slice().sort().join(","), [entryIds]);
+  const { data: auditRows = [] } = useQuery({
+    queryKey: ["cronograma-audit", weekEndingDate, selectedEntityId, entryIdsKey],
+    enabled: entryIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cronograma_entries_audit")
+        .select("id, entry_id, worker_type, worker_id, worker_name, day_of_week, time_slot, action, old_task, new_task, changed_by, changed_at")
+        .in("entry_id", entryIds)
+        .order("changed_at", { ascending: true });
+      if (error) throw error;
+      return (data || []) as CronogramaAuditRow[];
+    },
+  });
+
+  // Audit rows grouped by cellKey, oldest → newest.
+  const auditMap = useMemo(() => {
+    const map = new Map<string, CronogramaAuditRow[]>();
+    for (const a of auditRows) {
+      const key = cellKey(a.worker_type, a.worker_id, a.worker_name, a.day_of_week, a.time_slot);
+      const list = map.get(key) || [];
+      list.push(a);
+      map.set(key, list);
+    }
+    return map;
+  }, [auditRows]);
+
+  const auditMapVersion = useMemo(() => `${auditRows.length}`, [auditRows]);
 
   // Fetch user emails for displaying in tooltips.
   // Stable key + long staleTime: directory is small, fetched once per session,
@@ -487,6 +530,7 @@ export function CronogramaGrid() {
         queryClient.invalidateQueries({
           queryKey: ["cronograma-entries", variables.week_ending_date, variables.entity_id],
         });
+        queryClient.invalidateQueries({ queryKey: ["cronograma-audit"] });
       }
     },
     onError: (error) => {
@@ -1034,8 +1078,12 @@ export function CronogramaGrid() {
                         const dayNum = dayIdx + 1;
                         const isOnVacation = worker.type === "employee" && worker.id ? isEmployeeOnVacation(worker.id, day) : false;
 
-                        const morningEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "morning"));
-                        const afternoonEntry = entryMap.get(cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon"));
+                        const morningKey = cellKey(worker.type, worker.id, worker.name, dayNum, "morning");
+                        const afternoonKey = cellKey(worker.type, worker.id, worker.name, dayNum, "afternoon");
+                        const morningEntry = entryMap.get(morningKey);
+                        const afternoonEntry = entryMap.get(afternoonKey);
+                        const morningAudit = auditMap.get(morningKey);
+                        const afternoonAudit = auditMap.get(afternoonKey);
 
                         return (
                           <>
@@ -1056,6 +1104,8 @@ export function CronogramaGrid() {
                               isLastOfDay={false}
                               t={t}
                               entry={morningEntry}
+                              auditEntries={morningAudit}
+                              auditMapVersion={auditMapVersion}
                               userEmailMap={userEmailMap}
                               userEmailMapVersion={userEmailMapVersion}
                               isUserEmailMapLoading={isUserEmailMapLoading}
@@ -1079,6 +1129,8 @@ export function CronogramaGrid() {
                               isLastOfDay={true}
                               t={t}
                               entry={afternoonEntry}
+                              auditEntries={afternoonAudit}
+                              auditMapVersion={auditMapVersion}
                               userEmailMap={userEmailMap}
                               userEmailMapVersion={userEmailMapVersion}
                               isUserEmailMapLoading={isUserEmailMapLoading}
@@ -1135,6 +1187,8 @@ type CronogramaCellProps = {
   isLastOfDay: boolean;
   t: (key: string) => string;
   entry?: CronogramaEntry;
+  auditEntries?: CronogramaAuditRow[];
+  auditMapVersion: string;
   userEmailMap: Map<string, string>;
   userEmailMapVersion: string;
   isUserEmailMapLoading: boolean;
@@ -1159,6 +1213,8 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   isLastOfDay,
   t,
   entry,
+  auditEntries,
+  auditMapVersion: _auditMapVersion,
   userEmailMap,
   userEmailMapVersion: _userEmailMapVersion,
   isUserEmailMapLoading,
@@ -1172,19 +1228,11 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   const rawHighlightType = getHighlightType(entry);
   const highlightType = showIndicators ? rawHighlightType : null;
   const isHighlighted = highlightType !== null;
-  const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
-  const modifierFallback = entry?.updated_by
-    ? `${language === "es" ? "Usuario" : "User"} ${entry.updated_by.slice(0, 8)}`
-    : (language === "es" ? "Usuario desconocido" : "Unknown user");
-  const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
+  const hasHistory = !!(auditEntries && auditEntries.length > 0) || !!entry?.updated_at;
 
-  // Softer indicator: thin outline + dot positioned outside the cell so it never overlaps text
-  const ringClass = highlightType === "self-edit"
-    ? "ring-1 ring-inset ring-blue-300 dark:ring-blue-500"
-    : "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
-  const dotClass = highlightType === "self-edit"
-    ? "bg-blue-400"
-    : "bg-orange-400";
+  // Single highlight style — universal late-edit (24h+) ring + dot
+  const ringClass = "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
+  const dotClass = "bg-orange-400";
 
   const autoResize = useCallback(() => {
     if (textareaRef.current) {
@@ -1221,19 +1269,70 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     // via the dedicated Copy button in the toolbar.
   };
 
-  const getTooltipContent = () => {
-    if (!isHighlighted || !modifiedAt) return null;
-    
-    const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
-    const userDisplay = modifierEmail || modifierFallback;
-    
-    const modTypeLabel = highlightType === "self-edit"
-      ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")
-      : "";
-    
-    return language === "es" 
-      ? `Modificado por: ${userDisplay}${modTypeLabel}\n${dateStr}`
-      : `Modified by: ${userDisplay}${modTypeLabel}\n${dateStr}`;
+  const formatStamp = (d: Date) =>
+    format(d, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
+
+  const userDisplayFor = (uid: string | null | undefined): string => {
+    if (!uid) return language === "es" ? "Usuario desconocido" : "Unknown user";
+    const email = userEmailMap.get(uid);
+    if (email) return email;
+    return `${language === "es" ? "Usuario" : "User"} ${uid.slice(0, 8)}`;
+  };
+
+  const getTooltipNode = () => {
+    const history = auditEntries && auditEntries.length > 0 ? auditEntries : null;
+
+    // Header — most recent change
+    let headerLine: string;
+    if (history) {
+      const last = history[history.length - 1];
+      headerLine = language === "es"
+        ? `Última edición: ${userDisplayFor(last.changed_by)} — ${formatStamp(new Date(last.changed_at))}`
+        : `Last edit: ${userDisplayFor(last.changed_by)} — ${formatStamp(new Date(last.changed_at))}`;
+    } else if (entry?.updated_at) {
+      headerLine = language === "es"
+        ? `Modificado por: ${userDisplayFor(entry.updated_by)} — ${formatStamp(new Date(entry.updated_at))}`
+        : `Modified by: ${userDisplayFor(entry.updated_by)} — ${formatStamp(new Date(entry.updated_at))}`;
+    } else {
+      return null;
+    }
+
+    const lateNote = isHighlighted
+      ? (language === "es"
+          ? "Editado >24h después de la creación"
+          : "Edited >24h after creation")
+      : null;
+
+    // Older entries (up to 5 most recent, excluding the latest already shown)
+    const olderLines: string[] = [];
+    if (history && history.length > 1) {
+      const olderTail = history.slice(Math.max(0, history.length - 6), history.length - 1).reverse();
+      for (const a of olderTail) {
+        const action = a.action === "insert"
+          ? (language === "es" ? "creó" : "created")
+          : a.action === "delete"
+          ? (language === "es" ? "borró" : "deleted")
+          : (language === "es" ? "editó" : "edited");
+        olderLines.push(`• ${userDisplayFor(a.changed_by)} ${action} — ${formatStamp(new Date(a.changed_at))}`);
+      }
+    }
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium">{headerLine}</div>
+        {lateNote && <div className="text-orange-300">{lateNote}</div>}
+        {olderLines.length > 0 && (
+          <div className="pt-1 border-t border-border/40 space-y-0.5">
+            {olderLines.map((l, i) => <div key={i}>{l}</div>)}
+          </div>
+        )}
+        {isUserEmailMapLoading && (
+          <div className="text-muted-foreground italic">
+            {language === "es" ? "Cargando nombres…" : "Loading names…"}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (isVacation) {
@@ -1274,16 +1373,18 @@ const CronogramaCellMemo = memo(function CronogramaCell({
         isLastOfDay && "border-r-[3px]",
         isHighlighted && ringClass
       )}>
-        {isHighlighted ? (
+        {hasHistory ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="relative">
                 {cellContent}
-                <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+                {isHighlighted && (
+                  <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+                )}
               </div>
             </TooltipTrigger>
-            <TooltipContent className="whitespace-pre-line text-xs">
-              {getTooltipContent()}
+            <TooltipContent className="text-xs max-w-xs">
+              {getTooltipNode()}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -1300,16 +1401,18 @@ const CronogramaCellMemo = memo(function CronogramaCell({
       isLastOfDay && "border-r-[3px]",
       isHighlighted && ringClass
     )}>
-      {isHighlighted ? (
+      {hasHistory ? (
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="relative">
               {cellContent}
-              <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+              {isHighlighted && (
+                <div className={cn("absolute -top-1 -right-1 w-2 h-2 rounded-full ring-1 ring-background", dotClass)} />
+              )}
             </div>
           </TooltipTrigger>
-          <TooltipContent className="whitespace-pre-line text-xs">
-            {getTooltipContent()}
+          <TooltipContent className="text-xs max-w-xs">
+            {getTooltipNode()}
           </TooltipContent>
         </Tooltip>
       ) : (
@@ -1333,6 +1436,10 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     prevProps.entry?.updated_at === nextProps.entry?.updated_at &&
     prevProps.entry?.task === nextProps.entry?.task &&
     prevProps.isUserEmailMapLoading === nextProps.isUserEmailMapLoading &&
-    prevProps.userEmailMapVersion === nextProps.userEmailMapVersion
+    prevProps.userEmailMapVersion === nextProps.userEmailMapVersion &&
+    prevProps.auditMapVersion === nextProps.auditMapVersion &&
+    (prevProps.auditEntries?.length ?? 0) === (nextProps.auditEntries?.length ?? 0) &&
+    (prevProps.auditEntries?.[prevProps.auditEntries.length - 1]?.changed_at ?? null) ===
+      (nextProps.auditEntries?.[nextProps.auditEntries.length - 1]?.changed_at ?? null)
   );
 });

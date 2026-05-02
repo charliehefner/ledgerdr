@@ -1,75 +1,79 @@
-## Goals
+## Goal
 
-1. Replace the cedenojord-specific highlighting rule in the Schedule (Cronograma) with a universal rule that applies to every user.
-2. Add a proper audit trail so every change is recorded and viewable on hover, even when no highlight is shown.
-3. Remove `cedenojord` as an active user of the app.
+Add an Excel-style "drag handle" to each Schedule cell so users can fill the **task text** of adjacent cells in a straight line (horizontal across days/slots, or vertical across workers). Target cells are **overwritten** regardless of prior content. Each filled cell still goes through the existing save path, so audit and the 24h highlight rule keep working unchanged.
 
----
+## Behavior
 
-## New highlighting rule (universal)
+**Desktop (mouse)**
+- A small fill handle (4×4 px square, accent color) appears at the bottom-right of the **focused / hovered** cell when the week is editable.
+- Mouse-down on the handle starts a fill drag. Moving the mouse over other cells extends a dashed selection rectangle from the source cell along **one axis only** — whichever axis the cursor has moved further along (horizontal vs vertical), locked once chosen.
+  - Horizontal axis = same worker row, across morning/afternoon slots and days (Mon AM, Mon PM, Tue AM, …).
+  - Vertical axis = same day + slot column, across workers (in the order currently rendered).
+- Mouse-up commits: the source cell's task string is written to every target cell in the selection, overwriting whatever was there.
+- Esc during drag cancels.
 
-- **Original input** into a previously blank cell by **any** user → no orange/blue ring, no dot. The change is silently recorded in the audit trail and visible in the hover tooltip.
-- **Edits to a cell that already has content**:
-  - Within **24 hours** of the cell's original creation → no highlight (treated as a normal correction). Still recorded in audit + tooltip.
-  - **24 hours or more** after original creation → highlight the cell with a subtle ring + dot, and identify the user in the hover tooltip.
-- The current "trusted editors" allowlist (Iramaia, instructor) becomes obsolete and is removed — the 24h rule applies uniformly.
-- The per-device "show indicators" toggle is preserved.
+**Tablet (touch)**
+- Long-press (~500 ms) on the fill handle activates fill mode (haptic-style visual pulse on the handle).
+- Dragging the finger highlights cells along the locked axis, same as mouse.
+- Lift to commit, tap outside or press Esc-equivalent (back gesture / tap source cell) to cancel.
+- Plain taps and short presses on the handle do nothing (so accidental taps don't fill).
 
-## Audit trail
+**Scope of what is copied**
+- Only the `task` text. `is_vacation` and `is_holiday` flags on target cells are preserved.
+- Empty source → fills targets with empty (acts as a bulk clear along the axis). This is consistent with overwrite semantics; if you'd rather block empty-source drags, say so and I'll add a guard.
 
-Today the table only stores the latest `updated_by`/`updated_at`. A real audit trail requires a history table.
+**Cells that are skipped even when in the selection**
+- Cells in rows/columns that are read-only because the week is closed (`isWeekClosed`) — drag handle won't appear at all in that case.
+- Cells flagged as vacation or holiday for that worker/day — these are already non-editable in the grid; they will be visually included in the dashed rectangle but skipped on commit, with a small toast like "3 celdas omitidas (vacaciones/feriado)".
 
-- New table `public.cronograma_entries_audit`:
-  - `id uuid pk`, `entry_id uuid`, `entity_id uuid`, `week_ending_date date`
-  - `worker_type`, `worker_id`, `worker_name`, `day_of_week`, `time_slot`
-  - `action text` ('insert' | 'update' | 'delete')
-  - `old_task text`, `new_task text`
-  - `old_is_vacation bool`, `new_is_vacation bool`
-  - `old_is_holiday bool`, `new_is_holiday bool`
-  - `changed_by uuid`, `changed_at timestamptz default now()`
-- Trigger `tg_cronograma_entries_audit` on `cronograma_entries` for INSERT/UPDATE/DELETE that writes one row per change. Skip when nothing meaningful changed (same task, same flags).
-- RLS: select restricted to admin/management roles for the entry's entity (mirrors existing cronograma policies). Inserts only via the trigger (security definer).
+## Save pipeline & audit
 
-## Hover tooltip — always on
+- Each target cell is written via the existing `handleCellChange(worker, dayOfWeek, timeSlot, value)` function. No new mutation, no new RLS surface, no schema change.
+- Writes are dispatched in a tight loop (await-less, since `upsertMutation.mutate` is fire-and-forget and already debounced/queued). Optimistic cache updates already handled by `handleCellChange` keep the UI snappy.
+- The audit trigger logs one row per cell automatically.
+- The 24h highlight rule applies per cell as usual: a freshly filled cell whose underlying row was created >24h ago will highlight; a brand-new row will not. (This is intentional and consistent with single-cell editing.)
 
-- Tooltip is shown for **every cell that has any audit history**, not just highlighted ones.
-- Content:
-  - Most recent change: "Última edición: {user} — {date hh:mm}".
-  - If older edits exist: an expandable mini-list of the last up to 5 entries (user + timestamp + short delta like "added text" / "changed text" / "cleared").
-  - Highlighted cells additionally show "Editado >24h después de la creación" / "Edited >24h after creation".
-- A new lightweight query (`useCronogramaAudit`) fetches audit rows for the visible week+entity in one round trip and indexes them by `cellKey` for the tooltip.
+## Technical changes
 
-## Code changes
+Single file: `src/components/cronograma/CronogramaGrid.tsx`.
 
-`src/components/cronograma/CronogramaGrid.tsx`
-- Remove `CEDENOJORD_ID`, `INSTRUCTOR_ID`, `TRUSTED_EDITOR_IDS`, `SELF_EDIT_HIGHLIGHT_HOURS`.
-- Rewrite `getHighlightType(entry)`:
-  - Return `null` if `created_at === updated_at` (original input, never highlighted).
-  - Return `null` if `updated_at - created_at < 24h`.
-  - Otherwise return `"late-edit"` (single highlight type — orange ring + dot).
-- Rewrite tooltip builder to read from the audit query when available, falling back to `updated_by/updated_at` if audit not yet loaded.
-- Always render the cell inside a `Tooltip` when there is any audit history (not gated on `isHighlighted`). Keep the dot/ring gated on `isHighlighted && showIndicators`.
-- Update memo comparator to include audit-row count/last-change for the cell.
+1. **New local state** at the grid level:
+   - `fillSource: { workerKey, dayOfWeek, timeSlot, task } | null`
+   - `fillTargets: Set<string>` (cell keys currently in the dashed rectangle)
+   - `fillAxis: "horizontal" | "vertical" | null`
 
-`supabase/migrations/<new>.sql`
-- Create table, indexes (`entry_id`, `(entity_id, week_ending_date)`), enable RLS, add policies, create trigger function + trigger.
-- Backfill: insert one synthetic 'insert' audit row per existing `cronograma_entries` using `created_by`/`created_at`, plus an 'update' row when `updated_at <> created_at` using `updated_by`/`updated_at`. This preserves history for existing data.
+2. **Cell ordering refs** for axis traversal:
+   - Build a memoized ordered list of `(workerKey, dayOfWeek, timeSlot)` tuples in render order. Used to compute the inclusive range from source to current hover along the locked axis.
 
-## Remove cedenojord as a user
+3. **Fill handle UI**: tiny absolutely-positioned `<span>` in the bottom-right of each editable cell wrapper; visible on hover/focus and during a drag from that cell.
+   - `onMouseDown` → start fill, capture pointer.
+   - `onTouchStart` + 500 ms timer → start fill on long-press; cancel timer on touchmove > a few px before threshold or touchend.
 
-- Use the existing `delete-user` edge function (admin-only) to schedule deletion of `cedenojord@internal.jord.local` (`3976a9b9-…`). It is deferred to next midnight by default; we will pass `immediate: true` so processing runs right away.
-- The deletion only removes the auth user + `user_roles`. Existing `cronograma_entries.created_by/updated_by` references stay (they are uuid columns, not FKs to auth.users), so historical attributions remain intact and the audit trail keeps working — the tooltip will show "user: 3976a9b9" for past edits where the email is no longer resolvable, which is acceptable.
+4. **Global drag listeners** (window level, attached only while a drag is active):
+   - `mousemove`/`touchmove`: hit-test the cell under the pointer using `document.elementFromPoint`, read `data-cell-key` from the cell wrapper, recompute axis lock + target set.
+   - `mouseup`/`touchend`: commit, then clear state.
+   - `keydown` Esc: cancel.
 
-## Out of scope / not changing
+5. **Commit**: iterate the target keys, look up each `(worker, day, slot)` from existing maps, call `handleCellChange(...)` with the source task. Skip vacation/holiday cells. Show one summary toast.
 
-- `cronograma_entries` schema itself (columns unchanged).
-- Save/persistence logic fixed in the previous round.
-- The per-device indicator toggle behavior.
+6. **Cell wrappers** get `data-cell-key={cellKey(...)}` and `position: relative` so the handle and dashed overlay anchor correctly. The dashed selection is drawn by adding a Tailwind `ring-2 ring-dashed ring-accent` (or equivalent) class to cells whose key is in `fillTargets`.
+
+7. **Performance**: hit-testing on every move would be expensive with 100+ cells. Throttle `mousemove`/`touchmove` to `requestAnimationFrame`. Memoize the cell-key → index map.
+
+8. **No DB / migrations / edge function changes.**
+
+## Out of scope
+
+- Diagonal / rectangular fills (Excel-style 2D selection).
+- Drag-fill across vacation rows that are entirely read-only (grayed out).
+- Undo for the whole fill as a single action (each cell still individually undoable through normal edit + audit history).
 
 ## QA checklist
 
-1. New cell typed into → no highlight, hover shows "Creado por X — fecha".
-2. Same cell edited within 24h by a different user → no highlight, hover shows both entries.
-3. Same cell edited 24h+ later by any user → orange ring + dot, hover shows full history.
-4. Old cells from cedenojord still display correctly (backfilled audit row).
-5. After deleting cedenojord, login fails for that account; existing schedule data unchanged; tooltips still render with id-prefix fallback.
+1. Hover a cell → small handle appears bottom-right; disappears when week is closed.
+2. Drag horizontally across 4 cells → all 4 take the source task; audit shows 4 update rows.
+3. Drag vertically across 5 workers in the same column → all 5 filled; vacation rows skipped with toast.
+4. Drag in an L-shape → axis locks to whichever direction the cursor moved more first, ignores the other.
+5. Esc during drag → no writes, dashed rectangle disappears.
+6. Long-press handle on iPad → drag mode activates; quick tap does nothing.
+7. After fill, cells edited 24h+ after their row's `created_at` show the orange highlight; freshly-created rows do not — consistent with single-cell rule.

@@ -392,15 +392,21 @@ export function CronogramaGrid() {
         if (newWeekError) throw newWeekError;
         weekId = newWeek.id;
       }
-      
-      // Find existing entry using the map (O(1))
+
+      // Re-read latest cache to find existing row (avoids stale entryMap closure)
+      const queryKey = ["cronograma-entries", entry.week_ending_date, selectedEntityId];
+      const cached = queryClient.getQueryData<CronogramaEntry[]>(queryKey) || [];
       const lookupKey = entryKey(
         entry.worker_name,
         entry.worker_type,
         entry.day_of_week,
         entry.time_slot
       );
-      const existing = entryMap.get(lookupKey);
+      const existing = cached.find(
+        (e) =>
+          !e.id.startsWith("optimistic-") &&
+          entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === lookupKey
+      );
 
       if (existing) {
         const { error } = await supabase
@@ -430,8 +436,12 @@ export function CronogramaGrid() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cronograma-entries", weekEndingDate, selectedEntityId] });
+    onSettled: (_data, _err, variables) => {
+      if (variables) {
+        queryClient.invalidateQueries({
+          queryKey: ["cronograma-entries", variables.week_ending_date, selectedEntityId],
+        });
+      }
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : t("common.error"));
@@ -486,6 +496,22 @@ export function CronogramaGrid() {
     });
   }, [vacations]);
 
+  // Pending payload kept alongside the debounce timer so we can flush it on
+  // unmount, week change, or entity change without losing keystrokes.
+  const pendingPayloadRef = useRef<Parameters<typeof upsertMutation.mutate>[0] | null>(null);
+
+  const flushPending = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    if (pendingPayloadRef.current) {
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = null;
+      upsertMutation.mutate(payload);
+    }
+  }, [upsertMutation]);
+
   // Optimistic + debounced cell change handler
   const handleCellChange = useCallback((
     worker: WorkerRow,
@@ -494,6 +520,10 @@ export function CronogramaGrid() {
     value: string
   ) => {
     if (isWeekClosed) return;
+    if (!selectedEntityId) {
+      toast.error("Seleccione una entidad antes de guardar.");
+      return;
+    }
     
     const mutationPayload = {
       week_ending_date: weekEndingDate,
@@ -507,26 +537,74 @@ export function CronogramaGrid() {
       is_holiday: false,
     };
 
-    // Optimistic update: patch the query cache immediately
+    // Optimistic update: patch the query cache immediately. If a row already
+    // exists, update it; otherwise insert a synthetic placeholder so the cell
+    // keeps its text until the server confirms.
     const queryKey = ["cronograma-entries", weekEndingDate, selectedEntityId];
     queryClient.setQueryData<CronogramaEntry[]>(queryKey, (old) => {
-      if (!old) return old;
+      const list = old ? [...old] : [];
       const key = entryKey(worker.name, worker.type, dayOfWeek, timeSlot);
-      const idx = old.findIndex(e => entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === key);
+      const idx = list.findIndex(e => entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === key);
+      const nowIso = new Date().toISOString();
       if (idx >= 0) {
-        const updated = [...old];
-        updated[idx] = { ...updated[idx], task: value || null, updated_at: new Date().toISOString() };
-        return updated;
+        list[idx] = { ...list[idx], task: value || null, updated_at: nowIso, updated_by: user?.id || list[idx].updated_by };
+        return list;
       }
-      return old;
+      list.push({
+        id: `optimistic-${key}-${nowIso}`,
+        week_ending_date: weekEndingDate,
+        worker_type: worker.type,
+        worker_id: worker.id,
+        worker_name: worker.name,
+        day_of_week: dayOfWeek,
+        time_slot: timeSlot,
+        task: value || null,
+        is_vacation: false,
+        is_holiday: false,
+        created_by: user?.id || null,
+        updated_by: user?.id || null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      } as CronogramaEntry);
+      return list;
     });
 
-    // Debounce the actual network mutation (300ms)
+    // Debounce the actual network mutation (300ms). Keep the latest payload so
+    // a flush (blur, week-change, unmount) can still send it.
+    pendingPayloadRef.current = mutationPayload;
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      upsertMutation.mutate(mutationPayload);
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = null;
+      debounceTimerRef.current = null;
+      if (payload) upsertMutation.mutate(payload);
     }, 300);
-  }, [isWeekClosed, weekEndingDate, selectedEntityId, queryClient, upsertMutation]);
+  }, [isWeekClosed, weekEndingDate, selectedEntityId, queryClient, upsertMutation, user?.id]);
+
+  // Flush on unmount so a partial keystroke isn't lost when navigating away
+  useEffect(() => {
+    return () => { flushPending(); };
+  }, [flushPending]);
+
+  // Flush when entity changes — mutation is bound to the previous entity
+  const prevEntityRef = useRef(selectedEntityId);
+  useEffect(() => {
+    if (prevEntityRef.current !== selectedEntityId) {
+      flushPending();
+      prevEntityRef.current = selectedEntityId;
+    }
+  }, [selectedEntityId, flushPending]);
+
+  // Flush when the visible week changes — pending payload is keyed to the
+  // previous week_ending_date and would land in the wrong cache otherwise.
+  const prevWeekRef = useRef(weekEndingDate);
+  useEffect(() => {
+    if (prevWeekRef.current !== weekEndingDate) {
+      flushPending();
+      prevWeekRef.current = weekEndingDate;
+    }
+  }, [weekEndingDate, flushPending]);
+
 
   const handleCopy = useCallback((value: string) => {
     setCopiedTask(value);

@@ -1,65 +1,40 @@
-I am still tracking it. I agree the prior fixes were too superficial; the issue is not simply “office needs payroll access” or “auto-open the Summary tab.”
+## What I found
 
-What I verified:
-- Ana’s backend role is `office` for Jord Dominicana.
-- Nómina 96 exists as a closed payroll period for Jord Dominicana.
-- Nómina 96 has 13 committed payroll snapshot rows.
-- The database now has an `office` SELECT policy on `payroll_snapshots`, and Ana’s role/entity check returns true.
-- The Day Labor receipt button is easier because it renders directly from loaded weekly entries. Payroll is different: closed payroll receipts depend on `PayrollSummary` loading snapshots, employee data, loans, benefits, and being reachable through the Summary tab.
+I checked the database directly. Your entries **are** being saved successfully:
 
-Most likely remaining problem:
-- The UI still treats Payroll Summary as a management workflow. The export/receipt controls are embedded inside the same header as preview/commit/close, and the closed-period read-only receipt workflow is not separated for `office`.
-- For Ana, if closed-period snapshot data is unavailable, delayed, or the Summary tab is not reached, she gets no clear dedicated “download payroll receipts” affordance.
-- The correct fix is to make closed-period payroll exports/receipts a first-class read-only action for `office`, not dependent on preview behavior or management controls.
+- Week ending **2026-05-09** (next Saturday) just received 6 entries with `task = "Feriado"` (Monday AM) between 12:01:16 – 12:01:35 today — your most recent edits.
+- Week ending **2026-05-02** received 88 entries today, latest at 11:59:59.
+- All saved under your user id and the correct entity.
 
-Plan to fix it:
+So the upsert (`CronogramaGrid.tsx` lines 362–439) is working. The "Failed to fetch" errors in the console are **token-refresh** failures (transient network blips on `_refreshAccessToken`), not save failures.
 
-1. Separate payroll permissions in `PayrollSummary.tsx`
-   - Add explicit flags:
-     - `canPreviewPayroll`: admin, management, accountant, office for open-period previews only.
-     - `canExportPayroll`: admin, management, accountant, office for read-only exports/receipts.
-     - `canManagePayroll`: admin, management, accountant only for commit/close.
-   - Ensure export and receipts buttons render only from `canExportPayroll`, not accidentally tied to management/preview state.
+## Most likely reasons it *looks* like nothing saves
 
-2. Make closed-period export/receipts independent of preview
-   - For `periodStatus === 'closed'`, load payroll rows directly from `payroll_snapshots`.
-   - Show the export dropdown and `Recibos PDF` button whenever:
-     - the role can export, and
-     - the period is closed, and
-     - snapshots exist.
-   - Do not require Ana to click `Vista Previa` for closed periods.
+1. **Optimistic update only patches existing entries.** In `handleCellChange` (lines 510–522), the cache patcher uses `findIndex` and only updates when an entry already exists. For brand-new cells the typed text is **not** added to the cache — it relies on the server round-trip + `invalidateQueries` to repaint. If the 300 ms debounce is interrupted (you click into another cell, navigate weeks, or the tab refetches before the network reply arrives), the cell visually "snaps back" to empty even though the row was inserted server-side.
+2. **No success feedback.** Unlike errors (which `toast.error`), successful saves are silent, so there is no confirmation the data landed.
+3. **Debounced mutation can be lost on unmount/navigation.** `debounceTimerRef` is a 300 ms `setTimeout`. If you change weeks, switch entity, or close the tab within 300 ms of the last keystroke, the pending mutation is dropped (the timer is cleared on the next change but the previous payload is gone).
 
-3. Add a clear closed-period fallback state
-   - If the closed period has snapshots but supporting employee/benefit data is still loading, show a loading message instead of hiding the controls.
-   - If snapshot loading errors, show the exact error banner instead of silently showing an empty area.
-   - If no snapshots exist, show: “Este período está cerrado pero no tiene datos de nómina guardados.”
+## Plan to fix
 
-4. Keep office restricted from payroll management
-   - Ana will not see or be able to use:
-     - `Confirmar y Guardar`
-     - `Cerrar Período`
-     - admin rerun controls
-   - She will only be able to view/export/download receipts for payroll periods she can access by entity.
+### 1. Make optimistic updates handle inserts, not just updates
+In `handleCellChange`, when no existing entry is found, append a synthetic entry to the cache so the cell stays populated until the server confirms. On error rollback to previous snapshot.
 
-5. Improve HR tab navigation for office users
-   - Keep Day Labor as Ana’s default if desired, but make Payroll accessible and reliable.
-   - When a closed payroll period is selected, force the internal payroll tab to `Resumen y Cierre` immediately and reset correctly when switching periods.
+### 2. Flush pending debounced mutation on cell-blur and on unmount
+- Add a `flush()` helper that immediately fires the pending mutation if a timer is active.
+- Call it on input `onBlur`, on week navigation, on entity change, and inside a `useEffect` cleanup.
 
-6. Verify against Nómina 96 specifically
-   - Confirm the date range resolves to Nómina 96: 16 Apr 2026–30 Apr 2026.
-   - Confirm the closed period loads 13 snapshot rows.
-   - Confirm the visible buttons for Ana are:
-     - `Exportar`
-     - `Recibos PDF`
-   - Confirm hidden buttons for Ana are:
-     - `Confirmar y Guardar`
-     - `Cerrar Período`
+### 3. Add lightweight save feedback
+- Per-cell "saving…" indicator (small dot) while the mutation is in flight, switching to a green check for 1 s on success.
+- Keep the existing toast for errors.
 
-Technical changes expected:
-- `src/components/hr/PayrollSummary.tsx`
-  - Permission flag cleanup.
-  - Closed-period snapshot loading/error handling.
-  - Dedicated export/receipt rendering path for read-only roles.
-- `src/components/hr/PayrollView.tsx`
-  - Strengthen the closed-period Summary tab auto-selection so it cannot leave office users on the timesheet tab for closed periods.
-- Potentially no database migration is needed, because the database policies and Ana’s entity role now appear correct. I will only add a migration if implementation reveals a missing RLS policy during validation.
+### 4. Use proper React-Query optimistic pattern
+Convert `upsertMutation` to use `onMutate` / `onError` / `onSettled` so cache updates and rollbacks live with the mutation, not in `handleCellChange`. This removes the duplication and the snap-back behavior.
+
+### 5. Guard against the "All Entities" mode silently blocking writes
+`requireEntity()` returns `null` in All-Entities mode and the mutation throws `"Seleccione una entidad antes de guardar."`. Today that toast appears once but the cell still shows the typed text optimistically, suggesting it saved. Disable the input (and show a banner) when no entity is selected, instead of letting the user type and only seeing an error toast.
+
+## Files to change
+- `src/components/cronograma/CronogramaGrid.tsx` — items 1-5 above.
+
+## Out of scope
+- The `Failed to fetch` token-refresh errors — those are transient network issues unrelated to Schedule saves and should not be chased now.

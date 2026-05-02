@@ -595,6 +595,16 @@ export function CronogramaGrid() {
     }
   }, [selectedEntityId, flushPending]);
 
+  // Flush when the visible week changes — pending payload is keyed to the
+  // previous week_ending_date and would land in the wrong cache otherwise.
+  const prevWeekRef = useRef(weekEndingDate);
+  useEffect(() => {
+    if (prevWeekRef.current !== weekEndingDate) {
+      flushPending();
+      prevWeekRef.current = weekEndingDate;
+    }
+  }, [weekEndingDate, flushPending]);
+
 
   const handleCopy = useCallback((value: string) => {
     setCopiedTask(value);

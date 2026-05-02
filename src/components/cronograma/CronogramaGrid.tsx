@@ -1268,19 +1268,70 @@ const CronogramaCellMemo = memo(function CronogramaCell({
     // via the dedicated Copy button in the toolbar.
   };
 
-  const getTooltipContent = () => {
-    if (!isHighlighted || !modifiedAt) return null;
-    
-    const dateStr = format(modifiedAt, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
-    const userDisplay = modifierEmail || modifierFallback;
-    
-    const modTypeLabel = highlightType === "self-edit"
-      ? (language === "es" ? " (auto-edición tardía)" : " (late self-edit)")
-      : "";
-    
-    return language === "es" 
-      ? `Modificado por: ${userDisplay}${modTypeLabel}\n${dateStr}`
-      : `Modified by: ${userDisplay}${modTypeLabel}\n${dateStr}`;
+  const formatStamp = (d: Date) =>
+    format(d, language === "es" ? "d/M/yyyy HH:mm" : "M/d/yyyy h:mm a");
+
+  const userDisplayFor = (uid: string | null | undefined): string => {
+    if (!uid) return language === "es" ? "Usuario desconocido" : "Unknown user";
+    const email = userEmailMap.get(uid);
+    if (email) return email;
+    return `${language === "es" ? "Usuario" : "User"} ${uid.slice(0, 8)}`;
+  };
+
+  const getTooltipNode = () => {
+    const history = auditEntries && auditEntries.length > 0 ? auditEntries : null;
+
+    // Header — most recent change
+    let headerLine: string;
+    if (history) {
+      const last = history[history.length - 1];
+      headerLine = language === "es"
+        ? `Última edición: ${userDisplayFor(last.changed_by)} — ${formatStamp(new Date(last.changed_at))}`
+        : `Last edit: ${userDisplayFor(last.changed_by)} — ${formatStamp(new Date(last.changed_at))}`;
+    } else if (entry?.updated_at) {
+      headerLine = language === "es"
+        ? `Modificado por: ${userDisplayFor(entry.updated_by)} — ${formatStamp(new Date(entry.updated_at))}`
+        : `Modified by: ${userDisplayFor(entry.updated_by)} — ${formatStamp(new Date(entry.updated_at))}`;
+    } else {
+      return null;
+    }
+
+    const lateNote = isHighlighted
+      ? (language === "es"
+          ? "Editado >24h después de la creación"
+          : "Edited >24h after creation")
+      : null;
+
+    // Older entries (up to 5 most recent, excluding the latest already shown)
+    const olderLines: string[] = [];
+    if (history && history.length > 1) {
+      const olderTail = history.slice(Math.max(0, history.length - 6), history.length - 1).reverse();
+      for (const a of olderTail) {
+        const action = a.action === "insert"
+          ? (language === "es" ? "creó" : "created")
+          : a.action === "delete"
+          ? (language === "es" ? "borró" : "deleted")
+          : (language === "es" ? "editó" : "edited");
+        olderLines.push(`• ${userDisplayFor(a.changed_by)} ${action} — ${formatStamp(new Date(a.changed_at))}`);
+      }
+    }
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium">{headerLine}</div>
+        {lateNote && <div className="text-orange-300">{lateNote}</div>}
+        {olderLines.length > 0 && (
+          <div className="pt-1 border-t border-border/40 space-y-0.5">
+            {olderLines.map((l, i) => <div key={i}>{l}</div>)}
+          </div>
+        )}
+        {isUserEmailMapLoading && (
+          <div className="text-muted-foreground italic">
+            {language === "es" ? "Cargando nombres…" : "Loading names…"}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (isVacation) {

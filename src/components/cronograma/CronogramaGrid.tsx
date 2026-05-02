@@ -1103,6 +1103,8 @@ export function CronogramaGrid() {
                               isLastOfDay={false}
                               t={t}
                               entry={morningEntry}
+                              auditEntries={morningAudit}
+                              auditMapVersion={auditMapVersion}
                               userEmailMap={userEmailMap}
                               userEmailMapVersion={userEmailMapVersion}
                               isUserEmailMapLoading={isUserEmailMapLoading}

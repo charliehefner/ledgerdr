@@ -1212,6 +1212,8 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   isLastOfDay,
   t,
   entry,
+  auditEntries,
+  auditMapVersion: _auditMapVersion,
   userEmailMap,
   userEmailMapVersion: _userEmailMapVersion,
   isUserEmailMapLoading,
@@ -1225,19 +1227,11 @@ const CronogramaCellMemo = memo(function CronogramaCell({
   const rawHighlightType = getHighlightType(entry);
   const highlightType = showIndicators ? rawHighlightType : null;
   const isHighlighted = highlightType !== null;
-  const modifierEmail = entry?.updated_by ? userEmailMap.get(entry.updated_by) : null;
-  const modifierFallback = entry?.updated_by
-    ? `${language === "es" ? "Usuario" : "User"} ${entry.updated_by.slice(0, 8)}`
-    : (language === "es" ? "Usuario desconocido" : "Unknown user");
-  const modifiedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
+  const hasHistory = !!(auditEntries && auditEntries.length > 0) || !!entry?.updated_at;
 
-  // Softer indicator: thin outline + dot positioned outside the cell so it never overlaps text
-  const ringClass = highlightType === "self-edit"
-    ? "ring-1 ring-inset ring-blue-300 dark:ring-blue-500"
-    : "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
-  const dotClass = highlightType === "self-edit"
-    ? "bg-blue-400"
-    : "bg-orange-400";
+  // Single highlight style — universal late-edit (24h+) ring + dot
+  const ringClass = "ring-1 ring-inset ring-orange-300 dark:ring-orange-500";
+  const dotClass = "bg-orange-400";
 
   const autoResize = useCallback(() => {
     if (textareaRef.current) {

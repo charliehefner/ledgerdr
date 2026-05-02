@@ -703,6 +703,196 @@ export function CronogramaGrid() {
     ...additionalRows,
   ], [employees, additionalRows]);
 
+  // -------------------------------------------------------------------------
+  // Drag-to-fill engine. Builds an ordered list of every editable cell in
+  // render order (worker × day × slot) so we can compute the inclusive range
+  // between the source cell and the cell currently under the pointer along a
+  // single locked axis (horizontal across days/slots, vertical across workers).
+  // -------------------------------------------------------------------------
+  type CellMeta = {
+    key: string;
+    worker: WorkerRow;
+    dayOfWeek: number;
+    timeSlot: "morning" | "afternoon";
+    rowIdx: number; // index in allWorkerRows
+    colIdx: number; // 0..11 (6 days × AM/PM)
+  };
+
+  const cellOrder = useMemo<CellMeta[]>(() => {
+    const out: CellMeta[] = [];
+    allWorkerRows.forEach((worker, rowIdx) => {
+      for (let dayIdx = 0; dayIdx < 6; dayIdx++) {
+        const dayNum = dayIdx + 1;
+        (["morning", "afternoon"] as const).forEach((timeSlot, slotIdx) => {
+          out.push({
+            key: cellKey(worker.type, worker.id, worker.name, dayNum, timeSlot),
+            worker,
+            dayOfWeek: dayNum,
+            timeSlot,
+            rowIdx,
+            colIdx: dayIdx * 2 + slotIdx,
+          });
+        });
+      }
+    });
+    return out;
+  }, [allWorkerRows]);
+
+  const cellMetaByKey = useMemo(() => {
+    const m = new Map<string, CellMeta>();
+    cellOrder.forEach(c => m.set(c.key, c));
+    return m;
+  }, [cellOrder]);
+
+  const [dragSourceKey, setDragSourceKey] = useState<string | null>(null);
+  const [dragTargetKeys, setDragTargetKeys] = useState<Set<string>>(() => new Set());
+  const dragStateRef = useRef<{
+    sourceKey: string;
+    sourceTask: string;
+    sourceMeta: CellMeta;
+    axis: "horizontal" | "vertical" | null;
+    startX: number;
+    startY: number;
+    rafPending: boolean;
+    lastTargetKey: string | null;
+  } | null>(null);
+
+  const cancelDrag = useCallback(() => {
+    dragStateRef.current = null;
+    setDragSourceKey(null);
+    setDragTargetKeys(new Set());
+  }, []);
+
+  const computeTargets = useCallback((sourceMeta: CellMeta, targetMeta: CellMeta, axis: "horizontal" | "vertical"): string[] => {
+    if (axis === "horizontal") {
+      if (targetMeta.rowIdx !== sourceMeta.rowIdx) {
+        // Pointer left the source row: clamp to source row, end col
+        const lo = Math.min(sourceMeta.colIdx, targetMeta.colIdx);
+        const hi = Math.max(sourceMeta.colIdx, targetMeta.colIdx);
+        return cellOrder
+          .filter(c => c.rowIdx === sourceMeta.rowIdx && c.colIdx >= lo && c.colIdx <= hi)
+          .map(c => c.key);
+      }
+      const lo = Math.min(sourceMeta.colIdx, targetMeta.colIdx);
+      const hi = Math.max(sourceMeta.colIdx, targetMeta.colIdx);
+      return cellOrder
+        .filter(c => c.rowIdx === sourceMeta.rowIdx && c.colIdx >= lo && c.colIdx <= hi)
+        .map(c => c.key);
+    } else {
+      const lo = Math.min(sourceMeta.rowIdx, targetMeta.rowIdx);
+      const hi = Math.max(sourceMeta.rowIdx, targetMeta.rowIdx);
+      return cellOrder
+        .filter(c => c.colIdx === sourceMeta.colIdx && c.rowIdx >= lo && c.rowIdx <= hi)
+        .map(c => c.key);
+    }
+  }, [cellOrder]);
+
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    const st = dragStateRef.current;
+    if (!st) return;
+    if (st.rafPending) return;
+    st.rafPending = true;
+    requestAnimationFrame(() => {
+      const cur = dragStateRef.current;
+      if (!cur) return;
+      cur.rafPending = false;
+      const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+      const cellEl = el?.closest("[data-cell-key]") as HTMLElement | null;
+      const targetKey = cellEl?.getAttribute("data-cell-key") || null;
+      if (!targetKey) return;
+      if (targetKey === cur.lastTargetKey) return;
+      const targetMeta = cellMetaByKey.get(targetKey);
+      if (!targetMeta) return;
+      cur.lastTargetKey = targetKey;
+
+      // Lock axis on first off-source movement
+      if (!cur.axis) {
+        const dCol = Math.abs(targetMeta.colIdx - cur.sourceMeta.colIdx);
+        const dRow = Math.abs(targetMeta.rowIdx - cur.sourceMeta.rowIdx);
+        if (dCol === 0 && dRow === 0) return; // still on source
+        cur.axis = dCol >= dRow ? "horizontal" : "vertical";
+      }
+      const keys = computeTargets(cur.sourceMeta, targetMeta, cur.axis);
+      setDragTargetKeys(new Set(keys));
+    });
+  }, [cellMetaByKey, computeTargets]);
+
+  const commitDrag = useCallback(() => {
+    const st = dragStateRef.current;
+    if (!st) return;
+    const targets = Array.from(dragTargetKeys);
+    dragStateRef.current = null;
+    setDragSourceKey(null);
+    setDragTargetKeys(new Set());
+
+    // Filter: skip the source itself and any vacation cells (read-only).
+    let filled = 0;
+    let skipped = 0;
+    for (const key of targets) {
+      if (key === st.sourceKey) continue;
+      const meta = cellMetaByKey.get(key);
+      if (!meta) continue;
+      const onVacation = meta.worker.type === "employee" && meta.worker.id
+        ? isEmployeeOnVacation(meta.worker.id, weekDays[meta.dayOfWeek - 1])
+        : false;
+      if (onVacation) { skipped++; continue; }
+      handleCellChange(meta.worker, meta.dayOfWeek, meta.timeSlot, st.sourceTask);
+      filled++;
+    }
+    if (filled > 0) {
+      const msg = language === "es"
+        ? `${filled} celda${filled === 1 ? "" : "s"} llenada${filled === 1 ? "" : "s"}${skipped > 0 ? ` (${skipped} omitida${skipped === 1 ? "" : "s"} por vacaciones)` : ""}`
+        : `${filled} cell${filled === 1 ? "" : "s"} filled${skipped > 0 ? ` (${skipped} skipped — vacation)` : ""}`;
+      toast.success(msg);
+    }
+  }, [dragTargetKeys, cellMetaByKey, handleCellChange, isEmployeeOnVacation, weekDays, language]);
+
+  // Global pointer/key listeners are attached only while a drag is active.
+  useEffect(() => {
+    if (!dragSourceKey) return;
+    const onMove = (e: PointerEvent) => handleDragMove(e.clientX, e.clientY);
+    const onUp = () => commitDrag();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") cancelDrag(); };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", cancelDrag);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", cancelDrag);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [dragSourceKey, handleDragMove, commitDrag, cancelDrag]);
+
+  const beginDrag = useCallback((key: string, sourceTask: string, e: React.PointerEvent) => {
+    if (isWeekClosed) return;
+    const meta = cellMetaByKey.get(key);
+    if (!meta) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragStateRef.current = {
+      sourceKey: key,
+      sourceTask,
+      sourceMeta: meta,
+      axis: null,
+      startX: e.clientX,
+      startY: e.clientY,
+      rafPending: false,
+      lastTargetKey: key,
+    };
+    setDragSourceKey(key);
+    setDragTargetKeys(new Set([key]));
+  }, [cellMetaByKey, isWeekClosed]);
+
+  const dragFillCtx = useMemo<DragFillContextValue>(() => ({
+    sourceKey: dragSourceKey,
+    targetKeys: dragTargetKeys,
+    isDragging: dragSourceKey !== null,
+    weekClosed: isWeekClosed,
+    beginDrag,
+  }), [dragSourceKey, dragTargetKeys, isWeekClosed, beginDrag]);
+
   const dayLabels = language === "es" 
     ? ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
     : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

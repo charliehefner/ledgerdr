@@ -790,24 +790,28 @@ export function PayrollSummary({
             </Button>
           )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isExporting || payrollData.length === 0}>
-                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                {t("payrollSummary.export")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-popover">
-              <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="mr-2 h-4 w-4" />{t("payrollSummary.exportExcel")}</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF}><FileText className="mr-2 h-4 w-4" />{t("payrollSummary.exportPdf")}</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportMonthly}><Calendar className="mr-2 h-4 w-4" />{t("payrollSummary.exportMonthly")}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canExportPayroll && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isExporting || payrollData.length === 0}>
+                  {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                  {t("payrollSummary.export")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-popover">
+                <DropdownMenuItem onClick={handleExport}><FileSpreadsheet className="mr-2 h-4 w-4" />{t("payrollSummary.exportExcel")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}><FileText className="mr-2 h-4 w-4" />{t("payrollSummary.exportPdf")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportMonthly}><Calendar className="mr-2 h-4 w-4" />{t("payrollSummary.exportMonthly")}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-          <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
-            {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-            {t("payrollSummary.receiptsPdf")}
-          </Button>
+          {canExportPayroll && (
+            <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
+              {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+              {t("payrollSummary.receiptsPdf")}
+            </Button>
+          )}
 
           {!isClosed && canManagePayroll && (
             <Button onClick={() => setShowCloseConfirm(true)} disabled={payrollData.length === 0 || !hasCommittedSnapshots}>

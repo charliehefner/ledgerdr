@@ -199,18 +199,19 @@ function cellKey(workerType: string, workerId: string | null | undefined, worker
 }
 
 /**
- * Determine the highlight type for an entry based on who edited it and when.
+ * Universal highlight rule:
+ * - Original input (created_at == updated_at) is never highlighted.
+ * - Edits made within 24h of creation are not highlighted (treated as a normal correction).
+ * - Edits made 24h+ after creation are flagged as a "late-edit" regardless of which user made them.
  */
 function getHighlightType(entry?: CronogramaEntry): HighlightType {
-  if (!entry?.updated_by) return null;
-  if (TRUSTED_EDITOR_IDS.has(entry.updated_by)) return null;
-  if (entry.updated_by === CEDENOJORD_ID) {
-    const createdAt = new Date(entry.created_at);
-    const updatedAt = new Date(entry.updated_at);
-    const hoursDiff = (updatedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    return hoursDiff >= SELF_EDIT_HIGHLIGHT_HOURS ? "self-edit" : null;
-  }
-  return "other";
+  if (!entry?.updated_at || !entry?.created_at) return null;
+  const createdAt = new Date(entry.created_at).getTime();
+  const updatedAt = new Date(entry.updated_at).getTime();
+  if (!Number.isFinite(createdAt) || !Number.isFinite(updatedAt)) return null;
+  if (updatedAt <= createdAt) return null; // original input
+  const hoursDiff = (updatedAt - createdAt) / (1000 * 60 * 60);
+  return hoursDiff >= LATE_EDIT_HIGHLIGHT_HOURS ? "late-edit" : null;
 }
 
 export function CronogramaGrid() {

@@ -850,9 +850,13 @@ export function PayrollSummary({
         </div>
       ) : payrollData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {hasCommittedSnapshots
-            ? "Cargando datos de nómina comprometida..."
-            : "No hay datos de nómina. Haga clic en \"Vista Previa Nómina\" para calcular."}
+          {isClosed
+            ? (snapshotsLoading
+                ? "Cargando datos de nómina cerrada..."
+                : "Este período está cerrado pero no tiene datos de nómina guardados.")
+            : hasCommittedSnapshots
+              ? "Cargando datos de nómina comprometida..."
+              : "No hay datos de nómina. Haga clic en \"Vista Previa Nómina\" para calcular."}
         </div>
       ) : (
         <div className="overflow-auto border rounded-lg max-h-[70vh] relative">

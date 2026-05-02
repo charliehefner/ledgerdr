@@ -1582,11 +1582,6 @@ const CronogramaCellMemo = memo(function CronogramaCell({
             {olderLines.map((l, i) => <div key={i}>{l}</div>)}
           </div>
         )}
-        {isUserEmailMapLoading && (
-          <div className="text-muted-foreground italic">
-            {language === "es" ? "Cargando nombres…" : "Loading names…"}
-          </div>
-        )}
       </div>
     );
   };

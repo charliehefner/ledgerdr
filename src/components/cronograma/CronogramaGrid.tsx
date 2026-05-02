@@ -392,15 +392,21 @@ export function CronogramaGrid() {
         if (newWeekError) throw newWeekError;
         weekId = newWeek.id;
       }
-      
-      // Find existing entry using the map (O(1))
+
+      // Re-read latest cache to find existing row (avoids stale entryMap closure)
+      const queryKey = ["cronograma-entries", entry.week_ending_date, selectedEntityId];
+      const cached = queryClient.getQueryData<CronogramaEntry[]>(queryKey) || [];
       const lookupKey = entryKey(
         entry.worker_name,
         entry.worker_type,
         entry.day_of_week,
         entry.time_slot
       );
-      const existing = entryMap.get(lookupKey);
+      const existing = cached.find(
+        (e) =>
+          !e.id.startsWith("optimistic-") &&
+          entryKey(e.worker_name, e.worker_type, e.day_of_week, e.time_slot) === lookupKey
+      );
 
       if (existing) {
         const { error } = await supabase
@@ -430,8 +436,12 @@ export function CronogramaGrid() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cronograma-entries", weekEndingDate, selectedEntityId] });
+    onSettled: (_data, _err, variables) => {
+      if (variables) {
+        queryClient.invalidateQueries({
+          queryKey: ["cronograma-entries", variables.week_ending_date, selectedEntityId],
+        });
+      }
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : t("common.error"));

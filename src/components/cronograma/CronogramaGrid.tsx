@@ -198,6 +198,24 @@ function cellKey(workerType: string, workerId: string | null | undefined, worker
   return `${workerType}|${workerId || workerName}|${dayOfWeek}|${timeSlot}`;
 }
 
+// ---------------------------------------------------------------------------
+// Drag-to-fill (Excel-style) — context shared between the grid and each cell.
+// The grid owns the source/targets state; cells subscribe to know whether to
+// render the dashed selection ring and the bottom-right fill handle.
+// ---------------------------------------------------------------------------
+type DragFillContextValue = {
+  sourceKey: string | null;
+  targetKeys: Set<string>;
+  isDragging: boolean;
+  weekClosed: boolean;
+  // Called by a cell's fill handle on mouse-down or long-press.
+  beginDrag: (key: string, sourceTask: string, e: React.PointerEvent) => void;
+};
+
+const DragFillContext = createContext<DragFillContextValue | null>(null);
+const useDragFill = () => useContext(DragFillContext);
+const LONG_PRESS_MS = 500;
+
 /**
  * Universal highlight rule:
  * - Original input (created_at == updated_at) is never highlighted.

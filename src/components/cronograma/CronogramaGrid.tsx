@@ -45,15 +45,10 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// User IDs for highlight logic
-const CEDENOJORD_ID = "3976a9b9-ac8e-4afb-a4cb-2efcc02c2e80"; // Schedule owner
-const INSTRUCTOR_ID = "7ce0dff1-c2b3-4506-b6eb-c61d9ca50121"; // Never highlighted
-// Trusted editors whose edits do NOT trigger the orange-ring "other editor" indicator
-const TRUSTED_EDITOR_IDS = new Set<string>([
-  INSTRUCTOR_ID,
-  "b2a33a75-b63c-48e1-a252-7ab843f559d5", // Iramaia Bassoi (irabassoi@gmail.com)
-]);
-const SELF_EDIT_HIGHLIGHT_HOURS = 8; // Hours after creation before cedenojord edits are highlighted
+// Universal highlight rule: edits made 24h+ after the cell's original creation
+// are flagged. The original input by any user is never highlighted; it is
+// silently captured in the audit trail and shown in the hover tooltip.
+const LATE_EDIT_HIGHLIGHT_HOURS = 24;
 
 // Per-device toggle: hide edit indicators on this machine
 const HIGHLIGHT_PREF_KEY = "cronograma.showEditIndicators";
@@ -67,7 +62,23 @@ function getShowIndicatorsPref(): boolean {
 }
 
 // Highlight types for visual differentiation
-type HighlightType = "other" | "self-edit" | null;
+type HighlightType = "late-edit" | null;
+
+// One row from the cronograma_entries_audit table
+type CronogramaAuditRow = {
+  id: string;
+  entry_id: string;
+  worker_type: string;
+  worker_id: string | null;
+  worker_name: string;
+  day_of_week: number;
+  time_slot: string;
+  action: "insert" | "update" | "delete";
+  old_task: string | null;
+  new_task: string | null;
+  changed_by: string | null;
+  changed_at: string;
+};
 
 type CronogramaEntry = {
   id: string;

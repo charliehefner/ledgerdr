@@ -1623,12 +1623,16 @@ const CronogramaCellMemo = memo(function CronogramaCell({
 
   if (isHol) {
     return (
-      <td className={cn(
-        "border border-border p-1 text-center min-w-[120px] align-top",
-        "bg-amber-50 dark:bg-amber-900/20",
-        isLastOfDay && "border-r-[3px]",
-        isHighlighted && ringClass
-      )}>
+      <td
+        data-cell-key={myKey}
+        className={cn(
+          "border border-border p-1 text-center min-w-[120px] align-top relative group",
+          "bg-amber-50 dark:bg-amber-900/20",
+          isLastOfDay && "border-r-[3px]",
+          isHighlighted && ringClass,
+          dragSelectionClass
+        )}
+      >
         {hasHistory ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1646,17 +1650,22 @@ const CronogramaCellMemo = memo(function CronogramaCell({
         ) : (
           cellContent
         )}
+        {fillHandle}
       </td>
     );
   }
 
   return (
-    <td className={cn(
-      "border border-border p-1 min-w-[120px] align-top",
-      dayShade ? "bg-primary/10" : "bg-background",
-      isLastOfDay && "border-r-[3px]",
-      isHighlighted && ringClass
-    )}>
+    <td
+      data-cell-key={myKey}
+      className={cn(
+        "border border-border p-1 min-w-[120px] align-top relative group",
+        dayShade ? "bg-primary/10" : "bg-background",
+        isLastOfDay && "border-r-[3px]",
+        isHighlighted && ringClass,
+        dragSelectionClass
+      )}
+    >
       {hasHistory ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1674,6 +1683,7 @@ const CronogramaCellMemo = memo(function CronogramaCell({
       ) : (
         cellContent
       )}
+      {fillHandle}
     </td>
   );
 }, (prevProps, nextProps) => {

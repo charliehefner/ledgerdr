@@ -530,6 +530,7 @@ export function CronogramaGrid() {
         queryClient.invalidateQueries({
           queryKey: ["cronograma-entries", variables.week_ending_date, variables.entity_id],
         });
+        queryClient.invalidateQueries({ queryKey: ["cronograma-audit"] });
       }
     },
     onError: (error) => {

@@ -71,7 +71,9 @@ type HighlightType = "other" | "self-edit" | null;
 
 type CronogramaEntry = {
   id: string;
+  cronograma_week_id?: string;
   week_ending_date: string;
+  entity_id?: string;
   worker_type: "employee" | "jornalero";
   worker_id: string | null;
   worker_name: string;
@@ -91,6 +93,19 @@ type WorkerRow = {
   id: string | null;
   name: string;
   isTemp?: boolean;
+};
+
+type CronogramaMutationPayload = {
+  week_ending_date: string;
+  entity_id: string;
+  worker_type: "employee" | "jornalero";
+  worker_id: string | null;
+  worker_name: string;
+  day_of_week: number;
+  time_slot: "morning" | "afternoon";
+  task: string | null;
+  is_vacation: boolean;
+  is_holiday: boolean;
 };
 
 // Get Saturday of the week for a given date
@@ -170,6 +185,10 @@ async function fetchUserEmails(): Promise<Map<string, string>> {
 // Build a lookup key for the entry map
 function entryKey(workerName: string, workerType: string, dayOfWeek: number, timeSlot: string): string {
   return `${workerName}|${workerType}|${dayOfWeek}|${timeSlot}`;
+}
+
+function payloadKey(payload: Pick<CronogramaMutationPayload, "week_ending_date" | "entity_id" | "worker_name" | "worker_type" | "day_of_week" | "time_slot">): string {
+  return `${payload.week_ending_date}|${payload.entity_id}|${entryKey(payload.worker_name, payload.worker_type, payload.day_of_week, payload.time_slot)}`;
 }
 
 /**

@@ -333,6 +333,9 @@ export function CronogramaGrid() {
       if (error) throw error;
       return data as CronogramaEntry[];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   // O(1) lookup map for entries — replaces all entries.find() calls

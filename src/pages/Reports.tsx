@@ -79,6 +79,7 @@ export default function Reports() {
   const { data: allTransactions = [], isLoading } = useQuery({
     queryKey: ['reportTransactions', limit],
     queryFn: () => fetchRecentTransactions(parseInt(limit)),
+    refetchOnMount: 'always',
   });
 
   const { data: accounts = [] } = useQuery({

@@ -1,46 +1,56 @@
-I checked the backend data: the day-labor closure did create the transaction, and it should be visible in both Transactions and Financial Ledger.
+## Goal
 
-Confirmed transaction:
+Make the Schedule (Cronograma) hover tooltip always show the latest edits — including who edited and when — without requiring a manual refresh.
 
-```text
-Legacy ID: 581
-Transaction ID: d09af74f-10ef-4974-9a98-1c3efb9b95df
-Date: 01 May 2026
-Created: 01 May 2026 21:48 UTC
-Description: Jornales Semana al 01/05/2026
-Account: 7690
-Amount: RD$13,100.00
-Internal: yes
-Voided: no
-Entity: Jord Dominicana
+## Changes
+
+### 1. Force fresh fetches on the two queries that drive the grid + tooltip
+
+File: `src/components/cronograma/CronogramaGrid.tsx`
+
+On both queries, add overrides to the global 5-minute `staleTime`:
+
+- `["cronograma-entries", weekEndingDate, selectedEntityId]`
+- `["cronograma-audit", weekEndingDate, selectedEntityId, entryIdsKey]`
+
+Add to each:
+```ts
+staleTime: 0,
+refetchOnMount: "always",
+refetchOnWindowFocus: true,
 ```
 
-It is currently the 10th newest non-voided transaction, so with no filters it should appear in the default first page of Transactions and in Financial Ledger.
+Effect: every time you open or return focus to the Schedule tab, both the cell contents and the audit history are refetched, so other users' edits become visible immediately.
 
-The likely problem is not that the transaction failed to generate. The problem is that the UI can show stale transaction query data after a day-labor week is closed, and the day-labor close backend function also needs hardening.
+### 2. Add Realtime subscription for live collaborative updates
 
-Plan to fix:
+In `CronogramaGrid`, add a `useEffect` that subscribes to a Supabase Realtime channel on:
 
-1. Fix transaction list refresh behavior
-   - Make Transactions and Financial Ledger refetch transaction data when the page is opened/mounted, instead of relying on the 5-minute cached query window.
-   - Ensure the day-labor close action invalidates all transaction-related lists, including Financial Ledger (`reportTransactions`), not just Recent Transactions.
+- `cronograma_entries` (filter `week_ending_date=eq.<currentWeek>`)
+- `cronograma_entries_audit` (filter `week_ending_date=eq.<currentWeek>`)
 
-2. Make the day-labor close function entity-safe
-   - Update the close-week backend function to require/pass the selected `entity_id` explicitly.
-   - Filter day-labor entries by both `week_ending_date` and `entity_id` before summing and closing.
-   - Validate that the current user has access to that entity before creating the transaction.
-   - This avoids future cases where a same-date week in another entity could be combined or closed incorrectly.
+On any insert / update / delete event, invalidate both queries above. Tear the channel down on unmount or when the week / entity changes.
 
-3. Populate the transaction account FK correctly
-   - The generated day-labor transaction has `master_acct_code = 7690` but `account_id = NULL`.
-   - Backfill existing generated day-labor transactions to point to account 7690.
-   - Update the close-week function so all future day-labor transactions insert both `master_acct_code` and `account_id`.
+Effect: when Iramaia saves a change, your open Schedule tab refetches within ~1 second and the tooltip updates without you doing anything.
 
-4. Improve closure feedback
-   - After closing a week, show the generated transaction legacy ID / transaction ID in the success message so it can be searched immediately.
-   - Keep the PDF/receipts generation, but make the transaction creation result more visible.
+### 3. Enable Realtime on the audit table
 
-5. Verify after implementation
-   - Confirm the existing transaction 581 remains visible through the same query used by the app.
-   - Confirm a future day-labor close creates one transaction for the selected entity only.
-   - Confirm Transactions and Financial Ledger refresh without needing a hard browser reload.
+One-line migration to add the audit table to the realtime publication (`cronograma_entries` is already published):
+
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.cronograma_entries_audit;
+```
+
+No RLS changes needed — the existing `Authenticated can view cronograma audit` policy already permits the SELECT that Realtime performs on subscribers' behalf.
+
+## Out of scope
+
+- No changes to the audit trigger (it's already capturing inserts and updates correctly).
+- No tooltip layout changes.
+- No periodic server-side cron (not technically possible against in-browser caches, and Realtime is strictly better for this use case).
+
+## Verification
+
+1. Hard refresh once after deploy.
+2. Open `/cronograma` for the week ending 2026-05-09 and hover ANA ESTRELLA / Thu AM. Tooltip header should read "Última edición: irabassoi@gmail.com — 02 May 2026 21:01" with "• charliehefner@gmail.com creó — 02 May 2026 09:36" beneath.
+3. With two browsers open on the same week, edit a cell in one — the other should reflect the new text + new "Última edición" line within ~1 second, no refresh.

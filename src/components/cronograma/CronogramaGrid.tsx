@@ -333,6 +333,9 @@ export function CronogramaGrid() {
       if (error) throw error;
       return data as CronogramaEntry[];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   // O(1) lookup map for entries — replaces all entries.find() calls
@@ -363,6 +366,9 @@ export function CronogramaGrid() {
       if (error) throw error;
       return (data || []) as CronogramaAuditRow[];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   // Audit rows grouped by cellKey, oldest → newest.
@@ -417,6 +423,31 @@ export function CronogramaGrid() {
   });
 
   const isWeekClosed = weekStatus?.is_closed ?? false;
+
+  // Realtime: invalidate entries + audit when others edit this week
+  useEffect(() => {
+    const channel = supabase
+      .channel(`cronograma-${weekEndingDate}-${selectedEntityId ?? "all"}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cronograma_entries", filter: `week_ending_date=eq.${weekEndingDate}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["cronograma-entries", weekEndingDate, selectedEntityId] });
+          queryClient.invalidateQueries({ queryKey: ["cronograma-audit", weekEndingDate, selectedEntityId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cronograma_entries_audit", filter: `week_ending_date=eq.${weekEndingDate}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["cronograma-audit", weekEndingDate, selectedEntityId] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [weekEndingDate, selectedEntityId, queryClient]);
 
   // Initialize additional rows from entries that are jornaleros
   useEffect(() => {

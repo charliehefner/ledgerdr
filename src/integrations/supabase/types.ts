@@ -5806,7 +5806,12 @@ export type Database = {
         Returns: Json
       }
       cancel_stock_count: { Args: { p_session_id: string }; Returns: boolean }
-      close_day_labor_week: { Args: { p_week_ending: string }; Returns: string }
+      close_day_labor_week:
+        | { Args: { p_week_ending: string }; Returns: string }
+        | {
+            Args: { p_entity_id?: string; p_week_ending: string }
+            Returns: string
+          }
       compute_period_fx_translation: {
         Args: {
           p_closing_rate: number

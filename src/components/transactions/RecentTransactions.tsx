@@ -65,6 +65,7 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     queryKey: ['recentTransactions', refreshKey, page, pageSize],
     queryFn: () => fetchPaginatedTransactions(pageSize, offset),
     placeholderData: (prev) => prev, // keep previous data while loading next page
+    refetchOnMount: 'always',
   });
 
   const transactions = result?.data ?? [];

@@ -311,8 +311,10 @@ export function DayLaborView() {
 
   const closeWeek = useMutation({
     mutationFn: async () => {
+      if (!selectedEntityId) throw new Error("Selecciona una entidad antes de cerrar la semana");
       const { data, error } = await supabase.rpc("close_day_labor_week" as any, {
         p_week_ending: formatDateLocal(selectedFriday),
+        p_entity_id: selectedEntityId,
       });
       if (error) throw error;
       generatePDF();
@@ -321,6 +323,7 @@ export function DayLaborView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["day-labor"] });
       queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["reportTransactions"] });
       toast({ title: t("dayLabor.weekClosed"), description: t("dayLabor.weekClosedDesc") });
     },
     onError: (error) => {

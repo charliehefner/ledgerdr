@@ -366,6 +366,9 @@ export function CronogramaGrid() {
       if (error) throw error;
       return (data || []) as CronogramaAuditRow[];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   // Audit rows grouped by cellKey, oldest → newest.

@@ -571,7 +571,7 @@ export function DayLaborView() {
                   <option value="">{t("dayLabor.selectJornalero")}</option>
                   {jornaleros.map((j) => (
                     <option key={j.id} value={j.name}>
-                      {j.name}
+                      {j.name}{j.apodo ? ` (${j.apodo})` : ""}
                     </option>
                   ))}
                 </select>

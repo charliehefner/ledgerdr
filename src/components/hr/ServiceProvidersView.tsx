@@ -357,10 +357,27 @@ export function ServiceProvidersView() {
                 onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                 placeholder="Número de cuenta bancaria" />
             </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Upload className="h-4 w-4" /> Cédula (foto / PDF)</Label>
+              <Input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setCedulaFile(e.target.files?.[0] ?? null)}
+              />
+              {editingProvider?.cedula_attachment_url && !cedulaFile && (
+                <button
+                  type="button"
+                  className="text-sm text-primary underline"
+                  onClick={() => handleViewCedula(editingProvider.cedula_attachment_url)}
+                >
+                  Ver cédula actual
+                </button>
+              )}
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? t("common.saving") : editingProvider ? t("common.update") : t("common.add")}
+              <Button type="submit" disabled={saveMutation.isPending || uploading}>
+                {(saveMutation.isPending || uploading) ? t("common.saving") : editingProvider ? t("common.update") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>

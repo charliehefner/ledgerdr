@@ -39,6 +39,7 @@ const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia
 
 const employeeSchema = z.object({
   name: z.string().min(1, "required").max(200),
+  apodo: z.string().max(100).optional(),
   cedula: z.string().min(1, "required").max(20),
   position: z.enum(POSITIONS).default("Servicios Generales"),
   sex: z.string().optional(),

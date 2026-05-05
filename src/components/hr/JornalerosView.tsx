@@ -335,8 +335,8 @@ export function JornalerosView() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? t("common.saving") : editingJornalero ? t("common.update") : t("common.add")}
+              <Button type="submit" disabled={saveMutation.isPending || uploading}>
+                {(saveMutation.isPending || uploading) ? t("common.saving") : editingJornalero ? t("common.update") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>

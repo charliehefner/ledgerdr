@@ -31,6 +31,7 @@ import { useEntityFilter } from "@/hooks/useEntityFilter";
 interface Jornalero {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   is_active: boolean;
 }

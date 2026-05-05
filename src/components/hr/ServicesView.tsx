@@ -480,7 +480,7 @@ export function ServicesView() {
               <Select value={formData.provider_id || undefined} onValueChange={(v) => setFormData({ ...formData, provider_id: v })}>
                 <SelectTrigger><SelectValue placeholder={t("services.selectProvider2")} /></SelectTrigger>
                 <SelectContent>
-                  {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}{p.apodo ? ` (${p.apodo})` : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

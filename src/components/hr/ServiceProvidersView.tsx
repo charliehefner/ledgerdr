@@ -100,7 +100,7 @@ export function ServiceProvidersView() {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof emptyForm & { id?: string; file: File | null }) => {
       const payload: Record<string, any> = {
-        name: data.name, cedula: data.cedula,
+        name: data.name, apodo: data.apodo?.trim() || null, cedula: data.cedula,
         bank: data.bank || null,
         bank_account_type: data.bank_account_type || null,
         currency: data.currency || "DOP",

@@ -109,6 +109,16 @@ export function DayLaborView() {
     },
   });
 
+  const apodoByName = useMemo(() => {
+    const m = new Map<string, string>();
+    jornaleros.forEach((j) => { if (j.apodo) m.set(j.name, j.apodo); });
+    return m;
+  }, [jornaleros]);
+  const fmtWorker = (n: string) => {
+    const a = apodoByName.get(n);
+    return a ? `${n} (${a})` : n;
+  };
+
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["day-labor", formatDateLocal(selectedFriday), selectedEntityId],
     queryFn: async () => {

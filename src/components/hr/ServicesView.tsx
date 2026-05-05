@@ -49,7 +49,7 @@ interface ServiceEntry {
   ap_document_id?: string | null;
   created_at: string;
   transaction_id: string | null;
-  service_providers: { name: string; cedula: string };
+  service_providers: { name: string; apodo: string | null; cedula: string };
   transactions?: { legacy_id: number | null } | null;
 }
 

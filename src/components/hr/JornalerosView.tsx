@@ -37,7 +37,7 @@ export function JornalerosView() {
   const [showInactive, setShowInactive] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingJornalero, setEditingJornalero] = useState<Jornalero | null>(null);
-  const [formData, setFormData] = useState({ name: "", cedula: "" });
+  const [formData, setFormData] = useState({ name: "", apodo: "", cedula: "" });
   const [cedulaFile, setCedulaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 

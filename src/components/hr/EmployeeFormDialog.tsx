@@ -145,6 +145,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     } else if (!employeeId) {
       form.reset({
         name: "",
+        apodo: "",
         cedula: "",
         position: "Servicios Generales",
         sex: "",

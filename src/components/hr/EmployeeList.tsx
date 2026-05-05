@@ -58,6 +58,7 @@ type SortConfig = { key: string; direction: SortDirection };
 
 const EMPLOYEE_COLUMN_KEYS = [
   ["name", "empList.col.name", true],
+  ["apodo", "empList.col.apodo", true],
   ["cedula", "empList.col.cedula", true],
   ["position", "empList.col.position", true],
   ["date_of_hire", "empList.col.hireDate", true],

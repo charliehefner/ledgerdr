@@ -137,7 +137,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   cronograma: ["admin", "management", "supervisor", "office", "viewer"],
   alerts: ["admin", "management", "supervisor", "office"],
   settings: ["admin"],
-  accounting: ["admin", "management", "accountant", "viewer"],
+  accounting: ["admin", "management", "accountant", "office", "viewer"],
   "ap-ar": ["admin", "management", "accountant"],
   budget: ["admin"],
   treasury: ["admin", "management", "accountant", "office"],

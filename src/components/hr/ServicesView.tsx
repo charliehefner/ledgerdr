@@ -424,7 +424,7 @@ export function ServicesView() {
                       <TableCell className="px-2">
                         {incomplete && <AlertTriangle className="h-4 w-4 text-warning" />}
                       </TableCell>
-                      <TableCell className="font-medium">{entry.service_providers?.name}</TableCell>
+                      <TableCell className="font-medium">{entry.service_providers?.name}{entry.service_providers?.apodo ? ` (${entry.service_providers.apodo})` : ""}</TableCell>
                       <TableCell>{fmtDate(new Date(entry.service_date + "T12:00:00"))}</TableCell>
                       <TableCell className="font-mono">{entry.master_acct_code || "—"}</TableCell>
                       <TableCell className="max-w-48 truncate">{entry.description || "—"}</TableCell>

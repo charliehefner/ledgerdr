@@ -2978,6 +2978,7 @@ export type Database = {
       jornaleros: {
         Row: {
           cedula: string
+          cedula_attachment_url: string | null
           created_at: string
           entity_id: string
           id: string
@@ -2987,6 +2988,7 @@ export type Database = {
         }
         Insert: {
           cedula: string
+          cedula_attachment_url?: string | null
           created_at?: string
           entity_id?: string
           id?: string
@@ -2996,6 +2998,7 @@ export type Database = {
         }
         Update: {
           cedula?: string
+          cedula_attachment_url?: string | null
           created_at?: string
           entity_id?: string
           id?: string
@@ -4637,6 +4640,7 @@ export type Database = {
           bank_account_number: string | null
           bank_account_type: string | null
           cedula: string
+          cedula_attachment_url: string | null
           created_at: string
           currency: string | null
           entity_id: string
@@ -4650,6 +4654,7 @@ export type Database = {
           bank_account_number?: string | null
           bank_account_type?: string | null
           cedula: string
+          cedula_attachment_url?: string | null
           created_at?: string
           currency?: string | null
           entity_id?: string
@@ -4663,6 +4668,7 @@ export type Database = {
           bank_account_number?: string | null
           bank_account_type?: string | null
           cedula?: string
+          cedula_attachment_url?: string | null
           created_at?: string
           currency?: string | null
           entity_id?: string

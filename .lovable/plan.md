@@ -1,41 +1,37 @@
-## Goal
-Allow users to upload a scan/photo of the cédula (front, optionally back) for each Jornalero and Service Provider (Prestador), with a way to view it from the registry table.
+I found the cause: the published site is actively serving a PWA service worker at `/sw.js`. It precaches `index.html` and the JS/CSS bundles, so some users can keep getting an old app shell even after you publish. That is not acceptable for field workers.
 
-## Database changes (migration)
-- Add `cedula_attachment_url TEXT NULL` to `public.jornaleros`.
-- Add `cedula_attachment_url TEXT NULL` to `public.service_providers`.
-- Create a new private storage bucket `cedula-attachments` (private, like `transaction-attachments`).
-- RLS policies on `storage.objects` for that bucket: allow authenticated users to `SELECT`, `INSERT`, `UPDATE`, `DELETE` files (scoped to bucket). Path convention: `jornaleros/{jornaleroId}.{ext}` and `providers/{providerId}.{ext}`.
-- Reuse the existing `get-signed-url` edge function but extend it (or add a small generalized branch) to also accept files from the `cedula-attachments` bucket. Simplest: update `get-signed-url` to take an optional `bucket` parameter (default to `transaction-attachments` for backward compatibility).
+Plan:
 
-## Frontend changes
+1. Remove the current PWA service worker generation
+   - Remove `vite-plugin-pwa` usage from `vite.config.ts`.
+   - Remove the PWA dependency from package manifests.
+   - Keep app icons/branding intact, but stop generating the Workbox precache service worker that is causing stale UI.
 
-### `src/components/hr/JornalerosView.tsx`
-- Extend `Jornalero` interface with `cedula_attachment_url: string | null`.
-- In the Add/Edit dialog, add a new field "Cédula (foto)":
-  - File input (`accept="image/*,application/pdf"`).
-  - On select, upload immediately to `cedula-attachments` at path `jornaleros/{id-or-temp}.{ext}` using `supabase.storage`.
-  - Store the resulting path on save into `cedula_attachment_url`.
-  - If editing and file already exists, show a small preview/link "Ver cédula" + replace button.
-- In the table, add a new column "Cédula" (icon button) that opens a signed URL in a new tab when an attachment exists; show `—` otherwise.
+2. Ship a service-worker “kill switch” for already affected browsers
+   - Add a static `/sw.js` file that:
+     - activates immediately with `skipWaiting()` and `clients.claim()`;
+     - deletes all service-worker caches;
+     - reloads controlled tabs with a cache-busting query parameter;
+     - unregisters itself after cleanup.
+   - Also add `/service-worker.js` with the same cleanup logic as a safety net, in case any browser/device registered that path in the past.
 
-### `src/components/hr/ServiceProvidersView.tsx`
-- Same pattern: extend `ServiceProvider` interface, add upload field in dialog, add view column in the registry table (path: `providers/{id}.{ext}`).
+3. Add a client-side safety cleanup on app startup
+   - In `src/main.tsx`, before rendering the app, check for existing service-worker registrations.
+   - If any exist, unregister them and clear Cache Storage automatically.
+   - Trigger a one-time reload using a localStorage flag so users do not get stuck in a reload loop.
+   - This helps users who load a stale shell that still eventually runs current JS.
 
-### Shared helper
-- Add `src/lib/cedulaAttachments.ts` with two helpers:
-  - `uploadCedula(file, kind: 'jornalero'|'provider', id: string)` → returns the storage path.
-  - `getCedulaSignedUrl(path)` → calls the `get-signed-url` edge function with the `cedula-attachments` bucket.
+4. Preserve installability without offline caching
+   - If needed, keep a plain web app manifest/icon setup for “Add to Home Screen”.
+   - Do not use offline precaching for this operations/accounting app because current data and UI updates are more important than offline cached shells.
 
-## i18n
-- Add keys to `src/i18n/es.ts` and `src/i18n/en.ts`: `common.cedulaAttachment` ("Cédula (foto)" / "ID document"), `common.viewCedula`, `common.replaceCedula`, `common.uploadCedula`.
+5. Expected user impact
+   - After the next publish, affected browsers should clean themselves up automatically on their next visit.
+   - Users may see one automatic refresh once.
+   - They should not need DevTools, manual cache clearing, or instructions that are unrealistic for field workers.
 
-## UX details
-- Accept JPG, PNG, PDF up to ~10 MB.
-- Show a toast on success/failure.
-- Files are upserted (overwrite on replace) so each jornalero/provider has at most one stored file.
-- The "Ver" button uses a fresh signed URL each time it is clicked.
+Technical notes:
 
-## Out of scope
-- No OCR / auto-fill of cédula number from the image (already exists separately as `ScanCedulaButton`).
-- No back-of-cédula second slot (single image per worker).
+- The live `/sw.js` currently contains Workbox precaching for `index.html`, `assets/index-DY2RM6g4.js`, CSS, icons, and `manifest.webmanifest`.
+- It uses `createHandlerBoundToURL("index.html")`, which is exactly the pattern that can keep serving an old SPA shell.
+- Because service workers persist after code changes, simply deleting the PWA plugin is not enough. The static cleanup worker must be shipped at the same path (`/sw.js`) for at least one release cycle so existing devices can unregister themselves.

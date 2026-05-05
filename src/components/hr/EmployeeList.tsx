@@ -34,6 +34,7 @@ interface VacationSummary {
 interface Employee {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   position: string;
   bank: string | null;

@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
+import { CedulaUploadCell } from "./CedulaUploadCell";
 
 interface Jornalero {
   id: string;
@@ -234,14 +235,14 @@ export function JornalerosView() {
                     <TableCell className="font-medium">{jornalero.name}</TableCell>
                     <TableCell className="font-mono">{jornalero.cedula}</TableCell>
                     <TableCell className="text-center">
-                      {jornalero.cedula_attachment_url ? (
-                        <Button variant="ghost" size="icon" title="Ver cédula"
-                          onClick={() => handleViewCedula(jornalero.cedula_attachment_url)}>
-                          <FileImage className="h-4 w-4 text-primary" />
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      <CedulaUploadCell
+                        kind="jornalero"
+                        recordId={jornalero.id}
+                        table="jornaleros"
+                        currentPath={jornalero.cedula_attachment_url}
+                        canWrite={canWrite}
+                        onUploaded={() => queryClient.invalidateQueries({ queryKey: ["jornaleros"] })}
+                      />
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={jornalero.is_active ? "default" : "secondary"}>

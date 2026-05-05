@@ -19,6 +19,7 @@ import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 import { fmtDate } from "@/lib/dateUtils";
 import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
+import { CedulaUploadCell } from "./CedulaUploadCell";
 
 interface ServiceProvider {
   id: string;
@@ -267,14 +268,14 @@ export function ServiceProvidersView() {
                     <TableCell>{p.currency || "DOP"}</TableCell>
                     <TableCell className="font-mono">{p.bank_account_number || "—"}</TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      {p.cedula_attachment_url ? (
-                        <Button variant="ghost" size="icon" title="Ver cédula"
-                          onClick={() => handleViewCedula(p.cedula_attachment_url)}>
-                          <FileImage className="h-4 w-4 text-primary" />
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      <CedulaUploadCell
+                        kind="provider"
+                        recordId={p.id}
+                        table="service_providers"
+                        currentPath={p.cedula_attachment_url}
+                        canWrite={canWrite}
+                        onUploaded={() => queryClient.invalidateQueries({ queryKey: ["service-providers"] })}
+                      />
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={p.is_active ? "default" : "secondary"}>{p.is_active ? t("common.active") : t("common.inactive")}</Badge>

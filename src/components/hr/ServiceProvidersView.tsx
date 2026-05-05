@@ -256,9 +256,9 @@ export function ServiceProvidersView() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? t("providers.noFound") : t("providers.noRegistered")}
                 </TableCell></TableRow>
               ) : (
@@ -266,6 +266,7 @@ export function ServiceProvidersView() {
                   <TableRow key={p.id} className={`${!p.is_active ? "opacity-60" : ""} cursor-pointer hover:bg-muted/50`}
                     onClick={() => setHistoryProvider(p)}>
                     <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.apodo || "—"}</TableCell>
                     <TableCell className="font-mono">{p.cedula}</TableCell>
                     <TableCell>{p.bank || "—"}</TableCell>
                     <TableCell>{p.bank_account_type === "current" ? t("common.checking") : t("common.savings")}</TableCell>

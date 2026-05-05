@@ -92,7 +92,7 @@ export function JornalerosView() {
       queryClient.invalidateQueries({ queryKey: ["jornaleros"] });
       setIsDialogOpen(false);
       setEditingJornalero(null);
-      setFormData({ name: "", cedula: "" });
+      setFormData({ name: "", apodo: "", cedula: "" });
       setCedulaFile(null);
       toast({ title: editingJornalero ? t("jornaleros.updated") : t("jornaleros.added") });
     },

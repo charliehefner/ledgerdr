@@ -210,6 +210,7 @@ export function JornalerosView() {
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
                 <TableHead>{t("common.cedula")}</TableHead>
+                <TableHead className="text-center">Cédula (foto)</TableHead>
                 <TableHead className="text-center">{t("common.status")}</TableHead>
                 {canWrite && <TableHead className="w-24 text-center">{t("common.actions")}</TableHead>}
               </TableRow>
@@ -217,13 +218,13 @@ export function JornalerosView() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     {t("common.loading")}
                   </TableCell>
                 </TableRow>
               ) : filteredJornaleros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? t("jornaleros.noJornalerosFound") : t("jornaleros.noJornalerosRegistered")}
                   </TableCell>
                 </TableRow>
@@ -232,6 +233,16 @@ export function JornalerosView() {
                   <TableRow key={jornalero.id} className={!jornalero.is_active ? "opacity-60" : ""}>
                     <TableCell className="font-medium">{jornalero.name}</TableCell>
                     <TableCell className="font-mono">{jornalero.cedula}</TableCell>
+                    <TableCell className="text-center">
+                      {jornalero.cedula_attachment_url ? (
+                        <Button variant="ghost" size="icon" title="Ver cédula"
+                          onClick={() => handleViewCedula(jornalero.cedula_attachment_url)}>
+                          <FileImage className="h-4 w-4 text-primary" />
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={jornalero.is_active ? "default" : "secondary"}>
                         {jornalero.is_active ? t("common.active") : t("common.inactive")}
@@ -300,6 +311,25 @@ export function JornalerosView() {
                 onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
                 placeholder="000-0000000-0"
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Upload className="h-4 w-4" /> Cédula (foto / PDF)
+              </label>
+              <Input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setCedulaFile(e.target.files?.[0] ?? null)}
+              />
+              {editingJornalero?.cedula_attachment_url && !cedulaFile && (
+                <button
+                  type="button"
+                  className="text-sm text-primary underline"
+                  onClick={() => handleViewCedula(editingJornalero.cedula_attachment_url)}
+                >
+                  Ver cédula actual
+                </button>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

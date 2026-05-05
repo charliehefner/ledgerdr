@@ -670,7 +670,7 @@ export function DayLaborView() {
                       </TableCell>
                       <TableCell>{entry.operation_description}</TableCell>
                       <TableCell className="text-center">{entry.workers_count}</TableCell>
-                      <TableCell>{entry.worker_name || "-"}</TableCell>
+                      <TableCell>{entry.worker_name ? fmtWorker(entry.worker_name) : "-"}</TableCell>
                       <TableCell>{entry.field_name || "-"}</TableCell>
                       <TableCell className="text-right font-mono">
                         RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}

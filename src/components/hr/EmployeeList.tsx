@@ -248,6 +248,8 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     switch (key) {
       case "name":
         return <span className="font-medium">{employee.name}</span>;
+      case "apodo":
+        return employee.apodo || "—";
       case "cedula":
         return <span className="font-mono text-sm">{employee.cedula}</span>;
       case "date_of_hire":

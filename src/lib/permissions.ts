@@ -168,7 +168,7 @@ const writePermissions: Record<Section, UserRole[]> = {
   cronograma: ["admin", "management", "supervisor", "office"],
   alerts: ["admin", "management", "supervisor"],
   settings: ["admin"],
-  accounting: ["admin", "management", "accountant"],
+  accounting: ["admin", "management", "accountant", "office"],
   "ap-ar": ["admin", "management", "accountant"],
   budget: ["admin"],
   treasury: ["admin", "management", "accountant"], // office is read-only here; petty cash gated separately

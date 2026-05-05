@@ -130,16 +130,17 @@ export function JornalerosView() {
 
   const filteredJornaleros = jornaleros.filter((j) =>
     j.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (j.apodo && j.apodo.toLowerCase().includes(searchTerm.toLowerCase())) ||
     j.cedula.includes(searchTerm)
   );
 
   const handleOpenDialog = (jornalero?: Jornalero) => {
     if (jornalero) {
       setEditingJornalero(jornalero);
-      setFormData({ name: jornalero.name, cedula: jornalero.cedula });
+      setFormData({ name: jornalero.name, apodo: jornalero.apodo || "", cedula: jornalero.cedula });
     } else {
       setEditingJornalero(null);
-      setFormData({ name: "", cedula: "" });
+      setFormData({ name: "", apodo: "", cedula: "" });
     }
     setCedulaFile(null);
     setIsDialogOpen(true);
@@ -153,6 +154,7 @@ export function JornalerosView() {
     }
     saveMutation.mutate({
       name: formData.name.trim(),
+      apodo: formData.apodo.trim(),
       cedula: formData.cedula.trim(),
       id: editingJornalero?.id,
       file: cedulaFile,

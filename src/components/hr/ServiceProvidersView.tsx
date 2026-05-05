@@ -24,6 +24,7 @@ import { CedulaUploadCell } from "./CedulaUploadCell";
 interface ServiceProvider {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   bank: string | null;
   bank_account_type: string | null;

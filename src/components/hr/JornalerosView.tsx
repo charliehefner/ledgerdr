@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
+import { CedulaUploadCell } from "./CedulaUploadCell";
 
 interface Jornalero {
   id: string;

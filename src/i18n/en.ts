@@ -1790,6 +1790,7 @@ export const en = {
   "empList.viewDetails": "View Details & History",
   "empList.editEmployee": "Edit Employee",
   "empList.col.name": "Name",
+  "empList.col.apodo": "Nickname",
   "empList.col.cedula": "ID Number",
   "empList.col.position": "Position",
   "empList.col.hireDate": "Hire Date",

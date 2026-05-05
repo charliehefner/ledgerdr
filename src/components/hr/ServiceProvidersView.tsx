@@ -96,7 +96,7 @@ export function ServiceProvidersView() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: typeof emptyForm & { id?: string }) => {
+    mutationFn: async (data: typeof emptyForm & { id?: string; file: File | null }) => {
       const payload: Record<string, any> = {
         name: data.name, cedula: data.cedula,
         bank: data.bank || null,
@@ -104,15 +104,31 @@ export function ServiceProvidersView() {
         currency: data.currency || "DOP",
         bank_account_number: data.bank_account_number || null,
       };
-      if (data.id) {
-        const { error } = await supabase.from("service_providers").update(payload as any).eq("id", data.id);
+      let recordId = data.id;
+      if (recordId) {
+        const { error } = await supabase.from("service_providers").update(payload as any).eq("id", recordId);
         if (error) throw error;
       } else {
         const entityId = requireEntity();
         if (!entityId) throw new Error(t("providers.entityRequired"));
         payload.entity_id = entityId;
-        const { error } = await supabase.from("service_providers").insert(payload as any);
+        const { data: inserted, error } = await supabase
+          .from("service_providers")
+          .insert(payload as any)
+          .select("id")
+          .single();
         if (error) throw error;
+        recordId = (inserted as any).id as string;
+      }
+      if (data.file && recordId) {
+        setUploading(true);
+        const { path, error } = await uploadCedula(data.file, "provider", recordId);
+        setUploading(false);
+        if (error) throw new Error(error);
+        await supabase
+          .from("service_providers")
+          .update({ cedula_attachment_url: path } as any)
+          .eq("id", recordId);
       }
     },
     onSuccess: () => {
@@ -120,6 +136,7 @@ export function ServiceProvidersView() {
       setIsDialogOpen(false);
       setEditingProvider(null);
       setFormData(emptyForm);
+      setCedulaFile(null);
       toast({ title: editingProvider ? t("providers.updated") : t("providers.added") });
     },
     onError: (error: any) => {
@@ -131,6 +148,12 @@ export function ServiceProvidersView() {
     },
   });
 
+  const handleViewCedula = async (path: string | null) => {
+    if (!path) return;
+    const url = await getCedulaSignedUrl(path);
+    if (url) window.open(url, "_blank");
+    else toast({ title: t("common.error"), description: "No se pudo cargar la cédula", variant: "destructive" });
+  };
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase.from("service_providers").update({ is_active }).eq("id", id);
@@ -159,6 +182,7 @@ export function ServiceProvidersView() {
       setEditingProvider(null);
       setFormData(emptyForm);
     }
+    setCedulaFile(null);
     setIsDialogOpen(true);
   };
 
@@ -168,7 +192,7 @@ export function ServiceProvidersView() {
       toast({ title: t("providers.nameRequired"), variant: "destructive" });
       return;
     }
-    saveMutation.mutate({ ...formData, id: editingProvider?.id });
+    saveMutation.mutate({ ...formData, id: editingProvider?.id, file: cedulaFile });
   };
 
   const activeCount = providers.filter((p) => p.is_active).length;

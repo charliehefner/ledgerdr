@@ -8,17 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, UserCheck, UserX, Search, Users } from "lucide-react";
+import { Plus, Pencil, UserCheck, UserX, Search, Users, FileImage, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
 
 interface Jornalero {
   id: string;
   name: string;
   cedula: string;
   is_active: boolean;
+  cedula_attachment_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +36,8 @@ export function JornalerosView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingJornalero, setEditingJornalero] = useState<Jornalero | null>(null);
   const [formData, setFormData] = useState({ name: "", cedula: "" });
+  const [cedulaFile, setCedulaFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: jornaleros = [], isLoading } = useQuery({
     queryKey: ["jornaleros", showInactive],

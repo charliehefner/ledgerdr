@@ -170,6 +170,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
       const payload = {
         name: data.name,
+        apodo: data.apodo?.trim() || null,
         cedula: data.cedula,
         position: data.position,
         sex: data.sex || null,

@@ -311,6 +311,14 @@ export function JornalerosView() {
               />
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium">Apodo</label>
+              <Input
+                value={formData.apodo}
+                onChange={(e) => setFormData({ ...formData, apodo: e.target.value })}
+                placeholder="Juancho"
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">{t("common.cedula")} *</label>
               <Input
                 value={formData.cedula}

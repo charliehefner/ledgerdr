@@ -738,7 +738,7 @@ export function DayLaborView() {
                       <TableRow key={entry.id}>
                         <TableCell>{fmtDate(parseDateLocal(entry.work_date))}</TableCell>
                         <TableCell>{entry.operation_description}</TableCell>
-                        <TableCell>{idx === 0 ? group.name : ""}</TableCell>
+                        <TableCell>{idx === 0 ? fmtWorker(group.name) : ""}</TableCell>
                         <TableCell className="text-right font-mono">
                           RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                         </TableCell>

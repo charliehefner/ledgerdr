@@ -90,6 +90,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       name: "",
+      apodo: "",
       cedula: "",
       position: "Servicios Generales",
       sex: "",

@@ -139,6 +139,7 @@ export function JornalerosView() {
       setEditingJornalero(null);
       setFormData({ name: "", cedula: "" });
     }
+    setCedulaFile(null);
     setIsDialogOpen(true);
   };
 
@@ -152,9 +153,9 @@ export function JornalerosView() {
       name: formData.name.trim(),
       cedula: formData.cedula.trim(),
       id: editingJornalero?.id,
+      file: cedulaFile,
     });
   };
-
   const activeCount = jornaleros.filter((j) => j.is_active).length;
   const inactiveCount = jornaleros.filter((j) => !j.is_active).length;
 

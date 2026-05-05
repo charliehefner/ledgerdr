@@ -223,13 +223,13 @@ export function JornalerosView() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {t("common.loading")}
                   </TableCell>
                 </TableRow>
               ) : filteredJornaleros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? t("jornaleros.noJornalerosFound") : t("jornaleros.noJornalerosRegistered")}
                   </TableCell>
                 </TableRow>
@@ -237,6 +237,7 @@ export function JornalerosView() {
                 filteredJornaleros.map((jornalero) => (
                   <TableRow key={jornalero.id} className={!jornalero.is_active ? "opacity-60" : ""}>
                     <TableCell className="font-medium">{jornalero.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{jornalero.apodo || "—"}</TableCell>
                     <TableCell className="font-mono">{jornalero.cedula}</TableCell>
                     <TableCell className="text-center">
                       <CedulaUploadCell

@@ -127,6 +127,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     if (employee) {
       form.reset({
         name: employee.name,
+        apodo: (employee as any).apodo || "",
         cedula: employee.cedula,
         position: (POSITIONS.includes(employee.position as typeof POSITIONS[number]) ? employee.position : "Servicios Generales") as typeof POSITIONS[number],
         sex: employee.sex || "",

@@ -27,6 +27,7 @@ import { useEntityFilter } from "@/hooks/useEntityFilter";
 interface ServiceProvider {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
 }
 

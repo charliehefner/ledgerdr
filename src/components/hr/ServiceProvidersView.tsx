@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, UserCheck, UserX, Search, Wrench } from "lucide-react";
+import { Plus, Pencil, UserCheck, UserX, Search, Wrench, FileImage, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
@@ -18,6 +18,7 @@ import { useEntity } from "@/contexts/EntityContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 import { fmtDate } from "@/lib/dateUtils";
+import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
 
 interface ServiceProvider {
   id: string;
@@ -27,6 +28,7 @@ interface ServiceProvider {
   bank_account_type: string | null;
   currency: string | null;
   bank_account_number: string | null;
+  cedula_attachment_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -63,6 +65,8 @@ export function ServiceProvidersView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<ServiceProvider | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [cedulaFile, setCedulaFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [historyProvider, setHistoryProvider] = useState<ServiceProvider | null>(null);
 
   const { data: providers = [], isLoading } = useQuery({
@@ -92,7 +96,7 @@ export function ServiceProvidersView() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: typeof emptyForm & { id?: string }) => {
+    mutationFn: async (data: typeof emptyForm & { id?: string; file: File | null }) => {
       const payload: Record<string, any> = {
         name: data.name, cedula: data.cedula,
         bank: data.bank || null,
@@ -100,15 +104,31 @@ export function ServiceProvidersView() {
         currency: data.currency || "DOP",
         bank_account_number: data.bank_account_number || null,
       };
-      if (data.id) {
-        const { error } = await supabase.from("service_providers").update(payload as any).eq("id", data.id);
+      let recordId = data.id;
+      if (recordId) {
+        const { error } = await supabase.from("service_providers").update(payload as any).eq("id", recordId);
         if (error) throw error;
       } else {
         const entityId = requireEntity();
         if (!entityId) throw new Error(t("providers.entityRequired"));
         payload.entity_id = entityId;
-        const { error } = await supabase.from("service_providers").insert(payload as any);
+        const { data: inserted, error } = await supabase
+          .from("service_providers")
+          .insert(payload as any)
+          .select("id")
+          .single();
         if (error) throw error;
+        recordId = (inserted as any).id as string;
+      }
+      if (data.file && recordId) {
+        setUploading(true);
+        const { path, error } = await uploadCedula(data.file, "provider", recordId);
+        setUploading(false);
+        if (error) throw new Error(error);
+        await supabase
+          .from("service_providers")
+          .update({ cedula_attachment_url: path } as any)
+          .eq("id", recordId);
       }
     },
     onSuccess: () => {
@@ -116,6 +136,7 @@ export function ServiceProvidersView() {
       setIsDialogOpen(false);
       setEditingProvider(null);
       setFormData(emptyForm);
+      setCedulaFile(null);
       toast({ title: editingProvider ? t("providers.updated") : t("providers.added") });
     },
     onError: (error: any) => {
@@ -127,6 +148,12 @@ export function ServiceProvidersView() {
     },
   });
 
+  const handleViewCedula = async (path: string | null) => {
+    if (!path) return;
+    const url = await getCedulaSignedUrl(path);
+    if (url) window.open(url, "_blank");
+    else toast({ title: t("common.error"), description: "No se pudo cargar la cédula", variant: "destructive" });
+  };
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase.from("service_providers").update({ is_active }).eq("id", id);
@@ -155,6 +182,7 @@ export function ServiceProvidersView() {
       setEditingProvider(null);
       setFormData(emptyForm);
     }
+    setCedulaFile(null);
     setIsDialogOpen(true);
   };
 
@@ -164,7 +192,7 @@ export function ServiceProvidersView() {
       toast({ title: t("providers.nameRequired"), variant: "destructive" });
       return;
     }
-    saveMutation.mutate({ ...formData, id: editingProvider?.id });
+    saveMutation.mutate({ ...formData, id: editingProvider?.id, file: cedulaFile });
   };
 
   const activeCount = providers.filter((p) => p.is_active).length;
@@ -216,15 +244,16 @@ export function ServiceProvidersView() {
                 <TableHead>{t("providers.typeCol")}</TableHead>
                 <TableHead>{t("providers.currencyCol")}</TableHead>
                 <TableHead>{t("providers.accountCol")}</TableHead>
+                <TableHead className="text-center">Cédula</TableHead>
                 <TableHead className="text-center">{t("providers.statusCol")}</TableHead>
                 {canWrite && <TableHead className="w-24 text-center">{t("services.actionsCol")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? t("providers.noFound") : t("providers.noRegistered")}
                 </TableCell></TableRow>
               ) : (
@@ -237,6 +266,16 @@ export function ServiceProvidersView() {
                     <TableCell>{p.bank_account_type === "current" ? t("common.checking") : t("common.savings")}</TableCell>
                     <TableCell>{p.currency || "DOP"}</TableCell>
                     <TableCell className="font-mono">{p.bank_account_number || "—"}</TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      {p.cedula_attachment_url ? (
+                        <Button variant="ghost" size="icon" title="Ver cédula"
+                          onClick={() => handleViewCedula(p.cedula_attachment_url)}>
+                          <FileImage className="h-4 w-4 text-primary" />
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={p.is_active ? "default" : "secondary"}>{p.is_active ? t("common.active") : t("common.inactive")}</Badge>
                     </TableCell>
@@ -318,10 +357,27 @@ export function ServiceProvidersView() {
                 onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                 placeholder="Número de cuenta bancaria" />
             </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Upload className="h-4 w-4" /> Cédula (foto / PDF)</Label>
+              <Input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setCedulaFile(e.target.files?.[0] ?? null)}
+              />
+              {editingProvider?.cedula_attachment_url && !cedulaFile && (
+                <button
+                  type="button"
+                  className="text-sm text-primary underline"
+                  onClick={() => handleViewCedula(editingProvider.cedula_attachment_url)}
+                >
+                  Ver cédula actual
+                </button>
+              )}
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? t("common.saving") : editingProvider ? t("common.update") : t("common.add")}
+              <Button type="submit" disabled={saveMutation.isPending || uploading}>
+                {(saveMutation.isPending || uploading) ? t("common.saving") : editingProvider ? t("common.update") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>

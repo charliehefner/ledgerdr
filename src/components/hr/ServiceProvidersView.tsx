@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, UserCheck, UserX, Search, Wrench } from "lucide-react";
+import { Plus, Pencil, UserCheck, UserX, Search, Wrench, FileImage, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canWriteHrTab } from "@/lib/permissions";
@@ -18,6 +18,7 @@ import { useEntity } from "@/contexts/EntityContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 import { fmtDate } from "@/lib/dateUtils";
+import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
 
 interface ServiceProvider {
   id: string;
@@ -27,6 +28,7 @@ interface ServiceProvider {
   bank_account_type: string | null;
   currency: string | null;
   bank_account_number: string | null;
+  cedula_attachment_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -63,6 +65,8 @@ export function ServiceProvidersView() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<ServiceProvider | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [cedulaFile, setCedulaFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [historyProvider, setHistoryProvider] = useState<ServiceProvider | null>(null);
 
   const { data: providers = [], isLoading } = useQuery({

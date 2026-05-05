@@ -169,14 +169,16 @@ export function ServiceProvidersView() {
   });
 
   const filtered = providers.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.cedula.includes(searchTerm)
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.apodo && p.apodo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    p.cedula.includes(searchTerm)
   );
 
   const handleOpenDialog = (provider?: ServiceProvider) => {
     if (provider) {
       setEditingProvider(provider);
       setFormData({
-        name: provider.name, cedula: provider.cedula,
+        name: provider.name, apodo: provider.apodo || "", cedula: provider.cedula,
         bank: provider.bank || "", bank_account_type: provider.bank_account_type || "savings",
         currency: provider.currency || "DOP", bank_account_number: provider.bank_account_number || "",
       });

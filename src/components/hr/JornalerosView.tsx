@@ -58,12 +58,12 @@ export function JornalerosView() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { name: string; cedula: string; id?: string; file: File | null }) => {
+    mutationFn: async (data: { name: string; apodo: string; cedula: string; id?: string; file: File | null }) => {
       let recordId = data.id;
       if (recordId) {
         const { error } = await supabase
           .from("jornaleros")
-          .update({ name: data.name, cedula: data.cedula })
+          .update({ name: data.name, apodo: data.apodo || null, cedula: data.cedula })
           .eq("id", recordId);
         if (error) throw error;
       } else {
@@ -71,7 +71,7 @@ export function JornalerosView() {
         if (!entityId) throw new Error(t("jornaleros.entityRequired"));
         const { data: inserted, error } = await supabase
           .from("jornaleros")
-          .insert({ name: data.name, cedula: data.cedula, entity_id: entityId })
+          .insert({ name: data.name, apodo: data.apodo || null, cedula: data.cedula, entity_id: entityId })
           .select("id")
           .single();
         if (error) throw error;

@@ -56,20 +56,34 @@ export function JornalerosView() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { name: string; cedula: string; id?: string }) => {
-      if (data.id) {
+    mutationFn: async (data: { name: string; cedula: string; id?: string; file: File | null }) => {
+      let recordId = data.id;
+      if (recordId) {
         const { error } = await supabase
           .from("jornaleros")
           .update({ name: data.name, cedula: data.cedula })
-          .eq("id", data.id);
+          .eq("id", recordId);
         if (error) throw error;
       } else {
         const entityId = requireEntity();
         if (!entityId) throw new Error(t("jornaleros.entityRequired"));
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("jornaleros")
-          .insert({ name: data.name, cedula: data.cedula, entity_id: entityId });
+          .insert({ name: data.name, cedula: data.cedula, entity_id: entityId })
+          .select("id")
+          .single();
         if (error) throw error;
+        recordId = inserted!.id as string;
+      }
+      if (data.file && recordId) {
+        setUploading(true);
+        const { path, error } = await uploadCedula(data.file, "jornalero", recordId);
+        setUploading(false);
+        if (error) throw new Error(error);
+        await supabase
+          .from("jornaleros")
+          .update({ cedula_attachment_url: path })
+          .eq("id", recordId);
       }
     },
     onSuccess: () => {
@@ -77,6 +91,7 @@ export function JornalerosView() {
       setIsDialogOpen(false);
       setEditingJornalero(null);
       setFormData({ name: "", cedula: "" });
+      setCedulaFile(null);
       toast({ title: editingJornalero ? t("jornaleros.updated") : t("jornaleros.added") });
     },
     onError: (error: any) => {
@@ -88,6 +103,12 @@ export function JornalerosView() {
     },
   });
 
+  const handleViewCedula = async (path: string | null) => {
+    if (!path) return;
+    const url = await getCedulaSignedUrl(path);
+    if (url) window.open(url, "_blank");
+    else toast({ title: "Error", description: "No se pudo cargar la cédula", variant: "destructive" });
+  };
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase

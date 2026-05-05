@@ -19,6 +19,7 @@ import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 import { fmtDate } from "@/lib/dateUtils";
 import { uploadCedula, getCedulaSignedUrl } from "@/lib/cedulaAttachments";
+import { CedulaUploadCell } from "./CedulaUploadCell";
 
 interface ServiceProvider {
   id: string;

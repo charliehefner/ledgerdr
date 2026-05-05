@@ -293,6 +293,20 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
                 <FormField
                   control={form.control}
+                  name="apodo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Apodo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Juancho" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="cedula"
                   render={({ field }) => (
                     <FormItem>

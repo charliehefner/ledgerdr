@@ -244,15 +244,16 @@ export function ServiceProvidersView() {
                 <TableHead>{t("providers.typeCol")}</TableHead>
                 <TableHead>{t("providers.currencyCol")}</TableHead>
                 <TableHead>{t("providers.accountCol")}</TableHead>
+                <TableHead className="text-center">Cédula</TableHead>
                 <TableHead className="text-center">{t("providers.statusCol")}</TableHead>
                 {canWrite && <TableHead className="w-24 text-center">{t("services.actionsCol")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? t("providers.noFound") : t("providers.noRegistered")}
                 </TableCell></TableRow>
               ) : (
@@ -265,6 +266,16 @@ export function ServiceProvidersView() {
                     <TableCell>{p.bank_account_type === "current" ? t("common.checking") : t("common.savings")}</TableCell>
                     <TableCell>{p.currency || "DOP"}</TableCell>
                     <TableCell className="font-mono">{p.bank_account_number || "—"}</TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      {p.cedula_attachment_url ? (
+                        <Button variant="ghost" size="icon" title="Ver cédula"
+                          onClick={() => handleViewCedula(p.cedula_attachment_url)}>
+                          <FileImage className="h-4 w-4 text-primary" />
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={p.is_active ? "default" : "secondary"}>{p.is_active ? t("common.active") : t("common.inactive")}</Badge>
                     </TableCell>

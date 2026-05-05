@@ -197,6 +197,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     filtered = filtered.filter(
       (emp) =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.apodo && emp.apodo.toLowerCase().includes(searchTerm.toLowerCase())) ||
         emp.cedula.includes(searchTerm) ||
         (emp.bank && emp.bank.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (emp.bank_account_number && emp.bank_account_number.includes(searchTerm))

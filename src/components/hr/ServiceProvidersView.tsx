@@ -243,6 +243,7 @@ export function ServiceProvidersView() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("providers.nameCol")}</TableHead>
+                <TableHead>Apodo</TableHead>
                 <TableHead>{t("providers.cedulaCol")}</TableHead>
                 <TableHead>{t("providers.bankCol")}</TableHead>
                 <TableHead>{t("providers.typeCol")}</TableHead>

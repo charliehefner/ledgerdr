@@ -51,7 +51,7 @@ const BANKS = [
 ];
 
 const emptyForm = {
-  name: "", cedula: "", bank: "", bank_account_type: "savings" as string,
+  name: "", apodo: "", cedula: "", bank: "", bank_account_type: "savings" as string,
   currency: "DOP" as string, bank_account_number: "",
 };
 

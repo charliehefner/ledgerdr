@@ -19,6 +19,7 @@ import { CedulaUploadCell } from "./CedulaUploadCell";
 interface Jornalero {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   is_active: boolean;
   cedula_attachment_url: string | null;

@@ -85,6 +85,7 @@ Deno.serve(async (req) => {
     const allowedBuckets: Record<string, (p: string) => boolean> = {
       'transaction-attachments': (p) => p.startsWith('receipts/'),
       'employee-documents': (p) => /^[0-9a-f-]+\//.test(p),
+      'cedula-attachments': (p) => p.startsWith('jornaleros/') || p.startsWith('providers/'),
     };
 
     const targetBucket = bucket || 'transaction-attachments';

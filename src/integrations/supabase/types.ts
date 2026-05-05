@@ -5414,6 +5414,7 @@ export type Database = {
     Views: {
       employees_safe: {
         Row: {
+          apodo: string | null
           bank: string | null
           bank_account_number: string | null
           boot_size: string | null
@@ -5434,6 +5435,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: never
           boot_size?: string | null
@@ -5454,6 +5456,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: never
           boot_size?: string | null

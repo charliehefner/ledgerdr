@@ -319,6 +319,11 @@ export function ServiceProvidersView() {
                 placeholder={t("common.fullName")} autoFocus />
             </div>
             <div className="space-y-2">
+              <Label>Apodo</Label>
+              <Input value={formData.apodo} onChange={(e) => setFormData({ ...formData, apodo: e.target.value })}
+                placeholder="Juancho" />
+            </div>
+            <div className="space-y-2">
               <Label>{t("common.cedula")} *</Label>
               <Input value={formData.cedula} onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
                 placeholder="000-0000000-0" />

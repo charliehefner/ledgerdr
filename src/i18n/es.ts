@@ -1791,6 +1791,7 @@ export const es = {
   "empList.viewDetails": "Ver Detalles e Historial",
   "empList.editEmployee": "Editar Empleado",
   "empList.col.name": "Nombre",
+  "empList.col.apodo": "Apodo",
   "empList.col.cedula": "Cédula",
   "empList.col.position": "Posición",
   "empList.col.hireDate": "Fecha de Ingreso",

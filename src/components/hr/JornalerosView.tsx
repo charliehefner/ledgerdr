@@ -213,6 +213,7 @@ export function JornalerosView() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
+                <TableHead>Apodo</TableHead>
                 <TableHead>{t("common.cedula")}</TableHead>
                 <TableHead className="text-center">Cédula (foto)</TableHead>
                 <TableHead className="text-center">{t("common.status")}</TableHead>

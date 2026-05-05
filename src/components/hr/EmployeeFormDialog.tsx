@@ -39,6 +39,7 @@ const POSITIONS = ["Servicios Generales", "Supervisor", "Tractorista", "Gerencia
 
 const employeeSchema = z.object({
   name: z.string().min(1, "required").max(200),
+  apodo: z.string().max(100).optional(),
   cedula: z.string().min(1, "required").max(20),
   position: z.enum(POSITIONS).default("Servicios Generales"),
   sex: z.string().optional(),
@@ -89,6 +90,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       name: "",
+      apodo: "",
       cedula: "",
       position: "Servicios Generales",
       sex: "",
@@ -125,6 +127,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     if (employee) {
       form.reset({
         name: employee.name,
+        apodo: (employee as any).apodo || "",
         cedula: employee.cedula,
         position: (POSITIONS.includes(employee.position as typeof POSITIONS[number]) ? employee.position : "Servicios Generales") as typeof POSITIONS[number],
         sex: employee.sex || "",
@@ -142,6 +145,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
     } else if (!employeeId) {
       form.reset({
         name: "",
+        apodo: "",
         cedula: "",
         position: "Servicios Generales",
         sex: "",
@@ -166,6 +170,7 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
 
       const payload = {
         name: data.name,
+        apodo: data.apodo?.trim() || null,
         cedula: data.cedula,
         position: data.position,
         sex: data.sex || null,
@@ -280,6 +285,20 @@ export function EmployeeFormDialog({ employeeId, open, onOpenChange }: EmployeeF
                       <FormLabel>{t("empForm.fullName")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Juan Pérez" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="apodo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Apodo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Juancho" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

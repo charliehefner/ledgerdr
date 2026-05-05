@@ -31,6 +31,7 @@ import { useEntityFilter } from "@/hooks/useEntityFilter";
 interface Jornalero {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   is_active: boolean;
 }
@@ -107,6 +108,16 @@ export function DayLaborView() {
       return data as Jornalero[];
     },
   });
+
+  const apodoByName = useMemo(() => {
+    const m = new Map<string, string>();
+    jornaleros.forEach((j) => { if (j.apodo) m.set(j.name, j.apodo); });
+    return m;
+  }, [jornaleros]);
+  const fmtWorker = (n: string) => {
+    const a = apodoByName.get(n);
+    return a ? `${n} (${a})` : n;
+  };
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["day-labor", formatDateLocal(selectedFriday), selectedEntityId],
@@ -570,7 +581,7 @@ export function DayLaborView() {
                   <option value="">{t("dayLabor.selectJornalero")}</option>
                   {jornaleros.map((j) => (
                     <option key={j.id} value={j.name}>
-                      {j.name}
+                      {j.name}{j.apodo ? ` (${j.apodo})` : ""}
                     </option>
                   ))}
                 </select>
@@ -659,7 +670,7 @@ export function DayLaborView() {
                       </TableCell>
                       <TableCell>{entry.operation_description}</TableCell>
                       <TableCell className="text-center">{entry.workers_count}</TableCell>
-                      <TableCell>{entry.worker_name || "-"}</TableCell>
+                      <TableCell>{entry.worker_name ? fmtWorker(entry.worker_name) : "-"}</TableCell>
                       <TableCell>{entry.field_name || "-"}</TableCell>
                       <TableCell className="text-right font-mono">
                         RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
@@ -727,7 +738,7 @@ export function DayLaborView() {
                       <TableRow key={entry.id}>
                         <TableCell>{fmtDate(parseDateLocal(entry.work_date))}</TableCell>
                         <TableCell>{entry.operation_description}</TableCell>
-                        <TableCell>{idx === 0 ? group.name : ""}</TableCell>
+                        <TableCell>{idx === 0 ? fmtWorker(group.name) : ""}</TableCell>
                         <TableCell className="text-right font-mono">
                           RD$ {Number(entry.amount).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                         </TableCell>

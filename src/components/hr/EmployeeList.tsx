@@ -34,6 +34,7 @@ interface VacationSummary {
 interface Employee {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   position: string;
   bank: string | null;
@@ -57,6 +58,7 @@ type SortConfig = { key: string; direction: SortDirection };
 
 const EMPLOYEE_COLUMN_KEYS = [
   ["name", "empList.col.name", true],
+  ["apodo", "empList.col.apodo", true],
   ["cedula", "empList.col.cedula", true],
   ["position", "empList.col.position", true],
   ["date_of_hire", "empList.col.hireDate", true],
@@ -195,6 +197,7 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     filtered = filtered.filter(
       (emp) =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.apodo && emp.apodo.toLowerCase().includes(searchTerm.toLowerCase())) ||
         emp.cedula.includes(searchTerm) ||
         (emp.bank && emp.bank.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (emp.bank_account_number && emp.bank_account_number.includes(searchTerm))
@@ -246,6 +249,8 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
     switch (key) {
       case "name":
         return <span className="font-medium">{employee.name}</span>;
+      case "apodo":
+        return employee.apodo || "—";
       case "cedula":
         return <span className="font-mono text-sm">{employee.cedula}</span>;
       case "date_of_hire":

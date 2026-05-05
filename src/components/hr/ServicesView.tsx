@@ -27,6 +27,7 @@ import { useEntityFilter } from "@/hooks/useEntityFilter";
 interface ServiceProvider {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
 }
 
@@ -48,7 +49,7 @@ interface ServiceEntry {
   ap_document_id?: string | null;
   created_at: string;
   transaction_id: string | null;
-  service_providers: { name: string; cedula: string };
+  service_providers: { name: string; apodo: string | null; cedula: string };
   transactions?: { legacy_id: number | null } | null;
 }
 
@@ -96,7 +97,7 @@ export function ServicesView() {
     queryKey: ["service-providers-active", selectedEntityId],
     queryFn: async () => {
       let query = supabase.from("service_providers")
-        .select("id, name, cedula").eq("is_active", true).order("name") as any;
+        .select("id, name, apodo, cedula").eq("is_active", true).order("name") as any;
       if (!isAllEntities && selectedEntityId) query = query.eq("entity_id", selectedEntityId);
       const { data, error } = await query;
       if (error) throw error;
@@ -120,7 +121,7 @@ export function ServicesView() {
     queryKey: ["service-entries", showClosed, selectedEntityId],
     queryFn: async () => {
       let query = supabase.from("service_entries")
-        .select("*, service_providers(name, cedula), transactions(legacy_id)")
+        .select("*, service_providers(name, apodo, cedula), transactions(legacy_id)")
         .order("service_date", { ascending: false }) as any;
       if (!showClosed) query = query.eq("is_closed", false);
       if (!isAllEntities && selectedEntityId) query = query.eq("entity_id", selectedEntityId);
@@ -423,7 +424,7 @@ export function ServicesView() {
                       <TableCell className="px-2">
                         {incomplete && <AlertTriangle className="h-4 w-4 text-warning" />}
                       </TableCell>
-                      <TableCell className="font-medium">{entry.service_providers?.name}</TableCell>
+                      <TableCell className="font-medium">{entry.service_providers?.name}{entry.service_providers?.apodo ? ` (${entry.service_providers.apodo})` : ""}</TableCell>
                       <TableCell>{fmtDate(new Date(entry.service_date + "T12:00:00"))}</TableCell>
                       <TableCell className="font-mono">{entry.master_acct_code || "—"}</TableCell>
                       <TableCell className="max-w-48 truncate">{entry.description || "—"}</TableCell>
@@ -479,7 +480,7 @@ export function ServicesView() {
               <Select value={formData.provider_id || undefined} onValueChange={(v) => setFormData({ ...formData, provider_id: v })}>
                 <SelectTrigger><SelectValue placeholder={t("services.selectProvider2")} /></SelectTrigger>
                 <SelectContent>
-                  {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}{p.apodo ? ` (${p.apodo})` : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

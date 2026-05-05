@@ -24,6 +24,7 @@ import { CedulaUploadCell } from "./CedulaUploadCell";
 interface ServiceProvider {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   bank: string | null;
   bank_account_type: string | null;
@@ -50,7 +51,7 @@ const BANKS = [
 ];
 
 const emptyForm = {
-  name: "", cedula: "", bank: "", bank_account_type: "savings" as string,
+  name: "", apodo: "", cedula: "", bank: "", bank_account_type: "savings" as string,
   currency: "DOP" as string, bank_account_number: "",
 };
 
@@ -99,7 +100,7 @@ export function ServiceProvidersView() {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof emptyForm & { id?: string; file: File | null }) => {
       const payload: Record<string, any> = {
-        name: data.name, cedula: data.cedula,
+        name: data.name, apodo: data.apodo?.trim() || null, cedula: data.cedula,
         bank: data.bank || null,
         bank_account_type: data.bank_account_type || null,
         currency: data.currency || "DOP",
@@ -168,14 +169,16 @@ export function ServiceProvidersView() {
   });
 
   const filtered = providers.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.cedula.includes(searchTerm)
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.apodo && p.apodo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    p.cedula.includes(searchTerm)
   );
 
   const handleOpenDialog = (provider?: ServiceProvider) => {
     if (provider) {
       setEditingProvider(provider);
       setFormData({
-        name: provider.name, cedula: provider.cedula,
+        name: provider.name, apodo: provider.apodo || "", cedula: provider.cedula,
         bank: provider.bank || "", bank_account_type: provider.bank_account_type || "savings",
         currency: provider.currency || "DOP", bank_account_number: provider.bank_account_number || "",
       });
@@ -240,6 +243,7 @@ export function ServiceProvidersView() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("providers.nameCol")}</TableHead>
+                <TableHead>Apodo</TableHead>
                 <TableHead>{t("providers.cedulaCol")}</TableHead>
                 <TableHead>{t("providers.bankCol")}</TableHead>
                 <TableHead>{t("providers.typeCol")}</TableHead>
@@ -252,9 +256,9 @@ export function ServiceProvidersView() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? t("providers.noFound") : t("providers.noRegistered")}
                 </TableCell></TableRow>
               ) : (
@@ -262,6 +266,7 @@ export function ServiceProvidersView() {
                   <TableRow key={p.id} className={`${!p.is_active ? "opacity-60" : ""} cursor-pointer hover:bg-muted/50`}
                     onClick={() => setHistoryProvider(p)}>
                     <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.apodo || "—"}</TableCell>
                     <TableCell className="font-mono">{p.cedula}</TableCell>
                     <TableCell>{p.bank || "—"}</TableCell>
                     <TableCell>{p.bank_account_type === "current" ? t("common.checking") : t("common.savings")}</TableCell>
@@ -312,6 +317,11 @@ export function ServiceProvidersView() {
               <Label>{t("common.name")} *</Label>
               <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={t("common.fullName")} autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label>Apodo</Label>
+              <Input value={formData.apodo} onChange={(e) => setFormData({ ...formData, apodo: e.target.value })}
+                placeholder="Juancho" />
             </div>
             <div className="space-y-2">
               <Label>{t("common.cedula")} *</Label>

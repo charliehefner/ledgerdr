@@ -19,6 +19,7 @@ import { CedulaUploadCell } from "./CedulaUploadCell";
 interface Jornalero {
   id: string;
   name: string;
+  apodo: string | null;
   cedula: string;
   is_active: boolean;
   cedula_attachment_url: string | null;
@@ -36,7 +37,7 @@ export function JornalerosView() {
   const [showInactive, setShowInactive] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingJornalero, setEditingJornalero] = useState<Jornalero | null>(null);
-  const [formData, setFormData] = useState({ name: "", cedula: "" });
+  const [formData, setFormData] = useState({ name: "", apodo: "", cedula: "" });
   const [cedulaFile, setCedulaFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -57,12 +58,12 @@ export function JornalerosView() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { name: string; cedula: string; id?: string; file: File | null }) => {
+    mutationFn: async (data: { name: string; apodo: string; cedula: string; id?: string; file: File | null }) => {
       let recordId = data.id;
       if (recordId) {
         const { error } = await supabase
           .from("jornaleros")
-          .update({ name: data.name, cedula: data.cedula })
+          .update({ name: data.name, apodo: data.apodo || null, cedula: data.cedula })
           .eq("id", recordId);
         if (error) throw error;
       } else {
@@ -70,7 +71,7 @@ export function JornalerosView() {
         if (!entityId) throw new Error(t("jornaleros.entityRequired"));
         const { data: inserted, error } = await supabase
           .from("jornaleros")
-          .insert({ name: data.name, cedula: data.cedula, entity_id: entityId })
+          .insert({ name: data.name, apodo: data.apodo || null, cedula: data.cedula, entity_id: entityId })
           .select("id")
           .single();
         if (error) throw error;
@@ -91,7 +92,7 @@ export function JornalerosView() {
       queryClient.invalidateQueries({ queryKey: ["jornaleros"] });
       setIsDialogOpen(false);
       setEditingJornalero(null);
-      setFormData({ name: "", cedula: "" });
+      setFormData({ name: "", apodo: "", cedula: "" });
       setCedulaFile(null);
       toast({ title: editingJornalero ? t("jornaleros.updated") : t("jornaleros.added") });
     },
@@ -129,16 +130,17 @@ export function JornalerosView() {
 
   const filteredJornaleros = jornaleros.filter((j) =>
     j.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (j.apodo && j.apodo.toLowerCase().includes(searchTerm.toLowerCase())) ||
     j.cedula.includes(searchTerm)
   );
 
   const handleOpenDialog = (jornalero?: Jornalero) => {
     if (jornalero) {
       setEditingJornalero(jornalero);
-      setFormData({ name: jornalero.name, cedula: jornalero.cedula });
+      setFormData({ name: jornalero.name, apodo: jornalero.apodo || "", cedula: jornalero.cedula });
     } else {
       setEditingJornalero(null);
-      setFormData({ name: "", cedula: "" });
+      setFormData({ name: "", apodo: "", cedula: "" });
     }
     setCedulaFile(null);
     setIsDialogOpen(true);
@@ -152,6 +154,7 @@ export function JornalerosView() {
     }
     saveMutation.mutate({
       name: formData.name.trim(),
+      apodo: formData.apodo.trim(),
       cedula: formData.cedula.trim(),
       id: editingJornalero?.id,
       file: cedulaFile,
@@ -210,6 +213,7 @@ export function JornalerosView() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
+                <TableHead>Apodo</TableHead>
                 <TableHead>{t("common.cedula")}</TableHead>
                 <TableHead className="text-center">Cédula (foto)</TableHead>
                 <TableHead className="text-center">{t("common.status")}</TableHead>
@@ -219,13 +223,13 @@ export function JornalerosView() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {t("common.loading")}
                   </TableCell>
                 </TableRow>
               ) : filteredJornaleros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? t("jornaleros.noJornalerosFound") : t("jornaleros.noJornalerosRegistered")}
                   </TableCell>
                 </TableRow>
@@ -233,6 +237,7 @@ export function JornalerosView() {
                 filteredJornaleros.map((jornalero) => (
                   <TableRow key={jornalero.id} className={!jornalero.is_active ? "opacity-60" : ""}>
                     <TableCell className="font-medium">{jornalero.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{jornalero.apodo || "—"}</TableCell>
                     <TableCell className="font-mono">{jornalero.cedula}</TableCell>
                     <TableCell className="text-center">
                       <CedulaUploadCell
@@ -303,6 +308,14 @@ export function JornalerosView() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder={t("common.fullName")}
                 autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Apodo</label>
+              <Input
+                value={formData.apodo}
+                onChange={(e) => setFormData({ ...formData, apodo: e.target.value })}
+                placeholder="Juancho"
               />
             </div>
             <div className="space-y-2">

@@ -1773,6 +1773,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          apodo: string | null
           bank: string | null
           bank_account_number: string | null
           boot_size: string | null
@@ -1793,6 +1794,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: string | null
           boot_size?: string | null
@@ -1813,6 +1815,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: string | null
           boot_size?: string | null
@@ -2977,6 +2980,7 @@ export type Database = {
       }
       jornaleros: {
         Row: {
+          apodo: string | null
           cedula: string
           cedula_attachment_url: string | null
           created_at: string
@@ -2987,6 +2991,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          apodo?: string | null
           cedula: string
           cedula_attachment_url?: string | null
           created_at?: string
@@ -2997,6 +3002,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          apodo?: string | null
           cedula?: string
           cedula_attachment_url?: string | null
           created_at?: string
@@ -4636,6 +4642,7 @@ export type Database = {
       }
       service_providers: {
         Row: {
+          apodo: string | null
           bank: string | null
           bank_account_number: string | null
           bank_account_type: string | null
@@ -4650,6 +4657,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: string | null
           bank_account_type?: string | null
@@ -4664,6 +4672,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: string | null
           bank_account_type?: string | null
@@ -5405,6 +5414,7 @@ export type Database = {
     Views: {
       employees_safe: {
         Row: {
+          apodo: string | null
           bank: string | null
           bank_account_number: string | null
           boot_size: string | null
@@ -5425,6 +5435,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: never
           boot_size?: string | null
@@ -5445,6 +5456,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          apodo?: string | null
           bank?: string | null
           bank_account_number?: never
           boot_size?: string | null

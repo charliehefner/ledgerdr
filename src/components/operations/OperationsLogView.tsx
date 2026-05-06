@@ -1133,12 +1133,20 @@ export function OperationsLogView() {
                       onChange={(e) => setForm({ ...form, field_id: e.target.value })}
                     >
                       <option value="">{t("operations.form.selectField")}</option>
-                      {fields?.filter(f => f.farms?.name).map((field) => (
+                       {fields?.filter(f => f.farms?.name).map((field) => (
                         <option key={field.id} value={field.id}>
                           {field.name} ({field.farms?.name})
                         </option>
                       ))}
                     </select>
+                    {form.field_id && (() => {
+                      const selected = fields?.find(f => f.id === form.field_id);
+                      return selected?.hectares != null ? (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {selected.hectares} ha
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
 

@@ -6,7 +6,7 @@ import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
-import { TIPO_INGRESO, TIPO_BIENES_SERVICIOS } from '@/components/accounting/dgiiConstants';
+import { TIPO_INGRESO, TIPO_BIENES_SERVICIOS, TIPO_RETENCION_ISR } from '@/components/accounting/dgiiConstants';
 import {
   fetchAccounts,
   fetchProjects,
@@ -86,6 +86,9 @@ const getInitialFormState = () => ({
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   dgii_tipo_bienes_servicios: '',
+  ncf_modificado: '',
+  bs_split: 'auto' as 'auto' | 'bienes' | 'servicios',
+  dgii_tipo_retencion_isr: '',
   due_date: '',
   transfer_from_account: '',
   transfer_to_account: '',

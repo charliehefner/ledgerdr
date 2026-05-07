@@ -63,6 +63,7 @@ export function SuppliersView() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [contractsFor, setContractsFor] = useState<Supplier | null>(null);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers", showInactive, selectedEntityId],

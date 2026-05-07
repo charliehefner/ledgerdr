@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, HandCoins } from "lucide-react";
+import { CalendarIcon, HandCoins, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntity } from "@/contexts/EntityContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDateLocal, fmtDate } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,10 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -39,10 +44,19 @@ interface Supplier {
   apodo: string | null;
   currency: string | null;
 }
+interface Contract {
+  id: string;
+  contract_number: string | null;
+  description: string;
+  total_amount: number;
+  currency: string;
+  status: string;
+}
 
 const initialState = {
   date: undefined as Date | undefined,
   supplier_id: "",
+  contract_id: "",
   from_account: "",
   amount: "",
   itbis_retenido: "",
@@ -52,10 +66,15 @@ const initialState = {
 
 export function SupplierAdvancesView() {
   const { selectedEntityId } = useEntity();
+  const { user } = useAuth();
+  const role = user?.role;
+  const canOverride = role === "admin" || role === "management" || role === "accountant";
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialState);
   const [submitting, setSubmitting] = useState(false);
   const [retOpen, setRetOpen] = useState(false);
+  const [overWarning, setOverWarning] = useState<{ over: number; available: number; total: number; cur: string } | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["supplier-advance-bank-accounts"],
@@ -101,20 +120,64 @@ export function SupplierAdvancesView() {
     },
   });
 
+  // Active contracts for the selected supplier
+  const { data: contracts = [] } = useQuery({
+    queryKey: ["supplier-contracts-active", form.supplier_id, selectedEntityId],
+    enabled: !!form.supplier_id,
+    queryFn: async () => {
+      let q = supabase.from("supplier_contracts" as any)
+        .select("id, contract_number, description, total_amount, currency, status")
+        .eq("supplier_id", form.supplier_id)
+        .in("status", ["active", "draft"])
+        .order("created_at", { ascending: false }) as any;
+      if (selectedEntityId) q = q.eq("entity_id", selectedEntityId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []) as Contract[];
+    },
+  });
+
+  const selectedContract = contracts.find((c) => c.id === form.contract_id);
+
+  // Live balance for selected contract
+  const { data: contractBal } = useQuery({
+    queryKey: ["contract-balance", form.contract_id],
+    enabled: !!form.contract_id,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_contract_balance" as any, { p_contract_id: form.contract_id });
+      if (error) throw error;
+      const row: any = Array.isArray(data) ? data[0] : data;
+      return row ? {
+        total: Number(row.total_amount || 0),
+        advanced: Number(row.advanced_to_date || 0),
+        available: Number(row.available || 0),
+      } : null;
+    },
+  });
+
+  // Reset contract if supplier changes
+  useEffect(() => {
+    setForm((f) => ({ ...f, contract_id: "" }));
+  }, [form.supplier_id]);
+
   const fromAcct = bankAccounts.find((a) => a.id === form.from_account);
-  const fromCur = fromAcct?.currency || "DOP";
+  // Currency: contract overrides if set, else from account
+  const fromCur = selectedContract?.currency || fromAcct?.currency || "DOP";
   const supplier = suppliers.find((s) => s.id === form.supplier_id);
 
   const amt = parseFloat(form.amount || "0");
   const itbisRet = parseFloat(form.itbis_retenido || "0");
   const isrRet = parseFloat(form.isr_retenido || "0");
   const netoDesembolsar = Math.max(0, amt - itbisRet - isrRet);
+  const showNeto = itbisRet > 0 || isrRet > 0;
 
   const isValid = () => {
     if (!form.date || !form.supplier_id || !form.from_account || !form.amount) return false;
     if (amt <= 0) return false;
     if (itbisRet < 0 || isrRet < 0) return false;
     if (itbisRet + isrRet > amt) return false;
+    // currency mismatch when contract selected
+    if (selectedContract && fromAcct && fromAcct.currency && fromAcct.currency !== selectedContract.currency) return false;
     return true;
   };
 
@@ -122,17 +185,17 @@ export function SupplierAdvancesView() {
   const cards = bankAccounts.filter((a) => a.account_type === "credit_card");
   const petty = bankAccounts.filter((a) => a.account_type === "petty_cash");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isValid()) {
-      if (itbisRet + isrRet > amt) toast.error("Las retenciones no pueden superar el monto del anticipo");
-      else toast.error("Complete los campos requeridos");
-      return;
-    }
+  const performInsert = async (overrideNote?: string) => {
     setSubmitting(true);
     try {
-      const description = form.description?.trim()
+      let description = form.description?.trim()
         || `Anticipo a ${supplier?.name || "Suplidor"}${supplier?.rnc ? ` (${supplier.rnc})` : ""}`;
+      if (selectedContract) {
+        description += ` · Contrato ${selectedContract.contract_number || selectedContract.description}`;
+      }
+      if (overrideNote) {
+        description += ` [Override: ${overrideNote}]`;
+      }
 
       const { data, error } = await supabase.rpc("create_transaction_with_ap_ar" as any, {
         p_transaction_date: formatDateLocal(form.date!),
@@ -151,10 +214,10 @@ export function SupplierAdvancesView() {
         p_transaction_direction: "purchase",
         p_entity_id: selectedEntityId || null,
         p_supplier_id: supplier?.id || null,
+        p_contract_id: form.contract_id || null,
       });
       if (error) throw error;
 
-      // Patch advance doc to ensure supplier_id link (in case RPC version mismatch)
       const result = data as { id: string } | null;
       if (result?.id && supplier?.id) {
         await supabase
@@ -167,14 +230,40 @@ export function SupplierAdvancesView() {
       toast.success("Anticipo registrado");
       setForm(initialState);
       setRetOpen(false);
+      setOverWarning(null);
+      setOverrideReason("");
       await refetch();
       queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["contract-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-contract-balances"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValid()) {
+      if (itbisRet + isrRet > amt) toast.error("Las retenciones no pueden superar el monto del anticipo");
+      else if (selectedContract && fromAcct?.currency && fromAcct.currency !== selectedContract.currency)
+        toast.error(`La cuenta debe ser en ${selectedContract.currency} para este contrato`);
+      else toast.error("Complete los campos requeridos");
+      return;
+    }
+    // Over-advance check
+    if (selectedContract && contractBal && (contractBal.advanced + amt) > contractBal.total + 0.005) {
+      setOverWarning({
+        over: (contractBal.advanced + amt) - contractBal.total,
+        available: contractBal.available,
+        total: contractBal.total,
+        cur: selectedContract.currency,
+      });
+      return;
+    }
+    await performInsert();
   };
 
   const acctName = (id: string | null | undefined) => {
@@ -283,20 +372,62 @@ export function SupplierAdvancesView() {
               </div>
             </div>
 
+            {form.supplier_id && contracts.length > 0 && (
+              <div className="grid gap-4 md:grid-cols-3 p-3 rounded-md border bg-muted/20">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Contrato (opcional)</Label>
+                  <Select value={form.contract_id || "__none"}
+                    onValueChange={(v) => setForm((f) => ({ ...f, contract_id: v === "__none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover max-h-[300px]">
+                      <SelectItem value="__none">— Sin contrato —</SelectItem>
+                      {contracts.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.contract_number ? `${c.contract_number} · ` : ""}{c.description} ({c.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedContract && contractBal && (
+                  <div className="space-y-1 flex flex-col justify-center text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total:</span>
+                      <span className="font-mono">{contractBal.total.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedContract.currency}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Anticipado:</span>
+                      <span className="font-mono">{contractBal.advanced.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between font-semibold"><span>Disponible:</span>
+                      <span className={cn("font-mono", contractBal.available < amt && amt > 0 && "text-destructive")}>
+                        {contractBal.available.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span></div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedContract && fromAcct?.currency && fromAcct.currency !== selectedContract.currency && (
+              <div className="flex items-start gap-2 p-2 rounded-md border border-destructive/40 bg-destructive/5 text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>El contrato es en {selectedContract.currency} pero la cuenta origen es en {fromAcct.currency}. Seleccione una cuenta en {selectedContract.currency}.</span>
+              </div>
+            )}
+
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Monto Anticipo ({fromCur}) *</Label>
                 <Input type="number" step="0.01" value={form.amount} className="font-mono"
                   onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" />
               </div>
-              <div className="space-y-2 md:col-span-2 flex items-end">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Neto a desembolsar: </span>
-                  <span className="font-mono font-semibold">
-                    {netoDesembolsar.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {fromCur}
-                  </span>
+              {showNeto && (
+                <div className="space-y-2 md:col-span-2 flex items-end">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Monto a pagar al suplidor: </span>
+                    <span className="font-mono font-semibold">
+                      {netoDesembolsar.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {fromCur}
+                    </span>
+                    <span className="ml-2 text-xs text-muted-foreground">(neto de retenciones)</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <Collapsible open={retOpen} onOpenChange={setRetOpen}>
@@ -391,6 +522,55 @@ export function SupplierAdvancesView() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!overWarning} onOpenChange={(o) => { if (!o) { setOverWarning(null); setOverrideReason(""); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              Excede el monto del contrato
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Este anticipo excede el saldo disponible del contrato seleccionado.</p>
+                {overWarning && (
+                  <div className="text-sm space-y-1 p-3 rounded-md bg-muted/40 border">
+                    <div className="flex justify-between"><span>Total contrato:</span>
+                      <span className="font-mono">{overWarning.total.toLocaleString("es-DO", { minimumFractionDigits: 2 })} {overWarning.cur}</span></div>
+                    <div className="flex justify-between"><span>Disponible:</span>
+                      <span className="font-mono">{overWarning.available.toLocaleString("es-DO", { minimumFractionDigits: 2 })} {overWarning.cur}</span></div>
+                    <div className="flex justify-between text-destructive font-semibold"><span>Excedente:</span>
+                      <span className="font-mono">{overWarning.over.toLocaleString("es-DO", { minimumFractionDigits: 2 })} {overWarning.cur}</span></div>
+                  </div>
+                )}
+                {canOverride ? (
+                  <div className="space-y-2 pt-2">
+                    <Label className="text-xs">Justificación (requerida para continuar)</Label>
+                    <Textarea rows={2} value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      placeholder="Motivo del exceso" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pt-2">
+                    Solo Admin, Gerencia o Contabilidad pueden autorizar exceder un contrato.
+                    Ajuste el monto del contrato o reduzca este anticipo.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            {canOverride && (
+              <AlertDialogAction
+                disabled={!overrideReason.trim() || submitting}
+                onClick={(e) => { e.preventDefault(); performInsert(overrideReason.trim()); }}>
+                Continuar de todos modos
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

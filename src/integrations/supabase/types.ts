@@ -322,6 +322,7 @@ export type Database = {
           balance_remaining: number | null
           contact_name: string
           contact_rnc: string | null
+          contract_id: string | null
           created_at: string
           created_by: string | null
           currency: string
@@ -346,6 +347,7 @@ export type Database = {
           balance_remaining?: number | null
           contact_name: string
           contact_rnc?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -370,6 +372,7 @@ export type Database = {
           balance_remaining?: number | null
           contact_name?: string
           contact_rnc?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -394,6 +397,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_documents_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
             referencedColumns: ["id"]
           },
           {
@@ -4833,6 +4843,77 @@ export type Database = {
           },
         ]
       }
+      supplier_contracts: {
+        Row: {
+          attachment_url: string | null
+          contract_number: string | null
+          cost_center: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          default_account_code: string
+          description: string
+          end_date: string | null
+          entity_id: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          start_date: string | null
+          status: string
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          contract_number?: string | null
+          cost_center?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          default_account_code: string
+          description: string
+          end_date?: string | null
+          entity_id: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          start_date?: string | null
+          status?: string
+          supplier_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          attachment_url?: string | null
+          contract_number?: string | null
+          cost_center?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          default_account_code?: string
+          description?: string
+          end_date?: string | null
+          entity_id?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          start_date?: string | null
+          status?: string
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contracts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -5189,6 +5270,7 @@ export type Database = {
           cbs_code: string | null
           cbs_id: string | null
           comments: string | null
+          contract_id: string | null
           cost_center: string
           created_at: string
           currency: string
@@ -5245,6 +5327,7 @@ export type Database = {
           cbs_code?: string | null
           cbs_id?: string | null
           comments?: string | null
+          contract_id?: string | null
           cost_center?: string
           created_at?: string
           currency?: string
@@ -5301,6 +5384,7 @@ export type Database = {
           cbs_code?: string | null
           cbs_id?: string | null
           comments?: string | null
+          contract_id?: string | null
           cost_center?: string
           created_at?: string
           currency?: string
@@ -5383,6 +5467,13 @@ export type Database = {
             columns: ["cbs_id"]
             isOneToOne: false
             referencedRelation: "cbs_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
             referencedColumns: ["id"]
           },
           {
@@ -6014,6 +6105,7 @@ export type Database = {
           p_amount?: number
           p_cbs_code?: string
           p_comments?: string
+          p_contract_id?: string
           p_cost_center?: string
           p_currency?: string
           p_description: string
@@ -6170,6 +6262,14 @@ export type Database = {
           account_name: string
           account_type: string
           balance: number
+        }[]
+      }
+      get_contract_balance: {
+        Args: { p_contract_id: string }
+        Returns: {
+          advanced_to_date: number
+          available: number
+          total_amount: number
         }[]
       }
       get_cost_per_field: {

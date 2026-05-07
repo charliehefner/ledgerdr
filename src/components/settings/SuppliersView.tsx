@@ -16,7 +16,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, UserCheck, UserX, Search, Truck } from "lucide-react";
+import { Plus, Pencil, UserCheck, UserX, Search, Truck, FileText } from "lucide-react";
+import { SupplierContractsDialog } from "./SupplierContractsDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntity } from "@/contexts/EntityContext";
@@ -62,6 +63,7 @@ export function SuppliersView() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [contractsFor, setContractsFor] = useState<Supplier | null>(null);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers", showInactive, selectedEntityId],
@@ -213,7 +215,7 @@ export function SuppliersView() {
                 <TableHead>Moneda</TableHead>
                 <TableHead>B/S</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
-                {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
+                {canWrite && <TableHead className="w-32 text-center">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -240,10 +242,13 @@ export function SuppliersView() {
                   {canWrite && (
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openDialog(s)}>
+                        <Button variant="ghost" size="icon" title="Contratos" onClick={() => setContractsFor(s)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openDialog(s)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon"
+                        <Button variant="ghost" size="icon" title={s.is_active ? "Desactivar" : "Activar"}
                           onClick={() => toggleMut.mutate({ id: s.id, is_active: !s.is_active })}>
                           {s.is_active ? <UserX className="h-4 w-4 text-destructive" /> : <UserCheck className="h-4 w-4 text-primary" />}
                         </Button>
@@ -364,6 +369,13 @@ export function SuppliersView() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <SupplierContractsDialog
+        open={!!contractsFor}
+        onOpenChange={(o) => { if (!o) setContractsFor(null); }}
+        supplierId={contractsFor?.id || null}
+        supplierName={contractsFor?.name || ""}
+      />
     </div>
   );
 }

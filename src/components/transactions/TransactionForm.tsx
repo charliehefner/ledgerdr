@@ -121,6 +121,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const pendingCreditCodeRef = useRef<string | null>(null);
   const ruleAppliedFieldsRef = useRef<Record<string, unknown>>({});
 
+  // Mark form dirty when user has typed anything (compared to a fresh initial state).
+  const initialFormJson = useMemo(() => JSON.stringify(getInitialFormState()), []);
+  const isFormDirty = !isSubmitting && JSON.stringify(form) !== initialFormJson;
+  useDirtyForm('transaction-form', isFormDirty);
+
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: fetchAccounts,

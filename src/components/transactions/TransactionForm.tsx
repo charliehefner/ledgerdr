@@ -1245,6 +1245,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </div>
             )}
 
+            {openAdvances.length > 0 && (
+              <div className="md:col-span-3">
+                <Alert className="border-orange-500/50 bg-orange-50 dark:bg-orange-900/20">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <AlertDescription className="text-orange-800 dark:text-orange-200">
+                    Este suplidor tiene {openAdvances.length} anticipo(s) abierto(s) por{' '}
+                    <strong>
+                      {openAdvances.reduce((s, a) => s + (a.balance_remaining || 0), 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                    </strong>
+                    . Considere aplicarlo(s) en Cuentas por Pagar antes de registrar esta transacción.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>{t('txForm.rnc')}</Label>
               <Input

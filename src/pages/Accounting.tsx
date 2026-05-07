@@ -10,6 +10,7 @@ import { DGIIReportsView } from "@/components/accounting/DGIIReportsView";
 import { RecurringEntriesView } from "@/components/accounting/RecurringEntriesView";
 import { AuditLogView } from "@/components/accounting/AuditLogView";
 import { IntercompanyView } from "@/components/accounting/IntercompanyView";
+import { FxRevaluationButton } from "@/components/accounting/FxRevaluationButton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntity } from "@/contexts/EntityContext";
 import { BarChart3, Building2, BookOpen, RotateCcw, Calendar, FileText, Shield, ArrowLeftRight } from "lucide-react";
@@ -99,6 +100,7 @@ export default function Accounting() {
       headerIcon={<BookOpen className="h-6 w-6 text-primary" />}
       headerAccent
       helpChapter="06-accounting"
+      actions={<FxRevaluationButton />}
       tabGroups={[{ tabs: baseTabs }]}
     />
   );

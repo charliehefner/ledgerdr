@@ -1,91 +1,121 @@
-# DGII 606 — Full Column Coverage Audit
+# Supplier Advances in Treasury
 
-## What the official format requires (23 columns)
+## Accounting reasoning (why this design)
 
-From DGII's `Formato-de-Envio-606` (NG 07-2018 / 05-2019):
+Standard AP practice (and what GP/QuickBooks/Odoo do):
 
-| # | Column | Currently exported? | Source today | Gap / action |
-|---|--------|--------------------|--------------|--------------|
-| 1 | RNC o Cédula | Yes | `transactions.rnc` | OK |
-| 2 | Tipo Id | Yes | Derived from RNC length | OK |
-| 3 | Tipo Bienes y Servicios Comprados | Yes | `transactions.dgii_tipo_bienes_servicios` | OK |
-| 4 | NCF | Yes | `transactions.document` | OK |
-| 5 | NCF o Documento Modificado | **No** (always blank) | — | **Add field** on transaction (only used for credit/debit notes referencing original NCF) |
-| 6 | Fecha Comprobante | Yes | `transaction_date` | OK |
-| 7 | Fecha Pago | Yes | `purchase_date` fallback `transaction_date` | OK — verify semantics (should be actual payment date, not purchase date) |
-| 8 | **Monto Facturado en Servicios** | **No** (lumped) | — | **Split needed** |
-| 9 | **Monto Facturado en Bienes** | **No** (lumped) | — | **Split needed** |
-| 10 | Total Monto Facturado | Yes (computed `amount − itbis`) | derived | OK once 8+9 exist (= 8+9) |
-| 11 | ITBIS Facturado | Yes | `transactions.itbis` | OK |
-| 12 | ITBIS Retenido | Yes | `transactions.itbis_retenido` | OK |
-| 13 | **ITBIS sujeto a Proporcionalidad (Art. 349)** | No | — | **New field** (rare; usually 0) |
-| 14 | **ITBIS llevado al Costo** | No | — | **New field** (rare; usually 0) |
-| 15 | **ITBIS por Adelantar** | No | — | **New field** — typically = ITBIS Facturado − cost − proporcionalidad. Can be derived |
-| 16 | **ITBIS percibido en compras** | No | — | **New field** (rare; usually 0) |
-| 17 | **Tipo de Retención en ISR** | No | — | **New field**, code list (01–11). Required when there is ISR retenido |
-| 18 | Monto Retención Renta (ISR) | Yes | `transactions.isr_retenido` | OK |
-| 19 | **ISR Percibido en compras** | No | — | **New field** (rare; usually 0) |
-| 20 | **Impuesto Selectivo al Consumo (ISC)** | No | — | **New field** (combustibles, telecom, alcohol, tabaco) |
-| 21 | **Otros Impuestos / Tasas** | No | — | **New field** (CDT, propina obligatoria-no-legal, etc.) |
-| 22 | **Monto Propina Legal (10%)** | No | — | **New field** (restaurants) |
-| 23 | Forma de Pago | Yes | `pay_method` → DGII code | OK |
+- **Advance** = prepayment debited to **1690 Anticipos a Suppliers** (asset), credited to bank/cash. It is *not* a purchase, has no NCF, no ITBIS-on-cost, no inventory movement.
+- **Retention on advances**: in DR, retentions normally accrue with the **invoice** (the taxable event). However, when a payment is the trigger for retention (e.g. ISR 2% to informal services), some firms book it on the advance. We will support both: retention fields are **optional**, default zero.
+- **Open advance alert**: every reputable AP module checks for unapplied prepayments before posting a new invoice/payment to the same vendor and prompts to apply. This already exists conceptually in `advance_allocations` but isn't surfaced at entry time.
+- **Supplier master**: AP master data must be tighter than CRM. RNC, bank, currency, attachments, active flag — same shape as `service_providers`.
 
-## Summary of gaps
+## Scope
 
-**11 of 23 columns** are missing from the export. They fall into three buckets:
+1. **`suppliers` table** (new), modeled on `service_providers`.
+2. **Treasury → "Anticipo a Suppliers"** button + dialog.
+3. **Open-advance warning** in `TransactionForm` when supplier has open 1690 balance.
+4. **Suppliers admin view** in Settings.
 
-### A. Almost always needed (high priority)
-- **Col 5 — NCF Modificado**: required for any debit/credit note (NCF tipo B04/B03). Currently we never emit it.
-- **Col 8 / 9 — Servicios vs Bienes split**: every line must place its `monto facturado` in one or the other. Today we put the full amount in a single column that doesn't exist in the format (we use it as if it were col 10).
-- **Col 17 — Tipo de Retención ISR**: mandatory whenever col 18 (ISR retenido) > 0. Current B11 flow sets ISR retenido but never tags the retention type.
+---
 
-### B. Situational but real (medium priority)
-- **Col 20 — ISC**: needed for fuel/telecom/alcohol invoices. Dallasagro buys diesel, so this is relevant.
-- **Col 22 — Propina Legal**: needed for any restaurant/representation invoice.
-- **Col 21 — Otros Impuestos/Tasas**: occasional.
+## 1. Database
 
-### C. Rare for an agro entity (low priority, can default to 0)
-- Col 13 ITBIS Proporcionalidad (Art. 349)
-- Col 14 ITBIS al Costo
-- Col 15 ITBIS por Adelantar (can be derived: `itbis − col13 − col14`)
-- Col 16 ITBIS percibido en compras
-- Col 19 ISR percibido en compras
+New table `public.suppliers`:
 
-## Where the new inputs should live
+```text
+id, entity_id (NOT NULL, default current_user_entity_id())
+name, rnc (unique per entity), apodo
+contact_person, phone, email, address
+bank, bank_account_type (savings|current), bank_account_number, currency (DOP|USD|EUR)
+default_dgii_bs_type (B|S, nullable)        -- prefill 606
+rnc_attachment_url, notes
+is_active (default true), created_at, updated_at
+```
 
-Two reasonable approaches:
+RLS: copy from `service_providers` (admin/mgmt/accountant/supervisor write; viewer read; office read-only).
 
-1. **Inline on the transaction form**: add an expandable "DGII 606 detalle" section (collapsed by default) on `TransactionForm.tsx` for purchase-type rows. Fields: bienes/servicios split (radio + amount or two amounts), NCF modificado, tipo retención ISR, ISC, propina legal, otros impuestos, ITBIS al costo / proporcionalidad / adelantar.
-2. **Secondary "606 enrichment" screen** inside `DGIIReportsView`: a per-row editable grid where the accountant can fill the extra fields just before exporting. Stored back on the transaction.
+Helper RPC `get_supplier_open_advance_balance(p_supplier_id, p_entity_id) returns numeric`:
+- Sum `balance_remaining` from `ap_ar_documents` where `account_id` = 1690, direction='payable', status in ('open','partial'), and either linked to supplier_id or matched by RNC for grandfathered rows.
 
-Recommendation: do **(1)** for the 3 high-priority fields (default servicios=full, NCF mod blank, tipo ret ISR auto when B11) and **(2)** for the rest, so daily entry isn't slowed down.
+New RPC `create_supplier_advance(...)` (called by Treasury form):
+- Inputs: `p_supplier_id, p_date, p_from_account, p_amount, p_currency, p_itbis_retained, p_isr_retained, p_notes, p_attachment_url`
+- Inserts a `transactions` row with `master_acct_code='1690'`, `is_internal=false`, `transaction_direction='purchase'`, `pay_method=p_from_account`.
+- Net cash out = `amount − itbis_retained − isr_retained`.
+- If retentions > 0: posts credits to **2105 ITBIS Retenido** and **2106 ISR Retenido** via journal lines on the same transaction.
+- Creates `ap_ar_documents` row (advance) with `account_id`=1690 so existing allocation flow works.
+- Returns transaction id + advance doc id.
 
-## Technical changes (for the implementation step)
+Add `supplier_id uuid references suppliers(id)` (nullable) to:
+- `transactions` (so future entries link cleanly)
+- `ap_ar_documents` (so allocation can match by id, not just RNC)
 
-- **DB**: add columns to `transactions`:
-  - `ncf_modificado text`
-  - `monto_bienes numeric` (nullable; if null & monto_servicios null, treat full as servicios or bienes by account class)
-  - `monto_servicios numeric`
-  - `dgii_tipo_retencion_isr text` (code 01–11)
-  - `isc numeric default 0`
-  - `propina_legal numeric default 0`
-  - `otros_impuestos numeric default 0`
-  - `itbis_proporcionalidad numeric default 0`
-  - `itbis_al_costo numeric default 0`
-  - `itbis_percibido numeric default 0`
-  - `isr_percibido numeric default 0`
-- **Backend**: update `generate_dgii_606` RPC to emit all 23 fields in the fixed order with `|` separator (TXT) and matching Excel columns.
-- **Frontend**:
-  - Extend `DGII606Table.tsx` columns + Excel export to all 23.
-  - Add inputs to `TransactionForm.tsx` (high-priority subset) and an editable grid in `DGIIReportsView.tsx` for the rest.
-  - Add `TIPO_RETENCION_ISR` code map to `dgiiConstants.ts`.
-- **Defaults / heuristics** to minimize manual entry:
-  - If account is a service account (e.g. honorarios, alquiler, servicios) → default to `monto_servicios = total - itbis`; else `monto_bienes`.
-  - If `pay_method = B11` flow and `isr_retenido > 0` → default `tipo_retencion_isr = '02'` (Honorarios) or by account.
-  - `itbis_por_adelantar = itbis − proporcionalidad − al_costo` when others are zero.
+No backfill of historical rows (per "grandfather old" decision).
 
-## Open questions for you before we build
+---
 
-1. Inline form vs. enrichment grid vs. both — which workflow do you prefer?
-2. For the bienes/servicios split, is a **per-account default** (mark each Chart-of-Accounts entry as "bien" or "servicio") acceptable, so the user almost never has to choose manually?
-3. Should we backfill the new columns for existing transactions (using account-based defaults), or leave historical rows blank and only enforce going forward?
+## 2. Treasury UI
+
+`TreasuryView.tsx`: add **"Anticipos a Suppliers"** tab beside Internal Transfers (same `!isOffice` gate).
+
+New `src/components/accounting/SupplierAdvancesView.tsx`:
+
+- Top: "Nuevo Anticipo" button → `SupplierAdvanceDialog`.
+- Below: table of recent advances (date, supplier, amount, currency, balance remaining, status, attachment).
+
+`SupplierAdvanceDialog` fields:
+- Date (default today)
+- Supplier (searchable combobox sourced from `suppliers`; "+ Registrar nuevo" inline opens `SupplierFormDialog`)
+- From account (bank/cash/card list, currency auto-derived)
+- Currency (read-only, from account)
+- Amount
+- ITBIS Retenido (optional, default 0) — collapsible "Retenciones" section
+- ISR Retenido (optional, default 0)
+- Notes, attachment upload
+- Computed read-only: "Neto a desembolsar" = amount − retenciones
+
+Submit calls `create_supplier_advance` RPC.
+
+---
+
+## 3. Suppliers registry UI
+
+New `src/components/settings/SuppliersView.tsx` (added as a tab under Settings, beside Service Providers):
+- List with search, active toggle, edit/create dialog.
+- Same RLS-driven actions as service providers.
+
+`SupplierFormDialog`: name, RNC (validated), apodo, contact, phone, email, bank info, currency, default B/S, attachment, active.
+
+---
+
+## 4. Open-advance warning in Transactions
+
+`TransactionForm.tsx`:
+- When direction = `purchase` AND a supplier is selected (new combobox replacing free-text name for purchases going forward), call `get_supplier_open_advance_balance` (debounced).
+- If balance > 0, show non-blocking inline banner: *"Este suplidor tiene RD$ X,XXX en anticipos abiertos."* with a link to ApArDocumentList filtered by supplier.
+- On submit, if balance > 0, open confirm modal:
+  - Title: "Anticipos pendientes"
+  - Body: list open advance docs + balances
+  - Buttons:
+    - "Aplicar contra anticipo" → routes to existing allocation flow
+    - "Continuar sin aplicar" → only enabled for roles `admin | management | accountant`; logs override reason (textarea required) into `transactions.notes` and an audit row.
+    - "Cancelar"
+- Supervisor / Office cannot dismiss the modal (per decision).
+
+For grandfathered free-text rows, supplier match falls back to RNC equality.
+
+---
+
+## 5. Permissions, i18n, tests
+
+- RLS verified on `suppliers` and new RPCs.
+- ES + EN strings for the new tab, dialog, retention labels, and override modal.
+- Vitest unit test for `create_supplier_advance` net-cash math and journal balance.
+- Vitest test for the open-advance hook returning the right balance per supplier.
+
+---
+
+## Out of scope (call out)
+
+- No retroactive enforcement on legacy purchase transactions; they keep free-text contact_name.
+- No automated supplier creation from existing contacts; admins promote on demand.
+- e-CF / 606 emission for the advance itself is unchanged (advances are not reported on 606 — only the eventual invoice is).

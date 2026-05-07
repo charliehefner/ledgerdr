@@ -228,7 +228,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   // Credit note alert state
   const [creditNotes, setCreditNotes] = useState<{ id: string; balance_remaining: number; currency: string; document_number: string | null }[]>([]);
-  
+
+  // Open supplier advance alert state (matched by RNC)
+  const [openAdvances, setOpenAdvances] = useState<{ id: string; balance_remaining: number; currency: string; document_date: string; contact_name: string }[]>([]);
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const advanceOverrideAllowed = user?.role === 'admin' || user?.role === 'management' || user?.role === 'accountant';
+
   useEffect(() => {
     const name = form.name?.trim();
     if (!name || name.length < 2) {
@@ -247,6 +252,35 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     }, 400);
     return () => clearTimeout(timer);
   }, [form.name]);
+
+  // Detect open supplier advances when entering a purchase tied to a known RNC.
+  // Excludes the case where the user IS recording an advance (master_acct_code 1690).
+  useEffect(() => {
+    const rnc = form.rnc?.trim();
+    const isAdvanceEntry = form.master_acct_code?.startsWith('1690');
+    if (!rnc || rnc.length < 5 || form.transaction_direction !== 'purchase' || isAdvanceEntry) {
+      setOpenAdvances([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      let q = supabase
+        .from('ap_ar_documents')
+        .select('id, balance_remaining, currency, document_date, contact_name, account_id, chart_of_accounts:account_id(account_code)')
+        .eq('contact_rnc', rnc)
+        .eq('direction', 'payable')
+        .eq('document_type', 'advance')
+        .in('status', ['open', 'partial'])
+        .gt('balance_remaining', 0) as any;
+      if (selectedEntityId) q = q.eq('entity_id', selectedEntityId);
+      const { data } = await q;
+      const filtered = (data || []).filter((d: any) =>
+        (d.chart_of_accounts?.account_code || '').startsWith('1690')
+      );
+      setOpenAdvances(filtered);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.rnc, form.transaction_direction, form.master_acct_code, selectedEntityId]);
+
 
   const uniqueNames = useMemo(() => {
     const names = new Set<string>();
@@ -344,6 +378,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         ? parseFloat(String(clashingTx.amount)).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : '';
       toast.error(`Duplicado: NCF ya usado en transacción ${txNum} — ${txName}, ${txDate}, ${txAmt}`);
+      return;
+    }
+
+    // Open-advance gate: warn if supplier has unapplied 1690 advances
+    if (openAdvances.length > 0 && !showAdvanceModal) {
+      setShowAdvanceModal(true);
       return;
     }
 
@@ -1205,6 +1245,21 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </div>
             )}
 
+            {openAdvances.length > 0 && (
+              <div className="md:col-span-3">
+                <Alert className="border-orange-500/50 bg-orange-50 dark:bg-orange-900/20">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <AlertDescription className="text-orange-800 dark:text-orange-200">
+                    Este suplidor tiene {openAdvances.length} anticipo(s) abierto(s) por{' '}
+                    <strong>
+                      {openAdvances.reduce((s, a) => s + (a.balance_remaining || 0), 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                    </strong>
+                    . Considere aplicarlo(s) en Cuentas por Pagar antes de registrar esta transacción.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>{t('txForm.rnc')}</Label>
               <Input
@@ -1264,6 +1319,51 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           </div>
         </form>
       </CardContent>
+
+      {showAdvanceModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowAdvanceModal(false)}>
+          <div className="bg-background rounded-lg shadow-xl max-w-lg w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-6 w-6 text-orange-500 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-lg">Anticipos pendientes</h3>
+                <p className="text-sm text-muted-foreground">
+                  Este suplidor tiene anticipos abiertos. Aplíquelos antes de registrar esta transacción.
+                </p>
+              </div>
+            </div>
+            <div className="bg-muted/40 rounded p-3 text-sm space-y-1 max-h-48 overflow-y-auto">
+              {openAdvances.map((a) => (
+                <div key={a.id} className="flex justify-between font-mono">
+                  <span>{a.document_date}</span>
+                  <span>{Number(a.balance_remaining).toLocaleString('es-DO', { minimumFractionDigits: 2 })} {a.currency}</span>
+                </div>
+              ))}
+            </div>
+            {!advanceOverrideAllowed && (
+              <p className="text-xs text-destructive">
+                Solo Admin, Gerencia o Contabilidad pueden continuar sin aplicar el anticipo.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setShowAdvanceModal(false)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                disabled={!advanceOverrideAllowed || isSubmitting}
+                onClick={() => {
+                  setOpenAdvances([]);
+                  setShowAdvanceModal(false);
+                  setTimeout(() => {
+                    document.querySelector<HTMLFormElement>('form')?.requestSubmit();
+                  }, 0);
+                }}
+              >
+                Continuar sin aplicar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

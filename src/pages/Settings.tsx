@@ -56,6 +56,7 @@ import { ApprovalThresholdsManager } from "@/components/settings/ApprovalThresho
 import { MfaSettings } from "@/components/settings/MfaSettings";
 import { TelegramSettings } from "@/components/settings/TelegramSettings";
 import { ErrorLogView } from "@/components/settings/ErrorLogView";
+import { SuppliersView } from "@/components/settings/SuppliersView";
 
 export default function Settings() {
   const { canModifySettings, canModifyPostingRules } = useAuth();
@@ -133,6 +134,12 @@ export default function Settings() {
               <TabsTrigger value="vendor-rules">
                 <Store className="h-4 w-4 mr-2" />
                 {t("settings.vendorRules")}
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="suppliers">
+                <Truck className="h-4 w-4 mr-2" />
+                Suplidores
               </TabsTrigger>
             )}
             {canModifyPostingRules && (
@@ -362,6 +369,14 @@ export default function Settings() {
             <TabsContent value="vendor-rules" className="mt-6">
               <div className="max-w-4xl">
                 <VendorAccountRules />
+              </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="suppliers" className="mt-6">
+              <div className="max-w-6xl">
+                <SuppliersView />
               </div>
             </TabsContent>
           )}

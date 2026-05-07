@@ -215,7 +215,7 @@ export function SuppliersView() {
                 <TableHead>Moneda</TableHead>
                 <TableHead>B/S</TableHead>
                 <TableHead className="text-center">Estado</TableHead>
-                {canWrite && <TableHead className="w-24 text-center">Acciones</TableHead>}
+                {canWrite && <TableHead className="w-32 text-center">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>

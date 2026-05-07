@@ -228,7 +228,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   // Credit note alert state
   const [creditNotes, setCreditNotes] = useState<{ id: string; balance_remaining: number; currency: string; document_number: string | null }[]>([]);
-  
+
+  // Open supplier advance alert state (matched by RNC)
+  const [openAdvances, setOpenAdvances] = useState<{ id: string; balance_remaining: number; currency: string; document_date: string; contact_name: string }[]>([]);
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const advanceOverrideAllowed = user?.role === 'admin' || user?.role === 'management' || user?.role === 'accountant';
+
   useEffect(() => {
     const name = form.name?.trim();
     if (!name || name.length < 2) {
@@ -247,6 +252,35 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     }, 400);
     return () => clearTimeout(timer);
   }, [form.name]);
+
+  // Detect open supplier advances when entering a purchase tied to a known RNC.
+  // Excludes the case where the user IS recording an advance (master_acct_code 1690).
+  useEffect(() => {
+    const rnc = form.rnc?.trim();
+    const isAdvanceEntry = form.master_acct_code?.startsWith('1690');
+    if (!rnc || rnc.length < 5 || form.transaction_direction !== 'purchase' || isAdvanceEntry) {
+      setOpenAdvances([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      let q = supabase
+        .from('ap_ar_documents')
+        .select('id, balance_remaining, currency, document_date, contact_name, account_id, chart_of_accounts:account_id(account_code)')
+        .eq('contact_rnc', rnc)
+        .eq('direction', 'payable')
+        .eq('document_type', 'advance')
+        .in('status', ['open', 'partial'])
+        .gt('balance_remaining', 0) as any;
+      if (selectedEntityId) q = q.eq('entity_id', selectedEntityId);
+      const { data } = await q;
+      const filtered = (data || []).filter((d: any) =>
+        (d.chart_of_accounts?.account_code || '').startsWith('1690')
+      );
+      setOpenAdvances(filtered);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.rnc, form.transaction_direction, form.master_acct_code, selectedEntityId]);
+
 
   const uniqueNames = useMemo(() => {
     const names = new Set<string>();

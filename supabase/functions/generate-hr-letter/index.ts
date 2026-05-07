@@ -594,7 +594,7 @@ function generateHiringPdf(data: HiringData): Uint8Array {
     y = pushLine(items, "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:", y, { size: 11, bold: true, align: "center" });
     y -= GAP_PARA;
 
-    const primeroText = `PRIMERO: EL TRABAJADOR laborará en calidad de ${data.position.toUpperCase()} en la empresa, a partir de la fecha de ${formatDateSpanish(data.start_date)}, con un salario de DOP ${formatCurrency(data.salary)} (${salaryWords} pesos) mensuales, totalizando RD$ ${formatCurrency(biweekly)} (${biweeklyWords} pesos) quincenales. Pagados por quincena.`;
+    const primeroText = `PRIMERO: EL TRABAJADOR laborará en calidad de ${data.position.toUpperCase()} en la empresa, a partir de la fecha de ${formatDateSpanish(data.start_date)}, con un salario de DOP ${formatCurrency(data.salary)} (${salaryWords} pesos) mensuales, totalizando RD$ ${formatCurrency(biweekly)} (${biweeklyWords} pesos) quincenales, menos los debidos descuentos de ley. Pagados por quincena.`;
     y = pushParagraph(items, primeroText, y);
     y -= GAP_PARA;
 

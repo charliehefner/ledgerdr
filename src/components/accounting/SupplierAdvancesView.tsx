@@ -522,6 +522,55 @@ export function SupplierAdvancesView() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!overWarning} onOpenChange={(o) => { if (!o) { setOverWarning(null); setOverrideReason(""); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              Excede el monto del contrato
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Este anticipo excede el saldo disponible del contrato seleccionado.</p>
+                {overWarning && (
+                  <div className="text-sm space-y-1 p-3 rounded-md bg-muted/40 border">
+                    <div className="flex justify-between"><span>Total contrato:</span>
+                      <span className="font-mono">{overWarning.total.toLocaleString("es-DO", { minimumFractionDigits: 2 })} {overWarning.cur}</span></div>
+                    <div className="flex justify-between"><span>Disponible:</span>
+                      <span className="font-mono">{overWarning.available.toLocaleString("es-DO", { minimumFractionDigits: 2 })} {overWarning.cur}</span></div>
+                    <div className="flex justify-between text-destructive font-semibold"><span>Excedente:</span>
+                      <span className="font-mono">{overWarning.over.toLocaleString("es-DO", { minimumFractionDigits: 2 })} {overWarning.cur}</span></div>
+                  </div>
+                )}
+                {canOverride ? (
+                  <div className="space-y-2 pt-2">
+                    <Label className="text-xs">Justificación (requerida para continuar)</Label>
+                    <Textarea rows={2} value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      placeholder="Motivo del exceso" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pt-2">
+                    Solo Admin, Gerencia o Contabilidad pueden autorizar exceder un contrato.
+                    Ajuste el monto del contrato o reduzca este anticipo.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            {canOverride && (
+              <AlertDialogAction
+                disabled={!overrideReason.trim() || submitting}
+                onClick={(e) => { e.preventDefault(); performInsert(overrideReason.trim()); }}>
+                Continuar de todos modos
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,121 +1,103 @@
-# Supplier Advances in Treasury
+# Supplier Contracts + Advance linkage
 
-## Accounting reasoning (why this design)
+## Clarifications first
 
-Standard AP practice (and what GP/QuickBooks/Odoo do):
-
-- **Advance** = prepayment debited to **1690 Anticipos a Suppliers** (asset), credited to bank/cash. It is *not* a purchase, has no NCF, no ITBIS-on-cost, no inventory movement.
-- **Retention on advances**: in DR, retentions normally accrue with the **invoice** (the taxable event). However, when a payment is the trigger for retention (e.g. ISR 2% to informal services), some firms book it on the advance. We will support both: retention fields are **optional**, default zero.
-- **Open advance alert**: every reputable AP module checks for unapplied prepayments before posting a new invoice/payment to the same vendor and prompts to apply. This already exists conceptually in `advance_allocations` but isn't surfaced at entry time.
-- **Supplier master**: AP master data must be tighter than CRM. RNC, bank, currency, attachments, active flag — same shape as `service_providers`.
-
-## Scope
-
-1. **`suppliers` table** (new), modeled on `service_providers`.
-2. **Treasury → "Anticipo a Suppliers"** button + dialog.
-3. **Open-advance warning** in `TransactionForm` when supplier has open 1690 balance.
-4. **Suppliers admin view** in Settings.
+- **"Neto a desembolsar"** = net cash leaving your bank/cash account = `Monto − ITBIS retenido − ISR retenido`. Retentions stay with you as a liability owed to DGII (accounts 2105/2106); the supplier only receives the net. Label will be renamed to **"Monto a pagar al suplidor"** and only shown when retentions > 0.
+- **Source vs destination**: An advance always debits **1690 Anticipos a Suplidores** (asset). There is no "destination expense account" at the advance step — that account is chosen later when the supplier's invoice arrives and the advance is applied. Contracts let us pre-declare what that destination *will be*.
 
 ---
 
-## 1. Database
+## 1. Database — `supplier_contracts`
 
-New table `public.suppliers`:
+New table:
 
 ```text
-id, entity_id (NOT NULL, default current_user_entity_id())
-name, rnc (unique per entity), apodo
-contact_person, phone, email, address
-bank, bank_account_type (savings|current), bank_account_number, currency (DOP|USD|EUR)
-default_dgii_bs_type (B|S, nullable)        -- prefill 606
-rnc_attachment_url, notes
-is_active (default true), created_at, updated_at
+id, entity_id (NOT NULL)
+supplier_id (FK suppliers, NOT NULL)
+contract_number (optional, unique per supplier+entity)
+description (text, required)
+total_amount (numeric, required)
+currency (DOP|USD|EUR, required)
+default_account_code (FK accounts, required)   -- expense or asset/project
+cost_center_id (FK cost_centers, nullable)     -- General | Agrícola | Industrial
+start_date, end_date (nullable)
+attachment_url (signed contract PDF)
+status (draft | active | closed | cancelled)
+notes
+is_active, created_at, updated_at, created_by
 ```
 
-RLS: copy from `service_providers` (admin/mgmt/accountant/supervisor write; viewer read; office read-only).
+RLS: same pattern as `suppliers` (admin/mgmt/accountant write; supervisor/viewer read; office read-only).
 
-Helper RPC `get_supplier_open_advance_balance(p_supplier_id, p_entity_id) returns numeric`:
-- Sum `balance_remaining` from `ap_ar_documents` where `account_id` = 1690, direction='payable', status in ('open','partial'), and either linked to supplier_id or matched by RNC for grandfathered rows.
+**Helper view / RPC** `get_contract_balance(p_contract_id)` returns:
+- `total_amount`
+- `advanced_to_date` — sum of advances linked to contract (transactions with `master_acct_code='1690'` AND `contract_id = p_contract_id`)
+- `applied_to_date` — sum of advance allocations against invoices for the contract
+- `available` = `total_amount − advanced_to_date`
 
-New RPC `create_supplier_advance(...)` (called by Treasury form):
-- Inputs: `p_supplier_id, p_date, p_from_account, p_amount, p_currency, p_itbis_retained, p_isr_retained, p_notes, p_attachment_url`
-- Inserts a `transactions` row with `master_acct_code='1690'`, `is_internal=false`, `transaction_direction='purchase'`, `pay_method=p_from_account`.
-- Net cash out = `amount − itbis_retained − isr_retained`.
-- If retentions > 0: posts credits to **2105 ITBIS Retenido** and **2106 ISR Retenido** via journal lines on the same transaction.
-- Creates `ap_ar_documents` row (advance) with `account_id`=1690 so existing allocation flow works.
-- Returns transaction id + advance doc id.
+Add nullable FK `contract_id uuid references supplier_contracts(id)` on:
+- `transactions` (so advances and eventual invoices both link)
+- `ap_ar_documents`
 
-Add `supplier_id uuid references suppliers(id)` (nullable) to:
-- `transactions` (so future entries link cleanly)
-- `ap_ar_documents` (so allocation can match by id, not just RNC)
-
-No backfill of historical rows (per "grandfather old" decision).
+No backfill of old rows.
 
 ---
 
-## 2. Treasury UI
+## 2. Suppliers settings — secondary "Contratos" panel
 
-`TreasuryView.tsx`: add **"Anticipos a Suppliers"** tab beside Internal Transfers (same `!isOffice` gate).
-
-New `src/components/accounting/SupplierAdvancesView.tsx`:
-
-- Top: "Nuevo Anticipo" button → `SupplierAdvanceDialog`.
-- Below: table of recent advances (date, supplier, amount, currency, balance remaining, status, attachment).
-
-`SupplierAdvanceDialog` fields:
-- Date (default today)
-- Supplier (searchable combobox sourced from `suppliers`; "+ Registrar nuevo" inline opens `SupplierFormDialog`)
-- From account (bank/cash/card list, currency auto-derived)
-- Currency (read-only, from account)
-- Amount
-- ITBIS Retenido (optional, default 0) — collapsible "Retenciones" section
-- ISR Retenido (optional, default 0)
-- Notes, attachment upload
-- Computed read-only: "Neto a desembolsar" = amount − retenciones
-
-Submit calls `create_supplier_advance` RPC.
+In `SuppliersView.tsx`, when a supplier row is selected (or via an "Contratos" action button), open a side sheet showing:
+- List of that supplier's contracts with: number, description, currency, total, advanced, available, status.
+- "Nuevo contrato" button opens `SupplierContractDialog` with: description, contract number (optional), total amount, currency, default account (account picker scoped to expense + project asset accounts), cost center (optional), start/end, attachment, notes.
+- Edit dialog allows adjusting `total_amount` (audited via `notes` + audit row) — your "adjusted over time" requirement.
+- Status toggle: draft → active → closed.
 
 ---
 
-## 3. Suppliers registry UI
+## 3. Supplier Advance dialog — contract field
 
-New `src/components/settings/SuppliersView.tsx` (added as a tab under Settings, beside Service Providers):
-- List with search, active toggle, edit/create dialog.
-- Same RLS-driven actions as service providers.
+Update `SupplierAdvanceDialog`:
 
-`SupplierFormDialog`: name, RNC (validated), apodo, contact, phone, email, bank info, currency, default B/S, attachment, active.
+1. After supplier is selected, query active contracts for that supplier.
+2. New optional field **"Contrato"** (combobox). If supplier has contracts, default to "Sin contrato" but offer the list. If no contracts exist, field stays hidden.
+3. When a contract is picked:
+   - Show inline: `Total: X · Anticipado: Y · Disponible: Z` (live from `get_contract_balance`).
+   - Default-lock the **currency** to the contract currency.
+   - Persist `contract_id` on the resulting transaction and `ap_ar_documents` row.
+4. Rename "Neto a desembolsar" → **"Monto a pagar al suplidor"**, hide row when retenciones = 0.
 
----
-
-## 4. Open-advance warning in Transactions
-
-`TransactionForm.tsx`:
-- When direction = `purchase` AND a supplier is selected (new combobox replacing free-text name for purchases going forward), call `get_supplier_open_advance_balance` (debounced).
-- If balance > 0, show non-blocking inline banner: *"Este suplidor tiene RD$ X,XXX en anticipos abiertos."* with a link to ApArDocumentList filtered by supplier.
-- On submit, if balance > 0, open confirm modal:
-  - Title: "Anticipos pendientes"
-  - Body: list open advance docs + balances
-  - Buttons:
-    - "Aplicar contra anticipo" → routes to existing allocation flow
-    - "Continuar sin aplicar" → only enabled for roles `admin | management | accountant`; logs override reason (textarea required) into `transactions.notes` and an audit row.
-    - "Cancelar"
-- Supervisor / Office cannot dismiss the modal (per decision).
-
-For grandfathered free-text rows, supplier match falls back to RNC equality.
+**Over-advance warning**: on submit, if `(advanced_to_date + amount) > total_amount`:
+- Show modal listing the contract, current advanced, this amount, overage.
+- Buttons: "Cancelar" / "Continuar de todos modos" (latter only enabled for `admin | management | accountant`, requires reason → stored in `transactions.notes` + audit row). Same pattern as the open-advance alert.
 
 ---
 
-## 5. Permissions, i18n, tests
+## 4. Treasury Supplier Advances list
 
-- RLS verified on `suppliers` and new RPCs.
-- ES + EN strings for the new tab, dialog, retention labels, and override modal.
-- Vitest unit test for `create_supplier_advance` net-cash math and journal balance.
-- Vitest test for the open-advance hook returning the right balance per supplier.
+Add a "Contrato" column showing contract number + small available-balance chip when present.
 
 ---
 
-## Out of scope (call out)
+## 5. Future-proofing (not built now, just enabled by schema)
 
-- No retroactive enforcement on legacy purchase transactions; they keep free-text contact_name.
-- No automated supplier creation from existing contacts; admins promote on demand.
-- e-CF / 606 emission for the advance itself is unchanged (advances are not reported on 606 — only the eventual invoice is).
+- The same `contract_id` FK on `transactions` lets a future invoice entry pre-fill the expense account from the contract and auto-suggest applying open advances under that contract. Out of scope for this iteration — only the advance side links.
+- Per-line / milestone contracts can be added later as a child table without changing the parent.
+
+---
+
+## Out of scope
+
+- No PO/3-way match.
+- No contract-line items or milestones (per "Simple: amount + account" decision).
+- No automatic application of advances to invoices via contract — manual allocation flow remains as today.
+- Existing free-text advances stay as-is; contracts are forward-only.
+
+---
+
+## Technical notes (for reviewer)
+
+- New table `public.supplier_contracts` + nullable `contract_id` columns on `transactions` and `ap_ar_documents`.
+- `create_supplier_advance` RPC (and the underlying `create_transaction_with_ap_ar` overload it calls) gains a `p_contract_id uuid default null` parameter. Drop prior overload to avoid PostgREST ambiguity (same pattern used after the supplier_id rollout).
+- Server-side validation in the RPC re-checks the contract balance to prevent client bypass; an `p_force boolean default false` flag plus role check (admin/management/accountant) is required to exceed.
+- Account picker on the contract dialog filters chart of accounts to expense (5xxx/6xxx/7xxx) + asset/project accounts; cost center dropdown reuses existing `cost_centers` lookup.
+- All new strings added to `src/i18n/es.ts` and `src/i18n/en.ts` (default Spanish).
+- Vitest: unit test for `get_contract_balance` math and over-advance gating; UI test for currency auto-lock when contract selected.

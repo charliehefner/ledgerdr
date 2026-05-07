@@ -1,16 +1,12 @@
-## Changes
+## Change
 
-### 1. Default RNL value in Letters dialog
-**File:** `src/components/hr/EmployeeLetterDialog.tsx` (line 71)
+**File:** `src/components/hr/EmployeeLetterDialog.tsx` (line 38)
 
-Change `useState("")` to `useState("132214048-0001")` so the RNL field is pre-populated. User can still override it.
+Update the "Horario de trabajo" quick-add clause template:
 
-### 2. Append legal phrase to biweekly salary clause in contracts
-**File:** `supabase/functions/generate-hr-letter/index.ts` (line 597)
-
-Modify the PRIMERO clause so it reads:
-> ...totalizando RD$ X (X pesos) quincenales, **menos los debidos descuentos de ley.** Pagados por quincena.
+- From: "lunes a viernes de 8:00 AM a 5:00 PM y sábados de 8:00 AM a 12:00 PM"
+- To: **"lunes a viernes de 7:30 AM a 4:30 PM y sábados de 7:30 AM a 11:30 AM"**
 
 ## Notes
-- Only contract-type letters use the biweekly clause. Employment verification letters remain unchanged.
-- No DB or i18n changes needed.
+- This only affects the default text inserted when the user clicks the "Horario de trabajo" template button on new contracts. Already-generated PDFs are unchanged.
+- No other files reference these hours; no DB or i18n changes needed.

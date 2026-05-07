@@ -242,10 +242,13 @@ export function SuppliersView() {
                   {canWrite && (
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openDialog(s)}>
+                        <Button variant="ghost" size="icon" title="Contratos" onClick={() => setContractsFor(s)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openDialog(s)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon"
+                        <Button variant="ghost" size="icon" title={s.is_active ? "Desactivar" : "Activar"}
                           onClick={() => toggleMut.mutate({ id: s.id, is_active: !s.is_active })}>
                           {s.is_active ? <UserX className="h-4 w-4 text-destructive" /> : <UserCheck className="h-4 w-4 text-primary" />}
                         </Button>

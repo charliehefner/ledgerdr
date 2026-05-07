@@ -791,8 +791,6 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 <SelectContent className="bg-popover">
                   <SelectItem value="purchase">{t('txForm.purchase')}</SelectItem>
                   <SelectItem value="sale">{t('txForm.sale')}</SelectItem>
-                  <SelectItem value="payment">{t('txForm.payment')}</SelectItem>
-                  <SelectItem value="investment">{t('txForm.investment')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -372,20 +372,62 @@ export function SupplierAdvancesView() {
               </div>
             </div>
 
+            {form.supplier_id && contracts.length > 0 && (
+              <div className="grid gap-4 md:grid-cols-3 p-3 rounded-md border bg-muted/20">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Contrato (opcional)</Label>
+                  <Select value={form.contract_id || "__none"}
+                    onValueChange={(v) => setForm((f) => ({ ...f, contract_id: v === "__none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover max-h-[300px]">
+                      <SelectItem value="__none">— Sin contrato —</SelectItem>
+                      {contracts.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.contract_number ? `${c.contract_number} · ` : ""}{c.description} ({c.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedContract && contractBal && (
+                  <div className="space-y-1 flex flex-col justify-center text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total:</span>
+                      <span className="font-mono">{contractBal.total.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedContract.currency}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Anticipado:</span>
+                      <span className="font-mono">{contractBal.advanced.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between font-semibold"><span>Disponible:</span>
+                      <span className={cn("font-mono", contractBal.available < amt && amt > 0 && "text-destructive")}>
+                        {contractBal.available.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span></div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedContract && fromAcct?.currency && fromAcct.currency !== selectedContract.currency && (
+              <div className="flex items-start gap-2 p-2 rounded-md border border-destructive/40 bg-destructive/5 text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>El contrato es en {selectedContract.currency} pero la cuenta origen es en {fromAcct.currency}. Seleccione una cuenta en {selectedContract.currency}.</span>
+              </div>
+            )}
+
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Monto Anticipo ({fromCur}) *</Label>
                 <Input type="number" step="0.01" value={form.amount} className="font-mono"
                   onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" />
               </div>
-              <div className="space-y-2 md:col-span-2 flex items-end">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Neto a desembolsar: </span>
-                  <span className="font-mono font-semibold">
-                    {netoDesembolsar.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {fromCur}
-                  </span>
+              {showNeto && (
+                <div className="space-y-2 md:col-span-2 flex items-end">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Monto a pagar al suplidor: </span>
+                    <span className="font-mono font-semibold">
+                      {netoDesembolsar.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {fromCur}
+                    </span>
+                    <span className="ml-2 text-xs text-muted-foreground">(neto de retenciones)</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <Collapsible open={retOpen} onOpenChange={setRetOpen}>

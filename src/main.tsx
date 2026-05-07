@@ -2,35 +2,93 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Aggressive client-side cleanup: unregister any leftover service workers
-// from the previous PWA build and clear all caches. This protects field
-// users who would otherwise be stuck on a stale app shell. Safe to run on
-// every load — it only does work when registrations or caches exist, and
-// uses a one-time reload guarded by sessionStorage to avoid loops.
-(async () => {
+// ---------------------------------------------------------------------------
+// Stale-cache self-healing
+//
+// Three layers protect users from being pinned on an outdated build:
+//   1. Unregister any leftover service workers from the old PWA (kill switch).
+//   2. Clear any HTTP caches the browser kept around.
+//   3. Compare window.__APP_VERSION__ (baked into index.html at build time)
+//      against /version.json (always fetched no-store). If they disagree, the
+//      cached HTML is stale — purge everything and reload exactly once.
+//
+// The probe is also re-run every 10 minutes and on tab focus so long-lived
+// tabs (common in this app) self-update without a manual refresh.
+// ---------------------------------------------------------------------------
+
+const BUILT_VERSION = (window as any).__APP_VERSION__ as string | undefined;
+
+async function purgeAndReload(reason: string, newVersion?: string) {
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      let didWork = false;
-      for (const r of regs) {
-        try { await r.unregister(); didWork = true; } catch (_) { /* noop */ }
-      }
-      if ("caches" in window) {
-        const names = await caches.keys();
-        if (names.length) {
-          await Promise.all(names.map((n) => caches.delete(n)));
-          didWork = true;
-        }
-      }
-      if (didWork && !sessionStorage.getItem("__sw_cleanup_reloaded")) {
-        sessionStorage.setItem("__sw_cleanup_reloaded", "1");
-        location.reload();
-        return;
-      }
+      await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
+    }
+    if ("caches" in window) {
+      const names = await caches.keys();
+      await Promise.all(names.map((n) => caches.delete(n)));
+    }
+  } catch (_) {
+    // Never block on cleanup.
+  }
+  // Guard against reload loops: only reload once per detected version.
+  const key = "__version_reloaded_for";
+  const marker = newVersion ?? reason;
+  if (sessionStorage.getItem(key) === marker) return;
+  sessionStorage.setItem(key, marker);
+  location.reload();
+}
+
+async function checkVersion() {
+  if (!BUILT_VERSION || BUILT_VERSION === "__APP_VERSION__" || BUILT_VERSION === "dev") {
+    return; // Dev mode or pre-build placeholder — never trigger.
+  }
+  try {
+    const res = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return;
+    const { version } = (await res.json()) as { version?: string };
+    if (version && version !== BUILT_VERSION) {
+      await purgeAndReload("version-mismatch", version);
     }
   } catch (_) {
     // Ignore — never block app boot on cleanup.
   }
+}
+
+(async () => {
+  // Legacy cleanup: if the previous PWA SW is still registered, kill it now.
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length > 0) {
+        await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
+        if ("caches" in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map((n) => caches.delete(n)));
+        }
+        if (!sessionStorage.getItem("__sw_cleanup_reloaded")) {
+          sessionStorage.setItem("__sw_cleanup_reloaded", "1");
+          location.reload();
+          return;
+        }
+      }
+    }
+  } catch (_) {
+    // Never block boot.
+  }
+
+  // Initial version probe.
+  await checkVersion();
 })();
+
+// Periodic + focus-driven re-checks.
+if (typeof window !== "undefined") {
+  setInterval(checkVersion, 10 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void checkVersion();
+  });
+}
 
 createRoot(document.getElementById("root")!).render(<App />);

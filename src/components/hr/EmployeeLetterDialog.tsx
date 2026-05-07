@@ -35,7 +35,7 @@ const CLAUSE_TEMPLATES: { labelKey: string; title: string; body: string }[] = [
   { labelKey: "letter.fuelExpenses", title: "Beneficios", body: "LA EMPRESA cubrirá los gastos de combustible del TRABAJADOR para fines laborales." },
   { labelKey: "letter.companyVehicle", title: "Beneficios", body: "LA EMPRESA proporcionará un vehículo para uso del TRABAJADOR en el desempeño de sus funciones." },
   { labelKey: "letter.responsibilities", title: "Responsabilidades", body: "EL TRABAJADOR será responsable de " },
-  { labelKey: "letter.workSchedule", title: "Condiciones", body: "El horario de trabajo será de lunes a viernes de 8:00 AM a 5:00 PM y sábados de 8:00 AM a 12:00 PM." },
+  { labelKey: "letter.workSchedule", title: "Condiciones", body: "El horario de trabajo será de lunes a viernes de 7:30 AM a 4:30 PM y sábados de 7:30 AM a 11:30 AM." },
 ];
 
 interface EmployeeLetterDialogProps {

@@ -16,7 +16,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, UserCheck, UserX, Search, Truck } from "lucide-react";
+import { Plus, Pencil, UserCheck, UserX, Search, Truck, FileText } from "lucide-react";
+import { SupplierContractsDialog } from "./SupplierContractsDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEntity } from "@/contexts/EntityContext";

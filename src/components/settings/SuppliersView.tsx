@@ -369,6 +369,13 @@ export function SuppliersView() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <SupplierContractsDialog
+        open={!!contractsFor}
+        onOpenChange={(o) => { if (!o) setContractsFor(null); }}
+        supplierId={contractsFor?.id || null}
+        supplierName={contractsFor?.name || ""}
+      />
     </div>
   );
 }

@@ -405,6 +405,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           p_destination_amount:        destinationAmount ?? null,
           p_itbis_override_reason:     form.itbis_override_reason || null,
           p_entity_id:                 selectedEntityId || null,
+          p_ncf_modificado:            form.transaction_direction === 'purchase' ? (form.ncf_modificado || null) : null,
+          p_monto_bienes:              form.transaction_direction === 'purchase' && form.bs_split === 'bienes'
+                                         ? Math.max(0, parseFloat(form.amount || '0') - parseFloat(form.itbis || '0')) : null,
+          p_monto_servicios:           form.transaction_direction === 'purchase' && form.bs_split === 'servicios'
+                                         ? Math.max(0, parseFloat(form.amount || '0') - parseFloat(form.itbis || '0')) : null,
+          p_dgii_tipo_retencion_isr:   isB11 ? (form.dgii_tipo_retencion_isr || '02') : (form.dgii_tipo_retencion_isr || null),
         }
       );
 

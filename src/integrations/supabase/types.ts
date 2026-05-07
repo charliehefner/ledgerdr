@@ -5927,19 +5927,30 @@ export type Database = {
           p_destination_amount?: number
           p_dgii_tipo_bienes_servicios?: string
           p_dgii_tipo_ingreso?: string
+          p_dgii_tipo_retencion_isr?: string
           p_document?: string
           p_due_date?: string
           p_entity_id?: string
           p_exchange_rate?: number
           p_is_internal?: boolean
+          p_isc?: number
+          p_isr_percibido?: number
           p_isr_retenido?: number
           p_itbis?: number
+          p_itbis_al_costo?: number
           p_itbis_override_reason?: string
+          p_itbis_percibido?: number
+          p_itbis_proporcionalidad?: number
           p_itbis_retenido?: number
           p_master_acct_code: string
+          p_monto_bienes?: number
+          p_monto_servicios?: number
           p_name?: string
+          p_ncf_modificado?: string
+          p_otros_impuestos?: number
           p_pay_method?: string
           p_project_code?: string
+          p_propina_legal?: number
           p_purchase_date?: string
           p_rnc?: string
           p_transaction_date: string

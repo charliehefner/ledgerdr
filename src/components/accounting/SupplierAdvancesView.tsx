@@ -120,20 +120,64 @@ export function SupplierAdvancesView() {
     },
   });
 
+  // Active contracts for the selected supplier
+  const { data: contracts = [] } = useQuery({
+    queryKey: ["supplier-contracts-active", form.supplier_id, selectedEntityId],
+    enabled: !!form.supplier_id,
+    queryFn: async () => {
+      let q = supabase.from("supplier_contracts" as any)
+        .select("id, contract_number, description, total_amount, currency, status")
+        .eq("supplier_id", form.supplier_id)
+        .in("status", ["active", "draft"])
+        .order("created_at", { ascending: false }) as any;
+      if (selectedEntityId) q = q.eq("entity_id", selectedEntityId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []) as Contract[];
+    },
+  });
+
+  const selectedContract = contracts.find((c) => c.id === form.contract_id);
+
+  // Live balance for selected contract
+  const { data: contractBal } = useQuery({
+    queryKey: ["contract-balance", form.contract_id],
+    enabled: !!form.contract_id,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_contract_balance" as any, { p_contract_id: form.contract_id });
+      if (error) throw error;
+      const row: any = Array.isArray(data) ? data[0] : data;
+      return row ? {
+        total: Number(row.total_amount || 0),
+        advanced: Number(row.advanced_to_date || 0),
+        available: Number(row.available || 0),
+      } : null;
+    },
+  });
+
+  // Reset contract if supplier changes
+  useEffect(() => {
+    setForm((f) => ({ ...f, contract_id: "" }));
+  }, [form.supplier_id]);
+
   const fromAcct = bankAccounts.find((a) => a.id === form.from_account);
-  const fromCur = fromAcct?.currency || "DOP";
+  // Currency: contract overrides if set, else from account
+  const fromCur = selectedContract?.currency || fromAcct?.currency || "DOP";
   const supplier = suppliers.find((s) => s.id === form.supplier_id);
 
   const amt = parseFloat(form.amount || "0");
   const itbisRet = parseFloat(form.itbis_retenido || "0");
   const isrRet = parseFloat(form.isr_retenido || "0");
   const netoDesembolsar = Math.max(0, amt - itbisRet - isrRet);
+  const showNeto = itbisRet > 0 || isrRet > 0;
 
   const isValid = () => {
     if (!form.date || !form.supplier_id || !form.from_account || !form.amount) return false;
     if (amt <= 0) return false;
     if (itbisRet < 0 || isrRet < 0) return false;
     if (itbisRet + isrRet > amt) return false;
+    // currency mismatch when contract selected
+    if (selectedContract && fromAcct && fromAcct.currency && fromAcct.currency !== selectedContract.currency) return false;
     return true;
   };
 

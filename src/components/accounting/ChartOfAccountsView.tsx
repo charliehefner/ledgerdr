@@ -352,6 +352,21 @@ export function ChartOfAccountsView() {
                 <Label htmlFor="allow-posting">{t("accounting.coa.allowPosting")}</Label>
               </div>
             </div>
+            <div>
+              <Label>DGII 606 — Bienes / Servicios</Label>
+              <Select
+                value={form.dgii_bs_type || "none"}
+                onValueChange={v => setForm(f => ({ ...f, dgii_bs_type: v === "none" ? "" : (v as "B" | "S") }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Sin marca —</SelectItem>
+                  <SelectItem value="B">Bienes</SelectItem>
+                  <SelectItem value="S">Servicios</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Marca usada para auto-clasificar las compras en el reporte 606.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>

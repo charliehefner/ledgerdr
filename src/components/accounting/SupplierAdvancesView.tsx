@@ -66,10 +66,15 @@ const initialState = {
 
 export function SupplierAdvancesView() {
   const { selectedEntityId } = useEntity();
+  const { user } = useAuth();
+  const role = user?.role;
+  const canOverride = role === "admin" || role === "management" || role === "accountant";
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialState);
   const [submitting, setSubmitting] = useState(false);
   const [retOpen, setRetOpen] = useState(false);
+  const [overWarning, setOverWarning] = useState<{ over: number; available: number; total: number; cur: string } | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["supplier-advance-bank-accounts"],

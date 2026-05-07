@@ -26,6 +26,7 @@ type Account = {
   deleted_at: string | null;
   english_description: string | null;
   spanish_description: string | null;
+  dgii_bs_type: string | null;
 };
 
 const ACCOUNT_TYPES = ["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"];
@@ -88,6 +89,7 @@ export function ChartOfAccountsView() {
     currency: "DOP",
     english_description: "",
     spanish_description: "",
+    dgii_bs_type: "" as "" | "B" | "S",
   });
 
   const { data: accounts = [], isLoading } = useQuery({
@@ -115,6 +117,7 @@ export function ChartOfAccountsView() {
         currency: values.currency,
         english_description: values.english_description || null,
         spanish_description: values.spanish_description || null,
+        dgii_bs_type: values.dgii_bs_type || null,
       };
       if (editing) {
         const { error } = await supabase.from("chart_of_accounts").update(payload).eq("id", editing.id);
@@ -137,7 +140,7 @@ export function ChartOfAccountsView() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ account_code: "", account_name: "", account_type: "ASSET", parent_id: "", allow_posting: true, currency: "DOP", english_description: "", spanish_description: "" });
+    setForm({ account_code: "", account_name: "", account_type: "ASSET", parent_id: "", allow_posting: true, currency: "DOP", english_description: "", spanish_description: "", dgii_bs_type: "" });
     setDialogOpen(true);
   };
 
@@ -152,6 +155,7 @@ export function ChartOfAccountsView() {
       currency: a.currency || "DOP",
       english_description: a.english_description || "",
       spanish_description: a.spanish_description || "",
+      dgii_bs_type: (a.dgii_bs_type as "" | "B" | "S") || "",
     });
     setDialogOpen(true);
   };
@@ -347,6 +351,21 @@ export function ChartOfAccountsView() {
                 />
                 <Label htmlFor="allow-posting">{t("accounting.coa.allowPosting")}</Label>
               </div>
+            </div>
+            <div>
+              <Label>DGII 606 — Bienes / Servicios</Label>
+              <Select
+                value={form.dgii_bs_type || "none"}
+                onValueChange={v => setForm(f => ({ ...f, dgii_bs_type: v === "none" ? "" : (v as "B" | "S") }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Sin marca —</SelectItem>
+                  <SelectItem value="B">Bienes</SelectItem>
+                  <SelectItem value="S">Servicios</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Marca usada para auto-clasificar las compras en el reporte 606.</p>
             </div>
           </div>
           <DialogFooter>

@@ -898,6 +898,7 @@ export type Database = {
           created_by: string | null
           currency: string | null
           deleted_at: string | null
+          dgii_bs_type: string | null
           english_description: string | null
           id: string
           parent_id: string | null
@@ -914,6 +915,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
+          dgii_bs_type?: string | null
           english_description?: string | null
           id?: string
           parent_id?: string | null
@@ -930,6 +932,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
+          dgii_bs_type?: string | null
           english_description?: string | null
           id?: string
           parent_id?: string | null
@@ -5111,6 +5114,7 @@ export type Database = {
           dgii_tipo_anulacion: string | null
           dgii_tipo_bienes_servicios: string | null
           dgii_tipo_ingreso: string | null
+          dgii_tipo_retencion_isr: string | null
           document: string | null
           due_date: string | null
           entity_id: string
@@ -5119,17 +5123,27 @@ export type Database = {
           id: string
           is_internal: boolean
           is_void: boolean
+          isc: number
+          isr_percibido: number
           isr_retenido: number | null
           itbis: number
+          itbis_al_costo: number
           itbis_override_reason: string | null
+          itbis_percibido: number
+          itbis_proporcionalidad: number
           itbis_retenido: number | null
           legacy_id: number | null
           manual_credit_account_code: string | null
           master_acct_code: string | null
+          monto_bienes: number | null
+          monto_servicios: number | null
           name: string | null
+          ncf_modificado: string | null
+          otros_impuestos: number
           pay_method: string | null
           project_code: string | null
           project_id: string | null
+          propina_legal: number
           purchase_date: string | null
           rnc: string | null
           transaction_date: string
@@ -5155,6 +5169,7 @@ export type Database = {
           dgii_tipo_anulacion?: string | null
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
+          dgii_tipo_retencion_isr?: string | null
           document?: string | null
           due_date?: string | null
           entity_id?: string
@@ -5163,17 +5178,27 @@ export type Database = {
           id?: string
           is_internal?: boolean
           is_void?: boolean
+          isc?: number
+          isr_percibido?: number
           isr_retenido?: number | null
           itbis?: number
+          itbis_al_costo?: number
           itbis_override_reason?: string | null
+          itbis_percibido?: number
+          itbis_proporcionalidad?: number
           itbis_retenido?: number | null
           legacy_id?: number | null
           manual_credit_account_code?: string | null
           master_acct_code?: string | null
+          monto_bienes?: number | null
+          monto_servicios?: number | null
           name?: string | null
+          ncf_modificado?: string | null
+          otros_impuestos?: number
           pay_method?: string | null
           project_code?: string | null
           project_id?: string | null
+          propina_legal?: number
           purchase_date?: string | null
           rnc?: string | null
           transaction_date: string
@@ -5199,6 +5224,7 @@ export type Database = {
           dgii_tipo_anulacion?: string | null
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
+          dgii_tipo_retencion_isr?: string | null
           document?: string | null
           due_date?: string | null
           entity_id?: string
@@ -5207,17 +5233,27 @@ export type Database = {
           id?: string
           is_internal?: boolean
           is_void?: boolean
+          isc?: number
+          isr_percibido?: number
           isr_retenido?: number | null
           itbis?: number
+          itbis_al_costo?: number
           itbis_override_reason?: string | null
+          itbis_percibido?: number
+          itbis_proporcionalidad?: number
           itbis_retenido?: number | null
           legacy_id?: number | null
           manual_credit_account_code?: string | null
           master_acct_code?: string | null
+          monto_bienes?: number | null
+          monto_servicios?: number | null
           name?: string | null
+          ncf_modificado?: string | null
+          otros_impuestos?: number
           pay_method?: string | null
           project_code?: string | null
           project_id?: string | null
+          propina_legal?: number
           purchase_date?: string | null
           rnc?: string | null
           transaction_date?: string
@@ -5891,19 +5927,30 @@ export type Database = {
           p_destination_amount?: number
           p_dgii_tipo_bienes_servicios?: string
           p_dgii_tipo_ingreso?: string
+          p_dgii_tipo_retencion_isr?: string
           p_document?: string
           p_due_date?: string
           p_entity_id?: string
           p_exchange_rate?: number
           p_is_internal?: boolean
+          p_isc?: number
+          p_isr_percibido?: number
           p_isr_retenido?: number
           p_itbis?: number
+          p_itbis_al_costo?: number
           p_itbis_override_reason?: string
+          p_itbis_percibido?: number
+          p_itbis_proporcionalidad?: number
           p_itbis_retenido?: number
           p_master_acct_code: string
+          p_monto_bienes?: number
+          p_monto_servicios?: number
           p_name?: string
+          p_ncf_modificado?: string
+          p_otros_impuestos?: number
           p_pay_method?: string
           p_project_code?: string
+          p_propina_legal?: number
           p_purchase_date?: string
           p_rnc?: string
           p_transaction_date: string

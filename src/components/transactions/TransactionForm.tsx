@@ -6,7 +6,7 @@ import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { getDescription } from '@/lib/getDescription';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDateLocal } from '@/lib/dateUtils';
-import { TIPO_INGRESO, TIPO_BIENES_SERVICIOS } from '@/components/accounting/dgiiConstants';
+import { TIPO_INGRESO, TIPO_BIENES_SERVICIOS, TIPO_RETENCION_ISR } from '@/components/accounting/dgiiConstants';
 import {
   fetchAccounts,
   fetchProjects,
@@ -86,6 +86,9 @@ const getInitialFormState = () => ({
   destination_acct_code: '',
   dgii_tipo_ingreso: '',
   dgii_tipo_bienes_servicios: '',
+  ncf_modificado: '',
+  bs_split: 'auto' as 'auto' | 'bienes' | 'servicios',
+  dgii_tipo_retencion_isr: '',
   due_date: '',
   transfer_from_account: '',
   transfer_to_account: '',
@@ -402,6 +405,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           p_destination_amount:        destinationAmount ?? null,
           p_itbis_override_reason:     form.itbis_override_reason || null,
           p_entity_id:                 selectedEntityId || null,
+          p_ncf_modificado:            form.transaction_direction === 'purchase' ? (form.ncf_modificado || null) : null,
+          p_monto_bienes:              form.transaction_direction === 'purchase' && form.bs_split === 'bienes'
+                                         ? Math.max(0, parseFloat(form.amount || '0') - parseFloat(form.itbis || '0')) : null,
+          p_monto_servicios:           form.transaction_direction === 'purchase' && form.bs_split === 'servicios'
+                                         ? Math.max(0, parseFloat(form.amount || '0') - parseFloat(form.itbis || '0')) : null,
+          p_dgii_tipo_retencion_isr:   isB11 ? (form.dgii_tipo_retencion_isr || '02') : (form.dgii_tipo_retencion_isr || null),
         }
       );
 
@@ -1061,6 +1070,56 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {/* DGII 606 extra fields - purchases only */}
+          {form.transaction_direction === 'purchase' && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>NCF Modificado</Label>
+                <Input
+                  value={form.ncf_modificado}
+                  onChange={(e) => updateField('ncf_modificado', e.target.value.toUpperCase())}
+                  placeholder="Solo notas de crédito/débito"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">NCF original (B04/B03 únicamente)</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Bienes / Servicios</Label>
+                <Select
+                  value={form.bs_split}
+                  onValueChange={(v) => updateField('bs_split', v as 'auto' | 'bienes' | 'servicios')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="auto">Auto (según cuenta)</SelectItem>
+                    <SelectItem value="bienes">Bienes</SelectItem>
+                    <SelectItem value="servicios">Servicios</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Auto usa la marca de la cuenta contable</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo Retención ISR</Label>
+                <Select
+                  value={form.dgii_tipo_retencion_isr || undefined}
+                  onValueChange={(v) => updateField('dgii_tipo_retencion_isr', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="(Opcional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {Object.entries(TIPO_RETENCION_ISR).map(([code, desc]) => (
+                      <SelectItem key={code} value={code}>{code} - {desc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Requerido si hay ISR retenido</p>
+              </div>
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-4">

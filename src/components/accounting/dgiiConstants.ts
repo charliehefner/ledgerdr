@@ -25,6 +25,21 @@ export const TIPO_INGRESO: Record<string, string> = {
   "06": "Otros Ingresos",
 };
 
+// DGII Tipo de Retención ISR (Norma 07-2018, codes 01–11)
+export const TIPO_RETENCION_ISR: Record<string, string> = {
+  "01": "Alquileres",
+  "02": "Honorarios por Servicios",
+  "03": "Otras Rentas",
+  "04": "Otras Rentas (Rentas Presuntas)",
+  "05": "Intereses Pagados a Personas Jurídicas",
+  "06": "Intereses Pagados a Personas Físicas",
+  "07": "Retención por Dividendos",
+  "08": "Retención por Remesas al Exterior",
+  "09": "Juegos Telefónicos",
+  "10": "Premios o Ganancias",
+  "11": "Proveedores del Estado",
+};
+
 export const TIPO_ANULACION: Record<string, string> = {
   "01": "Deterioro de Factura Pre-Impresa",
   "02": "Errores de Impresión (Factura Pre-Impresa)",

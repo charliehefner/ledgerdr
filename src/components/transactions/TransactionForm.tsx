@@ -1319,6 +1319,51 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           </div>
         </form>
       </CardContent>
+
+      {showAdvanceModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowAdvanceModal(false)}>
+          <div className="bg-background rounded-lg shadow-xl max-w-lg w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-6 w-6 text-orange-500 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-lg">Anticipos pendientes</h3>
+                <p className="text-sm text-muted-foreground">
+                  Este suplidor tiene anticipos abiertos. Aplíquelos antes de registrar esta transacción.
+                </p>
+              </div>
+            </div>
+            <div className="bg-muted/40 rounded p-3 text-sm space-y-1 max-h-48 overflow-y-auto">
+              {openAdvances.map((a) => (
+                <div key={a.id} className="flex justify-between font-mono">
+                  <span>{a.document_date}</span>
+                  <span>{Number(a.balance_remaining).toLocaleString('es-DO', { minimumFractionDigits: 2 })} {a.currency}</span>
+                </div>
+              ))}
+            </div>
+            {!advanceOverrideAllowed && (
+              <p className="text-xs text-destructive">
+                Solo Admin, Gerencia o Contabilidad pueden continuar sin aplicar el anticipo.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setShowAdvanceModal(false)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                disabled={!advanceOverrideAllowed || isSubmitting}
+                onClick={() => {
+                  setOpenAdvances([]);
+                  setShowAdvanceModal(false);
+                  setTimeout(() => {
+                    document.querySelector<HTMLFormElement>('form')?.requestSubmit();
+                  }, 0);
+                }}
+              >
+                Continuar sin aplicar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

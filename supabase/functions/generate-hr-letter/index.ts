@@ -625,14 +625,16 @@ function generateHiringPdf(data: HiringData): Uint8Array {
     const lastBodyY = y;
     const sigY = y - GAP_SIG_TOP;
     const sigStart = items.length;
-    const empresaSubtitles = [
-      ...(data.representative_name ? [data.representative_name] : []),
-      ...(data.representative_title ? [data.representative_title] : []),
-      data.company_name,
-      `RNC: ${data.company_rnc}`,
-      "LA EMPRESA",
-    ];
-    pushSignature(items, COL_LEFT_CENTER, sigY, "", empresaSubtitles, "sig");
+    const empresaName = data.representative_name || data.company_name;
+    const empresaSubtitles = data.representative_name
+      ? [
+          ...(data.representative_title ? [data.representative_title] : []),
+          data.company_name,
+          `RNC: ${data.company_rnc}`,
+          "LA EMPRESA",
+        ]
+      : [`RNC: ${data.company_rnc}`, "LA EMPRESA"];
+    pushSignature(items, COL_LEFT_CENTER, sigY, empresaName, empresaSubtitles, "sig");
     pushSignature(items, COL_RIGHT_CENTER, sigY, data.employee_name, [`Cédula: ${data.cedula}`, "EL TRABAJADOR"], "sig");
     balanceSignatures(items, sigStart, lastBodyY);
 

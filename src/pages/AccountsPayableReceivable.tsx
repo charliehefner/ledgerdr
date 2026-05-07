@@ -3,7 +3,6 @@ import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ReceivablesView } from "@/components/accounting/ReceivablesView";
 import { PayablesView } from "@/components/accounting/PayablesView";
-import { FxRevaluationButton } from "@/components/accounting/FxRevaluationButton";
 
 export default function AccountsPayableReceivable() {
   const [activeTab, setActiveTab] = useState("payables");
@@ -16,7 +15,6 @@ export default function AccountsPayableReceivable() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       helpChapter="07-apar"
-      actions={<FxRevaluationButton />}
       tabGroups={[
         {
           tabs: [

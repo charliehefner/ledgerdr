@@ -1090,7 +1090,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 <Label>Bienes / Servicios</Label>
                 <Select
                   value={form.bs_split}
-                  onValueChange={(v) => updateField('bs_split', v)}
+                  onValueChange={(v) => updateField('bs_split', v as 'auto' | 'bienes' | 'servicios')}
                 >
                   <SelectTrigger>
                     <SelectValue />

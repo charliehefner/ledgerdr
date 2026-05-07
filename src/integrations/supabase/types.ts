@@ -898,6 +898,7 @@ export type Database = {
           created_by: string | null
           currency: string | null
           deleted_at: string | null
+          dgii_bs_type: string | null
           english_description: string | null
           id: string
           parent_id: string | null
@@ -914,6 +915,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
+          dgii_bs_type?: string | null
           english_description?: string | null
           id?: string
           parent_id?: string | null
@@ -930,6 +932,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
+          dgii_bs_type?: string | null
           english_description?: string | null
           id?: string
           parent_id?: string | null
@@ -5111,6 +5114,7 @@ export type Database = {
           dgii_tipo_anulacion: string | null
           dgii_tipo_bienes_servicios: string | null
           dgii_tipo_ingreso: string | null
+          dgii_tipo_retencion_isr: string | null
           document: string | null
           due_date: string | null
           entity_id: string
@@ -5119,17 +5123,27 @@ export type Database = {
           id: string
           is_internal: boolean
           is_void: boolean
+          isc: number
+          isr_percibido: number
           isr_retenido: number | null
           itbis: number
+          itbis_al_costo: number
           itbis_override_reason: string | null
+          itbis_percibido: number
+          itbis_proporcionalidad: number
           itbis_retenido: number | null
           legacy_id: number | null
           manual_credit_account_code: string | null
           master_acct_code: string | null
+          monto_bienes: number | null
+          monto_servicios: number | null
           name: string | null
+          ncf_modificado: string | null
+          otros_impuestos: number
           pay_method: string | null
           project_code: string | null
           project_id: string | null
+          propina_legal: number
           purchase_date: string | null
           rnc: string | null
           transaction_date: string
@@ -5155,6 +5169,7 @@ export type Database = {
           dgii_tipo_anulacion?: string | null
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
+          dgii_tipo_retencion_isr?: string | null
           document?: string | null
           due_date?: string | null
           entity_id?: string
@@ -5163,17 +5178,27 @@ export type Database = {
           id?: string
           is_internal?: boolean
           is_void?: boolean
+          isc?: number
+          isr_percibido?: number
           isr_retenido?: number | null
           itbis?: number
+          itbis_al_costo?: number
           itbis_override_reason?: string | null
+          itbis_percibido?: number
+          itbis_proporcionalidad?: number
           itbis_retenido?: number | null
           legacy_id?: number | null
           manual_credit_account_code?: string | null
           master_acct_code?: string | null
+          monto_bienes?: number | null
+          monto_servicios?: number | null
           name?: string | null
+          ncf_modificado?: string | null
+          otros_impuestos?: number
           pay_method?: string | null
           project_code?: string | null
           project_id?: string | null
+          propina_legal?: number
           purchase_date?: string | null
           rnc?: string | null
           transaction_date: string
@@ -5199,6 +5224,7 @@ export type Database = {
           dgii_tipo_anulacion?: string | null
           dgii_tipo_bienes_servicios?: string | null
           dgii_tipo_ingreso?: string | null
+          dgii_tipo_retencion_isr?: string | null
           document?: string | null
           due_date?: string | null
           entity_id?: string
@@ -5207,17 +5233,27 @@ export type Database = {
           id?: string
           is_internal?: boolean
           is_void?: boolean
+          isc?: number
+          isr_percibido?: number
           isr_retenido?: number | null
           itbis?: number
+          itbis_al_costo?: number
           itbis_override_reason?: string | null
+          itbis_percibido?: number
+          itbis_proporcionalidad?: number
           itbis_retenido?: number | null
           legacy_id?: number | null
           manual_credit_account_code?: string | null
           master_acct_code?: string | null
+          monto_bienes?: number | null
+          monto_servicios?: number | null
           name?: string | null
+          ncf_modificado?: string | null
+          otros_impuestos?: number
           pay_method?: string | null
           project_code?: string | null
           project_id?: string | null
+          propina_legal?: number
           purchase_date?: string | null
           rnc?: string | null
           transaction_date?: string

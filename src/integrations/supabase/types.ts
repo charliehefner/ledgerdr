@@ -6105,6 +6105,7 @@ export type Database = {
           p_amount?: number
           p_cbs_code?: string
           p_comments?: string
+          p_contract_id?: string
           p_cost_center?: string
           p_currency?: string
           p_description: string

@@ -28,6 +28,7 @@ import {
   type RuleConflict,
 } from '@/lib/postingRules';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
+import { useDirtyForm } from '@/lib/dirtyForms';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { NameAutocomplete } from './NameAutocomplete';
 import { ScanReceiptButton, OcrResult } from './ScanReceiptButton';
@@ -119,6 +120,11 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const [ruleConflicts, setRuleConflicts] = useState<RuleConflict[]>([]);
   const pendingCreditCodeRef = useRef<string | null>(null);
   const ruleAppliedFieldsRef = useRef<Record<string, unknown>>({});
+
+  // Mark form dirty when user has typed anything (compared to a fresh initial state).
+  const initialFormJson = useMemo(() => JSON.stringify(getInitialFormState()), []);
+  const isFormDirty = !isSubmitting && JSON.stringify(form) !== initialFormJson;
+  useDirtyForm('transaction-form', isFormDirty);
 
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],

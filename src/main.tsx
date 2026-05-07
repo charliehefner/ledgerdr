@@ -16,9 +16,11 @@ import "./index.css";
 // tabs (common in this app) self-update without a manual refresh.
 // ---------------------------------------------------------------------------
 
+import { hasDirtyForms } from "./lib/dirtyForms";
+
 const BUILT_VERSION = (window as any).__APP_VERSION__ as string | undefined;
 
-async function purgeAndReload(reason: string, newVersion?: string) {
+async function doPurgeAndReload(marker: string) {
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -33,10 +35,55 @@ async function purgeAndReload(reason: string, newVersion?: string) {
   }
   // Guard against reload loops: only reload once per detected version.
   const key = "__version_reloaded_for";
-  const marker = newVersion ?? reason;
   if (sessionStorage.getItem(key) === marker) return;
   sessionStorage.setItem(key, marker);
   location.reload();
+}
+
+async function purgeAndReload(reason: string, newVersion?: string) {
+  const marker = newVersion ?? reason;
+
+  // If the user has unsaved work, defer until the form is clean OR the
+  // tab is hidden (whichever comes first).
+  if (hasDirtyForms()) {
+    if ((window as any).__pendingReloadMarker) return; // already deferred
+    (window as any).__pendingReloadMarker = marker;
+
+    const trigger = () => {
+      if (!(window as any).__pendingReloadMarker) return;
+      const m = (window as any).__pendingReloadMarker as string;
+      (window as any).__pendingReloadMarker = undefined;
+      window.__onDirtyFormsEmpty = undefined;
+      void doPurgeAndReload(m);
+    };
+
+    window.__onDirtyFormsEmpty = () => {
+      if (!hasDirtyForms()) trigger();
+    };
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.visibilityState === "hidden") trigger();
+      },
+      { once: true }
+    );
+    return;
+  }
+
+  await doPurgeAndReload(marker);
+}
+
+// Native safety net: warn the user before they lose unsaved work via manual
+// refresh/close. Modern browsers ignore custom strings but still show a prompt
+// when the handler returns a truthy value.
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", (e) => {
+    if (hasDirtyForms()) {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    }
+  });
 }
 
 async function checkVersion() {

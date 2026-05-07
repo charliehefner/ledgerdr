@@ -28,6 +28,7 @@ import {
   type RuleConflict,
 } from '@/lib/postingRules';
 import { saveAttachment, AttachmentCategory } from '@/lib/attachments';
+import { useDirtyForm } from '@/lib/dirtyForms';
 import { MultiAttachmentUpload, CategoryAttachments } from './MultiAttachmentUpload';
 import { NameAutocomplete } from './NameAutocomplete';
 import { ScanReceiptButton, OcrResult } from './ScanReceiptButton';

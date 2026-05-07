@@ -185,17 +185,17 @@ export function SupplierAdvancesView() {
   const cards = bankAccounts.filter((a) => a.account_type === "credit_card");
   const petty = bankAccounts.filter((a) => a.account_type === "petty_cash");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isValid()) {
-      if (itbisRet + isrRet > amt) toast.error("Las retenciones no pueden superar el monto del anticipo");
-      else toast.error("Complete los campos requeridos");
-      return;
-    }
+  const performInsert = async (overrideNote?: string) => {
     setSubmitting(true);
     try {
-      const description = form.description?.trim()
+      let description = form.description?.trim()
         || `Anticipo a ${supplier?.name || "Suplidor"}${supplier?.rnc ? ` (${supplier.rnc})` : ""}`;
+      if (selectedContract) {
+        description += ` · Contrato ${selectedContract.contract_number || selectedContract.description}`;
+      }
+      if (overrideNote) {
+        description += ` [Override: ${overrideNote}]`;
+      }
 
       const { data, error } = await supabase.rpc("create_transaction_with_ap_ar" as any, {
         p_transaction_date: formatDateLocal(form.date!),
@@ -214,10 +214,10 @@ export function SupplierAdvancesView() {
         p_transaction_direction: "purchase",
         p_entity_id: selectedEntityId || null,
         p_supplier_id: supplier?.id || null,
+        p_contract_id: form.contract_id || null,
       });
       if (error) throw error;
 
-      // Patch advance doc to ensure supplier_id link (in case RPC version mismatch)
       const result = data as { id: string } | null;
       if (result?.id && supplier?.id) {
         await supabase
@@ -230,14 +230,40 @@ export function SupplierAdvancesView() {
       toast.success("Anticipo registrado");
       setForm(initialState);
       setRetOpen(false);
+      setOverWarning(null);
+      setOverrideReason("");
       await refetch();
       queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["contract-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-contract-balances"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValid()) {
+      if (itbisRet + isrRet > amt) toast.error("Las retenciones no pueden superar el monto del anticipo");
+      else if (selectedContract && fromAcct?.currency && fromAcct.currency !== selectedContract.currency)
+        toast.error(`La cuenta debe ser en ${selectedContract.currency} para este contrato`);
+      else toast.error("Complete los campos requeridos");
+      return;
+    }
+    // Over-advance check
+    if (selectedContract && contractBal && (contractBal.advanced + amt) > contractBal.total + 0.005) {
+      setOverWarning({
+        over: (contractBal.advanced + amt) - contractBal.total,
+        available: contractBal.available,
+        total: contractBal.total,
+        cur: selectedContract.currency,
+      });
+      return;
+    }
+    await performInsert();
   };
 
   const acctName = (id: string | null | undefined) => {

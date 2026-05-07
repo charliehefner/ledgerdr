@@ -381,6 +381,12 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       return;
     }
 
+    // Open-advance gate: warn if supplier has unapplied 1690 advances
+    if (openAdvances.length > 0 && !showAdvanceModal) {
+      setShowAdvanceModal(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {

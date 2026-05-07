@@ -1072,6 +1072,56 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </Select>
             </div>
           )}
+
+          {/* DGII 606 extra fields - purchases only */}
+          {form.transaction_direction === 'purchase' && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>NCF Modificado</Label>
+                <Input
+                  value={form.ncf_modificado}
+                  onChange={(e) => updateField('ncf_modificado', e.target.value.toUpperCase())}
+                  placeholder="Solo notas de crédito/débito"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">NCF original (B04/B03 únicamente)</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Bienes / Servicios</Label>
+                <Select
+                  value={form.bs_split}
+                  onValueChange={(v) => updateField('bs_split', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="auto">Auto (según cuenta)</SelectItem>
+                    <SelectItem value="bienes">Bienes</SelectItem>
+                    <SelectItem value="servicios">Servicios</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Auto usa la marca de la cuenta contable</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo Retención ISR</Label>
+                <Select
+                  value={form.dgii_tipo_retencion_isr || undefined}
+                  onValueChange={(v) => updateField('dgii_tipo_retencion_isr', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="(Opcional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {Object.entries(TIPO_RETENCION_ISR).map(([code, desc]) => (
+                      <SelectItem key={code} value={code}>{code} - {desc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Requerido si hay ISR retenido</p>
+              </div>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label>{t('txForm.currency')}</Label>

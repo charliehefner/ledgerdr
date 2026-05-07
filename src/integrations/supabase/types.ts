@@ -335,6 +335,7 @@ export type Database = {
           id: string
           notes: string | null
           status: string
+          supplier_id: string | null
           total_amount: number
           total_amount_dop: number | null
           updated_at: string
@@ -358,6 +359,7 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          supplier_id?: string | null
           total_amount?: number
           total_amount_dop?: number | null
           updated_at?: string
@@ -381,6 +383,7 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          supplier_id?: string | null
           total_amount?: number
           total_amount_dop?: number | null
           updated_at?: string
@@ -398,6 +401,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_documents_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -4823,6 +4833,80 @@ export type Database = {
           },
         ]
       }
+      suppliers: {
+        Row: {
+          address: string | null
+          apodo: string | null
+          bank: string | null
+          bank_account_number: string | null
+          bank_account_type: string | null
+          contact_person: string | null
+          created_at: string
+          currency: string | null
+          default_dgii_bs_type: string | null
+          email: string | null
+          entity_id: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          rnc: string | null
+          rnc_attachment_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          apodo?: string | null
+          bank?: string | null
+          bank_account_number?: string | null
+          bank_account_type?: string | null
+          contact_person?: string | null
+          created_at?: string
+          currency?: string | null
+          default_dgii_bs_type?: string | null
+          email?: string | null
+          entity_id?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          rnc?: string | null
+          rnc_attachment_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          apodo?: string | null
+          bank?: string | null
+          bank_account_number?: string | null
+          bank_account_type?: string | null
+          contact_person?: string | null
+          created_at?: string
+          currency?: string | null
+          default_dgii_bs_type?: string | null
+          email?: string | null
+          entity_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          rnc?: string | null
+          rnc_attachment_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_codes: {
         Row: {
           affects_isr: boolean | null
@@ -5146,6 +5230,7 @@ export type Database = {
           propina_legal: number
           purchase_date: string | null
           rnc: string | null
+          supplier_id: string | null
           transaction_date: string
           transaction_direction: string | null
           updated_at: string
@@ -5201,6 +5286,7 @@ export type Database = {
           propina_legal?: number
           purchase_date?: string | null
           rnc?: string | null
+          supplier_id?: string | null
           transaction_date: string
           transaction_direction?: string | null
           updated_at?: string
@@ -5256,6 +5342,7 @@ export type Database = {
           propina_legal?: number
           purchase_date?: string | null
           rnc?: string | null
+          supplier_id?: string | null
           transaction_date?: string
           transaction_direction?: string | null
           updated_at?: string
@@ -5310,6 +5397,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -5915,49 +6009,94 @@ export type Database = {
         }
         Returns: string
       }
-      create_transaction_with_ap_ar: {
-        Args: {
-          p_amount?: number
-          p_cbs_code?: string
-          p_comments?: string
-          p_cost_center?: string
-          p_currency?: string
-          p_description: string
-          p_destination_acct_code?: string
-          p_destination_amount?: number
-          p_dgii_tipo_bienes_servicios?: string
-          p_dgii_tipo_ingreso?: string
-          p_dgii_tipo_retencion_isr?: string
-          p_document?: string
-          p_due_date?: string
-          p_entity_id?: string
-          p_exchange_rate?: number
-          p_is_internal?: boolean
-          p_isc?: number
-          p_isr_percibido?: number
-          p_isr_retenido?: number
-          p_itbis?: number
-          p_itbis_al_costo?: number
-          p_itbis_override_reason?: string
-          p_itbis_percibido?: number
-          p_itbis_proporcionalidad?: number
-          p_itbis_retenido?: number
-          p_master_acct_code: string
-          p_monto_bienes?: number
-          p_monto_servicios?: number
-          p_name?: string
-          p_ncf_modificado?: string
-          p_otros_impuestos?: number
-          p_pay_method?: string
-          p_project_code?: string
-          p_propina_legal?: number
-          p_purchase_date?: string
-          p_rnc?: string
-          p_transaction_date: string
-          p_transaction_direction?: string
-        }
-        Returns: Json
-      }
+      create_transaction_with_ap_ar:
+        | {
+            Args: {
+              p_amount?: number
+              p_cbs_code?: string
+              p_comments?: string
+              p_cost_center?: string
+              p_currency?: string
+              p_description: string
+              p_destination_acct_code?: string
+              p_destination_amount?: number
+              p_dgii_tipo_bienes_servicios?: string
+              p_dgii_tipo_ingreso?: string
+              p_dgii_tipo_retencion_isr?: string
+              p_document?: string
+              p_due_date?: string
+              p_entity_id?: string
+              p_exchange_rate?: number
+              p_is_internal?: boolean
+              p_isc?: number
+              p_isr_percibido?: number
+              p_isr_retenido?: number
+              p_itbis?: number
+              p_itbis_al_costo?: number
+              p_itbis_override_reason?: string
+              p_itbis_percibido?: number
+              p_itbis_proporcionalidad?: number
+              p_itbis_retenido?: number
+              p_master_acct_code: string
+              p_monto_bienes?: number
+              p_monto_servicios?: number
+              p_name?: string
+              p_ncf_modificado?: string
+              p_otros_impuestos?: number
+              p_pay_method?: string
+              p_project_code?: string
+              p_propina_legal?: number
+              p_purchase_date?: string
+              p_rnc?: string
+              p_transaction_date: string
+              p_transaction_direction?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount?: number
+              p_cbs_code?: string
+              p_comments?: string
+              p_cost_center?: string
+              p_currency?: string
+              p_description: string
+              p_destination_acct_code?: string
+              p_destination_amount?: number
+              p_dgii_tipo_bienes_servicios?: string
+              p_dgii_tipo_ingreso?: string
+              p_dgii_tipo_retencion_isr?: string
+              p_document?: string
+              p_due_date?: string
+              p_entity_id?: string
+              p_exchange_rate?: number
+              p_is_internal?: boolean
+              p_isc?: number
+              p_isr_percibido?: number
+              p_isr_retenido?: number
+              p_itbis?: number
+              p_itbis_al_costo?: number
+              p_itbis_override_reason?: string
+              p_itbis_percibido?: number
+              p_itbis_proporcionalidad?: number
+              p_itbis_retenido?: number
+              p_master_acct_code: string
+              p_monto_bienes?: number
+              p_monto_servicios?: number
+              p_name?: string
+              p_ncf_modificado?: string
+              p_otros_impuestos?: number
+              p_pay_method?: string
+              p_project_code?: string
+              p_propina_legal?: number
+              p_purchase_date?: string
+              p_rnc?: string
+              p_supplier_id?: string
+              p_transaction_date: string
+              p_transaction_direction?: string
+            }
+            Returns: Json
+          }
       current_user_entity_id: { Args: never; Returns: string }
       dgii_507_report: {
         Args: { p_end: string; p_start: string }
@@ -6136,6 +6275,10 @@ export type Database = {
           currency: string
           total_amount: number
         }[]
+      }
+      get_supplier_open_advance_balance: {
+        Args: { p_entity_id?: string; p_supplier_id: string }
+        Returns: number
       }
       get_user_role: {
         Args: { _user_id: string }

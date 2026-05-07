@@ -3,6 +3,7 @@ import { BankReconciliationView } from "./BankReconciliationView";
 import { BankAccountsList } from "./BankAccountsList";
 import { CreditCardsList } from "./CreditCardsList";
 import { PettyCashView } from "./PettyCashView";
+import { InternalTransfersView } from "./InternalTransfersView";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,6 +20,7 @@ export function TreasuryView() {
         {!isOffice && <TabsTrigger value="bank-accounts">{t("treasury.bankAccounts")}</TabsTrigger>}
         {!isOffice && <TabsTrigger value="credit-cards">{t("treasury.creditCards")}</TabsTrigger>}
         <TabsTrigger value="petty-cash">{t("treasury.pettyCash")}</TabsTrigger>
+        {!isOffice && <TabsTrigger value="internal-transfers">Transferencias Internas</TabsTrigger>}
       </TabsList>
       {!isOffice && (
         <>
@@ -30,6 +32,9 @@ export function TreasuryView() {
           </TabsContent>
           <TabsContent value="credit-cards">
             <CreditCardsList />
+          </TabsContent>
+          <TabsContent value="internal-transfers">
+            <InternalTransfersView />
           </TabsContent>
         </>
       )}

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, HandCoins } from "lucide-react";
+import { CalendarIcon, HandCoins, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntity } from "@/contexts/EntityContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDateLocal, fmtDate } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,10 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -39,10 +44,19 @@ interface Supplier {
   apodo: string | null;
   currency: string | null;
 }
+interface Contract {
+  id: string;
+  contract_number: string | null;
+  description: string;
+  total_amount: number;
+  currency: string;
+  status: string;
+}
 
 const initialState = {
   date: undefined as Date | undefined,
   supplier_id: "",
+  contract_id: "",
   from_account: "",
   amount: "",
   itbis_retenido: "",

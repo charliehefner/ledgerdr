@@ -119,6 +119,7 @@ export const routeToSection: Record<string, Section> = {
   "/driver-portal": "driver-portal",
   "/analytics": "analytics",
   "/approvals": "approvals",
+  "/purchasing": "purchasing",
 };
 
 // Permission matrix: which roles can access which sections

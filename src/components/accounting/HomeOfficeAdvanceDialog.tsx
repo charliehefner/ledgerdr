@@ -332,10 +332,33 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label>Tasa interés % (anual)</Label>
+              <Input
+                type="number"
+                step="0.0001"
+                value={interestRatePct}
+                onChange={(e) => setInterestRatePct(e.target.value)}
+                placeholder="(heredar de la matriz)"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Base</Label>
+              <Select value={interestBasis} onValueChange={setInterestBasis}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">Heredar matriz</SelectItem>
+                  <SelectItem value="actual/365">actual/365</SelectItem>
+                  <SelectItem value="actual/360">actual/360</SelectItem>
+                  <SelectItem value="30/360">30/360</SelectItem>
+                  <SelectItem value="none">Sin interés</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1">
               <Label>Referencia</Label>
-              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Wire #, Factura, etc." />
+              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Wire #, Factura" />
             </div>
           </div>
 

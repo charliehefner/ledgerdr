@@ -60,6 +60,8 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
   const [cipProjectId, setCipProjectId] = useState<string>("");
   const [reference, setReference] = useState("");
   const [description, setDescription] = useState("");
+  const [interestRatePct, setInterestRatePct] = useState<string>("");
+  const [interestBasis, setInterestBasis] = useState<string>("inherit");
   const [error, setError] = useState<string | null>(null);
 
   const dateStr = format(date, "yyyy-MM-dd");

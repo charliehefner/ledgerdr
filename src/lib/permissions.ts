@@ -39,7 +39,8 @@ export type Section =
   | "contacts"
   | "industrial"
   | "driver-portal"
-  | "approvals";
+  | "approvals"
+  | "purchasing";
 
 // HR sub-tabs for granular access control
 export type HrTab = "payroll" | "day-labor" | "jornaleros" | "employees" | "add-employee" | "servicios" | "prestadores" | "tss";

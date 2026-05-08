@@ -405,6 +405,8 @@ export function ApArDocumentList({ direction }: Props) {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const updateDueDateMutation = useMutation({
     mutationFn: async () => {
       if (!dueDateDoc) throw new Error("Documento no encontrado");
       if (dueDateDoc.status === "paid" || dueDateDoc.status === "void") {

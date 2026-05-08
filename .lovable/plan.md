@@ -1,89 +1,134 @@
-# Wire-up plan: Drilldown + Dimensions
 
-Make both new features fully functional without disturbing existing posting/reporting paths.
+# Home Office Loans (Casa Matriz) — final plan
 
-## Part 1 — Drill-down deep links work end to end
+## On the existing "Revaluar FX" button — there will be **one** FX, not two
 
-Goal: clicking a `<DrilldownBadges>` badge opens the actual source record.
+The existing **`<FxRevaluationButton>`** (in the Accounting header) calls the RPC **`revalue_open_ap_ar`**. That RPC walks **only `ap_ar_documents`** in foreign currency with `status in ('open','partial')` and posts deltas to **8510 — Diferencia Cambiaria**, logging each delta in `ap_ar_fx_revaluations` (active/reversed model so it's idempotent across periods).
 
-1. **Transactions deep link** (`/transactions?id=<uuid>`)
-   - `Transactions.tsx`: read `?id=` via `useSearchParams`, pass `openTransactionId` prop to `RecentTransactions`.
-   - `RecentTransactions.tsx`: on mount/prop change, fetch the single tx by id (if not in current page) and open `EditTransactionDialog` with it; clear the param after opening.
+Account **2160 (Casa Matriz)** is **not** an AP/AR document — it's its own sub‑ledger — so today it is **not revalued by anyone**. There is no double counting risk and there is also a real gap.
 
-2. **Fixed asset / depreciation deep link**
-   - Update `drilldown_resolve` routes to:
-     - `fixed_asset`         → `/accounting?tab=fixed-assets&asset=<id>`
-     - `depreciation_entry`  → `/accounting?tab=fixed-assets&dep=<id>`
-   - `Accounting.tsx`: already tabs-based; read `?tab=` and forward `?asset=`/`?dep=` into `FixedAssetsView` to highlight the row.
+Decision: **one FX engine, one button, one P&L account.**
 
-3. **Purchasing deep link** (`/purchasing?po=` / `?gr=`)
-   - `Purchasing.tsx`: read params, scroll to / highlight the matching PO or GR card. No-op gracefully if id not found.
+- **Reuse the same button.** No second "Revaluar Casa Matriz" button. The existing one becomes the universal period‑end FX revaluation trigger.
+- **Reuse account 8510** for both gains and losses (sign of the journal indicates direction — same convention `revalue_open_ap_ar` already uses). Drop the earlier 7710/4710 split idea.
+- **Extend the engine, don't fork it.** Either:
+  - **(a, preferred)** add a sibling RPC `revalue_open_home_office(p_date, p_period_id, p_user_id, p_entity_id)` that mirrors the AP/AR pattern (per‑tranche advance, reverse prior active reval, post delta vs 2160/2960 to 8510), and have `<FxRevaluationButton>` call **both** RPCs in sequence inside one user action. The preview dialog already shows "accounts to revalue" — we add Casa Matriz tranches to that count.
+  - (b) add a wrapper RPC `revalue_all_fx(...)` that internally calls AP/AR + Casa Matriz; button calls only the wrapper. Cleaner long‑term but a bigger migration touch.
+  - We'll go with **(a)** — least disruptive, identical UX.
+- **`home_office_fx_revaluations`** mirrors `ap_ar_fx_revaluations` exactly: `(advance_id, period_id, journal_id, dop_delta, rate_used, is_active)`. Same "deactivate prior + post new" pattern, so re‑running for the same period replaces the prior reval rather than stacking.
+- **Triggers extend the existing pattern.** When a `home_office_repayments` row settles a tranche to zero or an advance is voided, set `is_active = false` on its open reval rows — same shape as `deactivate_fx_revals_on_paid_void()`.
+- **Cron** (last day of month) calls the same combined trigger via the existing pattern (one cron entry, both engines).
 
-4. **Routes still incomplete** (`bank_recon_match`, `recurring_template`, `accrual`, `manual`)
-   - Keep current routes; badges stay clickable — landing pages already exist (manual → `/accounting/journals/<id>` becomes `/accounting?tab=ledger&jid=<id>`). Mark accrual / recurring as no-link for now (badge renders without link until those modules exist).
+Net effect: one button, one P&L line (**8510**), one consistent reval audit trail spanning AP, AR, and Casa Matriz.
 
-## Part 2 — Per-line dimension picker on journals
+---
 
-5. **`<DimensionPicker>`** new component in `src/components/accounting/`:
-   - Loads active `accounting_dimensions` + their values via React Query.
-   - Renders one inline `<Select>` per active dimension.
-   - Emits `{ dimension_id → dimension_value_id | null }`.
+## Decisions locked in
 
-6. **`JournalDetailDialog`** lines table:
-   - Add one column per active dimension (between Description and Project).
-   - Load existing tags via `journal_line_dimensions` (joined in the journal query).
-   - On Save: diff current tags vs existing → upsert/delete in `journal_line_dimensions`. Skip when journal posted.
+- **Loan currency:** **USD** today, switchable to **SEK** later (`home_office_parties.currency` editable; new advances use the new currency, history stays at original).
+- **Repayments:** sporadic, deferred. Repago lives behind a secondary "Acciones" menu, not a primary CTA.
+- **Unpaid interest:** accrues monthly into **2960** and stays until JORD AB instructs to capitalize (rolled into 2160) or to be paid.
+- **Capitalize CIP:** Accountant role sufficient.
+- **FX gain/loss:** unified with existing AP/AR engine, posted to **8510**, logged in `home_office_fx_revaluations`, reused button.
 
-7. **Auto-sync from `transactions.cost_center`** (no UI change to `TransactionForm`):
-   - Extend `fn_journal_autolink_sources` trigger: when a journal is inserted with `transaction_source_id`, look up the source transaction's `cost_center` and insert matching `journal_line_dimensions` rows for each new line. Idempotent (`ON CONFLICT DO NOTHING`).
-   - This means every new posting from `TransactionForm` produces dimension tags automatically — no double-entry by the user.
+---
 
-## Part 3 — Account dimension rules admin UI
+## Module scope
 
-8. **New `<AccountDimensionRulesPanel>`** added as a third card inside `DimensionsManager`:
-   - Pick an account from a searchable combobox over `chart_of_accounts` (posting-allowed only).
-   - For each active dimension, dropdown: `optional` / `required` / `blocked`.
-   - CRUD against `account_dimension_rules`.
+### Data model
 
-## Part 4 — Warn-mode validation hook
+- `home_office_parties` — registry of external parents (seed: "JORD AB", currency `USD`). Fields: name, tax_id, currency, `interest_rate_pct`, `interest_basis` (`actual/360` | `actual/365` | `30/360` | `none`), `compounding` (default `simple`), `accrual_account` (2960), `expense_account` (8460), `liability_account` (2160).
+- `home_office_advances` — per inflow event: `kind` (`cash_transfer` | `equipment_capitalize` | `equipment_cip` | `equipment_inventory` | `expense_paid_on_behalf` | `other`), `party_id`, `entity_id`, `advance_date`, `currency`, `amount_fc`, `fx_rate`, `amount_dop`, `balance_remaining_fc`, `reference`, `description`, `status`, `journal_id`, `transaction_id` / `fixed_asset_id` / `cip_project_id`.
+- `home_office_repayments` — outflows: cash, offset, write‑off; stores realized FX (also posted to 8510).
+- `home_office_interest_accruals` — `period_month`, `avg_daily_balance_fc`, `avg_daily_balance_dop`, `rate_pct`, `days`, `interest_fc`, `interest_dop`, `journal_id`, `status` (`accrued` | `capitalized` | `paid`).
+- `home_office_fx_revaluations` — mirror of `ap_ar_fx_revaluations`: `(advance_id, period_id, journal_id, dop_delta, rate_used, is_active)`.
+- `cip_projects` — `name`, `cip_account_code` (1080/1180/1280), `entity_id`, `status`, `placed_in_service_date`, `final_asset_id`.
+- `home_office_balance` view — per party / per tranche, principal vs interest, FC + DOP at original/today rates.
 
-9. **Wrap `post_journal` invocation client-side**:
-   - In `JournalDetailDialog.handlePost` and `TransactionForm` post flow, after a successful `post_journal`, call `validate_journal_line_dimensions(journal_id)` (read-only; returns missing required tags).
-   - If rows returned → non-blocking warning toast listing affected accounts. Posting still succeeds (warn-only release).
-   - This satisfies the "validation has effect" gap without risking blocked operations.
+### Posting rules
 
-## Part 5 — Dimension filter (reports)
+| Event | Dr | Cr |
+|---|---|---|
+| Cash wire received | Bank (1110.x) | **2160** |
+| Equipment → capitalized directly | 14xx (+ ITBIS) | **2160** |
+| Equipment → CIP | **1080 / 1180 / 1280** | **2160** |
+| Equipment → inventory | Inventory | **2160** |
+| Expense paid on our behalf | Expense + cost center | **2160** |
+| Monthly interest accrual | **8460** | **2960** |
+| Interest capitalized into principal (Accountant OK) | **2960** | **2160** |
+| Interest paid in cash | **2960** | Bank |
+| CIP placed in service (Accountant OK) | 14xx | 1080/1180/1280 |
+| Cash repayment + realized FX | **2160** + **8510** | Bank |
+| Period‑end FX reval — loss | **8510** | **2160** / **2960** |
+| Period‑end FX reval — gain | **2160** / **2960** | **8510** |
 
-10. **Keep existing cost-center filter intact.** Add a dynamic dimension filter ONLY for new dimensions:
-    - Tiny `<DimensionFilters>` toolbar component on `AccountingReportsView` that lists active dimensions besides `cost_center`.
-    - Filter post-fetch in JS by joining loaded `journal_line_dimensions` (the volume on these report pages already supports client filtering — no RPC change needed for v1).
-    - P&L / Balance Sheet keep their current `p_cost_center` flow unchanged (touched only if user later asks).
+All journals route through `post_journal`, inherit period‑lock, audit log, approval thresholds, drill‑down chain (`source_type` ∈ `home_office_advance`, `home_office_repayment`, `home_office_interest_accrual`, `home_office_fx_reval`, `cip_capitalize`).
 
-## Files
+### UX
 
-**Created**
-- `src/components/accounting/DimensionPicker.tsx`
-- `src/components/settings/AccountDimensionRulesPanel.tsx`
-- `src/components/accounting/DimensionFilters.tsx`
-- `supabase/migrations/<ts>_drilldown_routes_and_dim_autosync.sql`
+New tab **Accounting → Casa Matriz**:
 
-**Modified**
-- `src/pages/Transactions.tsx`, `src/components/transactions/RecentTransactions.tsx`
-- `src/pages/Accounting.tsx`, `src/components/equipment/FixedAssetsView.tsx`
-- `src/pages/Purchasing.tsx`
-- `src/components/accounting/JournalDetailDialog.tsx`
-- `src/components/transactions/TransactionForm.tsx` (post-call validation hook only)
-- `src/components/settings/DimensionsManager.tsx`
-- `src/components/accounting/AccountingReportsView.tsx`
-- `src/lib/drilldown.ts` (no logic change; types only if new badges added)
+- **Saldo Casa Matriz** card: per party, principal + accrued interest, FC and DOP at original and today's rate, unrealized FX delta highlighted (informational; the actual posting happens through the shared "Revaluar FX" button).
+- **Nueva entrada** dialog with `kind` selector. *Equipment with invoice* opens sub‑selector — *Capitalize directly* / *Construction in progress* / *Inventory*. CIP path picks/creates a `cip_projects` row + CIP account.
+- **Movimientos** table with drill‑down badges to journal/transaction/asset/CIP/repayment/accrual/reval.
+- **Acciones** menu (secondary): Repago, Capitalizar interés, Pagar interés.
+- **Reconciliación**: attach JORD AB statement PDF and tick‑off matched lines (no auto‑match v1).
 
-## Out of scope (intentional, can be follow-ups)
+**Header `<FxRevaluationButton>`** is unchanged in placement, but its preview dialog and confirm action now cover AP + AR + Casa Matriz tranches.
 
-- True server-side dimension filter on `compute_pnl` / `compute_balance_sheet` RPCs.
-- Hard-enforce mode for `validate_journal_line_dimensions`.
-- Drill-down badges in P&L / BS / GL cells (current scope: the journal detail dialog is the entry point).
-- Recurring journals / accruals modules (routes will remain as link-less badges).
+New section **Accounting → CIP** (tab inside Fixed Assets):
 
-## Risk
+- Open CIP projects with running balance per CIP account.
+- **Capitalize CIP** action (Accountant OK): pick project, placed‑in‑service date, useful life → creates `fixed_assets` row, posts `Dr 14xx / Cr 1080|1180|1280`, depreciation begins.
 
-Additive only. No existing RPC signatures change. The trigger extension is idempotent and only writes tags when matching dimension values exist (no failure path if `cost_center` dimension is later renamed). Warn-only validation never blocks posting.
+### Interest engine
+
+- Monthly cron (last day of month, runs **before** FX reval) computes per party `interest = avg_daily_balance × rate × days / basis`, posts `Dr 8460 / Cr 2960`, inserts `home_office_interest_accruals`.
+- `interest_basis = 'none'` skips that party.
+- "Capitalizar interés" button posts `Dr 2960 / Cr 2160`, marks accrual `capitalized`.
+- "Pagar interés" posts `Dr 2960 / Cr Bank`, marks accrual `paid`.
+
+### FX engine (unified)
+
+- Same monthly cron then calls **both** `revalue_open_ap_ar` and the new `revalue_open_home_office` for every entity. Manual user trigger: existing `<FxRevaluationButton>` does the same two‑call sequence.
+- Idempotent: prior active reval row is deactivated and reversed before posting the new one (same pattern as today).
+- Single P&L account: **8510**.
+
+### Reports
+
+- **Estado de Casa Matriz** (range‑filtered): opening, additions by kind, interest accrued, interest capitalized/paid, repayments, FX reval (8510), closing — split principal vs interest. Export PDF/Excel.
+- Balance Sheet and P&L unchanged (already pick up 2160, 2960, 1180/1280/1080, 8510, 8460).
+
+### Permissions
+
+- Admin / Mgmt / Accountant: full CRUD, including capitalize CIP, capitalize interest, run revaluation.
+- Supervisor / Viewer: read‑only.
+- Driver: no access.
+- Period locks and approval thresholds enforced.
+
+## Out of scope for v1
+
+- Auto‑matching JORD AB statement lines.
+- Promoting JORD AB to a real `entity` and using sibling intercompany flow.
+- Compounding more granular than monthly.
+- Per‑asset FX revaluation (assets stay at historical DOP cost; only the liability and accrued interest are revalued).
+
+## Files (build phase)
+
+- **Migrations**: tables + view + RPCs `post_home_office_advance`, `post_home_office_repayment`, `post_home_office_interest_accrual`, `revalue_open_home_office` (mirrors `revalue_open_ap_ar`), `capitalize_cip_project`, `capitalize_interest_to_principal`; trigger `deactivate_ho_fx_revals_on_settle_or_void`; `drilldown_resolve` route additions; RLS; seed JORD AB row.
+- **Edge functions**: `home-office-interest-cron`, plus extending the FX cron entry to call both reval RPCs.
+- **New components**:
+  - `src/pages/CasaMatriz.tsx` (new tab inside `Accounting.tsx`)
+  - `HomeOfficeAdvanceDialog.tsx` (with destination‑type sub‑selector)
+  - `HomeOfficeRepaymentDialog.tsx`
+  - `HomeOfficeBalanceCard.tsx` (FC + DOP + unrealized FX preview)
+  - `HomeOfficeMovementsTable.tsx`
+  - `HomeOfficeInterestPanel.tsx`
+  - `CipProjectsView.tsx` + `CapitalizeCipDialog.tsx`
+  - `CasaMatrizStatementReport.tsx`
+- **Edits**:
+  - `FxRevaluationButton.tsx` — extend preview + confirm to include Casa Matriz tranches; call new RPC after AP/AR.
+  - `TransactionForm.tsx` — `pay_method = 'home_office:<party_id>'` virtual method.
+  - `Accounting.tsx` — add Casa Matriz tab; CIP tab inside Fixed Assets view.
+  - `FixedAssetsView.tsx` — "from CIP" badge for assets capitalized from CIP.
+  - i18n es/en strings.

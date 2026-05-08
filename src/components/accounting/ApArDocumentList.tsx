@@ -374,6 +374,8 @@ export function ApArDocumentList({ direction }: Props) {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const resetForm = () => {
     setForm({
       document_type: "invoice",
       contact_name: "",

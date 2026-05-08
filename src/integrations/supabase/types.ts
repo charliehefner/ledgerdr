@@ -3409,6 +3409,41 @@ export type Database = {
           },
         ]
       }
+      journal_source_links: {
+        Row: {
+          created_at: string
+          id: string
+          journal_id: string
+          source_id: string
+          source_label: string | null
+          source_type: Database["public"]["Enums"]["journal_source_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          journal_id: string
+          source_id: string
+          source_label?: string | null
+          source_type: Database["public"]["Enums"]["journal_source_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          journal_id?: string
+          source_id?: string
+          source_label?: string | null
+          source_type?: Database["public"]["Enums"]["journal_source_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_source_links_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journals: {
         Row: {
           approval_status: string
@@ -6732,6 +6767,17 @@ export type Database = {
       dgii_fmt_amount: { Args: { p_amount: number }; Returns: string }
       dgii_id_type: { Args: { p_rnc: string }; Returns: string }
       dgii_pay_method: { Args: { p_method: string }; Returns: string }
+      drilldown_resolve: {
+        Args: { p_journal_id: string }
+        Returns: {
+          link_id: string
+          route: string
+          source_id: string
+          source_label: string
+          source_type: Database["public"]["Enums"]["journal_source_type"]
+          state_badge: string
+        }[]
+      }
       ensure_purchasing_settings: {
         Args: { p_entity_id: string }
         Returns: {
@@ -7121,6 +7167,17 @@ export type Database = {
         | "other"
         | "condicionador"
         | "adherente"
+      journal_source_type:
+        | "transaction"
+        | "payroll_run"
+        | "depreciation_entry"
+        | "fixed_asset"
+        | "goods_receipt"
+        | "purchase_order"
+        | "bank_recon_match"
+        | "recurring_template"
+        | "accrual"
+        | "manual"
       liquidation_case_status: "draft" | "final"
       prestaciones_scenario: "desahucio" | "dimision"
     }
@@ -7271,6 +7328,18 @@ export const Constants = {
         "other",
         "condicionador",
         "adherente",
+      ],
+      journal_source_type: [
+        "transaction",
+        "payroll_run",
+        "depreciation_entry",
+        "fixed_asset",
+        "goods_receipt",
+        "purchase_order",
+        "bank_recon_match",
+        "recurring_template",
+        "accrual",
+        "manual",
       ],
       liquidation_case_status: ["draft", "final"],
       prestaciones_scenario: ["desahucio", "dimision"],

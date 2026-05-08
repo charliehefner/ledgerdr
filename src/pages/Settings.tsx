@@ -446,6 +446,12 @@ export default function Settings() {
           )}
 
           {canModifySettings && (
+            <TabsContent value="dimensions" className="mt-6">
+              <DimensionsManager />
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
             <TabsContent value="backup" className="mt-6">
               <BackupExportView />
             </TabsContent>

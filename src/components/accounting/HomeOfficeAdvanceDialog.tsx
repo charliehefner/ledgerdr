@@ -60,6 +60,8 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
   const [cipProjectId, setCipProjectId] = useState<string>("");
   const [reference, setReference] = useState("");
   const [description, setDescription] = useState("");
+  const [interestRatePct, setInterestRatePct] = useState<string>("");
+  const [interestBasis, setInterestBasis] = useState<string>("inherit");
   const [error, setError] = useState<string | null>(null);
 
   const dateStr = format(date, "yyyy-MM-dd");
@@ -77,6 +79,8 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
       setCipProjectId("");
       setReference("");
       setDescription("");
+      setInterestRatePct("");
+      setInterestBasis("inherit");
       setError(null);
     }
   }, [open, partyCurrency]);
@@ -88,6 +92,17 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
       setFxRate(String(officialRate));
     }
   }, [currency, officialRate]); // eslint-disable-line
+
+  // Default interest by kind: equipment transfers default to 0%, others inherit party rate.
+  useEffect(() => {
+    if (kind.startsWith("equipment_")) {
+      setInterestRatePct("0");
+      setInterestBasis("none");
+    } else {
+      setInterestRatePct("");
+      setInterestBasis("inherit");
+    }
+  }, [kind]);
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["ho-bank-accounts", selectedEntityId],
@@ -182,6 +197,8 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
         p_description: description || null,
         p_cip_project_id: kind === "equipment_cip" ? cipProjectId : null,
         p_bank_account_id: kind === "cash_transfer" ? bankAccountId : null,
+        p_interest_rate_pct: interestRatePct === "" ? null : Number(interestRatePct),
+        p_interest_basis: interestBasis === "inherit" ? null : interestBasis,
       });
       if (e) throw e;
       return data;
@@ -315,10 +332,33 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label>Tasa interés % (anual)</Label>
+              <Input
+                type="number"
+                step="0.0001"
+                value={interestRatePct}
+                onChange={(e) => setInterestRatePct(e.target.value)}
+                placeholder="(heredar de la matriz)"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Base</Label>
+              <Select value={interestBasis} onValueChange={setInterestBasis}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">Heredar matriz</SelectItem>
+                  <SelectItem value="actual/365">actual/365</SelectItem>
+                  <SelectItem value="actual/360">actual/360</SelectItem>
+                  <SelectItem value="30/360">30/360</SelectItem>
+                  <SelectItem value="none">Sin interés</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1">
               <Label>Referencia</Label>
-              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Wire #, Factura, etc." />
+              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Wire #, Factura" />
             </div>
           </div>
 

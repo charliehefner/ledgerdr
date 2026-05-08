@@ -313,6 +313,9 @@ export function DimensionsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
+
+      <AccountDimensionRulesPanel />
     </div>
   );
 }

@@ -829,6 +829,23 @@ export function ApArDocumentList({ direction }: Props) {
                           <Button
                             variant="ghost"
                             size="icon"
+                            title="Estado de cuenta (PDF)"
+                            onClick={() => handleStatement(doc)}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Aviso de remesa (PDF)"
+                            onClick={() => handleRemittance(doc)}
+                            disabled={doc.amount_paid <= 0}
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             title="Anular documento"
                             onClick={() => setVoidDoc(doc)}
                           >

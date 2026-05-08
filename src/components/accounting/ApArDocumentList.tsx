@@ -356,7 +356,24 @@ export function ApArDocumentList({ direction }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const resetForm = () => {
+  const voidMutation = useMutation({
+    mutationFn: async () => {
+      if (!voidDoc) throw new Error("No document");
+      const { error } = await supabase.rpc("void_ap_ar_document" as any, {
+        p_document_id: voidDoc.id,
+        p_user_id: user?.id || null,
+        p_reason: null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      setVoidDoc(null);
+      toast.success("Documento anulado y asientos reversados");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
     setForm({
       document_type: "invoice",
       contact_name: "",

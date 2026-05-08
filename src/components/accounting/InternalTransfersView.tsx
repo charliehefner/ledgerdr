@@ -61,6 +61,8 @@ export function InternalTransfersView() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialState);
   const [submitting, setSubmitting] = useState(false);
+  const [editTxn, setEditTxn] = useState<any | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["internal-transfer-bank-accounts"],

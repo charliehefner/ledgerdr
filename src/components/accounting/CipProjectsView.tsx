@@ -112,7 +112,7 @@ export function CipProjectsView({ highlightCapId }: CipProps = {}) {
                 <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Sin proyectos CIP</TableCell></TableRow>
               )}
               {projects.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} className={highlightCapId === p.id ? "bg-yellow-50 dark:bg-yellow-950/20 ring-2 ring-yellow-400/60" : ""}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell><Badge variant="outline">{p.cip_account_code}</Badge></TableCell>
                   <TableCell className="text-right font-mono">

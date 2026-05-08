@@ -394,8 +394,11 @@ export type Database = {
           due_date: string | null
           entity_id: string
           exchange_rate_used: number | null
+          gr_id: string | null
           id: string
+          match_status: string
           notes: string | null
+          po_id: string | null
           status: string
           supplier_id: string | null
           total_amount: number
@@ -421,8 +424,11 @@ export type Database = {
           due_date?: string | null
           entity_id?: string
           exchange_rate_used?: number | null
+          gr_id?: string | null
           id?: string
+          match_status?: string
           notes?: string | null
+          po_id?: string | null
           status?: string
           supplier_id?: string | null
           total_amount?: number
@@ -448,8 +454,11 @@ export type Database = {
           due_date?: string | null
           entity_id?: string
           exchange_rate_used?: number | null
+          gr_id?: string | null
           id?: string
+          match_status?: string
           notes?: string | null
+          po_id?: string | null
           status?: string
           supplier_id?: string | null
           total_amount?: number
@@ -476,6 +485,20 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_documents_gr_id_fkey"
+            columns: ["gr_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_documents_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2613,6 +2636,96 @@ export type Database = {
           },
         ]
       }
+      goods_receipt_lines: {
+        Row: {
+          created_at: string
+          gr_id: string
+          id: string
+          notes: string | null
+          po_line_id: string
+          qty_received: number
+        }
+        Insert: {
+          created_at?: string
+          gr_id: string
+          id?: string
+          notes?: string | null
+          po_line_id: string
+          qty_received: number
+        }
+        Update: {
+          created_at?: string
+          gr_id?: string
+          id?: string
+          notes?: string | null
+          po_line_id?: string
+          qty_received?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipt_lines_gr_id_fkey"
+            columns: ["gr_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipt_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goods_receipts: {
+        Row: {
+          created_at: string
+          entity_id: string
+          gr_number: string
+          id: string
+          notes: string | null
+          po_id: string
+          received_by: string | null
+          received_date: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string
+          gr_number: string
+          id?: string
+          notes?: string | null
+          po_id: string
+          received_by?: string | null
+          received_date?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          gr_number?: string
+          id?: string
+          notes?: string | null
+          po_id?: string
+          received_by?: string | null
+          received_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_audit_log: {
         Row: {
           changed_at: string
@@ -4201,6 +4314,193 @@ export type Database = {
           spanish_description?: string
         }
         Relationships: []
+      }
+      purchase_order_lines: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          description: string
+          id: string
+          item_id: string | null
+          line_no: number
+          line_total: number | null
+          po_id: string
+          qty_invoiced: number
+          qty_ordered: number
+          qty_received: number
+          tax_rate: number
+          unit_price: number
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          item_id?: string | null
+          line_no: number
+          line_total?: number | null
+          po_id: string
+          qty_invoiced?: number
+          qty_ordered?: number
+          qty_received?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          item_id?: string | null
+          line_no?: number
+          line_total?: number | null
+          po_id?: string
+          qty_invoiced?: number
+          qty_ordered?: number
+          qty_received?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_low_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          contact_name: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          entity_id: string
+          expected_date: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          po_number: string
+          status: string
+          subtotal: number
+          supplier_id: string | null
+          tax_total: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          contact_name: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entity_id?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          po_number: string
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          tax_total?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          contact_name?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entity_id?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          po_number?: string
+          status?: string
+          subtotal?: number
+          supplier_id?: string | null
+          tax_total?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchasing_settings: {
+        Row: {
+          entity_id: string
+          next_gr_number: number
+          next_po_number: number
+          price_tolerance_pct: number
+          qty_tolerance_pct: number
+          three_way_required: boolean
+          updated_at: string
+        }
+        Insert: {
+          entity_id: string
+          next_gr_number?: number
+          next_po_number?: number
+          price_tolerance_pct?: number
+          qty_tolerance_pct?: number
+          three_way_required?: boolean
+          updated_at?: string
+        }
+        Update: {
+          entity_id?: string
+          next_gr_number?: number
+          next_po_number?: number
+          price_tolerance_pct?: number
+          qty_tolerance_pct?: number
+          three_way_required?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchasing_settings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rainfall_records: {
         Row: {
@@ -6268,6 +6568,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cancel_purchase_order: { Args: { p_po_id: string }; Returns: undefined }
       cancel_stock_count: { Args: { p_session_id: string }; Returns: boolean }
       close_day_labor_week:
         | { Args: { p_week_ending: string }; Returns: string }
@@ -6338,6 +6639,19 @@ export type Database = {
             }
             Returns: string
           }
+      create_purchase_order: {
+        Args: {
+          p_contact_name: string
+          p_currency?: string
+          p_entity_id: string
+          p_expected_date?: string
+          p_lines?: Json
+          p_notes?: string
+          p_order_date?: string
+          p_supplier_id: string
+        }
+        Returns: string
+      }
       create_reversal_journal: {
         Args: {
           p_created_by: string
@@ -6418,6 +6732,24 @@ export type Database = {
       dgii_fmt_amount: { Args: { p_amount: number }; Returns: string }
       dgii_id_type: { Args: { p_rnc: string }; Returns: string }
       dgii_pay_method: { Args: { p_method: string }; Returns: string }
+      ensure_purchasing_settings: {
+        Args: { p_entity_id: string }
+        Returns: {
+          entity_id: string
+          next_gr_number: number
+          next_po_number: number
+          price_tolerance_pct: number
+          qty_tolerance_pct: number
+          three_way_required: boolean
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "purchasing_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       evaluate_posting_rules: {
         Args: { p_entity_id: string; p_payload: Json }
         Returns: {
@@ -6640,6 +6972,16 @@ export type Database = {
         }
         Returns: string
       }
+      receive_goods: {
+        Args: {
+          p_entity_id: string
+          p_lines: Json
+          p_notes: string
+          p_po_id: string
+          p_received_date: string
+        }
+        Returns: string
+      }
       recompute_ap_ar_document_balance: {
         Args: { p_document_id: string }
         Returns: undefined
@@ -6748,6 +7090,10 @@ export type Database = {
       user_top_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      validate_po_invoice_match: {
+        Args: { p_apar_id: string }
+        Returns: string
       }
       void_ap_ar_document: {
         Args: { p_document_id: string; p_reason?: string; p_user_id?: string }

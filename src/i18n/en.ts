@@ -14,6 +14,7 @@ export const en = {
   "nav.alerts": "Alerts",
   "nav.industrial": "Industrial",
   "nav.approvals": "Approvals",
+  "nav.purchasing": "Purchasing (PO)",
   
   // Sidebar sections
   "sidebar.menu": "Menu",

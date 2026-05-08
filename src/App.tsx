@@ -24,6 +24,7 @@ import Cronograma from "./pages/Cronograma";
 import Alerts from "./pages/Alerts";
 import Accounting from "./pages/Accounting";
 import AccountsPayableReceivable from "./pages/AccountsPayableReceivable";
+import Purchasing from "./pages/Purchasing";
 import Budget from "./pages/Budget";
 import Treasury from "./pages/Treasury";
 import Login from "./pages/Login";
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
                 <Route path="/accounts" element={<ProtectedRoute><AccountsPayableReceivable /></ProtectedRoute>} />
+                <Route path="/purchasing" element={<ProtectedRoute><Purchasing /></ProtectedRoute>} />
                 <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
                 <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />

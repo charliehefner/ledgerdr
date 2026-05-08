@@ -25,6 +25,7 @@ import {
   Building2,
   Factory,
   ClipboardCheck,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";
@@ -73,6 +74,7 @@ const sectionColors: Record<Section, string> = {
   industrial: "bg-section-fuel",
   "driver-portal": "",
   approvals: "",
+  purchasing: "",
 };
 
 const navigation: NavItem[] = [
@@ -83,6 +85,7 @@ const navigation: NavItem[] = [
   { nameKey: "nav.analytics", href: "/analytics", icon: BarChart3, section: "analytics" },
   { nameKey: "nav.accounting", href: "/accounting", icon: BookOpen, section: "accounting" },
   { nameKey: "nav.apar", href: "/accounts", icon: Receipt, section: "ap-ar" },
+  { nameKey: "nav.purchasing", href: "/purchasing", icon: ShoppingCart, section: "purchasing" },
   { nameKey: "nav.budget", href: "/budget", icon: Wallet, section: "budget" },
   { nameKey: "nav.treasury", href: "/treasury", icon: Landmark, section: "treasury" },
   { nameKey: "nav.contacts", href: "/contacts", icon: Building2, section: "contacts" },

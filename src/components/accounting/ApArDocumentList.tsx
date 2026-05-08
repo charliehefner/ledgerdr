@@ -29,7 +29,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban, Layers } from "lucide-react";
+import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban, Layers, FileText, Send } from "lucide-react";
+import { generateRemittanceAdvice, generateCustomerStatement } from "@/lib/apArDocuments";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,

@@ -38,6 +38,7 @@ interface Supplier {
   default_dgii_bs_type: string | null;
   notes: string | null;
   is_active: boolean;
+  credit_limit?: number | null;
 }
 
 const BANKS = [
@@ -49,6 +50,7 @@ const emptyForm = {
   name: "", rnc: "", apodo: "", contact_person: "", phone: "", email: "", address: "",
   bank: "", bank_account_type: "current", bank_account_number: "",
   currency: "DOP", default_dgii_bs_type: "", notes: "",
+  credit_limit: "0",
 };
 
 export function SuppliersView() {

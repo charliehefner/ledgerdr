@@ -120,7 +120,7 @@ The client orchestrates **5 sequential writes** (journal → lines → transacti
 10. ✅ **Aging service**: server-side function `aging_as_of(date, direction)` returning per-currency buckets. Powers UI today, regulator-grade snapshots tomorrow.
 11. **Period-end FX revaluation already exists** (`FxRevaluationButton`) — extend it to revalue open AP/AR sub-ledger items and post unrealized gain/loss.
 12. ✅ **Edit lock**: posted/paid/void documents should be hard-locked (DB trigger), not just hidden buttons.
-13. **Lock down generation paths**: collapse paths A/B/C into a single server-side `create_ap_ar_document` RPC so every doc gets the same validation, journal, and audit trail.
+13. ✅ **Lock down generation paths**: collapse paths A/B/C into a single server-side `create_ap_ar_document` RPC so every doc gets the same validation, journal, and audit trail.
 
 ### P3 — Nice to have / future
 14. Remittance advice PDF generation for vendor payments.

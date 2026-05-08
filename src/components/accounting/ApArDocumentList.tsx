@@ -104,6 +104,9 @@ export function ApArDocumentList({ direction }: Props) {
   const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
   const [voidDoc, setVoidDoc] = useState<ApArDocument | null>(null);
   const [multiOpen, setMultiOpen] = useState(false);
+  const [creditDoc, setCreditDoc] = useState<ApArDocument | null>(null);
+  const [selectedCreditId, setSelectedCreditId] = useState("");
+  const [creditAmount, setCreditAmount] = useState("");
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",

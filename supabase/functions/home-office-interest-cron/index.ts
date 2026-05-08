@@ -10,8 +10,18 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Determine target month: previous month if running on day 1, else current month.
+    // Run only on the last day of the month (cron may fire on days 28-31).
+    const url = new URL(req.url);
+    const force = url.searchParams.get("force") === "1";
     const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const isLastDay = tomorrow.getMonth() !== now.getMonth();
+    if (!isLastDay && !force) {
+      return new Response(JSON.stringify({ skipped: true, reason: "not last day of month" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Accrue for the current month (period_month = first day of current month).
     const targetDate = new Date(now.getFullYear(), now.getMonth(), 1);
     const periodMonth = targetDate.toISOString().slice(0, 10);
 

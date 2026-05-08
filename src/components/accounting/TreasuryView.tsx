@@ -4,6 +4,7 @@ import { BankAccountsList } from "./BankAccountsList";
 import { CreditCardsList } from "./CreditCardsList";
 import { PettyCashView } from "./PettyCashView";
 import { InternalTransfersView } from "./InternalTransfersView";
+import { CreditCardPaymentsView } from "./CreditCardPaymentsView";
 import { SupplierAdvancesView } from "./SupplierAdvancesView";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +23,7 @@ export function TreasuryView() {
         {!isOffice && <TabsTrigger value="credit-cards">{t("treasury.creditCards")}</TabsTrigger>}
         <TabsTrigger value="petty-cash">{t("treasury.pettyCash")}</TabsTrigger>
         {!isOffice && <TabsTrigger value="internal-transfers">Transferencias Internas</TabsTrigger>}
+        {!isOffice && <TabsTrigger value="cc-payments">Pagos de Tarjeta</TabsTrigger>}
         {!isOffice && <TabsTrigger value="supplier-advances">Anticipos a Suplidores</TabsTrigger>}
       </TabsList>
       {!isOffice && (
@@ -37,6 +39,9 @@ export function TreasuryView() {
           </TabsContent>
           <TabsContent value="internal-transfers">
             <InternalTransfersView />
+          </TabsContent>
+          <TabsContent value="cc-payments">
+            <CreditCardPaymentsView />
           </TabsContent>
           <TabsContent value="supplier-advances">
             <SupplierAdvancesView />

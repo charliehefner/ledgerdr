@@ -168,6 +168,17 @@ export function ApArDocumentList({ direction }: Props) {
     },
   });
 
+  // Suppliers/customers master for picker
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers-active", selectedEntityId],
+    queryFn: async () => {
+      let q = supabase.from("suppliers").select("id, name, rnc").eq("is_active", true).order("name");
+      if (selectedEntityId) q = q.or(`entity_id.eq.${selectedEntityId},entity_id.is.null`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []) as { id: string; name: string; rnc: string | null }[];
+    },
+  });
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["ap-ar-documents", direction],
     queryFn: async () => {

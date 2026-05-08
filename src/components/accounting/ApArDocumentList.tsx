@@ -353,7 +353,7 @@ export function ApArDocumentList({ direction }: Props) {
         p_total_amount: totalAmount,
         p_notes: form.notes || null,
         p_account_id: form.account_id || null,
-        p_supplier_id: null,
+        p_supplier_id: form.supplier_id || null,
         p_contract_id: null,
         p_entity_id: selectedEntityId || null,
         p_offset_account_id: form.offset_account_id || null,

@@ -374,7 +374,7 @@ export function InternalTransfersView() {
                 {recent.map((r: any) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground" title={r.id}>
-                      {String(r.id).slice(0, 8)}
+                      {r.legacy_id ?? "-"}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {fmtDate(new Date(r.transaction_date))}

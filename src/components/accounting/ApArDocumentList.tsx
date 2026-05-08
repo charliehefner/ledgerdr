@@ -519,9 +519,15 @@ export function ApArDocumentList({ direction }: Props) {
           )}
         </div>
         {canWrite && (
-          <Button variant="outline" size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1" /> {t("apar.newDocument")}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setMultiOpen(true)}>
+              <Layers className="h-4 w-4 mr-1" />
+              {direction === "payable" ? "Pago múltiple" : "Cobro múltiple"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> {t("apar.newDocument")}
+            </Button>
+          </div>
         )}
       </div>
 

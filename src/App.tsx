@@ -86,6 +86,7 @@ const App = () => (
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
                 <Route path="/accounts" element={<ProtectedRoute><AccountsPayableReceivable /></ProtectedRoute>} />
+                <Route path="/purchasing" element={<ProtectedRoute><Purchasing /></ProtectedRoute>} />
                 <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
                 <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                 <Route path="/driver-portal" element={<ProtectedRoute><DriverPortal /></ProtectedRoute>} />

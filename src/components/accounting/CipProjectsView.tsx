@@ -28,7 +28,11 @@ const CIP_ACCOUNTS = [
   { code: "1280", label: "1280 — Maquinaria y equipo en curso" },
 ];
 
-export function CipProjectsView() {
+interface CipProps {
+  highlightCapId?: string | null;
+}
+
+export function CipProjectsView({ highlightCapId }: CipProps = {}) {
   const { user } = useAuth();
   const { selectedEntityId, requireEntity } = useEntity();
   const qc = useQueryClient();

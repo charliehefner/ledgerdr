@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Trash2, Tag } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { AccountDimensionRulesPanel } from "@/components/settings/AccountDimensionRulesPanel";
 
 interface Dimension {
   id: string;
@@ -127,7 +128,8 @@ export function DimensionsManager() {
   const valName = (v: DimensionValue) => (language === "en" ? v.name_en : v.name_es);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Dimensions list */}
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">

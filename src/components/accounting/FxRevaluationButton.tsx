@@ -50,20 +50,24 @@ export function FxRevaluationButton() {
       const entityId = requireEntity();
       if (!entityId) throw new Error("Seleccione una entidad específica antes de ejecutar la revaluación.");
 
-      const { data, error } = await supabase.rpc("revalue_open_ap_ar", {
+      const args = {
         p_revaluation_date: format(date, "yyyy-MM-dd"),
         p_period_id: periodId,
         p_user_id: user?.id!,
         p_entity_id: entityId,
-      });
-      if (error) throw error;
-      return data as number;
+      };
+      const { data: apar, error: e1 } = await supabase.rpc("revalue_open_ap_ar", args);
+      if (e1) throw e1;
+      const { data: ho, error: e2 } = await supabase.rpc("revalue_open_home_office", args);
+      if (e2) throw e2;
+      return { apar: (apar as number) ?? 0, ho: (ho as number) ?? 0 };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ apar, ho }) => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["home-office-balance"] });
       toast.success(
-        `Revaluación completa — ${count} documento(s) ajustado(s).`
+        `Revaluación completa — ${apar} documento(s) CxP/CxC, ${ho} tramo(s) Casa Matriz.`
       );
       setError(null);
       setOpen(false);
@@ -92,7 +96,7 @@ export function FxRevaluationButton() {
           <DialogHeader>
             <DialogTitle>Revaluación FX al Cierre de Período</DialogTitle>
             <DialogDescription>
-              Revalúa documentos abiertos de CxP/CxC en moneda extranjera usando la tasa de cambio vigente.
+              Revalúa documentos abiertos de CxP/CxC y saldos de Casa Matriz en moneda extranjera usando la tasa vigente. Posteo a 8510.
             </DialogDescription>
           </DialogHeader>
 

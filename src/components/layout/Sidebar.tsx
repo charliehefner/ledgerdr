@@ -25,6 +25,7 @@ import {
   Building2,
   Factory,
   ClipboardCheck,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jordLogo from "@/assets/Logo_Jord.png";

@@ -78,19 +78,25 @@ export function InternalTransfersView() {
   });
 
   const { data: recent = [], refetch: refetchRecent } = useQuery({
-    queryKey: ["recent-internal-transfers", selectedEntityId],
+    queryKey: ["recent-internal-transfers", selectedEntityId, bankAccounts.length],
     queryFn: async () => {
+      const cardIdSet = new Set(
+        bankAccounts.filter((a) => a.account_type === "credit_card").map((a) => a.id)
+      );
       const q = supabase
         .from("transactions")
         .select("*")
         .eq("is_internal", true)
         .in("transaction_direction", ["payment", "investment"])
         .order("transaction_date", { ascending: false })
-        .limit(25);
+        .limit(50);
       if (selectedEntityId) q.eq("entity_id", selectedEntityId);
       const { data, error } = await q;
       if (error) throw error;
-      const rows = data || [];
+      // Exclude credit card payments — those have their own tab
+      const rows = (data || []).filter(
+        (r: any) => !cardIdSet.has(r.destination_acct_code)
+      ).slice(0, 25);
       const ids = rows.map((r: any) => r.id);
       let postedSet = new Set<string>();
       if (ids.length) {

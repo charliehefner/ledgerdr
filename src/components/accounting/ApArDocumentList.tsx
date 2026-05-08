@@ -817,8 +817,41 @@ export function ApArDocumentList({ direction }: Props) {
               </Select>
             </div>
             <div className="space-y-1">
+              <Label>{direction === "payable" ? "Proveedor (maestro)" : "Cliente (maestro)"}</Label>
+              <Select
+                value={form.supplier_id || "__none__"}
+                onValueChange={v => {
+                  if (v === "__none__") {
+                    setForm(f => ({ ...f, supplier_id: "" }));
+                    return;
+                  }
+                  const s = suppliers.find(x => x.id === v);
+                  setForm(f => ({
+                    ...f,
+                    supplier_id: v,
+                    contact_name: s?.name || f.contact_name,
+                    contact_rnc: s?.rnc || f.contact_rnc,
+                  }));
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="— Texto libre —" /></SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  <SelectItem value="__none__">— Texto libre —</SelectItem>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}{s.rnc ? ` · ${s.rnc}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>{t("apar.contactName")} *</Label>
-              <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+              <Input
+                value={form.contact_name}
+                disabled={!!form.supplier_id}
+                onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">

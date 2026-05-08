@@ -143,6 +143,27 @@ export function ApArDocumentList({ direction }: Props) {
     },
   });
 
+  // Postable accounts for the offsetting side of a manual journal
+  const { data: offsetAccounts = [] } = useQuery({
+    queryKey: ["postable-accounts-for-offset", direction],
+    queryFn: async () => {
+      // payable: expense (4xxx/5xxx/6xxx/7xxx/8xxx); receivable: income (3xxx)
+      const prefixes = direction === "payable" ? ["4", "5", "6", "7", "8"] : ["3"];
+      const out: { id: string; account_code: string; account_name: string }[] = [];
+      for (const p of prefixes) {
+        const { data } = await supabase
+          .from("chart_of_accounts")
+          .select("id, account_code, account_name")
+          .like("account_code", `${p}%`)
+          .eq("allow_posting", true)
+          .is("deleted_at", null)
+          .order("account_code");
+        if (data) out.push(...data);
+      }
+      return out;
+    },
+  });
+
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["ap-ar-documents", direction],
     queryFn: async () => {

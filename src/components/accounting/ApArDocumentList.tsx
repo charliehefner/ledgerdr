@@ -92,7 +92,7 @@ interface Props {
 export function ApArDocumentList({ direction }: Props) {
   const { t } = useLanguage();
   const { canWriteSection, user } = useAuth();
-  const { selectedEntityId } = useEntity();
+  const { selectedEntityId, entities } = useEntity();
   const queryClient = useQueryClient();
   const canWrite = canWriteSection("ap-ar");
   const [dialogOpen, setDialogOpen] = useState(false);

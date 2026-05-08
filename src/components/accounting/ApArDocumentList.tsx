@@ -459,6 +459,7 @@ export function ApArDocumentList({ direction }: Props) {
   const resetForm = () => {
     setForm({
       document_type: "invoice",
+      supplier_id: "",
       contact_name: "",
       contact_rnc: "",
       document_number: "",

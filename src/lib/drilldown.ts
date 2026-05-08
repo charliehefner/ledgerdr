@@ -10,7 +10,12 @@ export type DrilldownSourceType =
   | "bank_recon_match"
   | "recurring_template"
   | "accrual"
-  | "manual";
+  | "manual"
+  | "home_office_advance"
+  | "home_office_repayment"
+  | "home_office_accrual"
+  | "home_office_fx_reval"
+  | "cip_capitalize";
 
 export interface DrilldownLink {
   link_id: string;
@@ -44,6 +49,11 @@ export const SOURCE_TYPE_LABEL_ES: Record<DrilldownSourceType, string> = {
   recurring_template: "Plantilla recurrente",
   accrual: "Provisión",
   manual: "Asiento manual",
+  home_office_advance: "Aporte Casa Matriz",
+  home_office_repayment: "Repago Casa Matriz",
+  home_office_accrual: "Devengo de interés",
+  home_office_fx_reval: "Reval. FX Casa Matriz",
+  cip_capitalize: "Capitalización CIP",
 };
 
 export const SOURCE_TYPE_LABEL_EN: Record<DrilldownSourceType, string> = {
@@ -57,4 +67,9 @@ export const SOURCE_TYPE_LABEL_EN: Record<DrilldownSourceType, string> = {
   recurring_template: "Recurring template",
   accrual: "Accrual",
   manual: "Manual entry",
+  home_office_advance: "Home office advance",
+  home_office_repayment: "Home office repayment",
+  home_office_accrual: "Interest accrual",
+  home_office_fx_reval: "Home office FX reval",
+  cip_capitalize: "CIP capitalization",
 };

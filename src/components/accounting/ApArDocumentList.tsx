@@ -601,6 +601,14 @@ export function ApArDocumentList({ direction }: Props) {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Anular documento"
+                            onClick={() => setVoidDoc(doc)}
+                          >
+                            <Ban className="h-4 w-4 text-destructive" />
+                          </Button>
                         </>
                       )}
                     </div>

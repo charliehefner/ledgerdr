@@ -776,6 +776,59 @@ export function ApArDocumentList({ direction }: Props) {
               <Label>{t("common.notes")}</Label>
               <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
             </div>
+
+            {/* Optional journal posting */}
+            <div className="rounded-lg border p-3 bg-muted/20 space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.post_journal}
+                  onChange={e => setForm(f => ({ ...f, post_journal: e.target.checked }))}
+                />
+                Publicar asiento contable al guardar
+              </label>
+              {form.post_journal && (
+                <div className="space-y-1">
+                  <Label className="text-xs">
+                    {direction === "payable" ? "Cuenta de gasto/contrapartida" : "Cuenta de ingreso/contrapartida"} *
+                  </Label>
+                  <Select value={form.offset_account_id} onValueChange={v => setForm(f => ({ ...f, offset_account_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
+                    <SelectContent className="bg-popover max-h-[300px]">
+                      {offsetAccounts.map(a => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.account_code} — {a.account_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={
+                !form.contact_name || !form.total_amount || !form.account_id ||
+                (form.post_journal && !form.offset_account_id) ||
+                createMutation.isPending
+              }
+            >
+              {createMutation.isPending ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Multi-document payment dialog */}
+      <MultiPaymentDialog
+        open={multiOpen}
+        onOpenChange={setMultiOpen}
+        direction={direction}
+        documents={documents.filter(d => d.status !== "paid" && d.status !== "void" && d.balance_remaining > 0)}
+      />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>

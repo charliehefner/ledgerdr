@@ -172,7 +172,7 @@ export function InternalTransfersView() {
   const cards = bankAccounts.filter((a) => a.account_type === "credit_card");
   const petty = bankAccounts.filter((a) => a.account_type === "petty_cash");
 
-  const renderAccountOptions = (includeCards: boolean) => (
+  const renderAccountOptions = (_includeCards: boolean) => (
     <>
       {banks.length > 0 && (
         <SelectGroup>
@@ -183,19 +183,6 @@ export function InternalTransfersView() {
             </SelectItem>
           ))}
         </SelectGroup>
-      )}
-      {includeCards && cards.length > 0 && (
-        <>
-          <SelectSeparator />
-          <SelectGroup>
-            <SelectLabel className="text-xs font-semibold text-muted-foreground">Tarjetas de Crédito</SelectLabel>
-            {cards.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.account_name} ({a.currency || "DOP"})
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </>
       )}
       {petty.length > 0 && (
         <>

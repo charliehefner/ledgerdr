@@ -24,6 +24,7 @@ import Cronograma from "./pages/Cronograma";
 import Alerts from "./pages/Alerts";
 import Accounting from "./pages/Accounting";
 import AccountsPayableReceivable from "./pages/AccountsPayableReceivable";
+import Purchasing from "./pages/Purchasing";
 import Budget from "./pages/Budget";
 import Treasury from "./pages/Treasury";
 import Login from "./pages/Login";

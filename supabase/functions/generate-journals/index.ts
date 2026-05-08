@@ -602,7 +602,7 @@ Deno.serve(async (req) => {
             lines.push({
               journal_id: journalId, account_id: itbisRetenidoId,
               debit: 0, credit: itbisRetenido, created_by: userId,
-              description: "ITBIS Retenido",
+              description: "ITBIS Retenido (a DGII)",
             });
             bankCredit -= itbisRetenido;
           }
@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
             lines.push({
               journal_id: journalId, account_id: isrRetenidoId,
               debit: 0, credit: isrRetenido, created_by: userId,
-              description: "ISR Retenido",
+              description: "ISR Retenido (a DGII)",
             });
             bankCredit -= isrRetenido;
           }

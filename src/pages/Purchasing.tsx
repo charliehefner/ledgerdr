@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, PackageCheck, X } from "lucide-react";
+import { Plus, Trash2, PackageCheck, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -647,9 +647,18 @@ function MatchStatus() {
   });
 
   return (
-    <Card>
-      <CardHeader><CardTitle>Conciliación PO ↔ Factura</CardTitle></CardHeader>
-      <CardContent>
+    <div className="space-y-3">
+      <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-900 p-3 text-sm text-blue-900 dark:text-blue-100">
+        <Info className="h-4 w-4 mt-0.5 shrink-0" />
+        <span>
+          El saldo de la cuenta <strong>2120 (GR/IR)</strong> al cierre del mes representa
+          mercancía recibida pendiente de facturar. Es un pasivo devengado válido —
+          no se requiere asiento manual.
+        </span>
+      </div>
+      <Card>
+        <CardHeader><CardTitle>Conciliación PO ↔ Factura</CardTitle></CardHeader>
+        <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
@@ -687,6 +696,7 @@ function MatchStatus() {
         </Table>
       </CardContent>
     </Card>
+    </div>
   );
 }
 

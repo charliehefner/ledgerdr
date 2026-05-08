@@ -35,6 +35,7 @@ interface FixedAssetsViewProps {
 }
 
 export function FixedAssetsView({ highlightAssetId, highlightDepId }: FixedAssetsViewProps = {}) {
+  const { t } = useLanguage();
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"active" | "disposed" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -107,6 +108,9 @@ export function FixedAssetsView({ highlightAssetId, highlightDepId }: FixedAsset
 
   return (
     <div className="space-y-4">
+      <p className="text-xs text-muted-foreground italic">
+        {t("fa.depreciationMethod")}
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-[180px]">

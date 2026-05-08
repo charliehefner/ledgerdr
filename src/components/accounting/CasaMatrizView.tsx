@@ -15,6 +15,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { HomeOfficeAdvanceDialog } from "./HomeOfficeAdvanceDialog";
 import { HomeOfficeRepaymentDialog } from "./HomeOfficeRepaymentDialog";
 import { CasaMatrizStatementExport } from "./CasaMatrizStatementExport";
@@ -45,6 +49,7 @@ export function CasaMatrizView({
 
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [repayOpen, setRepayOpen] = useState(false);
+  const [pendingCapAccrualId, setPendingCapAccrualId] = useState<string | null>(null);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const { rate: usdRate } = useExchangeRate(today);
@@ -360,7 +365,7 @@ export function CasaMatrizView({
                   <TableCell><Badge variant={a.status === "accrued" ? "outline" : "secondary"}>{a.status}</Badge></TableCell>
                   <TableCell className="text-right">
                     {canWrite && a.status === "accrued" && (
-                      <Button size="sm" variant="outline" onClick={() => capitalize.mutate(a.id)} disabled={capitalize.isPending}>
+                      <Button size="sm" variant="outline" onClick={() => setPendingCapAccrualId(a.id)} disabled={capitalize.isPending}>
                         {t("ho.capitalize")}
                       </Button>
                     )}
@@ -379,6 +384,26 @@ export function CasaMatrizView({
 
       <HomeOfficeAdvanceDialog open={advanceOpen} onOpenChange={setAdvanceOpen} partyId={party.id} partyCurrency={party.currency} />
       <HomeOfficeRepaymentDialog open={repayOpen} onOpenChange={setRepayOpen} partyId={party.id} partyCurrency={party.currency} />
+
+      <AlertDialog open={!!pendingCapAccrualId} onOpenChange={(v) => { if (!v) setPendingCapAccrualId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("ho.capitalizeWarning.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("ho.capitalizeWarning.body")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("ho.capitalizeWarning.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (pendingCapAccrualId) {
+                capitalize.mutate(pendingCapAccrualId);
+                setPendingCapAccrualId(null);
+              }
+            }}>
+              {t("ho.capitalizeWarning.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

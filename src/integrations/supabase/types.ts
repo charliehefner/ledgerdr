@@ -340,6 +340,7 @@ export type Database = {
           created_at: string | null
           id: string
           invoice_doc_id: string
+          journal_id: string | null
         }
         Insert: {
           advance_doc_id: string
@@ -348,6 +349,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           invoice_doc_id: string
+          journal_id?: string | null
         }
         Update: {
           advance_doc_id?: string
@@ -356,6 +358,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           invoice_doc_id?: string
+          journal_id?: string | null
         }
         Relationships: [
           {
@@ -384,6 +387,13 @@ export type Database = {
             columns: ["invoice_doc_id"]
             isOneToOne: false
             referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advance_allocations_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
             referencedColumns: ["id"]
           },
         ]

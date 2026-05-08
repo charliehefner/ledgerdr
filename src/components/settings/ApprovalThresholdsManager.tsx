@@ -204,6 +204,8 @@ export function ApprovalThresholdsManager() {
                   <TableCell className="capitalize">
                     {p.applies_to === "transaction"
                       ? "Transacción"
+                      : p.applies_to === "ap_ar_document"
+                      ? "Factura A/P-A/R"
                       : "Asiento contable"}
                   </TableCell>
                   <TableCell className="text-right font-mono">

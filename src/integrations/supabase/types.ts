@@ -422,6 +422,58 @@ export type Database = {
           },
         ]
       }
+      ap_ar_payment_applications: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          document_id: string
+          id: string
+          notes: string | null
+          payment_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          id?: string
+          notes?: string | null
+          payment_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          id?: string
+          notes?: string | null
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_payment_applications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_payment_applications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_payment_applications_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ap_ar_payments: {
         Row: {
           amount: number
@@ -6004,6 +6056,17 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_ap_ar_payment_multi: {
+        Args: {
+          p_applications: Json
+          p_bank_account_id: string
+          p_exchange_rate?: number
+          p_notes?: string
+          p_payment_date: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       approve_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: boolean
@@ -6081,6 +6144,29 @@ export type Database = {
       count_unlinked_transactions: {
         Args: { p_end?: string; p_start?: string }
         Returns: number
+      }
+      create_ap_ar_document: {
+        Args: {
+          p_account_id?: string
+          p_contact_name: string
+          p_contact_rnc?: string
+          p_contract_id?: string
+          p_currency?: string
+          p_direction: string
+          p_document_date?: string
+          p_document_number?: string
+          p_document_type: string
+          p_due_date?: string
+          p_entity_id?: string
+          p_exchange_rate?: number
+          p_notes?: string
+          p_offset_account_id?: string
+          p_post_journal?: boolean
+          p_supplier_id?: string
+          p_total_amount?: number
+          p_user_id?: string
+        }
+        Returns: Json
       }
       create_journal_from_transaction:
         | {

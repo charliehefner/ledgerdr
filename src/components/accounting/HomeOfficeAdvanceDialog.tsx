@@ -79,6 +79,8 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
       setCipProjectId("");
       setReference("");
       setDescription("");
+      setInterestRatePct("");
+      setInterestBasis("inherit");
       setError(null);
     }
   }, [open, partyCurrency]);

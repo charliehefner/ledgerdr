@@ -366,6 +366,7 @@ export function InternalTransfersView() {
                   <TableHead>Destino</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
                   <TableHead>Descripción</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -384,6 +385,18 @@ export function InternalTransfersView() {
                       {r.currency}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.description}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(r)}
+                        disabled={r._isPosted}
+                        title={r._isPosted ? "Asiento ya posteado" : "Editar"}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -391,6 +404,19 @@ export function InternalTransfersView() {
           )}
         </CardContent>
       </Card>
+
+      <EditTransactionDialog
+        transaction={editTxn}
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o);
+          if (!o) {
+            setEditTxn(null);
+            refetchRecent();
+            queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
+          }
+        }}
+      />
     </div>
   );
 }

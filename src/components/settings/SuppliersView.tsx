@@ -287,6 +287,15 @@ export function SuppliersView() {
                 <Input value={form.apodo} onChange={(e) => setForm({ ...form, apodo: e.target.value })} />
               </div>
               <div className="space-y-2">
+                <Label>Límite de crédito (DOP)</Label>
+                <Input
+                  type="number" step="0.01" min="0" className="font-mono"
+                  value={form.credit_limit}
+                  onChange={(e) => setForm({ ...form, credit_limit: e.target.value })}
+                  placeholder="0 = sin límite"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Persona de Contacto</Label>
                 <Input value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} />
               </div>

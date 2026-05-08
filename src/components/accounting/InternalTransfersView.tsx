@@ -361,6 +361,7 @@ export function InternalTransfersView() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Origen</TableHead>
                   <TableHead>Destino</TableHead>
@@ -372,6 +373,9 @@ export function InternalTransfersView() {
               <TableBody>
                 {recent.map((r: any) => (
                   <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground" title={r.id}>
+                      {String(r.id).slice(0, 8)}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {fmtDate(new Date(r.transaction_date))}
                     </TableCell>
@@ -405,16 +409,17 @@ export function InternalTransfersView() {
         </CardContent>
       </Card>
 
-      <EditTransactionDialog
+      <EditInternalTransferDialog
         transaction={editTxn}
+        bankAccounts={bankAccounts}
         open={editOpen}
         onOpenChange={(o) => {
           setEditOpen(o);
-          if (!o) {
-            setEditTxn(null);
-            refetchRecent();
-            queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
-          }
+          if (!o) setEditTxn(null);
+        }}
+        onSaved={() => {
+          refetchRecent();
+          queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
         }}
       />
     </div>

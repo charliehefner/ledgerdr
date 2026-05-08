@@ -64,7 +64,11 @@ type Journal = {
 type StatusFilter = "all" | "draft" | "posted";
 type TypeFilter = "all" | "GJ" | "PJ" | "SJ" | "PRJ" | "CDJ" | "CRJ" | "DEP" | "RJ" | "CLJ";
 
-export function JournalView() {
+interface JournalViewProps {
+  highlightJournalId?: string | null;
+}
+
+export function JournalView({ highlightJournalId }: JournalViewProps = {}) {
   const { t } = useLanguage();
   const { canWriteSection, user } = useAuth();
   const canWrite = canWriteSection("accounting");

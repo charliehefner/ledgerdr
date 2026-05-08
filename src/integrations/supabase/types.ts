@@ -5993,6 +5993,17 @@ export type Database = {
               total_debit: number
             }[]
           }
+      apply_ap_ar_payment: {
+        Args: {
+          p_amount: number
+          p_bank_account_id: string
+          p_document_id: string
+          p_exchange_rate?: number
+          p_payment_date: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       approve_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: boolean
@@ -6378,6 +6389,10 @@ export type Database = {
       is_mfa_verified: { Args: never; Returns: boolean }
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
+        Returns: undefined
+      }
+      recompute_ap_ar_document_balance: {
+        Args: { p_document_id: string }
         Returns: undefined
       }
       reconcile_stock_count: {

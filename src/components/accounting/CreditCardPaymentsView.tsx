@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, ArrowLeftRight, Pencil } from "lucide-react";
-import { EditInternalTransferDialog } from "./EditInternalTransferDialog";
+import { CalendarIcon, CreditCard, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntity } from "@/contexts/EntityContext";
@@ -23,11 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import {
@@ -38,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EditCreditCardPaymentDialog } from "./EditCreditCardPaymentDialog";
 
 interface BankAcct {
   id: string;
@@ -49,13 +45,13 @@ interface BankAcct {
 const initialState = {
   date: undefined as Date | undefined,
   from_account: "",
-  to_account: "",
+  card_account: "",
   amount: "",
   dest_amount: "",
   description: "",
 };
 
-export function InternalTransfersView() {
+export function CreditCardPaymentsView() {
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
   const queryClient = useQueryClient();
@@ -65,7 +61,7 @@ export function InternalTransfersView() {
   const [editOpen, setEditOpen] = useState(false);
 
   const { data: bankAccounts = [] } = useQuery({
-    queryKey: ["internal-transfer-bank-accounts"],
+    queryKey: ["cc-pay-bank-accounts"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_accounts")
@@ -77,26 +73,27 @@ export function InternalTransfersView() {
     },
   });
 
+  const banks = bankAccounts.filter((a) => a.account_type === "bank");
+  const petty = bankAccounts.filter((a) => a.account_type === "petty_cash");
+  const cards = bankAccounts.filter((a) => a.account_type === "credit_card");
+  const cardIds = cards.map((c) => c.id);
+
   const { data: recent = [], refetch: refetchRecent } = useQuery({
-    queryKey: ["recent-internal-transfers", selectedEntityId, bankAccounts.length],
+    queryKey: ["recent-cc-payments", selectedEntityId, cardIds.join(",")],
+    enabled: cardIds.length > 0,
     queryFn: async () => {
-      const cardIdSet = new Set(
-        bankAccounts.filter((a) => a.account_type === "credit_card").map((a) => a.id)
-      );
       const q = supabase
         .from("transactions")
         .select("*")
         .eq("is_internal", true)
         .in("transaction_direction", ["payment", "investment"])
+        .in("destination_acct_code", cardIds)
         .order("transaction_date", { ascending: false })
-        .limit(50);
+        .limit(25);
       if (selectedEntityId) q.eq("entity_id", selectedEntityId);
       const { data, error } = await q;
       if (error) throw error;
-      // Exclude credit card payments — those have their own tab
-      const rows = (data || []).filter(
-        (r: any) => !cardIdSet.has(r.destination_acct_code)
-      ).slice(0, 25);
+      const rows = data || [];
       const ids = rows.map((r: any) => r.id);
       let postedSet = new Set<string>();
       if (ids.length) {
@@ -111,17 +108,11 @@ export function InternalTransfersView() {
     },
   });
 
-  const handleEdit = (row: any) => {
-    setEditTxn(row);
-    setEditOpen(true);
-  };
-
-
   const fromAcct = bankAccounts.find((a) => a.id === form.from_account);
-  const toAcct = bankAccounts.find((a) => a.id === form.to_account);
+  const cardAcct = bankAccounts.find((a) => a.id === form.card_account);
   const fromCur = fromAcct?.currency || "DOP";
-  const toCur = toAcct?.currency || "DOP";
-  const isCrossCurrency = !!fromAcct && !!toAcct && fromCur !== toCur;
+  const toCur = cardAcct?.currency || "DOP";
+  const isCrossCurrency = !!fromAcct && !!cardAcct && fromCur !== toCur;
 
   const acctName = (id: string | null | undefined) => {
     if (!id) return "—";
@@ -130,8 +121,8 @@ export function InternalTransfersView() {
   };
 
   const isValid = () => {
-    if (!form.date || !form.from_account || !form.to_account || !form.amount) return false;
-    if (form.from_account === form.to_account) return false;
+    if (!form.date || !form.from_account || !form.card_account || !form.amount) return false;
+    if (form.from_account === form.card_account) return false;
     if (parseFloat(form.amount) <= 0) return false;
     if (isCrossCurrency && !form.dest_amount) return false;
     return true;
@@ -140,9 +131,8 @@ export function InternalTransfersView() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid()) {
-      if (form.from_account === form.to_account) toast.error("Origen y destino no pueden ser iguales");
-      else if (isCrossCurrency && !form.dest_amount)
-        toast.error("Ingrese monto destino para transferencia multi-moneda");
+      if (isCrossCurrency && !form.dest_amount)
+        toast.error("Ingrese monto aplicado a la tarjeta para pago multi-moneda");
       else toast.error(t("txForm.requiredFields"));
       return;
     }
@@ -151,19 +141,21 @@ export function InternalTransfersView() {
       const { error } = await supabase.rpc("create_transaction_with_ap_ar" as any, {
         p_transaction_date: formatDateLocal(form.date!),
         p_master_acct_code: "0000",
-        p_description: form.description || `Transferencia interna: ${acctName(form.from_account)} → ${acctName(form.to_account)}`,
+        p_description:
+          form.description ||
+          `Pago tarjeta: ${acctName(form.card_account)} desde ${acctName(form.from_account)}`,
         p_currency: fromCur,
         p_amount: parseFloat(form.amount),
         p_pay_method: form.from_account,
         p_is_internal: true,
         p_cost_center: "general",
         p_transaction_direction: "payment",
-        p_destination_acct_code: form.to_account,
+        p_destination_acct_code: form.card_account,
         p_destination_amount: isCrossCurrency ? parseFloat(form.dest_amount) : null,
         p_entity_id: selectedEntityId || null,
       });
       if (error) throw error;
-      toast.success("Transferencia interna registrada");
+      toast.success("Pago de tarjeta registrado");
       setForm(initialState);
       await refetchRecent();
       queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
@@ -174,45 +166,18 @@ export function InternalTransfersView() {
     }
   };
 
-  const banks = bankAccounts.filter((a) => a.account_type === "bank");
-  const cards = bankAccounts.filter((a) => a.account_type === "credit_card");
-  const petty = bankAccounts.filter((a) => a.account_type === "petty_cash");
-
-  const renderAccountOptions = (_includeCards: boolean) => (
-    <>
-      {banks.length > 0 && (
-        <SelectGroup>
-          <SelectLabel className="text-xs font-semibold text-muted-foreground">Bancos</SelectLabel>
-          {banks.map((a) => (
-            <SelectItem key={a.id} value={a.id}>
-              {a.account_name} ({a.currency || "DOP"})
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      )}
-      {petty.length > 0 && (
-        <>
-          <SelectSeparator />
-          <SelectGroup>
-            <SelectLabel className="text-xs font-semibold text-muted-foreground">Caja Chica</SelectLabel>
-            {petty.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.account_name} ({a.currency || "DOP"})
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </>
-      )}
-    </>
-  );
+  const handleEdit = (row: any) => {
+    setEditTxn(row);
+    setEditOpen(true);
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ArrowLeftRight className="h-5 w-5 text-primary" />
-            Nueva Transferencia Interna
+            <CreditCard className="h-5 w-5 text-primary" />
+            Nuevo Pago de Tarjeta de Crédito
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -246,7 +211,7 @@ export function InternalTransfersView() {
               </div>
 
               <div className="space-y-2">
-                <Label>Cuenta Origen *</Label>
+                <Label>Banco / Caja Origen *</Label>
                 <Select
                   value={form.from_account || undefined}
                   onValueChange={(v) => setForm((f) => ({ ...f, from_account: v }))}
@@ -255,36 +220,68 @@ export function InternalTransfersView() {
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover max-h-[300px]">
-                    {renderAccountOptions(false)}
+                    {banks.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-semibold text-muted-foreground">
+                          Bancos
+                        </SelectLabel>
+                        {banks.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.account_name} ({a.currency || "DOP"})
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {petty.length > 0 && (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground">
+                            Caja Chica
+                          </SelectLabel>
+                          {petty.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.account_name} ({a.currency || "DOP"})
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
-                {fromAcct && (
-                  <p className="text-xs text-muted-foreground">Moneda: {fromCur}</p>
-                )}
+                {fromAcct && <p className="text-xs text-muted-foreground">Moneda: {fromCur}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label>Cuenta Destino *</Label>
+                <Label>Tarjeta de Crédito *</Label>
                 <Select
-                  value={form.to_account || undefined}
-                  onValueChange={(v) => setForm((f) => ({ ...f, to_account: v }))}
+                  value={form.card_account || undefined}
+                  onValueChange={(v) => setForm((f) => ({ ...f, card_account: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover max-h-[300px]">
-                    {renderAccountOptions(true)}
+                    {cards.length === 0 ? (
+                      <div className="p-2 text-xs text-muted-foreground">
+                        No hay tarjetas registradas
+                      </div>
+                    ) : (
+                      cards.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.account_name} ({a.currency || "DOP"})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
-                {toAcct && (
-                  <p className="text-xs text-muted-foreground">Moneda: {toCur}</p>
-                )}
+                {cardAcct && <p className="text-xs text-muted-foreground">Moneda: {toCur}</p>}
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label>Monto Origen ({fromCur}) *</Label>
+                <Label>Monto Pagado ({fromCur}) *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -297,7 +294,7 @@ export function InternalTransfersView() {
               {isCrossCurrency && (
                 <>
                   <div className="space-y-2">
-                    <Label>Monto Destino ({toCur}) *</Label>
+                    <Label>Aplicado a Tarjeta ({toCur}) *</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -324,17 +321,22 @@ export function InternalTransfersView() {
               <Textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Concepto de la transferencia"
+                placeholder="Concepto del pago"
                 rows={2}
               />
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button type="button" variant="outline" onClick={() => setForm(initialState)} disabled={submitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setForm(initialState)}
+                disabled={submitting}
+              >
                 Limpiar
               </Button>
               <Button type="submit" disabled={submitting || !isValid()}>
-                {submitting ? "Guardando..." : "Registrar Transferencia"}
+                {submitting ? "Guardando..." : "Registrar Pago"}
               </Button>
             </div>
           </form>
@@ -343,12 +345,12 @@ export function InternalTransfersView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Transferencias Recientes</CardTitle>
+          <CardTitle>Pagos Recientes</CardTitle>
         </CardHeader>
         <CardContent>
           {recent.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              No hay transferencias internas registradas.
+              No hay pagos de tarjeta registrados.
             </p>
           ) : (
             <Table>
@@ -357,7 +359,7 @@ export function InternalTransfersView() {
                   <TableHead>ID</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Origen</TableHead>
-                  <TableHead>Destino</TableHead>
+                  <TableHead>Tarjeta</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -402,7 +404,7 @@ export function InternalTransfersView() {
         </CardContent>
       </Card>
 
-      <EditInternalTransferDialog
+      <EditCreditCardPaymentDialog
         transaction={editTxn}
         bankAccounts={bankAccounts}
         open={editOpen}

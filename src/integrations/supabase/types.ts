@@ -5104,6 +5104,7 @@ export type Database = {
           bank_account_type: string | null
           contact_person: string | null
           created_at: string
+          credit_limit: number
           currency: string | null
           default_dgii_bs_type: string | null
           email: string | null
@@ -5125,6 +5126,7 @@ export type Database = {
           bank_account_type?: string | null
           contact_person?: string | null
           created_at?: string
+          credit_limit?: number
           currency?: string | null
           default_dgii_bs_type?: string | null
           email?: string | null
@@ -5146,6 +5148,7 @@ export type Database = {
           bank_account_type?: string | null
           contact_person?: string | null
           created_at?: string
+          credit_limit?: number
           currency?: string | null
           default_dgii_bs_type?: string | null
           email?: string | null
@@ -6390,6 +6393,10 @@ export type Database = {
         Returns: Json
       }
       current_user_entity_id: { Args: never; Returns: string }
+      customer_outstanding_dop: {
+        Args: { p_supplier_id: string }
+        Returns: number
+      }
       dgii_507_report: {
         Args: { p_end: string; p_start: string }
         Returns: {

@@ -29,7 +29,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban, Layers } from "lucide-react";
+import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban, Layers, FileText, Send } from "lucide-react";
+import { generateRemittanceAdvice, generateCustomerStatement } from "@/lib/apArDocuments";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -91,7 +92,7 @@ interface Props {
 export function ApArDocumentList({ direction }: Props) {
   const { t } = useLanguage();
   const { canWriteSection, user } = useAuth();
-  const { selectedEntityId } = useEntity();
+  const { selectedEntityId, entities } = useEntity();
   const queryClient = useQueryClient();
   const canWrite = canWriteSection("ap-ar");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -502,6 +503,118 @@ export function ApArDocumentList({ direction }: Props) {
     setEditedDueDate(doc.due_date ? parseDateLocal(doc.due_date) : undefined);
   };
 
+  // Header info for PDFs
+  const entityName =
+    entities.find(e => e.id === selectedEntityId)?.name || "Empresa";
+
+  // #14 Remittance advice — for vendor payments tied to one document
+  const handleRemittance = async (doc: ApArDocument) => {
+    try {
+      const { data: payments, error } = await supabase
+        .from("ap_ar_payments")
+        .select("payment_date, amount, payment_method, notes, bank_account_id")
+        .eq("document_id", doc.id)
+        .order("payment_date", { ascending: true });
+      if (error) throw error;
+      if (!payments || payments.length === 0) {
+        toast.error("Sin pagos registrados para este documento");
+        return;
+      }
+      let running = doc.total_amount;
+      const lines = payments.map(p => {
+        const after = Math.max(0, +(running - p.amount).toFixed(2));
+        const line = {
+          document_number: doc.document_number,
+          document_date: doc.document_date,
+          total_amount: doc.total_amount,
+          amount_paid_now: p.amount,
+          balance_after: after,
+          currency: doc.currency,
+        };
+        running = after;
+        return line;
+      });
+      const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+      const last = payments[payments.length - 1];
+      const pdf = generateRemittanceAdvice({
+        header: {
+          entityName,
+          contactName: doc.contact_name,
+          contactRnc: doc.contact_rnc,
+        },
+        paymentDate: last.payment_date,
+        paymentAmount: totalPaid,
+        paymentCurrency: doc.currency,
+        paymentMethod: last.payment_method,
+        notes: last.notes,
+        lines,
+      });
+      pdf.save(`remesa-${doc.document_number || doc.id.slice(0, 8)}.pdf`);
+    } catch (e: any) {
+      toast.error(e.message || "Error generando PDF");
+    }
+  };
+
+  // #15 Customer/supplier statement — all docs for the contact in a currency
+  const handleStatement = (doc: ApArDocument) => {
+    const contactDocs = documents
+      .filter(d => d.contact_name === doc.contact_name && d.currency === doc.currency && d.status !== "void")
+      .sort((a, b) => a.document_date.localeCompare(b.document_date));
+    if (contactDocs.length === 0) return;
+    let balance = 0;
+    const lines = contactDocs.flatMap(d => {
+      const isReceivableCharge = d.direction === "receivable" && d.document_type !== "credit_memo";
+      const isPayableCharge = d.direction === "payable" && d.document_type !== "credit_memo";
+      const charge = (isReceivableCharge || isPayableCharge) ? d.total_amount : 0;
+      const credit = d.document_type === "credit_memo" ? d.total_amount : 0;
+      balance += charge - credit;
+      const docLine = {
+        date: d.document_date,
+        reference: d.document_number || d.id.slice(0, 8),
+        description: `${d.document_type} ${d.notes ? `— ${d.notes}` : ""}`.trim(),
+        charge, credit, balance,
+        currency: d.currency,
+      };
+      const paid = d.amount_paid;
+      if (paid > 0) {
+        balance -= paid;
+        return [docLine, {
+          date: d.document_date, reference: d.document_number || "—",
+          description: "Pagos aplicados",
+          charge: 0, credit: paid, balance,
+          currency: d.currency,
+        }];
+      }
+      return [docLine];
+    });
+    // aging buckets for this contact+currency
+    const now = new Date();
+    const aging = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    contactDocs.filter(d => d.status !== "paid" && d.document_type !== "advance").forEach(d => {
+      const due = d.due_date ? new Date(d.due_date) : new Date(d.document_date);
+      const days = Math.floor((now.getTime() - due.getTime()) / 86400000);
+      const bal = d.balance_remaining;
+      if (days <= 0) aging.current += bal;
+      else if (days <= 30) aging.d30 += bal;
+      else if (days <= 60) aging.d60 += bal;
+      else if (days <= 90) aging.d90 += bal;
+      else aging.d90plus += bal;
+    });
+    const pdf = generateCustomerStatement({
+      header: {
+        entityName,
+        contactName: doc.contact_name,
+        contactRnc: doc.contact_rnc,
+      },
+      asOf: new Date().toISOString().slice(0, 10),
+      currency: doc.currency,
+      lines,
+      totalOutstanding: contactDocs.reduce((s, d) => s + (d.status !== "paid" ? d.balance_remaining : 0), 0),
+      agingBuckets: aging,
+    });
+    pdf.save(`estado-${doc.contact_name.replace(/\s+/g, "_")}-${doc.currency}.pdf`);
+  };
+
   return (
     <div className="space-y-4">
       {/* Aging Summary — per currency */}
@@ -712,6 +825,23 @@ export function ApArDocumentList({ direction }: Props) {
                             onClick={() => openDueDateDialog(doc)}
                           >
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Estado de cuenta (PDF)"
+                            onClick={() => handleStatement(doc)}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Aviso de remesa (PDF)"
+                            onClick={() => handleRemittance(doc)}
+                            disabled={doc.amount_paid <= 0}
+                          >
+                            <Send className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"

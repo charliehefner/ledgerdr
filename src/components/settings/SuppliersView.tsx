@@ -38,6 +38,7 @@ interface Supplier {
   default_dgii_bs_type: string | null;
   notes: string | null;
   is_active: boolean;
+  credit_limit?: number | null;
 }
 
 const BANKS = [
@@ -49,6 +50,7 @@ const emptyForm = {
   name: "", rnc: "", apodo: "", contact_person: "", phone: "", email: "", address: "",
   bank: "", bank_account_type: "current", bank_account_number: "",
   currency: "DOP", default_dgii_bs_type: "", notes: "",
+  credit_limit: "0",
 };
 
 export function SuppliersView() {
@@ -93,6 +95,7 @@ export function SuppliersView() {
         currency: data.currency || "DOP",
         default_dgii_bs_type: data.default_dgii_bs_type || null,
         notes: data.notes.trim() || null,
+        credit_limit: parseFloat(data.credit_limit || "0") || 0,
       };
       if (data.id) {
         const { error } = await supabase.from("suppliers" as any).update(payload).eq("id", data.id);
@@ -150,6 +153,7 @@ export function SuppliersView() {
         currency: s.currency || "DOP",
         default_dgii_bs_type: s.default_dgii_bs_type || "",
         notes: s.notes || "",
+        credit_limit: String(s.credit_limit ?? 0),
       });
     } else {
       setEditing(null);
@@ -281,6 +285,15 @@ export function SuppliersView() {
               <div className="space-y-2">
                 <Label>Apodo</Label>
                 <Input value={form.apodo} onChange={(e) => setForm({ ...form, apodo: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Límite de crédito (DOP)</Label>
+                <Input
+                  type="number" step="0.01" min="0" className="font-mono"
+                  value={form.credit_limit}
+                  onChange={(e) => setForm({ ...form, credit_limit: e.target.value })}
+                  placeholder="0 = sin límite"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Persona de Contacto</Label>

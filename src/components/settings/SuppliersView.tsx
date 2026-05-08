@@ -95,6 +95,7 @@ export function SuppliersView() {
         currency: data.currency || "DOP",
         default_dgii_bs_type: data.default_dgii_bs_type || null,
         notes: data.notes.trim() || null,
+        credit_limit: parseFloat(data.credit_limit || "0") || 0,
       };
       if (data.id) {
         const { error } = await supabase.from("suppliers" as any).update(payload).eq("id", data.id);

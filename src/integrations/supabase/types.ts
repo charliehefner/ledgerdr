@@ -6449,6 +6449,18 @@ export type Database = {
         Args: { p_amount: number; p_int_len?: number }
         Returns: string
       }
+      update_internal_transfer: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_description: string
+          p_destination_amount: number
+          p_from_account: string
+          p_to_account: string
+          p_transaction_id: string
+        }
+        Returns: undefined
+      }
       upsert_field_boundary: {
         Args: { p_field_id: string; p_geojson: string }
         Returns: undefined

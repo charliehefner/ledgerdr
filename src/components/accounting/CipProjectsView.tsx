@@ -78,8 +78,55 @@ export function CipProjectsView({ highlightCapId }: CipProps = {}) {
     enabled: projects.length > 0,
   });
 
+  // Latest activity per project (used for 12-month idle impairment notice)
+  const { data: lastActivity = {} } = useQuery({
+    queryKey: ["cip-last-activity", projects.map((p) => p.id).join(",")],
+    queryFn: async () => {
+      const ids = projects.filter((p) => p.status === "open").map((p) => p.id);
+      if (ids.length === 0) return {};
+      const { data, error } = await supabase
+        .from("home_office_advances")
+        .select("cip_project_id, advance_date")
+        .in("cip_project_id", ids)
+        .neq("status", "voided")
+        .order("advance_date", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => {
+        if (r.cip_project_id && !map[r.cip_project_id]) map[r.cip_project_id] = r.advance_date;
+      });
+      return map;
+    },
+    enabled: projects.length > 0,
+  });
+
+  const isStale = (projectId: string) => {
+    const last = lastActivity[projectId];
+    if (!last) return false;
+    const lastDate = new Date(last);
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 12);
+    return lastDate < cutoff;
+  };
+
+  const staleProjects = projects.filter((p) => p.status === "open" && isStale(p.id));
+
   return (
     <div className="space-y-6">
+      {staleProjects.length > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 p-3 text-sm text-amber-900 dark:text-amber-100">
+          <Building2 className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            <div className="font-medium">Posible deterioro</div>
+            <div className="text-xs mt-0.5">
+              {staleProjects.length === 1
+                ? `El proyecto "${staleProjects[0].name}" no ha tenido actividad en más de 12 meses.`
+                : `${staleProjects.length} proyectos sin actividad en más de 12 meses.`}{" "}
+              Si fueron abandonados o sufrieron retrasos significativos, revise el saldo para deterioro y dé de baja los costos no recuperables.
+            </div>
+          </div>
+        </div>
+      )}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -318,6 +365,7 @@ function CapitalizeCipDialog({ project, onClose }: { project: any | null; onClos
               <Input type="number" step="0.01" value={salvage} onChange={(e) => setSalvage(e.target.value)} />
             </div>
           </div>
+          <p className="text-xs text-muted-foreground italic">Método de depreciación: Línea recta</p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

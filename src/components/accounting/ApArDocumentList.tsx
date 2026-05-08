@@ -396,6 +396,8 @@ export function ApArDocumentList({ direction }: Props) {
       total_amount: "",
       notes: "",
       account_id: glAccounts.length > 0 ? glAccounts[0].id : "",
+      offset_account_id: "",
+      post_journal: false,
     });
   };
 

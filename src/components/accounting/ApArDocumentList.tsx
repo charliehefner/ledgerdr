@@ -109,6 +109,7 @@ export function ApArDocumentList({ direction }: Props) {
   const [creditAmount, setCreditAmount] = useState("");
   const [form, setForm] = useState({
     document_type: "invoice",
+    supplier_id: "",
     contact_name: "",
     contact_rnc: "",
     document_number: "",

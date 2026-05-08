@@ -96,7 +96,7 @@ export function FxRevaluationButton() {
           <DialogHeader>
             <DialogTitle>Revaluación FX al Cierre de Período</DialogTitle>
             <DialogDescription>
-              Revalúa documentos abiertos de CxP/CxC en moneda extranjera usando la tasa de cambio vigente.
+              Revalúa documentos abiertos de CxP/CxC y saldos de Casa Matriz en moneda extranjera usando la tasa vigente. Posteo a 8510.
             </DialogDescription>
           </DialogHeader>
 

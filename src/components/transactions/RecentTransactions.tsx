@@ -61,6 +61,28 @@ export function RecentTransactions({ refreshKey, openTransactionId, onOpenedTran
     setEditDialogOpen(true);
   };
 
+  // Deep-link: open a specific transaction by id (drill-down from journal)
+  useEffect(() => {
+    if (!openTransactionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', openTransactionId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        onOpenedTransaction?.();
+        return;
+      }
+      setSelectedTransaction(data as unknown as Transaction);
+      setEditDialogOpen(true);
+      onOpenedTransaction?.();
+    })();
+    return () => { cancelled = true; };
+  }, [openTransactionId, onOpenedTransaction]);
+
   const offset = page * pageSize;
 
   const { data: result, isLoading } = useQuery({

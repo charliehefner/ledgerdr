@@ -383,7 +383,28 @@ export function ApArDocumentList({ direction }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const updateDueDateMutation = useMutation({
+  const applyCreditMutation = useMutation({
+    mutationFn: async () => {
+      if (!creditDoc || !selectedCreditId || !creditAmount) throw new Error("Datos faltantes");
+      const amount = parseFloat(creditAmount);
+      if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
+      const { error } = await supabase.from("ap_ar_credit_applications" as any).insert({
+        credit_doc_id: selectedCreditId,
+        target_doc_id: creditDoc.id,
+        amount,
+        applied_by: user?.id || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      setCreditDoc(null);
+      setSelectedCreditId("");
+      setCreditAmount("");
+      toast.success("Nota aplicada");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
     mutationFn: async () => {
       if (!dueDateDoc) throw new Error("Documento no encontrado");
       if (dueDateDoc.status === "paid" || dueDateDoc.status === "void") {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CalendarIcon, ArrowLeftRight, Pencil } from "lucide-react";
-import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
+import { EditInternalTransferDialog } from "./EditInternalTransferDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntity } from "@/contexts/EntityContext";

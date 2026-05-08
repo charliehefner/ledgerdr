@@ -67,7 +67,11 @@ export function FxRevaluationButton() {
       queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
       queryClient.invalidateQueries({ queryKey: ["home-office-balance"] });
       toast.success(
-        `Revaluación completa — ${apar} documento(s) CxP/CxC, ${ho} tramo(s) Casa Matriz.`
+        `Revaluación completa — ${apar} documento(s) CxP/CxC, ${ho} tramo(s) Casa Matriz.`,
+        {
+          description: "Cuando un documento revaluado se liquide, el asiento de FX no realizada se reversará automáticamente y se reemplazará con la diferencia de FX realizada.",
+          duration: 9000,
+        }
       );
       setError(null);
       setOpen(false);

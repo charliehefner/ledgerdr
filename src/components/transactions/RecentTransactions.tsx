@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -33,11 +33,13 @@ import { TRANSACTION_COLUMNS } from './columnConfig';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
+  openTransactionId?: string | null;
+  onOpenedTransaction?: () => void;
 }
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200];
 
-export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
+export function RecentTransactions({ refreshKey, openTransactionId, onOpenedTransaction }: RecentTransactionsProps) {
   const queryClient = useQueryClient();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -58,6 +60,28 @@ export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
     setSelectedTransaction(tx);
     setEditDialogOpen(true);
   };
+
+  // Deep-link: open a specific transaction by id (drill-down from journal)
+  useEffect(() => {
+    if (!openTransactionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', openTransactionId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        onOpenedTransaction?.();
+        return;
+      }
+      setSelectedTransaction(data as unknown as Transaction);
+      setEditDialogOpen(true);
+      onOpenedTransaction?.();
+    })();
+    return () => { cancelled = true; };
+  }, [openTransactionId, onOpenedTransaction]);
 
   const offset = page * pageSize;
 

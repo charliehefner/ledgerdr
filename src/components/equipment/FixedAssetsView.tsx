@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,12 @@ const CATEGORIES = [
   { value: "other", label: "Otro" },
 ];
 
-export function FixedAssetsView() {
+interface FixedAssetsViewProps {
+  highlightAssetId?: string | null;
+  highlightDepId?: string | null;
+}
+
+export function FixedAssetsView({ highlightAssetId, highlightDepId }: FixedAssetsViewProps = {}) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"active" | "disposed" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -167,8 +172,13 @@ export function FixedAssetsView() {
             ) : (
               assets.map((asset) => {
                 const netBookValue = Number(asset.acquisition_value) - Number(asset.accumulated_depreciation);
+                const isHighlighted = highlightAssetId && asset.id === highlightAssetId;
                 return (
-                  <TableRow key={asset.id}>
+                  <TableRow
+                    key={asset.id}
+                    ref={isHighlighted ? (el) => { if (el) el.scrollIntoView({ behavior: "smooth", block: "center" }); } : undefined}
+                    className={isHighlighted ? "bg-primary/10 ring-2 ring-primary/40" : ""}
+                  >
                     <TableCell className="font-mono text-xs">{asset.asset_code}</TableCell>
                     <TableCell className="font-medium">{asset.name}</TableCell>
                     <TableCell>

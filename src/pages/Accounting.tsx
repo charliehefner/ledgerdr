@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
@@ -16,9 +17,29 @@ import { useEntity } from "@/contexts/EntityContext";
 import { BarChart3, Building2, BookOpen, RotateCcw, Calendar, FileText, Shield, ArrowLeftRight } from "lucide-react";
 
 export default function Accounting() {
-  const [activeTab, setActiveTab] = useState("reports");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "reports";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
+
+  // Sync ?tab=… into state when it changes
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== activeTab) setActiveTab(tab);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Forward deep-link params (asset/dep/jid) into specific views via context props
+  const assetId = searchParams.get("asset");
+  const depId = searchParams.get("dep");
+  const journalId = searchParams.get("jid");
+
+  const handleTabChange = (next: string) => {
+    setActiveTab(next);
+    const sp = new URLSearchParams(searchParams);
+    sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
+  };
 
   // Check if the current entity belongs to a group
   const { data: hasGroup } = useQuery({
@@ -46,13 +67,13 @@ export default function Accounting() {
       value: "fixed-assets",
       label: t("accounting.fixedAssets"),
       icon: <Building2 className="h-4 w-4" />,
-      content: <FixedAssetsView />,
+      content: <FixedAssetsView highlightAssetId={assetId} highlightDepId={depId} />,
     },
     {
       value: "journal",
       label: t("accounting.journal"),
       icon: <BookOpen className="h-4 w-4" />,
-      content: <JournalView />,
+      content: <JournalView highlightJournalId={journalId} />,
     },
     {
       value: "recurring",
@@ -96,7 +117,7 @@ export default function Accounting() {
       title={t("page.accounting.title")}
       subtitle={t("page.accounting.subtitle")}
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
       headerIcon={<BookOpen className="h-6 w-6 text-primary" />}
       headerAccent
       helpChapter="06-accounting"

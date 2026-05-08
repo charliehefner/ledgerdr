@@ -15,6 +15,7 @@ import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX, CheckCircl
 
 import { fmtDate } from "@/lib/dateUtils";
 import { DrilldownBadges } from "@/components/accounting/DrilldownBadges";
+import { warnIfDimensionsMissing } from "@/lib/dimensionValidation";
 
 type JournalLine = {
   id: string;
@@ -211,6 +212,9 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
         p_user: user?.id,
       });
       if (error) throw error;
+
+      // Warn-mode: surface missing required dimensions (non-blocking)
+      await warnIfDimensionsMissing(journal.id);
 
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       toast({ title: t("accounting.publishedTitle"), description: t("accounting.entryPublished") });

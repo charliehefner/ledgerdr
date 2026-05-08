@@ -73,15 +73,22 @@ export default function Accounting() {
     },
     {
       value: "cip",
-      label: "CIP",
+      label: t("accounting.cip"),
       icon: <HardHat className="h-4 w-4" />,
-      content: <CipProjectsView />,
+      content: <CipProjectsView highlightCapId={searchParams.get("cap")} />,
     },
     {
       value: "casa-matriz",
-      label: "Casa Matriz",
+      label: t("accounting.casaMatriz"),
       icon: <Landmark className="h-4 w-4" />,
-      content: <CasaMatrizView />,
+      content: (
+        <CasaMatrizView
+          highlightAdvId={searchParams.get("adv")}
+          highlightRepId={searchParams.get("rep")}
+          highlightAccId={searchParams.get("acc")}
+          highlightFxrId={searchParams.get("fxr")}
+        />
+      ),
     },
     {
       value: "journal",

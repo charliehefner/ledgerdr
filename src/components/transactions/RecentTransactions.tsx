@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -33,11 +33,13 @@ import { TRANSACTION_COLUMNS } from './columnConfig';
 
 interface RecentTransactionsProps {
   refreshKey?: number;
+  openTransactionId?: string | null;
+  onOpenedTransaction?: () => void;
 }
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200];
 
-export function RecentTransactions({ refreshKey }: RecentTransactionsProps) {
+export function RecentTransactions({ refreshKey, openTransactionId, onOpenedTransaction }: RecentTransactionsProps) {
   const queryClient = useQueryClient();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);

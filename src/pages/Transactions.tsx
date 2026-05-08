@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { RecentTransactions } from '@/components/transactions/RecentTransactions';
@@ -9,6 +10,19 @@ import { HelpPanelButton } from '@/components/layout/HelpPanelButton';
 export default function Transactions() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [openTransactionId, setOpenTransactionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setOpenTransactionId(id);
+      // remove the param so refreshes don't reopen forever
+      const next = new URLSearchParams(searchParams);
+      next.delete('id');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleTransactionSuccess = () => {
     setRefreshKey(prev => prev + 1);
@@ -30,7 +44,11 @@ export default function Transactions() {
           </div>
         </header>
         <TransactionForm onSuccess={handleTransactionSuccess} />
-        <RecentTransactions refreshKey={refreshKey} />
+        <RecentTransactions
+          refreshKey={refreshKey}
+          openTransactionId={openTransactionId}
+          onOpenedTransaction={() => setOpenTransactionId(null)}
+        />
       </div>
     </MainLayout>
   );

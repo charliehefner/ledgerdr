@@ -153,6 +153,7 @@ export function SuppliersView() {
         currency: s.currency || "DOP",
         default_dgii_bs_type: s.default_dgii_bs_type || "",
         notes: s.notes || "",
+        credit_limit: String(s.credit_limit ?? 0),
       });
     } else {
       setEditing(null);

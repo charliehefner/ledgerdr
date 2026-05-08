@@ -29,7 +29,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil } from "lucide-react";
+import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { PaymentDialog } from "./PaymentDialog";
 
@@ -97,6 +101,7 @@ export function ApArDocumentList({ direction }: Props) {
   const [selectedAdvanceId, setSelectedAdvanceId] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocTypeFilter>("all");
   const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
+  const [voidDoc, setVoidDoc] = useState<ApArDocument | null>(null);
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",
@@ -351,6 +356,25 @@ export function ApArDocumentList({ direction }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const voidMutation = useMutation({
+    mutationFn: async () => {
+      if (!voidDoc) throw new Error("No document");
+      const { error } = await supabase.rpc("void_ap_ar_document" as any, {
+        p_document_id: voidDoc.id,
+        p_user_id: user?.id || null,
+        p_reason: null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["journals"] });
+      setVoidDoc(null);
+      toast.success("Documento anulado y asientos reversados");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const resetForm = () => {
     setForm({
       document_type: "invoice",
@@ -576,6 +600,14 @@ export function ApArDocumentList({ direction }: Props) {
                             onClick={() => openDueDateDialog(doc)}
                           >
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Anular documento"
+                            onClick={() => setVoidDoc(doc)}
+                          >
+                            <Ban className="h-4 w-4 text-destructive" />
                           </Button>
                         </>
                       )}
@@ -870,6 +902,30 @@ export function ApArDocumentList({ direction }: Props) {
         onOpenChange={open => { if (!open) setPaymentDoc(null); }}
         document={paymentDoc}
       />
+
+      {/* Void Confirmation */}
+      <AlertDialog open={!!voidDoc} onOpenChange={open => { if (!open) setVoidDoc(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anular documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se reversarán todos los asientos del documento y de sus pagos.
+              {voidDoc?.document_number ? ` (${voidDoc.document_number})` : ""}
+              {voidDoc ? ` — ${voidDoc.contact_name}` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidMutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); voidMutation.mutate(); }}
+              disabled={voidMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {voidMutation.isPending ? "Anulando..." : "Anular"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

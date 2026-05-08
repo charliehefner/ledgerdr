@@ -147,6 +147,7 @@ const sectionPermissions: Record<Section, UserRole[]> = {
   industrial: ["admin", "supervisor", "office"],
   "driver-portal": ["driver"],
   approvals: ["admin", "management"],
+  purchasing: ["admin", "management", "accountant", "supervisor", "office", "viewer"],
 };
 
 // Roles that have write access (can modify data) for each section

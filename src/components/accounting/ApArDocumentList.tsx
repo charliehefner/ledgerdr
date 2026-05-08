@@ -902,6 +902,30 @@ export function ApArDocumentList({ direction }: Props) {
         onOpenChange={open => { if (!open) setPaymentDoc(null); }}
         document={paymentDoc}
       />
+
+      {/* Void Confirmation */}
+      <AlertDialog open={!!voidDoc} onOpenChange={open => { if (!open) setVoidDoc(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anular documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se reversarán todos los asientos del documento y de sus pagos.
+              {voidDoc?.document_number ? ` (${voidDoc.document_number})` : ""}
+              {voidDoc ? ` — ${voidDoc.contact_name}` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidMutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); voidMutation.mutate(); }}
+              disabled={voidMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {voidMutation.isPending ? "Anulando..." : "Anular"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

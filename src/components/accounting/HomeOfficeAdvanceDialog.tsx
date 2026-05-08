@@ -197,6 +197,8 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
         p_description: description || null,
         p_cip_project_id: kind === "equipment_cip" ? cipProjectId : null,
         p_bank_account_id: kind === "cash_transfer" ? bankAccountId : null,
+        p_interest_rate_pct: interestRatePct === "" ? null : Number(interestRatePct),
+        p_interest_basis: interestBasis === "inherit" ? null : interestBasis,
       });
       if (e) throw e;
       return data;

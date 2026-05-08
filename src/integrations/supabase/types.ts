@@ -265,6 +265,65 @@ export type Database = {
         }
         Relationships: []
       }
+      ap_ar_credit_applications: {
+        Row: {
+          amount: number
+          applied_at: string
+          applied_by: string | null
+          credit_doc_id: string
+          id: string
+          notes: string | null
+          target_doc_id: string
+        }
+        Insert: {
+          amount: number
+          applied_at?: string
+          applied_by?: string | null
+          credit_doc_id: string
+          id?: string
+          notes?: string | null
+          target_doc_id: string
+        }
+        Update: {
+          amount?: number
+          applied_at?: string
+          applied_by?: string | null
+          credit_doc_id?: string
+          id?: string
+          notes?: string | null
+          target_doc_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_credit_applications_credit_doc_id_fkey"
+            columns: ["credit_doc_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_credit_applications_credit_doc_id_fkey"
+            columns: ["credit_doc_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_credit_applications_target_doc_id_fkey"
+            columns: ["target_doc_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_credit_applications_target_doc_id_fkey"
+            columns: ["target_doc_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ap_ar_document_transactions: {
         Row: {
           created_at: string
@@ -418,6 +477,70 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ap_ar_fx_revaluations: {
+        Row: {
+          balance_remaining: number
+          created_at: string
+          created_by: string | null
+          document_id: string
+          dop_delta: number
+          id: string
+          is_active: boolean
+          journal_id: string | null
+          period_id: string | null
+          rate: number
+          revaluation_date: string
+        }
+        Insert: {
+          balance_remaining: number
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          dop_delta: number
+          id?: string
+          is_active?: boolean
+          journal_id?: string | null
+          period_id?: string | null
+          rate: number
+          revaluation_date: string
+        }
+        Update: {
+          balance_remaining?: number
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          dop_delta?: number
+          id?: string
+          is_active?: boolean
+          journal_id?: string | null
+          period_id?: string | null
+          rate?: number
+          revaluation_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ap_ar_fx_revaluations_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "ap_ar_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_fx_revaluations_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_ar_aging"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ap_ar_fx_revaluations_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
             referencedColumns: ["id"]
           },
         ]

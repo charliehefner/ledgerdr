@@ -104,6 +104,9 @@ export function ApArDocumentList({ direction }: Props) {
   const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
   const [voidDoc, setVoidDoc] = useState<ApArDocument | null>(null);
   const [multiOpen, setMultiOpen] = useState(false);
+  const [creditDoc, setCreditDoc] = useState<ApArDocument | null>(null);
+  const [selectedCreditId, setSelectedCreditId] = useState("");
+  const [creditAmount, setCreditAmount] = useState("");
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",
@@ -227,6 +230,30 @@ export function ApArDocumentList({ direction }: Props) {
       d.balance_remaining > 0
     );
   }, [documents, allocDoc]);
+
+  // Available credit memos / debit notes for the credit-application dialog
+  const availableCredits = useMemo(() => {
+    if (!creditDoc) return [];
+    return documents.filter(d =>
+      (d.document_type === "credit_memo" || d.document_type === "debit_note") &&
+      d.contact_name === creditDoc.contact_name &&
+      d.currency === creditDoc.currency &&
+      d.status !== "paid" &&
+      d.status !== "void" &&
+      d.balance_remaining > 0
+    );
+  }, [documents, creditDoc]);
+
+  const hasCreditsForContact = (contactName: string, currency: string) => {
+    return documents.some(d =>
+      (d.document_type === "credit_memo" || d.document_type === "debit_note") &&
+      d.contact_name === contactName &&
+      d.currency === currency &&
+      d.status !== "paid" &&
+      d.status !== "void" &&
+      d.balance_remaining > 0
+    );
+  };
 
   // Currencies present in the data
   const activeCurrencies = useMemo(() => {
@@ -352,6 +379,29 @@ export function ApArDocumentList({ direction }: Props) {
       setAllocAmount("");
       setSelectedAdvanceId("");
       toast.success(t("apar.advanceApplied"));
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const applyCreditMutation = useMutation({
+    mutationFn: async () => {
+      if (!creditDoc || !selectedCreditId || !creditAmount) throw new Error("Datos faltantes");
+      const amount = parseFloat(creditAmount);
+      if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
+      const { error } = await supabase.from("ap_ar_credit_applications" as any).insert({
+        credit_doc_id: selectedCreditId,
+        target_doc_id: creditDoc.id,
+        amount,
+        applied_by: user?.id || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ap-ar-documents"] });
+      setCreditDoc(null);
+      setSelectedCreditId("");
+      setCreditAmount("");
+      toast.success("Nota aplicada");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -623,6 +673,16 @@ export function ApArDocumentList({ direction }: Props) {
                               <ArrowLeftRight className="h-4 w-4" />
                             </Button>
                           )}
+                          {hasCreditsForContact(doc.contact_name, doc.currency) && (doc.document_type === "invoice" || doc.document_type === "bill") && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Aplicar nota de crédito/débito"
+                              onClick={() => { setCreditDoc(doc); setCreditAmount(""); setSelectedCreditId(""); }}
+                            >
+                              <Receipt className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -886,6 +946,55 @@ export function ApArDocumentList({ direction }: Props) {
               disabled={!selectedAdvanceId || !allocAmount || parseFloat(allocAmount) <= 0 || allocateMutation.isPending}
             >
               {allocateMutation.isPending ? t("common.saving") : t("apar.applyAdvance")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit memo / debit note application */}
+      <Dialog open={!!creditDoc} onOpenChange={o => { if (!o) { setCreditDoc(null); setSelectedCreditId(""); setCreditAmount(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aplicar nota de crédito / débito</DialogTitle>
+            <DialogDescription>
+              {creditDoc?.contact_name} — Saldo: {creditDoc ? formatCurrency(creditDoc.balance_remaining, creditDoc.currency) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {availableCredits.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Sin notas disponibles</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Notas disponibles</Label>
+                <Select value={selectedCreditId} onValueChange={v => {
+                  setSelectedCreditId(v);
+                  const c = availableCredits.find(a => a.id === v);
+                  if (c && creditDoc) setCreditAmount(Math.min(c.balance_remaining, creditDoc.balance_remaining).toFixed(2));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar nota..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {availableCredits.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {t(`apar.${c.document_type}`)} {c.document_number || "s/n"} — {formatCurrency(c.balance_remaining, c.currency)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Monto a aplicar</Label>
+                <Input type="number" step="0.01" min="0" value={creditAmount}
+                  onChange={e => setCreditAmount(e.target.value)} className="font-mono" />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreditDoc(null)}>{t("common.cancel")}</Button>
+            <Button
+              onClick={() => applyCreditMutation.mutate()}
+              disabled={!selectedCreditId || !creditAmount || parseFloat(creditAmount) <= 0 || applyCreditMutation.isPending}
+            >
+              {applyCreditMutation.isPending ? t("common.saving") : "Aplicar"}
             </Button>
           </DialogFooter>
         </DialogContent>

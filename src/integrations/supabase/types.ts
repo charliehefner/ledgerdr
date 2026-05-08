@@ -8048,6 +8048,11 @@ export type Database = {
         | "recurring_template"
         | "accrual"
         | "manual"
+        | "home_office_advance"
+        | "home_office_repayment"
+        | "home_office_accrual"
+        | "home_office_fx_reval"
+        | "cip_capitalize"
       liquidation_case_status: "draft" | "final"
       prestaciones_scenario: "desahucio" | "dimision"
     }
@@ -8211,6 +8216,11 @@ export const Constants = {
         "recurring_template",
         "accrual",
         "manual",
+        "home_office_advance",
+        "home_office_repayment",
+        "home_office_accrual",
+        "home_office_fx_reval",
+        "cip_capitalize",
       ],
       liquidation_case_status: ["draft", "final"],
       prestaciones_scenario: ["desahucio", "dimision"],

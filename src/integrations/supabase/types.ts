@@ -1323,6 +1323,76 @@ export type Database = {
           },
         ]
       }
+      cip_projects: {
+        Row: {
+          capitalize_journal_id: string | null
+          cip_account_code: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          entity_id: string
+          final_asset_id: string | null
+          id: string
+          name: string
+          placed_in_service_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          capitalize_journal_id?: string | null
+          cip_account_code: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          entity_id: string
+          final_asset_id?: string | null
+          id?: string
+          name: string
+          placed_in_service_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          capitalize_journal_id?: string | null
+          cip_account_code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          entity_id?: string
+          final_asset_id?: string | null
+          id?: string
+          name?: string
+          placed_in_service_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cip_projects_capitalize_journal_id_fkey"
+            columns: ["capitalize_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cip_projects_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cip_projects_final_asset_id_fkey"
+            columns: ["final_asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_bank_accounts: {
         Row: {
           account_number: string
@@ -2872,6 +2942,501 @@ export type Database = {
             columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_office_advances: {
+        Row: {
+          advance_date: string
+          amount_dop: number
+          amount_fc: number
+          balance_remaining_fc: number
+          bank_account_id: string | null
+          cip_project_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          entity_id: string
+          fixed_asset_id: string | null
+          fx_rate: number
+          id: string
+          journal_id: string | null
+          kind: string
+          party_id: string
+          reference: string | null
+          status: string
+          target_account_id: string | null
+          transaction_id: string | null
+          updated_at: string
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          advance_date: string
+          amount_dop: number
+          amount_fc: number
+          balance_remaining_fc: number
+          bank_account_id?: string | null
+          cip_project_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          description?: string | null
+          entity_id: string
+          fixed_asset_id?: string | null
+          fx_rate: number
+          id?: string
+          journal_id?: string | null
+          kind: string
+          party_id: string
+          reference?: string | null
+          status?: string
+          target_account_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          advance_date?: string
+          amount_dop?: number
+          amount_fc?: number
+          balance_remaining_fc?: number
+          bank_account_id?: string | null
+          cip_project_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          entity_id?: string
+          fixed_asset_id?: string | null
+          fx_rate?: number
+          id?: string
+          journal_id?: string | null
+          kind?: string
+          party_id?: string
+          reference?: string | null
+          status?: string
+          target_account_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_office_advances_cip_project_id_fkey"
+            columns: ["cip_project_id"]
+            isOneToOne: false
+            referencedRelation: "cip_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_fixed_asset_id_fkey"
+            columns: ["fixed_asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_balance"
+            referencedColumns: ["party_id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_advances_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_transactions_with_dop"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_office_fx_revaluations: {
+        Row: {
+          advance_id: string
+          balance_fc: number
+          created_at: string
+          dop_delta: number
+          entity_id: string
+          id: string
+          is_active: boolean
+          journal_id: string | null
+          party_id: string
+          period_id: string
+          prior_rate: number
+          rate_used: number
+          revaluation_date: string
+        }
+        Insert: {
+          advance_id: string
+          balance_fc: number
+          created_at?: string
+          dop_delta: number
+          entity_id: string
+          id?: string
+          is_active?: boolean
+          journal_id?: string | null
+          party_id: string
+          period_id: string
+          prior_rate: number
+          rate_used: number
+          revaluation_date: string
+        }
+        Update: {
+          advance_id?: string
+          balance_fc?: number
+          created_at?: string
+          dop_delta?: number
+          entity_id?: string
+          id?: string
+          is_active?: boolean
+          journal_id?: string | null
+          party_id?: string
+          period_id?: string
+          prior_rate?: number
+          rate_used?: number
+          revaluation_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_office_fx_revaluations_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_fx_revaluations_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_fx_revaluations_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_fx_revaluations_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_balance"
+            referencedColumns: ["party_id"]
+          },
+          {
+            foreignKeyName: "home_office_fx_revaluations_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_fx_revaluations_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_office_interest_accruals: {
+        Row: {
+          avg_daily_balance_dop: number
+          avg_daily_balance_fc: number
+          basis_days: number
+          created_at: string
+          created_by: string | null
+          days: number
+          entity_id: string
+          id: string
+          interest_dop: number
+          interest_fc: number
+          journal_id: string | null
+          party_id: string
+          period_month: string
+          rate_pct: number
+          settlement_journal_id: string | null
+          status: string
+        }
+        Insert: {
+          avg_daily_balance_dop?: number
+          avg_daily_balance_fc?: number
+          basis_days: number
+          created_at?: string
+          created_by?: string | null
+          days: number
+          entity_id: string
+          id?: string
+          interest_dop: number
+          interest_fc: number
+          journal_id?: string | null
+          party_id: string
+          period_month: string
+          rate_pct: number
+          settlement_journal_id?: string | null
+          status?: string
+        }
+        Update: {
+          avg_daily_balance_dop?: number
+          avg_daily_balance_fc?: number
+          basis_days?: number
+          created_at?: string
+          created_by?: string | null
+          days?: number
+          entity_id?: string
+          id?: string
+          interest_dop?: number
+          interest_fc?: number
+          journal_id?: string | null
+          party_id?: string
+          period_month?: string
+          rate_pct?: number
+          settlement_journal_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_office_interest_accruals_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_interest_accruals_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_interest_accruals_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_balance"
+            referencedColumns: ["party_id"]
+          },
+          {
+            foreignKeyName: "home_office_interest_accruals_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_interest_accruals_settlement_journal_id_fkey"
+            columns: ["settlement_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_office_parties: {
+        Row: {
+          accrual_account_code: string
+          compounding: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          deleted_at: string | null
+          entity_id: string | null
+          expense_account_code: string
+          fx_account_code: string
+          id: string
+          interest_basis: string
+          interest_rate_pct: number
+          is_active: boolean
+          liability_account_code: string
+          name: string
+          notes: string | null
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accrual_account_code?: string
+          compounding?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deleted_at?: string | null
+          entity_id?: string | null
+          expense_account_code?: string
+          fx_account_code?: string
+          id?: string
+          interest_basis?: string
+          interest_rate_pct?: number
+          is_active?: boolean
+          liability_account_code?: string
+          name: string
+          notes?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accrual_account_code?: string
+          compounding?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deleted_at?: string | null
+          entity_id?: string | null
+          expense_account_code?: string
+          fx_account_code?: string
+          id?: string
+          interest_basis?: string
+          interest_rate_pct?: number
+          is_active?: boolean
+          liability_account_code?: string
+          name?: string
+          notes?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_office_parties_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_office_repayments: {
+        Row: {
+          amount_dop: number
+          amount_fc: number
+          bank_account_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          entity_id: string
+          fx_rate: number
+          id: string
+          journal_id: string | null
+          kind: string
+          party_id: string
+          realized_fx_dop: number
+          reference: string | null
+          repayment_date: string
+          status: string
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount_dop: number
+          amount_fc: number
+          bank_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          description?: string | null
+          entity_id: string
+          fx_rate: number
+          id?: string
+          journal_id?: string | null
+          kind?: string
+          party_id: string
+          realized_fx_dop?: number
+          reference?: string | null
+          repayment_date: string
+          status?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount_dop?: number
+          amount_fc?: number
+          bank_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          entity_id?: string
+          fx_rate?: number
+          id?: string
+          journal_id?: string | null
+          kind?: string
+          party_id?: string
+          realized_fx_dop?: number
+          reference?: string | null
+          repayment_date?: string
+          status?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_office_repayments_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_repayments_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_office_repayments_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_balance"
+            referencedColumns: ["party_id"]
+          },
+          {
+            foreignKeyName: "home_office_repayments_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "home_office_parties"
             referencedColumns: ["id"]
           },
         ]
@@ -6437,6 +7002,26 @@ export type Database = {
         }
         Relationships: []
       }
+      home_office_balance: {
+        Row: {
+          accrued_interest_dop: number | null
+          currency: string | null
+          entity_id: string | null
+          name: string | null
+          party_id: string | null
+          principal_dop: number | null
+          principal_fc: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_office_parties_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trial_balance_all: {
         Row: {
           account_code: string | null
@@ -6682,6 +7267,8 @@ export type Database = {
       }
     }
     Functions: {
+      _ho_acct: { Args: { p_code: string }; Returns: string }
+      _ho_resolve_period: { Args: { p_date: string }; Returns: string }
       account_balances_from_journals:
         | {
             Args: { p_end?: string; p_start?: string }
@@ -6801,6 +7388,23 @@ export type Database = {
       }
       cancel_purchase_order: { Args: { p_po_id: string }; Returns: undefined }
       cancel_stock_count: { Args: { p_session_id: string }; Returns: boolean }
+      capitalize_cip_project: {
+        Args: {
+          p_asset_name: string
+          p_cip_project_id: string
+          p_placed_in_service_date: string
+          p_salvage_value: number
+          p_serial_number?: string
+          p_target_asset_account_code: string
+          p_useful_life_months: number
+          p_user_id: string
+        }
+        Returns: string
+      }
+      capitalize_interest_to_principal: {
+        Args: { p_accrual_id: string; p_user_id: string }
+        Returns: string
+      }
       close_day_labor_week:
         | { Args: { p_week_ending: string }; Returns: string }
         | {
@@ -7201,6 +7805,50 @@ export type Database = {
       is_accountant_only: { Args: never; Returns: boolean }
       is_global_admin: { Args: never; Returns: boolean }
       is_mfa_verified: { Args: never; Returns: boolean }
+      post_home_office_advance: {
+        Args: {
+          p_advance_date: string
+          p_amount_fc: number
+          p_bank_account_id?: string
+          p_cip_project_id?: string
+          p_currency: string
+          p_description?: string
+          p_entity_id: string
+          p_fixed_asset_id?: string
+          p_fx_rate: number
+          p_kind: string
+          p_party_id: string
+          p_reference?: string
+          p_target_account_id: string
+          p_transaction_id?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      post_home_office_interest_accrual: {
+        Args: {
+          p_entity_id: string
+          p_party_id: string
+          p_period_month: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      post_home_office_repayment: {
+        Args: {
+          p_amount_fc: number
+          p_bank_account_id: string
+          p_currency: string
+          p_description?: string
+          p_entity_id: string
+          p_fx_rate: number
+          p_party_id: string
+          p_reference?: string
+          p_repayment_date: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       post_journal: {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined
@@ -7273,6 +7921,15 @@ export type Database = {
             }
             Returns: number
           }
+      revalue_open_home_office: {
+        Args: {
+          p_entity_id?: string
+          p_period_id: string
+          p_revaluation_date: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       review_ap_ar_approval: {
         Args: {
           p_decision: string

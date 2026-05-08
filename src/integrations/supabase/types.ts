@@ -6168,6 +6168,24 @@ export type Database = {
               total_debit: number
             }[]
           }
+      aging_as_of: {
+        Args: { p_as_of: string; p_direction: string; p_entity_id?: string }
+        Returns: {
+          balance_as_of: number
+          bucket: string
+          contact_name: string
+          contact_rnc: string
+          currency: string
+          days_overdue: number
+          document_date: string
+          document_id: string
+          document_number: string
+          due_date: string
+          paid_as_of: number
+          supplier_id: string
+          total_amount: number
+        }[]
+      }
       apply_ap_ar_payment: {
         Args: {
           p_amount: number

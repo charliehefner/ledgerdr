@@ -109,6 +109,7 @@ export function ApArDocumentList({ direction }: Props) {
   const [creditAmount, setCreditAmount] = useState("");
   const [form, setForm] = useState({
     document_type: "invoice",
+    supplier_id: "",
     contact_name: "",
     contact_rnc: "",
     document_number: "",
@@ -167,6 +168,17 @@ export function ApArDocumentList({ direction }: Props) {
     },
   });
 
+  // Suppliers/customers master for picker
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers-active", selectedEntityId],
+    queryFn: async () => {
+      let q = supabase.from("suppliers").select("id, name, rnc").eq("is_active", true).order("name");
+      if (selectedEntityId) q = q.or(`entity_id.eq.${selectedEntityId},entity_id.is.null`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []) as { id: string; name: string; rnc: string | null }[];
+    },
+  });
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["ap-ar-documents", direction],
     queryFn: async () => {
@@ -341,7 +353,7 @@ export function ApArDocumentList({ direction }: Props) {
         p_total_amount: totalAmount,
         p_notes: form.notes || null,
         p_account_id: form.account_id || null,
-        p_supplier_id: null,
+        p_supplier_id: form.supplier_id || null,
         p_contract_id: null,
         p_entity_id: selectedEntityId || null,
         p_offset_account_id: form.offset_account_id || null,
@@ -458,6 +470,7 @@ export function ApArDocumentList({ direction }: Props) {
   const resetForm = () => {
     setForm({
       document_type: "invoice",
+      supplier_id: "",
       contact_name: "",
       contact_rnc: "",
       document_number: "",
@@ -804,8 +817,41 @@ export function ApArDocumentList({ direction }: Props) {
               </Select>
             </div>
             <div className="space-y-1">
+              <Label>{direction === "payable" ? "Proveedor (maestro)" : "Cliente (maestro)"}</Label>
+              <Select
+                value={form.supplier_id || "__none__"}
+                onValueChange={v => {
+                  if (v === "__none__") {
+                    setForm(f => ({ ...f, supplier_id: "" }));
+                    return;
+                  }
+                  const s = suppliers.find(x => x.id === v);
+                  setForm(f => ({
+                    ...f,
+                    supplier_id: v,
+                    contact_name: s?.name || f.contact_name,
+                    contact_rnc: s?.rnc || f.contact_rnc,
+                  }));
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="— Texto libre —" /></SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  <SelectItem value="__none__">— Texto libre —</SelectItem>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}{s.rnc ? ` · ${s.rnc}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>{t("apar.contactName")} *</Label>
-              <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+              <Input
+                value={form.contact_name}
+                disabled={!!form.supplier_id}
+                onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">

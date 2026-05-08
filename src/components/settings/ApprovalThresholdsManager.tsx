@@ -262,6 +262,7 @@ export function ApprovalThresholdsManager() {
                 <SelectContent>
                   <SelectItem value="transaction">Transacciones</SelectItem>
                   <SelectItem value="journal">Asientos Contables</SelectItem>
+                  <SelectItem value="ap_ar_document">Facturas A/P-A/R</SelectItem>
                 </SelectContent>
               </Select>
             </div>

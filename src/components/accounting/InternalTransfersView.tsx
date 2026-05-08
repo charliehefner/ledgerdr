@@ -82,9 +82,7 @@ export function InternalTransfersView() {
     queryFn: async () => {
       const q = supabase
         .from("transactions")
-        .select(
-          "id, transaction_date, description, amount, currency, pay_method, destination_acct_code, transaction_direction, is_internal"
-        )
+        .select("*")
         .eq("is_internal", true)
         .in("transaction_direction", ["payment", "investment"])
         .order("transaction_date", { ascending: false })
@@ -92,9 +90,26 @@ export function InternalTransfersView() {
       if (selectedEntityId) q.eq("entity_id", selectedEntityId);
       const { data, error } = await q;
       if (error) throw error;
-      return data || [];
+      const rows = data || [];
+      const ids = rows.map((r: any) => r.id);
+      let postedSet = new Set<string>();
+      if (ids.length) {
+        const { data: jrows } = await supabase
+          .from("journals")
+          .select("transaction_source_id, posted")
+          .in("transaction_source_id", ids)
+          .eq("posted", true);
+        postedSet = new Set((jrows || []).map((j: any) => j.transaction_source_id));
+      }
+      return rows.map((r: any) => ({ ...r, _isPosted: postedSet.has(r.id) }));
     },
   });
+
+  const handleEdit = (row: any) => {
+    setEditTxn(row);
+    setEditOpen(true);
+  };
+
 
   const fromAcct = bankAccounts.find((a) => a.id === form.from_account);
   const toAcct = bankAccounts.find((a) => a.id === form.to_account);

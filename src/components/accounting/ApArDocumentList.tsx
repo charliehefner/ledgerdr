@@ -829,15 +829,6 @@ export function ApArDocumentList({ direction }: Props) {
         direction={direction}
         documents={documents.filter(d => d.status !== "paid" && d.status !== "void" && d.balance_remaining > 0)}
       />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!form.contact_name || !form.total_amount || !form.account_id || createMutation.isPending}>
-              {createMutation.isPending ? t("common.saving") : t("common.save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Advance Allocation Dialog */}
       <Dialog open={!!allocDoc} onOpenChange={open => { if (!open) setAllocDoc(null); }}>

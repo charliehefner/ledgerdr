@@ -35,6 +35,7 @@ interface FixedAssetsViewProps {
 }
 
 export function FixedAssetsView({ highlightAssetId, highlightDepId }: FixedAssetsViewProps = {}) {
+  const { t } = useLanguage();
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"active" | "disposed" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);

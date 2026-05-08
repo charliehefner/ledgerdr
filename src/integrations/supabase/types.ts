@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_dimension_rules: {
+        Row: {
+          account_id: string
+          created_at: string
+          dimension_id: string
+          id: string
+          requirement: Database["public"]["Enums"]["dimension_requirement"]
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          dimension_id: string
+          id?: string
+          requirement?: Database["public"]["Enums"]["dimension_requirement"]
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          dimension_id?: string
+          id?: string
+          requirement?: Database["public"]["Enums"]["dimension_requirement"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_dimension_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_dimension_rules_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_dimensions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounting_audit_log: {
         Row: {
           action: string
@@ -46,6 +85,117 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      accounting_dimension_values: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          dimension_id: string
+          display_order: number
+          entity_id: string | null
+          id: string
+          name_en: string
+          name_es: string
+          parent_value_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          dimension_id: string
+          display_order?: number
+          entity_id?: string | null
+          id?: string
+          name_en: string
+          name_es: string
+          parent_value_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          dimension_id?: string
+          display_order?: number
+          entity_id?: string | null
+          id?: string
+          name_en?: string
+          name_es?: string
+          parent_value_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_dimension_values_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_dimension_values_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_dimension_values_parent_value_id_fkey"
+            columns: ["parent_value_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_dimension_values"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_dimensions: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          display_order: number
+          entity_id: string | null
+          id: string
+          is_required_default: boolean
+          name_en: string
+          name_es: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          display_order?: number
+          entity_id?: string | null
+          id?: string
+          is_required_default?: boolean
+          name_en: string
+          name_es: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          display_order?: number
+          entity_id?: string | null
+          id?: string
+          is_required_default?: boolean
+          name_en?: string
+          name_es?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_dimensions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       accounting_periods: {
         Row: {
@@ -3335,6 +3485,52 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_line_dimensions: {
+        Row: {
+          created_at: string
+          dimension_id: string
+          dimension_value_id: string
+          id: string
+          journal_line_id: string
+        }
+        Insert: {
+          created_at?: string
+          dimension_id: string
+          dimension_value_id: string
+          id?: string
+          journal_line_id: string
+        }
+        Update: {
+          created_at?: string
+          dimension_id?: string
+          dimension_value_id?: string
+          id?: string
+          journal_line_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_line_dimensions_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_line_dimensions_dimension_value_id_fkey"
+            columns: ["dimension_value_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_dimension_values"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_line_dimensions_journal_line_id_fkey"
+            columns: ["journal_line_id"]
+            isOneToOne: false
+            referencedRelation: "journal_lines"
             referencedColumns: ["id"]
           },
         ]
@@ -7137,6 +7333,14 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      validate_journal_line_dimensions: {
+        Args: { p_journal_id: string }
+        Returns: {
+          account_code: string
+          line_id: string
+          missing_dimension: string
+        }[]
+      }
       validate_po_invoice_match: {
         Args: { p_apar_id: string }
         Returns: string
@@ -7155,6 +7359,7 @@ export type Database = {
         | "viewer"
         | "driver"
         | "office"
+      dimension_requirement: "required" | "optional" | "blocked"
       inventory_function:
         | "fertilizer"
         | "fuel"
@@ -7316,6 +7521,7 @@ export const Constants = {
         "driver",
         "office",
       ],
+      dimension_requirement: ["required", "optional", "blocked"],
       inventory_function: [
         "fertilizer",
         "fuel",

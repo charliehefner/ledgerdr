@@ -123,10 +123,10 @@ The client orchestrates **5 sequential writes** (journal → lines → transacti
 13. ✅ **Lock down generation paths**: collapse paths A/B/C into a single server-side `create_ap_ar_document` RPC so every doc gets the same validation, journal, and audit trail.
 
 ### P3 — Nice to have / future
-14. Remittance advice PDF generation for vendor payments.
-15. Statement of account PDF for customers.
-16. Lightweight purchase-order module to enable three-way match.
-17. Customer credit limit checks at invoice creation.
+14. ✅ Remittance advice PDF generation for vendor payments.
+15. ✅ Statement of account PDF for customers.
+16. **Deferred** — Lightweight purchase-order module to enable three-way match (multi-feature build, scope separately).
+17. ✅ Customer credit limit checks at invoice creation.
 
 ---
 

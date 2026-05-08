@@ -696,6 +696,7 @@ function MatchStatus() {
         </Table>
       </CardContent>
     </Card>
+    </div>
   );
 }
 

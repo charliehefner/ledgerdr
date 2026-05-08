@@ -93,6 +93,17 @@ export function HomeOfficeAdvanceDialog({ open, onOpenChange, partyId, partyCurr
     }
   }, [currency, officialRate]); // eslint-disable-line
 
+  // Default interest by kind: equipment transfers default to 0%, others inherit party rate.
+  useEffect(() => {
+    if (kind.startsWith("equipment_")) {
+      setInterestRatePct("0");
+      setInterestBasis("none");
+    } else {
+      setInterestRatePct("");
+      setInterestBasis("inherit");
+    }
+  }, [kind]);
+
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["ho-bank-accounts", selectedEntityId],
     queryFn: async () => {

@@ -2962,6 +2962,8 @@ export type Database = {
           fixed_asset_id: string | null
           fx_rate: number
           id: string
+          interest_basis: string | null
+          interest_rate_pct: number | null
           journal_id: string | null
           kind: string
           party_id: string
@@ -2988,6 +2990,8 @@ export type Database = {
           fixed_asset_id?: string | null
           fx_rate: number
           id?: string
+          interest_basis?: string | null
+          interest_rate_pct?: number | null
           journal_id?: string | null
           kind: string
           party_id: string
@@ -3014,6 +3018,8 @@ export type Database = {
           fixed_asset_id?: string | null
           fx_rate?: number
           id?: string
+          interest_basis?: string | null
+          interest_rate_pct?: number | null
           journal_id?: string | null
           kind?: string
           party_id?: string
@@ -7805,26 +7811,49 @@ export type Database = {
       is_accountant_only: { Args: never; Returns: boolean }
       is_global_admin: { Args: never; Returns: boolean }
       is_mfa_verified: { Args: never; Returns: boolean }
-      post_home_office_advance: {
-        Args: {
-          p_advance_date: string
-          p_amount_fc: number
-          p_bank_account_id?: string
-          p_cip_project_id?: string
-          p_currency: string
-          p_description?: string
-          p_entity_id: string
-          p_fixed_asset_id?: string
-          p_fx_rate: number
-          p_kind: string
-          p_party_id: string
-          p_reference?: string
-          p_target_account_id: string
-          p_transaction_id?: string
-          p_user_id: string
-        }
-        Returns: string
-      }
+      post_home_office_advance:
+        | {
+            Args: {
+              p_advance_date: string
+              p_amount_fc: number
+              p_bank_account_id?: string
+              p_cip_project_id?: string
+              p_currency: string
+              p_description?: string
+              p_entity_id: string
+              p_fixed_asset_id?: string
+              p_fx_rate: number
+              p_kind: string
+              p_party_id: string
+              p_reference?: string
+              p_target_account_id: string
+              p_transaction_id?: string
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_advance_date: string
+              p_amount_fc: number
+              p_bank_account_id?: string
+              p_cip_project_id?: string
+              p_currency: string
+              p_description?: string
+              p_entity_id: string
+              p_fixed_asset_id?: string
+              p_fx_rate: number
+              p_interest_basis?: string
+              p_interest_rate_pct?: number
+              p_kind: string
+              p_party_id: string
+              p_reference?: string
+              p_target_account_id: string
+              p_transaction_id?: string
+              p_user_id: string
+            }
+            Returns: string
+          }
       post_home_office_interest_accrual: {
         Args: {
           p_entity_id: string

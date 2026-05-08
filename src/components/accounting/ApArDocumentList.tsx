@@ -29,13 +29,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { formatDateLocal, parseDateLocal } from "@/lib/dateUtils";
 import { formatCurrency, formatDate } from "@/lib/formatters";
-import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban } from "lucide-react";
+import { Plus, Receipt, DollarSign, ArrowLeftRight, CalendarIcon, Pencil, Ban, Layers } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { PaymentDialog } from "./PaymentDialog";
+import { MultiPaymentDialog } from "./MultiPaymentDialog";
 
 interface ApArDocument {
   id: string;
@@ -102,6 +103,7 @@ export function ApArDocumentList({ direction }: Props) {
   const [typeFilter, setTypeFilter] = useState<DocTypeFilter>("all");
   const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
   const [voidDoc, setVoidDoc] = useState<ApArDocument | null>(null);
+  const [multiOpen, setMultiOpen] = useState(false);
   const [form, setForm] = useState({
     document_type: "invoice",
     contact_name: "",
@@ -113,6 +115,8 @@ export function ApArDocumentList({ direction }: Props) {
     total_amount: "",
     notes: "",
     account_id: "",
+    offset_account_id: "",
+    post_journal: false,
   });
 
   // Fetch relevant GL accounts for the direction
@@ -274,24 +278,29 @@ export function ApArDocumentList({ direction }: Props) {
   const createMutation = useMutation({
     mutationFn: async () => {
       const totalAmount = parseFloat(form.total_amount) || 0;
-      const { error } = await supabase.from("ap_ar_documents").insert({
-        direction,
-        document_type: form.document_type,
-        contact_name: form.contact_name,
-        contact_rnc: form.contact_rnc || null,
-        document_number: form.document_number || null,
-        document_date: form.document_date,
-        due_date: form.due_date || null,
-        currency: form.currency,
-        total_amount: totalAmount,
-        notes: form.notes || null,
-        created_by: user?.id || null,
-        account_id: form.account_id || null,
-        status: 'open',
-        amount_paid: 0,
-        balance_remaining: totalAmount,
-        ...(selectedEntityId ? { entity_id: selectedEntityId } : {}),
-      } as any);
+      if (form.post_journal && !form.offset_account_id) {
+        throw new Error("Seleccione cuenta de contrapartida para publicar el asiento");
+      }
+      const { error } = await supabase.rpc("create_ap_ar_document" as any, {
+        p_direction: direction,
+        p_document_type: form.document_type,
+        p_contact_name: form.contact_name,
+        p_contact_rnc: form.contact_rnc || null,
+        p_document_number: form.document_number || null,
+        p_document_date: form.document_date,
+        p_due_date: form.due_date || null,
+        p_currency: form.currency,
+        p_total_amount: totalAmount,
+        p_notes: form.notes || null,
+        p_account_id: form.account_id || null,
+        p_supplier_id: null,
+        p_contract_id: null,
+        p_entity_id: selectedEntityId || null,
+        p_offset_account_id: form.offset_account_id || null,
+        p_post_journal: form.post_journal,
+        p_exchange_rate: null,
+        p_user_id: user?.id || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

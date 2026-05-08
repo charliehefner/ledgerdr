@@ -673,6 +673,16 @@ export function ApArDocumentList({ direction }: Props) {
                               <ArrowLeftRight className="h-4 w-4" />
                             </Button>
                           )}
+                          {hasCreditsForContact(doc.contact_name, doc.currency) && (doc.document_type === "invoice" || doc.document_type === "bill") && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Aplicar nota de crédito/débito"
+                              onClick={() => { setCreditDoc(doc); setCreditAmount(""); setSelectedCreditId(""); }}
+                            >
+                              <Receipt className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, ArrowLeftRight } from "lucide-react";
+import { CalendarIcon, ArrowLeftRight, Pencil } from "lucide-react";
+import { EditTransactionDialog } from "@/components/invoices/EditTransactionDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEntity } from "@/contexts/EntityContext";
@@ -60,6 +61,8 @@ export function InternalTransfersView() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialState);
   const [submitting, setSubmitting] = useState(false);
+  const [editTxn, setEditTxn] = useState<any | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["internal-transfer-bank-accounts"],
@@ -79,9 +82,7 @@ export function InternalTransfersView() {
     queryFn: async () => {
       const q = supabase
         .from("transactions")
-        .select(
-          "id, transaction_date, description, amount, currency, pay_method, destination_acct_code, transaction_direction, is_internal"
-        )
+        .select("*")
         .eq("is_internal", true)
         .in("transaction_direction", ["payment", "investment"])
         .order("transaction_date", { ascending: false })
@@ -89,9 +90,26 @@ export function InternalTransfersView() {
       if (selectedEntityId) q.eq("entity_id", selectedEntityId);
       const { data, error } = await q;
       if (error) throw error;
-      return data || [];
+      const rows = data || [];
+      const ids = rows.map((r: any) => r.id);
+      let postedSet = new Set<string>();
+      if (ids.length) {
+        const { data: jrows } = await supabase
+          .from("journals")
+          .select("transaction_source_id, posted")
+          .in("transaction_source_id", ids)
+          .eq("posted", true);
+        postedSet = new Set((jrows || []).map((j: any) => j.transaction_source_id));
+      }
+      return rows.map((r: any) => ({ ...r, _isPosted: postedSet.has(r.id) }));
     },
   });
+
+  const handleEdit = (row: any) => {
+    setEditTxn(row);
+    setEditOpen(true);
+  };
+
 
   const fromAcct = bankAccounts.find((a) => a.id === form.from_account);
   const toAcct = bankAccounts.find((a) => a.id === form.to_account);
@@ -348,6 +366,7 @@ export function InternalTransfersView() {
                   <TableHead>Destino</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
                   <TableHead>Descripción</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -366,6 +385,18 @@ export function InternalTransfersView() {
                       {r.currency}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.description}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(r)}
+                        disabled={r._isPosted}
+                        title={r._isPosted ? "Asiento ya posteado" : "Editar"}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -373,6 +404,19 @@ export function InternalTransfersView() {
           )}
         </CardContent>
       </Card>
+
+      <EditTransactionDialog
+        transaction={editTxn}
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o);
+          if (!o) {
+            setEditTxn(null);
+            refetchRecent();
+            queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
+          }
+        }}
+      />
     </div>
   );
 }

@@ -6391,6 +6391,15 @@ export type Database = {
         Args: { p_journal_id: string; p_user: string }
         Returns: undefined
       }
+      post_reversing_journal: {
+        Args: {
+          p_reason?: string
+          p_reversal_date: string
+          p_source_journal_id: string
+          p_user_id?: string
+        }
+        Returns: string
+      }
       recompute_ap_ar_document_balance: {
         Args: { p_document_id: string }
         Returns: undefined
@@ -6486,6 +6495,10 @@ export type Database = {
         Returns: boolean
       }
       user_has_group_access: { Args: { p_group_id: string }; Returns: boolean }
+      void_ap_ar_document: {
+        Args: { p_document_id: string; p_reason?: string; p_user_id?: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:

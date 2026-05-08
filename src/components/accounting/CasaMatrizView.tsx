@@ -15,6 +15,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { HomeOfficeAdvanceDialog } from "./HomeOfficeAdvanceDialog";
 import { HomeOfficeRepaymentDialog } from "./HomeOfficeRepaymentDialog";
 import { CasaMatrizStatementExport } from "./CasaMatrizStatementExport";
@@ -45,6 +49,7 @@ export function CasaMatrizView({
 
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [repayOpen, setRepayOpen] = useState(false);
+  const [pendingCapAccrualId, setPendingCapAccrualId] = useState<string | null>(null);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const { rate: usdRate } = useExchangeRate(today);

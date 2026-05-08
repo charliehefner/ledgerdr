@@ -32,7 +32,8 @@ import {
   Building2,
   ClipboardCheck,
   MessageCircle,
-  AlertTriangle
+  AlertTriangle,
+  Tag
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +58,7 @@ import { MfaSettings } from "@/components/settings/MfaSettings";
 import { TelegramSettings } from "@/components/settings/TelegramSettings";
 import { ErrorLogView } from "@/components/settings/ErrorLogView";
 import { SuppliersView } from "@/components/settings/SuppliersView";
+import { DimensionsManager } from "@/components/settings/DimensionsManager";
 
 export default function Settings() {
   const { canModifySettings, canModifyPostingRules } = useAuth();
@@ -182,6 +184,12 @@ export default function Settings() {
               <TabsTrigger value="approvals">
                 <ClipboardCheck className="h-4 w-4 mr-2" />
                 {t("settings.approvals")}
+              </TabsTrigger>
+            )}
+            {canModifySettings && (
+              <TabsTrigger value="dimensions">
+                <Tag className="h-4 w-4 mr-2" />
+                {t("settings.dimensions") || "Dimensiones"}
               </TabsTrigger>
             )}
             {canModifySettings && (
@@ -434,6 +442,12 @@ export default function Settings() {
               <div className="max-w-4xl">
                 <ApprovalThresholdsManager />
               </div>
+            </TabsContent>
+          )}
+
+          {canModifySettings && (
+            <TabsContent value="dimensions" className="mt-6">
+              <DimensionsManager />
             </TabsContent>
           )}
 

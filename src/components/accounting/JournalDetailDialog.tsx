@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Lock, Save, CheckCircle, ShieldCheck, ShieldX, CheckCircle2 } from "lucide-react";
 
 import { fmtDate } from "@/lib/dateUtils";
+import { DrilldownBadges } from "@/components/accounting/DrilldownBadges";
 
 type JournalLine = {
   id: string;
@@ -330,6 +331,9 @@ export function JournalDetailDialog({ journal, open, onOpenChange }: JournalDeta
               </span>
             )}
           </DialogDescription>
+          <div className="pt-1">
+            <DrilldownBadges journalId={journal.id} />
+          </div>
         </DialogHeader>
 
         {/* Journal Type (editable for drafts) */}

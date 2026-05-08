@@ -113,11 +113,11 @@ The client orchestrates **5 sequential writes** (journal → lines → transacti
 ### P1 — Architectural alignment (high value)
 6. **M:N payment application table** `ap_ar_payment_applications(payment_id, document_id, amount)`. UI lets one check pay multiple bills (the most-requested feature in any AP system). Existing `ap_ar_payments.document_id` becomes deprecated/migrated.
 7. **Credit memo / debit note application** through the same application table. Removes the "type exists but does nothing" UI.
-8. **Vendor/Customer master**: link `ap_ar_documents.supplier_id` to a real `business_partners` table (can be the existing `contacts` plus a thin partner extension carrying default terms, default GL, default currency, RNC). Validate at insert time. Migrate existing free-text names by RNC where possible.
+8. ✅ **Vendor/Customer master**: link `ap_ar_documents.supplier_id` to a real `business_partners` table (can be the existing `contacts` plus a thin partner extension carrying default terms, default GL, default currency, RNC). Validate at insert time. Migrate existing free-text names by RNC where possible.
 9. **Approval gate for bills entered manually** (path A) — same threshold engine you already have for transactions.
 
 ### P2 — Process & controls
-10. **Aging service**: server-side function `aging_as_of(date, direction)` returning per-currency buckets. Powers UI today, regulator-grade snapshots tomorrow.
+10. ✅ **Aging service**: server-side function `aging_as_of(date, direction)` returning per-currency buckets. Powers UI today, regulator-grade snapshots tomorrow.
 11. **Period-end FX revaluation already exists** (`FxRevaluationButton`) — extend it to revalue open AP/AR sub-ledger items and post unrealized gain/loss.
 12. **Edit lock**: posted/paid/void documents should be hard-locked (DB trigger), not just hidden buttons.
 13. **Lock down generation paths**: collapse paths A/B/C into a single server-side `create_ap_ar_document` RPC so every doc gets the same validation, journal, and audit trail.

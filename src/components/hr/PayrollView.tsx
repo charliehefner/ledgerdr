@@ -55,7 +55,7 @@ export function PayrollView() {
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState(user?.role === "office" ? "summary" : "timesheet");
+  const [activeTab, setActiveTab] = useState("timesheet");
   const [autoOpenedSummaryForPeriod, setAutoOpenedSummaryForPeriod] = useState<string | null>(null);
 
   const { data: periodData, isLoading: periodLoading } = useQuery({
@@ -109,18 +109,13 @@ export function PayrollView() {
 
   const nominaNumber = calculateNominaNumber(selectedPeriod.startDate);
 
-  // Office users always live in the Summary tab (read-only export/receipts).
-  // Other roles get auto-switched to Summary when the selected period is closed.
+  // Auto-switch to Summary when the selected period is closed (all roles).
   useEffect(() => {
-    if (user?.role === "office") {
-      if (activeTab !== "summary") setActiveTab("summary");
-      return;
-    }
     if (periodData?.status === "closed" && periodData.id !== autoOpenedSummaryForPeriod) {
       setActiveTab("summary");
       setAutoOpenedSummaryForPeriod(periodData.id);
     }
-  }, [periodData?.id, periodData?.status, autoOpenedSummaryForPeriod, user?.role, activeTab]);
+  }, [periodData?.id, periodData?.status, autoOpenedSummaryForPeriod]);
 
   return (
     <div className="space-y-4">

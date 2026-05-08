@@ -74,6 +74,7 @@ const sectionColors: Record<Section, string> = {
   industrial: "bg-section-fuel",
   "driver-portal": "",
   approvals: "",
+  purchasing: "",
 };
 
 const navigation: NavItem[] = [

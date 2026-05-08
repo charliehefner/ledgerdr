@@ -951,6 +951,55 @@ export function ApArDocumentList({ direction }: Props) {
         </DialogContent>
       </Dialog>
 
+      {/* Credit memo / debit note application */}
+      <Dialog open={!!creditDoc} onOpenChange={o => { if (!o) { setCreditDoc(null); setSelectedCreditId(""); setCreditAmount(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aplicar nota de crédito / débito</DialogTitle>
+            <DialogDescription>
+              {creditDoc?.contact_name} — Saldo: {creditDoc ? formatCurrency(creditDoc.balance_remaining, creditDoc.currency) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {availableCredits.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Sin notas disponibles</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Notas disponibles</Label>
+                <Select value={selectedCreditId} onValueChange={v => {
+                  setSelectedCreditId(v);
+                  const c = availableCredits.find(a => a.id === v);
+                  if (c && creditDoc) setCreditAmount(Math.min(c.balance_remaining, creditDoc.balance_remaining).toFixed(2));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar nota..." /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    {availableCredits.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {t(`apar.${c.document_type}`)} {c.document_number || "s/n"} — {formatCurrency(c.balance_remaining, c.currency)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Monto a aplicar</Label>
+                <Input type="number" step="0.01" min="0" value={creditAmount}
+                  onChange={e => setCreditAmount(e.target.value)} className="font-mono" />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreditDoc(null)}>{t("common.cancel")}</Button>
+            <Button
+              onClick={() => applyCreditMutation.mutate()}
+              disabled={!selectedCreditId || !creditAmount || parseFloat(creditAmount) <= 0 || applyCreditMutation.isPending}
+            >
+              {applyCreditMutation.isPending ? t("common.saving") : "Aplicar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!dueDateDoc} onOpenChange={open => {
         if (!open) {
           setDueDateDoc(null);

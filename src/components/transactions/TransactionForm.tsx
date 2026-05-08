@@ -1112,31 +1112,36 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
           {/* B11 Withholding Fields - visible only for B11 documents */}
           {form.document?.toUpperCase().startsWith('B11') && (
-            <div className="grid gap-4 md:grid-cols-2 max-w-md">
-              <div className="space-y-2">
-                <Label>ITBIS Retenido</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.itbis_retenido}
-                  onChange={(e) => updateField('itbis_retenido', e.target.value)}
-                  placeholder="0.00"
-                  className="font-mono"
-                />
-                <p className="text-xs text-muted-foreground">100% del ITBIS</p>
+            <div className="space-y-3 max-w-2xl">
+              <div className="grid gap-4 md:grid-cols-2 max-w-md">
+                <div className="space-y-2">
+                  <Label>ITBIS Retenido (a DGII)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.itbis_retenido}
+                    onChange={(e) => updateField('itbis_retenido', e.target.value)}
+                    placeholder="0.00"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">100% del ITBIS</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>ISR Retenido (a DGII)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.isr_retenido}
+                    onChange={(e) => updateField('isr_retenido', e.target.value)}
+                    placeholder="0.00"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">10% renta / 2% bienes</p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>ISR Retenido</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.isr_retenido}
-                  onChange={(e) => updateField('isr_retenido', e.target.value)}
-                  placeholder="0.00"
-                  className="font-mono"
-                />
-                <p className="text-xs text-muted-foreground">10% renta / 2% bienes</p>
-              </div>
+              <p className="text-xs text-muted-foreground italic max-w-lg">
+                {t('txForm.itbisRetenidoB11Hint')}
+              </p>
             </div>
           )}
 

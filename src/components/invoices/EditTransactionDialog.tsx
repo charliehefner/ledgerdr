@@ -824,7 +824,7 @@ export function EditTransactionDialog({
             {/* ITBIS Retenido / ISR Retenido */}
             <div className="grid gap-4 md:grid-cols-2 max-w-md">
               <div className="space-y-2">
-                <Label>ITBIS Retenido</Label>
+                <Label>ITBIS Retenido (a DGII)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -837,7 +837,7 @@ export function EditTransactionDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>ISR Retenido</Label>
+                <Label>ISR Retenido (a DGII)</Label>
                 <Input
                   type="number"
                   step="0.01"

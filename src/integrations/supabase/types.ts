@@ -378,6 +378,8 @@ export type Database = {
         Row: {
           account_id: string | null
           amount_paid: number
+          approval_request_id: string | null
+          approval_status: string
           balance_remaining: number | null
           contact_name: string
           contact_rnc: string | null
@@ -403,6 +405,8 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount_paid?: number
+          approval_request_id?: string | null
+          approval_status?: string
           balance_remaining?: number | null
           contact_name: string
           contact_rnc?: string | null
@@ -428,6 +432,8 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount_paid?: number
+          approval_request_id?: string | null
+          approval_status?: string
           balance_remaining?: number | null
           contact_name?: string
           contact_rnc?: string | null
@@ -6676,6 +6682,16 @@ export type Database = {
             }
             Returns: number
           }
+      review_ap_ar_approval: {
+        Args: {
+          p_decision: string
+          p_offset_account_id?: string
+          p_request_id: string
+          p_review_note?: string
+          p_reviewer_id: string
+        }
+        Returns: Json
+      }
       save_operation_inputs: {
         Args: {
           p_inputs?: Json
@@ -6722,6 +6738,10 @@ export type Database = {
         Returns: boolean
       }
       user_has_group_access: { Args: { p_group_id: string }; Returns: boolean }
+      user_top_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       void_ap_ar_document: {
         Args: { p_document_id: string; p_reason?: string; p_user_id?: string }
         Returns: Json

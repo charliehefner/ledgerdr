@@ -204,6 +204,8 @@ export function ApprovalThresholdsManager() {
                   <TableCell className="capitalize">
                     {p.applies_to === "transaction"
                       ? "Transacción"
+                      : p.applies_to === "ap_ar_document"
+                      ? "Factura A/P-A/R"
                       : "Asiento contable"}
                   </TableCell>
                   <TableCell className="text-right font-mono">
@@ -260,6 +262,7 @@ export function ApprovalThresholdsManager() {
                 <SelectContent>
                   <SelectItem value="transaction">Transacciones</SelectItem>
                   <SelectItem value="journal">Asientos Contables</SelectItem>
+                  <SelectItem value="ap_ar_document">Facturas A/P-A/R</SelectItem>
                 </SelectContent>
               </Select>
             </div>

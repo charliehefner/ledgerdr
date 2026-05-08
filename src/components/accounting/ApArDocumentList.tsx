@@ -231,6 +231,30 @@ export function ApArDocumentList({ direction }: Props) {
     );
   }, [documents, allocDoc]);
 
+  // Available credit memos / debit notes for the credit-application dialog
+  const availableCredits = useMemo(() => {
+    if (!creditDoc) return [];
+    return documents.filter(d =>
+      (d.document_type === "credit_memo" || d.document_type === "debit_note") &&
+      d.contact_name === creditDoc.contact_name &&
+      d.currency === creditDoc.currency &&
+      d.status !== "paid" &&
+      d.status !== "void" &&
+      d.balance_remaining > 0
+    );
+  }, [documents, creditDoc]);
+
+  const hasCreditsForContact = (contactName: string, currency: string) => {
+    return documents.some(d =>
+      (d.document_type === "credit_memo" || d.document_type === "debit_note") &&
+      d.contact_name === contactName &&
+      d.currency === currency &&
+      d.status !== "paid" &&
+      d.status !== "void" &&
+      d.balance_remaining > 0
+    );
+  };
+
   // Currencies present in the data
   const activeCurrencies = useMemo(() => {
     const set = new Set(documents.map(d => d.currency));

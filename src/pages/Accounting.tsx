@@ -12,9 +12,11 @@ import { RecurringEntriesView } from "@/components/accounting/RecurringEntriesVi
 import { AuditLogView } from "@/components/accounting/AuditLogView";
 import { IntercompanyView } from "@/components/accounting/IntercompanyView";
 import { FxRevaluationButton } from "@/components/accounting/FxRevaluationButton";
+import { CasaMatrizView } from "@/components/accounting/CasaMatrizView";
+import { CipProjectsView } from "@/components/accounting/CipProjectsView";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntity } from "@/contexts/EntityContext";
-import { BarChart3, Building2, BookOpen, RotateCcw, Calendar, FileText, Shield, ArrowLeftRight } from "lucide-react";
+import { BarChart3, Building2, BookOpen, RotateCcw, Calendar, FileText, Shield, ArrowLeftRight, Landmark, HardHat } from "lucide-react";
 
 export default function Accounting() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -68,6 +70,18 @@ export default function Accounting() {
       label: t("accounting.fixedAssets"),
       icon: <Building2 className="h-4 w-4" />,
       content: <FixedAssetsView highlightAssetId={assetId} highlightDepId={depId} />,
+    },
+    {
+      value: "cip",
+      label: "CIP",
+      icon: <HardHat className="h-4 w-4" />,
+      content: <CipProjectsView />,
+    },
+    {
+      value: "casa-matriz",
+      label: "Casa Matriz",
+      icon: <Landmark className="h-4 w-4" />,
+      content: <CasaMatrizView />,
     },
     {
       value: "journal",

@@ -14,6 +14,7 @@ export const es = {
   "nav.alerts": "Alertas",
   "nav.industrial": "Industrial",
   "nav.approvals": "Aprobaciones",
+  "nav.purchasing": "Compras (PO)",
   
   // Sidebar sections
   "sidebar.menu": "Menú",

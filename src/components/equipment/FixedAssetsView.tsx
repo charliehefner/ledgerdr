@@ -29,7 +29,12 @@ const CATEGORIES = [
   { value: "other", label: "Otro" },
 ];
 
-export function FixedAssetsView() {
+interface FixedAssetsViewProps {
+  highlightAssetId?: string | null;
+  highlightDepId?: string | null;
+}
+
+export function FixedAssetsView({ highlightAssetId, highlightDepId }: FixedAssetsViewProps = {}) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"active" | "disposed" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);

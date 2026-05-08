@@ -236,6 +236,17 @@ export const en = {
   "cip.placedInService": "Placed in service",
   "cip.empty": "No CIP projects",
   "cip.capitalize": "Capitalize",
+  "cip.impairment.title": "Possible impairment",
+  "cip.impairment.body": "This project has had no activity for over 12 months. If it has been abandoned or significantly delayed, review the balance for impairment and write off non-recoverable costs.",
+  "cip.depreciationMethod": "Depreciation method: Straight-line",
+  "fa.depreciationMethod": "Depreciation method: Straight-line",
+  "fx.reval.successTitle": "Revaluation complete",
+  "fx.reval.reversalNote": "When a revalued document is settled, the unrealized FX entry will be automatically reversed and replaced with the realized FX difference.",
+  "purchasing.grir.banner": "The balance in account 2120 (GR/IR) at month-end represents goods received but not yet invoiced. This is a valid accrued liability — no manual entry is needed.",
+  "txForm.itbisRetenidoB11Hint": "B11 (informal supplier): the company withholds 100% of ITBIS and remits it to DGII. No input-tax credit is recognized.",
+  "apar.advancesApplied": "Advances applied",
+  "apar.applicationsList": "Applications",
+  "apar.viewJournal": "View journal",
 
   // Accounting - Journal View
   "accounting.newEntry": "New Entry",

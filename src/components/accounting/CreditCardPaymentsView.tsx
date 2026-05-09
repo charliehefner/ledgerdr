@@ -335,7 +335,7 @@ export function CreditCardPaymentsView() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setForm(initialState)}
+                onClick={resetForm}
                 disabled={submitting}
               >
                 Limpiar

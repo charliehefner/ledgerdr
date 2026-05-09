@@ -55,7 +55,12 @@ export function CreditCardPaymentsView() {
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState({ ...initialState });
+  const [formKey, setFormKey] = useState(0);
+  const resetForm = () => {
+    setForm({ ...initialState });
+    setFormKey((k) => k + 1);
+  };
   const [submitting, setSubmitting] = useState(false);
   const [editTxn, setEditTxn] = useState<any | null>(null);
   const [editOpen, setEditOpen] = useState(false);

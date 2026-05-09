@@ -186,7 +186,7 @@ export function CreditCardPaymentsView() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Fecha *</Label>

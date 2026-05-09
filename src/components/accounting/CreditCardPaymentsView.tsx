@@ -55,7 +55,12 @@ export function CreditCardPaymentsView() {
   const { t } = useLanguage();
   const { selectedEntityId } = useEntity();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState({ ...initialState });
+  const [formKey, setFormKey] = useState(0);
+  const resetForm = () => {
+    setForm({ ...initialState });
+    setFormKey((k) => k + 1);
+  };
   const [submitting, setSubmitting] = useState(false);
   const [editTxn, setEditTxn] = useState<any | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -156,7 +161,7 @@ export function CreditCardPaymentsView() {
       });
       if (error) throw error;
       toast.success("Pago de tarjeta registrado");
-      setForm(initialState);
+      resetForm();
       await refetchRecent();
       queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
     } catch (err) {
@@ -181,7 +186,7 @@ export function CreditCardPaymentsView() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Fecha *</Label>
@@ -330,7 +335,7 @@ export function CreditCardPaymentsView() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setForm(initialState)}
+                onClick={resetForm}
                 disabled={submitting}
               >
                 Limpiar

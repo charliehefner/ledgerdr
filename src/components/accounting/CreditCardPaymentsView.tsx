@@ -161,7 +161,7 @@ export function CreditCardPaymentsView() {
       });
       if (error) throw error;
       toast.success("Pago de tarjeta registrado");
-      setForm(initialState);
+      resetForm();
       await refetchRecent();
       queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
     } catch (err) {

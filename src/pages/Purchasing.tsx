@@ -156,7 +156,7 @@ function PurchaseOrders() {
                 <TableRow key={po.id} className="cursor-pointer" onClick={() => setDetailPo(po)}>
                   <TableCell className="font-mono">{po.po_number}</TableCell>
                   <TableCell>{po.contact_name}</TableCell>
-                  <TableCell>{format(new Date(po.order_date), "dd MMM yyyy").toUpperCase()}</TableCell>
+                  <TableCell>{format(new Date(po.order_date), "dd/MM/yyyy").toUpperCase()}</TableCell>
                   <TableCell><Badge className={STATUS_COLORS[po.status]}>{po.status}</Badge></TableCell>
                   <TableCell className="text-right font-mono">
                     {po.currency} {po.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -403,7 +403,7 @@ function PurchaseOrderDetail({ po, onClose }: { po: PO | null; onClose: () => vo
           <DialogTitle>{po.po_number} · {po.contact_name}</DialogTitle>
         </DialogHeader>
         <div className="text-sm text-muted-foreground mb-2">
-          {format(new Date(po.order_date), "dd MMM yyyy").toUpperCase()} · <Badge className={STATUS_COLORS[po.status]}>{po.status}</Badge>
+          {format(new Date(po.order_date), "dd/MM/yyyy").toUpperCase()} · <Badge className={STATUS_COLORS[po.status]}>{po.status}</Badge>
         </div>
         <Table>
           <TableHeader>
@@ -480,7 +480,7 @@ function GoodsReceiptsView() {
                 <TableCell className="font-mono">{g.gr_number}</TableCell>
                 <TableCell className="font-mono">{g.purchase_orders?.po_number}</TableCell>
                 <TableCell>{g.purchase_orders?.contact_name}</TableCell>
-                <TableCell>{format(new Date(g.received_date), "dd MMM yyyy").toUpperCase()}</TableCell>
+                <TableCell>{format(new Date(g.received_date), "dd/MM/yyyy").toUpperCase()}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{g.notes}</TableCell>
               </TableRow>
             ))}
@@ -677,7 +677,7 @@ function MatchStatus() {
                 <TableCell className="font-mono">{d.document_number ?? "—"}</TableCell>
                 <TableCell className="font-mono">{d.purchase_orders?.po_number}</TableCell>
                 <TableCell>{d.contact_name}</TableCell>
-                <TableCell>{format(new Date(d.document_date), "dd MMM yyyy").toUpperCase()}</TableCell>
+                <TableCell>{format(new Date(d.document_date), "dd/MM/yyyy").toUpperCase()}</TableCell>
                 <TableCell className="text-right font-mono">
                   {d.currency} {Number(d.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                 </TableCell>

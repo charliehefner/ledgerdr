@@ -165,7 +165,7 @@ export function JournalRuleBadge({ transactionSourceId }: Props) {
                     </div>
                   )}
                   <div className="text-[10px] text-muted-foreground mt-1">
-                    {format(new Date(a.applied_at), "dd MMM yyyy HH:mm")}
+                    {format(new Date(a.applied_at), "dd/MM/yyyy HH:mm")}
                     {a.context ? ` · ${a.context}` : ""}
                   </div>
                 </div>

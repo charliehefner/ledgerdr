@@ -168,7 +168,7 @@ export function CipProjectsView({ highlightCapId }: CipProps = {}) {
                   <TableCell>
                     <Badge variant={p.status === "open" ? "default" : "secondary"}>{p.status}</Badge>
                   </TableCell>
-                  <TableCell>{p.placed_in_service_date ? format(new Date(p.placed_in_service_date), "dd MMM yyyy") : "—"}</TableCell>
+                  <TableCell>{p.placed_in_service_date ? format(new Date(p.placed_in_service_date), "dd/MM/yyyy") : "—"}</TableCell>
                   <TableCell className="text-right">
                     {canWrite && p.status === "open" && (balances[p.id] || 0) > 0 && (
                       <Button size="sm" onClick={() => setCapProject(p)}>Capitalizar</Button>
@@ -348,7 +348,7 @@ function CapitalizeCipDialog({ project, onClose }: { project: any | null; onClos
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(pisDate, "dd MMM yyyy")}
+                    {format(pisDate, "dd/MM/yyyy")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

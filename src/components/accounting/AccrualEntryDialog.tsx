@@ -247,7 +247,7 @@ export function AccrualEntryDialog({ open, onOpenChange }: Props) {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {accrualDate ? format(accrualDate, "dd MMM yyyy") : "Elegir fecha"}
+                  {accrualDate ? format(accrualDate, "dd/MM/yyyy") : "Elegir fecha"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-popover" align="start">

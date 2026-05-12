@@ -630,7 +630,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd MMM yyyy", { locale: dateFnsLocale }) : t("progress.dateStart")}
+                    {startDate ? format(startDate, "dd/MM/yyyy", { locale: dateFnsLocale }) : t("progress.dateStart")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -648,7 +648,7 @@ export function InputUsageReport({ initialInputId }: InputUsageReportProps = {})
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd MMM yyyy", { locale: dateFnsLocale }) : t("progress.dateEnd")}
+                    {endDate ? format(endDate, "dd/MM/yyyy", { locale: dateFnsLocale }) : t("progress.dateEnd")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

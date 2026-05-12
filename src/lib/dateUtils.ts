@@ -26,12 +26,12 @@ export function parseDateLocal(dateString: string | null | undefined): Date {
 /**
  * Standard date format: "10 APR 2026"
  */
-export const APP_DATE_FORMAT = "dd MMM yyyy";
+export const APP_DATE_FORMAT = "dd/MM/yyyy";
 
 /**
  * Standard datetime format: "10 APR 2026 14:30"
  */
-export const APP_DATETIME_FORMAT = "dd MMM yyyy HH:mm";
+export const APP_DATETIME_FORMAT = "dd/MM/yyyy HH:mm";
 
 /**
  * Format a date to the app standard: "10 APR 2026"

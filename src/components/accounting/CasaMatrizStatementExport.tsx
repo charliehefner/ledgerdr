@@ -81,7 +81,7 @@ export function CasaMatrizStatementExport({
       n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const exportRows = rows.map((r) => ({
-      date: format(new Date(r.date), "dd MMM yyyy"),
+      date: format(new Date(r.date), "dd/MM/yyyy"),
       type: r.type,
       ref: r.ref,
       amount_fc: r.amount_fc !== 0 ? fmtNum(r.amount_fc) : "-",

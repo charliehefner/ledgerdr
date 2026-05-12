@@ -4721,6 +4721,88 @@ export type Database = {
           },
         ]
       }
+      payroll_loan_deductions: {
+        Row: {
+          created_at: string
+          employee_id: string
+          entity_id: string | null
+          id: string
+          loan_amount: number
+          loan_id: string
+          payment_amount: number
+          payment_number: number
+          period_id: string
+          total_payments: number
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          entity_id?: string | null
+          id?: string
+          loan_amount: number
+          loan_id: string
+          payment_amount: number
+          payment_number: number
+          period_id: string
+          total_payments: number
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          entity_id?: string | null
+          id?: string
+          loan_amount?: number
+          loan_id?: string
+          payment_amount?: number
+          payment_number?: number
+          period_id?: string
+          total_payments?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_loan_deductions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_loan_deductions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_loan_deductions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_loan_deductions_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "employee_loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_loan_deductions_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_loan_deductions_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "v_payroll_summary"
+            referencedColumns: ["period_id"]
+          },
+        ]
+      }
       payroll_periods: {
         Row: {
           created_at: string

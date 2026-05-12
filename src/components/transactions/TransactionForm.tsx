@@ -892,6 +892,39 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </Select>
             </div>
 
+            {isVehicleFuelEntry && (
+              <>
+                <div className="space-y-2">
+                  <Label>Vehículo *</Label>
+                  <Select
+                    value={form.vehicle_id || undefined}
+                    onValueChange={(value) => updateField('vehicle_id', value)}
+                  >
+                    <SelectTrigger className={cn(!form.vehicle_id && 'border-destructive')}>
+                      <SelectValue placeholder="Seleccionar vehículo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover max-h-[300px]">
+                      {vehiclesList.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name} ({Number(v.current_km).toLocaleString()} km)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Km al tanqueo *</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={form.vehicle_km}
+                    onChange={(e) => updateField('vehicle_km', e.target.value)}
+                    placeholder="ej. 45230"
+                    className={cn(!form.vehicle_km && 'border-destructive')}
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label>
                 {t('txForm.project')} {requires1180Fields && '*'}

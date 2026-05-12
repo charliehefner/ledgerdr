@@ -196,6 +196,27 @@ export function PayrollSummary({
     },
   });
 
+  // Fetch persisted loan-deduction snapshots for this period (stable parcela N de M on receipts).
+  const { data: loanDeductionSnapshots = [] } = useQuery({
+    queryKey: ["payroll-loan-deductions", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_loan_deductions")
+        .select("employee_id, loan_id, payment_number, total_payments, loan_amount, payment_amount")
+        .eq("period_id", periodId);
+      if (error) throw error;
+      return data as {
+        employee_id: string;
+        loan_id: string;
+        payment_number: number;
+        total_payments: number;
+        loan_amount: number;
+        payment_amount: number;
+      }[];
+    },
+    enabled: !!periodId,
+  });
+
   // Fetch employee benefits (for receipts)
   const { data: employeeBenefits = [] } = useQuery({
     queryKey: ["employee-benefits-for-receipts", selectedEntityId],

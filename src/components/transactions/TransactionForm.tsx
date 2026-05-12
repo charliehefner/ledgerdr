@@ -94,6 +94,8 @@ const getInitialFormState = () => ({
   transfer_from_account: '',
   transfer_to_account: '',
   transfer_dest_amount: '',
+  vehicle_id: '',
+  vehicle_km: '',
   attachments: {
     ncf: null,
     payment_receipt: null,

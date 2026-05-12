@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Wallet, RefreshCw, Scale } from "lucide-react";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
+import { CashAdjustmentDialog } from "./CashAdjustmentDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +50,7 @@ type Transaction = {
   currency: string;
   pay_method?: string;
   destination_acct_code?: string;
+  master_acct_code?: string;
 };
 
 const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "", currency: "DOP", chart_account_id: "", fixed_amount: "" };
@@ -63,6 +65,7 @@ export function PettyCashView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [replenishFund, setReplenishFund] = useState<PettyCashAccount | null>(null);
+  const [adjustFund, setAdjustFund] = useState<PettyCashAccount | null>(null);
   const [selectedFundId, setSelectedFundId] = useState<string>("all");
 
   const { data: accounts = [], isLoading } = useQuery({
@@ -128,7 +131,7 @@ export function PettyCashView() {
       const orFilter = `pay_method.in.(${idList}),destination_acct_code.in.(${idList})`;
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
+        .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code, master_acct_code")
         .or(orFilter)
         .eq("is_void", false)
         .order("transaction_date", { ascending: false })
@@ -138,7 +141,11 @@ export function PettyCashView() {
     },
   });
 
+  const isFalta = (tx: Transaction) => tx.master_acct_code === "7990" && pettyCashIds.includes(tx.pay_method || "");
+  const isSobra = (tx: Transaction) => tx.master_acct_code === "3990" && pettyCashIds.includes(tx.destination_acct_code || "");
+  const isAdjustment = (tx: Transaction) => isFalta(tx) || isSobra(tx);
   const isRecharge = (tx: Transaction) =>
+    !isAdjustment(tx) &&
     !pettyCashIds.includes(tx.pay_method || "") && pettyCashIds.includes(tx.destination_acct_code || "");
 
   const filteredTx = useMemo(() => {
@@ -160,7 +167,7 @@ export function PettyCashView() {
     const chronological = [...filteredTx].reverse();
     let balance = startingBalance;
     const withBal = chronological.map(tx => {
-      if (isRecharge(tx)) {
+      if (isRecharge(tx) || isSobra(tx)) {
         balance += tx.amount;
       } else {
         balance -= tx.amount;
@@ -279,6 +286,16 @@ export function PettyCashView() {
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                       )}
+                      {canManageFunds && acct.chart_account_id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={t("treasury.adjust.button")}
+                          onClick={() => setAdjustFund(acct)}
+                        >
+                          <Scale className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -335,9 +352,15 @@ export function PettyCashView() {
                     <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id ?? "—"}</TableCell>
                     <TableCell>{fmtDate(new Date(tx.transaction_date + "T00:00:00"))}</TableCell>
                     <TableCell>
-                      <Badge variant={isRecharge(tx) ? "default" : "outline"}>
-                        {isRecharge(tx) ? t("treasury.pc.recharge") : t("treasury.pc.expense")}
-                      </Badge>
+                      {isSobra(tx) ? (
+                        <Badge className="bg-primary/15 text-primary hover:bg-primary/20 border-primary/30">{t("treasury.adjust.sobra")}</Badge>
+                      ) : isFalta(tx) ? (
+                        <Badge variant="destructive">{t("treasury.adjust.falta")}</Badge>
+                      ) : isRecharge(tx) ? (
+                        <Badge variant="default">{t("treasury.pc.recharge")}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t("treasury.pc.expense")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>{tx.name || "—"}</TableCell>
                     <TableCell>{tx.description}</TableCell>
@@ -409,6 +432,13 @@ export function PettyCashView() {
         open={!!replenishFund}
         onOpenChange={open => { if (!open) setReplenishFund(null); }}
         fund={replenishFund}
+      />
+
+      {/* Cash Adjustment Dialog (Sobra/Falta) */}
+      <CashAdjustmentDialog
+        open={!!adjustFund}
+        onOpenChange={open => { if (!open) setAdjustFund(null); }}
+        fund={adjustFund}
       />
     </div>
   );

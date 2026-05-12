@@ -94,6 +94,8 @@ const getInitialFormState = () => ({
   transfer_from_account: '',
   transfer_to_account: '',
   transfer_dest_amount: '',
+  vehicle_id: '',
+  vehicle_km: '',
   attachments: {
     ncf: null,
     payment_receipt: null,
@@ -130,6 +132,19 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryKey: ['accounts'],
     queryFn: fetchAccounts,
   });
+
+  // Vehicles for 5611 fuel-purchase entries
+  const { data: vehiclesList = [] } = useQuery({
+    queryKey: ['vehicles-active', selectedEntityId],
+    queryFn: async () => {
+      let q: any = supabase.from('vehicles' as any).select('id, name, current_km').eq('is_active', true).order('name');
+      if (selectedEntityId) q = q.eq('entity_id', selectedEntityId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []) as { id: string; name: string; current_km: number }[];
+    },
+  });
+  const isVehicleFuelEntry = form.master_acct_code === '5611';
 
 
   // Fetch active bank accounts for transfer From/To dropdowns
@@ -495,6 +510,33 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             appliedFields: ruleAppliedFieldsRef.current,
             context: 'transaction_entry',
           });
+        }
+      }
+
+      // Vehicle linkage for fuel-purchase entries (account 5611).
+      // Stored on transaction; latest km also bumps vehicles.current_km
+      // so maintenance alerts stay current.
+      if (result.id && form.master_acct_code === '5611' && form.vehicle_id) {
+        const km = form.vehicle_km ? parseFloat(form.vehicle_km) : null;
+        try {
+          await supabase
+            .from('transactions')
+            .update({ vehicle_id: form.vehicle_id, vehicle_km: km } as any)
+            .eq('id', result.id);
+          if (km !== null && !Number.isNaN(km)) {
+            const v = vehiclesList.find((x) => x.id === form.vehicle_id);
+            if (v && km > Number(v.current_km)) {
+              await supabase
+                .from('vehicles' as any)
+                .update({ current_km: km })
+                .eq('id', form.vehicle_id);
+              queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+              queryClient.invalidateQueries({ queryKey: ['vehicles-active'] });
+              queryClient.invalidateQueries({ queryKey: ['alert-vehicles'] });
+            }
+          }
+        } catch (e) {
+          console.warn('[vehicle] failed to persist linkage:', e);
         }
       }
 
@@ -877,6 +919,39 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </Select>
             </div>
 
+            {isVehicleFuelEntry && (
+              <>
+                <div className="space-y-2">
+                  <Label>Vehículo *</Label>
+                  <Select
+                    value={form.vehicle_id || undefined}
+                    onValueChange={(value) => updateField('vehicle_id', value)}
+                  >
+                    <SelectTrigger className={cn(!form.vehicle_id && 'border-destructive')}>
+                      <SelectValue placeholder="Seleccionar vehículo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover max-h-[300px]">
+                      {vehiclesList.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name} ({Number(v.current_km).toLocaleString()} km)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Km al tanqueo *</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={form.vehicle_km}
+                    onChange={(e) => updateField('vehicle_km', e.target.value)}
+                    placeholder="ej. 45230"
+                    className={cn(!form.vehicle_km && 'border-destructive')}
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label>
                 {t('txForm.project')} {requires1180Fields && '*'}

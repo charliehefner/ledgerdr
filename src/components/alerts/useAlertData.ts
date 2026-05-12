@@ -763,3 +763,90 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+// ─── VEHICLE ALERTS ───────────────────────────────────────
+export function useVehicleAlerts(configs: AlertConfig[] | undefined) {
+  const vehiclesQuery = useQuery({
+    queryKey: ["alert-vehicles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicles" as any)
+        .select("id, name, current_km, maintenance_interval_km, insurance_expiration, is_active")
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!configs,
+  });
+
+  const maintenanceQuery = useQuery({
+    queryKey: ["alert-vehicle-maintenance"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicle_maintenance" as any)
+        .select("vehicle_id, km_reading")
+        .order("maintenance_date", { ascending: false });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!configs,
+  });
+
+  const isLoading = vehiclesQuery.isLoading || maintenanceQuery.isLoading;
+  const alerts: AlertItem[] = [];
+  if (!configs || !vehiclesQuery.data || !maintenanceQuery.data) return { alerts, isLoading };
+
+  const maintConfig = getConfig(configs, "vehicle_maintenance_km");
+  const insConfig = getConfig(configs, "vehicle_insurance_expiry");
+
+  const latestMaint = new Map<string, number>();
+  for (const m of maintenanceQuery.data) {
+    const cur = latestMaint.get(m.vehicle_id) ?? 0;
+    if (m.km_reading > cur) latestMaint.set(m.vehicle_id, m.km_reading);
+  }
+
+  for (const v of vehiclesQuery.data) {
+    if (maintConfig?.is_active) {
+      const lastKm = latestMaint.get(v.id) ?? 0;
+      const since = Number(v.current_km) - lastKm;
+      const remaining = v.maintenance_interval_km - since;
+      const thresholdPct = (maintConfig.threshold_value ?? 90) / 100;
+      const dueSoonAt = v.maintenance_interval_km * (1 - thresholdPct);
+      if (remaining < 0) {
+        alerts.push({
+          severity: "urgent",
+          title: `Mantenimiento vencido — ${v.name}`,
+          detail: `Vencido por ${Math.abs(Math.round(remaining)).toLocaleString()} km`,
+        });
+      } else if (remaining <= dueSoonAt) {
+        alerts.push({
+          severity: "warning",
+          title: `Mantenimiento próximo — ${v.name}`,
+          detail: `Faltan ${Math.round(remaining).toLocaleString()} km`,
+        });
+      }
+    }
+
+    if (insConfig?.is_active && v.insurance_expiration) {
+      const exp = parseDateLocal(v.insurance_expiration);
+      const days = differenceInDays(exp, new Date());
+      const thresholdDays = insConfig.threshold_value ?? 30;
+      if (days < 0) {
+        alerts.push({
+          severity: "urgent",
+          title: `Seguro vencido — ${v.name}`,
+          detail: `Vencido el ${fmtDate(exp)}`,
+        });
+      } else if (days <= thresholdDays) {
+        alerts.push({
+          severity: "warning",
+          title: `Seguro por vencer — ${v.name}`,
+          detail: `Vence en ${days} día${days !== 1 ? "s" : ""} (${fmtDate(exp)})`,
+        });
+      }
+    }
+  }
+
+  alerts.sort((a, b) => (a.severity === "urgent" ? -1 : 1));
+  return { alerts, isLoading };
+}

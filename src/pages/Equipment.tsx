@@ -3,6 +3,7 @@ import { TabbedPageLayout } from "@/components/layout/TabbedPageLayout";
 import { TractorsView } from "@/components/fuel/TractorsView";
 import { ImplementsView } from "@/components/fuel/ImplementsView";
 import { HourMeterSequenceView } from "@/components/equipment/HourMeterSequenceView";
+import { VehiclesView } from "@/components/equipment/VehiclesView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Equipment() {
@@ -28,6 +29,11 @@ export default function Equipment() {
               value: "implements",
               label: t("equipment.implements"),
               content: <ImplementsView />,
+            },
+            {
+              value: "vehicles",
+              label: "Vehículos",
+              content: <VehiclesView />,
             },
             {
               value: "horometer",

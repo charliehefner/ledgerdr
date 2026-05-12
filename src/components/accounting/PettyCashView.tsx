@@ -286,6 +286,16 @@ export function PettyCashView() {
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                       )}
+                      {canManageFunds && acct.chart_account_id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={t("treasury.adjust.button")}
+                          onClick={() => setAdjustFund(acct)}
+                        >
+                          <Scale className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -31,6 +31,11 @@ export default function Equipment() {
               content: <ImplementsView />,
             },
             {
+              value: "vehicles",
+              label: "Vehículos",
+              content: <VehiclesView />,
+            },
+            {
               value: "horometer",
               label: t("equipment.hourMeter"),
               content: <HourMeterSequenceView />,

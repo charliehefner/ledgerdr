@@ -88,8 +88,8 @@ export default function Alerts() {
               ))}
             </AlertSector>
 
-            <AlertSector title="Equipos" alertCount={equipment.alerts.length}>
-              {equipment.alerts.map((a, i) => (
+            <AlertSector title="Equipos" alertCount={allEquipmentAlerts.length}>
+              {allEquipmentAlerts.map((a, i) => (
                 <AlertCard key={i} severity={a.severity} title={a.title} detail={a.detail} />
               ))}
             </AlertSector>

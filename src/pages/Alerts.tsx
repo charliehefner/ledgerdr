@@ -12,6 +12,7 @@ import {
   useHrAlerts,
   useFuelAlerts,
   useEquipmentAlerts,
+  useVehicleAlerts,
   useInventoryAlerts,
   useOperationsAlerts,
   useOperationsGpsAlerts,

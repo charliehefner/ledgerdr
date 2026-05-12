@@ -133,6 +133,19 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
     queryFn: fetchAccounts,
   });
 
+  // Vehicles for 5611 fuel-purchase entries
+  const { data: vehiclesList = [] } = useQuery({
+    queryKey: ['vehicles-active', selectedEntityId],
+    queryFn: async () => {
+      let q: any = supabase.from('vehicles' as any).select('id, name, current_km').eq('is_active', true).order('name');
+      if (selectedEntityId) q = q.eq('entity_id', selectedEntityId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []) as { id: string; name: string; current_km: number }[];
+    },
+  });
+  const isVehicleFuelEntry = form.master_acct_code === '5611';
+
 
   // Fetch active bank accounts for transfer From/To dropdowns
   const { data: bankAccounts = [] } = useQuery({

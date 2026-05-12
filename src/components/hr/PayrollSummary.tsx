@@ -245,6 +245,7 @@ export function PayrollSummary({
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots-check", periodId] });
       queryClient.invalidateQueries({ queryKey: ["employee-loans-active"] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-loan-deductions", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
       toast.success(t("payrollSummary.payrollSaved"));
     },

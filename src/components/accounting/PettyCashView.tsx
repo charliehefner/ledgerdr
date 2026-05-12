@@ -141,7 +141,11 @@ export function PettyCashView() {
     },
   });
 
+  const isFalta = (tx: Transaction) => tx.master_acct_code === "7990" && pettyCashIds.includes(tx.pay_method || "");
+  const isSobra = (tx: Transaction) => tx.master_acct_code === "3990" && pettyCashIds.includes(tx.destination_acct_code || "");
+  const isAdjustment = (tx: Transaction) => isFalta(tx) || isSobra(tx);
   const isRecharge = (tx: Transaction) =>
+    !isAdjustment(tx) &&
     !pettyCashIds.includes(tx.pay_method || "") && pettyCashIds.includes(tx.destination_acct_code || "");
 
   const filteredTx = useMemo(() => {

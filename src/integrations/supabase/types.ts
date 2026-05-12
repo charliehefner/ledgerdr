@@ -6694,6 +6694,8 @@ export type Database = {
           transaction_date: string
           transaction_direction: string | null
           updated_at: string
+          vehicle_id: string | null
+          vehicle_km: number | null
           void_reason: string | null
           voided_at: string | null
         }
@@ -6751,6 +6753,8 @@ export type Database = {
           transaction_date: string
           transaction_direction?: string | null
           updated_at?: string
+          vehicle_id?: string | null
+          vehicle_km?: number | null
           void_reason?: string | null
           voided_at?: string | null
         }
@@ -6808,6 +6812,8 @@ export type Database = {
           transaction_date?: string
           transaction_direction?: string | null
           updated_at?: string
+          vehicle_id?: string | null
+          vehicle_km?: number | null
           void_reason?: string | null
           voided_at?: string | null
         }
@@ -6873,6 +6879,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -6969,6 +6982,119 @@ export type Database = {
           },
           {
             foreignKeyName: "user_roles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_maintenance: {
+        Row: {
+          created_at: string
+          entity_id: string
+          id: string
+          km_reading: number
+          maintenance_date: string
+          maintenance_type: string
+          notes: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          km_reading: number
+          maintenance_date?: string
+          maintenance_type: string
+          notes?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          km_reading?: number
+          maintenance_date?: string
+          maintenance_type?: string
+          notes?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          brand: string | null
+          created_at: string
+          current_km: number
+          entity_id: string
+          id: string
+          insurance_expiration: string | null
+          is_active: boolean
+          license_plate: string | null
+          maintenance_interval_km: number
+          model: string | null
+          name: string
+          purchase_cost: number | null
+          purchase_date: string | null
+          updated_at: string
+          vehicle_type: string
+          vin: string | null
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          current_km?: number
+          entity_id?: string
+          id?: string
+          insurance_expiration?: string | null
+          is_active?: boolean
+          license_plate?: string | null
+          maintenance_interval_km?: number
+          model?: string | null
+          name: string
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          updated_at?: string
+          vehicle_type: string
+          vin?: string | null
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          current_km?: number
+          entity_id?: string
+          id?: string
+          insurance_expiration?: string | null
+          is_active?: boolean
+          license_plate?: string | null
+          maintenance_interval_km?: number
+          model?: string | null
+          name?: string
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          updated_at?: string
+          vehicle_type?: string
+          vin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"

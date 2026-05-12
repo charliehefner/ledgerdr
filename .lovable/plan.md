@@ -1,63 +1,62 @@
-## Goal
+## Vehicles in Equipment + 5611 vehicle/km capture
 
-Add a dedicated way to register cash overages (**sobras**) and shortages (**faltantes**) of petty cash, separate from the replenishment flow, with a clear audit trail and proper accounting.
+### 1. Database (new table `vehicles`)
 
-## UI changes — `src/components/accounting/PettyCashView.tsx`
+Columns:
+- `id uuid pk`, `entity_id uuid not null default current_user_entity_id()`
+- `vehicle_type text check in ('motorcycle','pickup','car')`
+- `name text not null`, `brand text`, `model text`
+- `vin text`, `license_plate text`
+- `maintenance_interval_km integer not null default 5000`
+- `insurance_expiration date`
+- `purchase_date date`, `purchase_cost numeric`
+- `current_km numeric not null default 0` (updated on each refueling)
+- `is_active boolean default true`, `created_at`, `updated_at`
 
-In each row of the Petty Cash funds table, add a third icon-button next to the existing **Edit** and **Replenish** icons:
+New table `vehicle_maintenance` (mirrors `tractor_maintenance`):
+- `id`, `vehicle_id fk`, `maintenance_date`, `km_reading numeric`, `maintenance_type text`, `notes text`, `entity_id`, `created_at`.
 
-- Icon: `Scale` (or `AlertTriangle`) from lucide-react
-- Tooltip: **"Registrar sobra/falta de caja"**
-- Visible only when `canManageFunds` is true and the fund has a `chart_account_id` set
-- Opens a new `CashAdjustmentDialog` for that fund
+RLS: same 6-role pattern as `fuel_equipment` / `tractor_maintenance` (admin/mgmt/accountant/supervisor full; viewer select; driver select).
 
-## New component — `src/components/accounting/CashAdjustmentDialog.tsx`
+Link refueling → vehicle: add `vehicle_id uuid` and `vehicle_km numeric` to `transactions` (nullable). Used only when `master_acct_code = '5611'`. No effect on journals.
 
-Modal that captures one cash-difference event.
+### 2. Equipment page — new "Vehicles" tab
 
-Fields:
-- **Tipo** (radio / segmented): `Sobra` (over) or `Falta` (short)
-- **Monto** (positive number, DOP/fund currency, font-mono)
-- **Fecha** (defaults to today, validated against closed periods like every other Treasury form)
-- **Motivo / descripción** (textarea, required, e.g. "Conteo del 12 May 2026 — diferencia de RD$50")
+Add tab in `src/pages/Equipment.tsx` between "Implements" and "Hour meter". New component `src/components/equipment/VehiclesView.tsx` modeled on `TractorsView`:
 
-Submit handler inserts a single row into `transactions`, mirroring the pattern used by `ReplenishmentDialog` so the existing journal-generation trigger handles double entry:
+- Header button **"+ Vehicle"** → dialog with all registry inputs (type select, name, brand, model, VIN, license plate, maintenance_interval_km, insurance_expiration date picker, purchase_cost, purchase_date, current_km).
+- Table columns (default visible): **Name**, **Brand**, **Km to maintenance** (= `interval - (current_km - last_maintenance_km) mod interval`, color-coded badge: green/yellow/red same thresholds as tractors).
+- Row actions: **Eye icon** → read-only detail panel (Dialog) showing every registry field + insurance expiration countdown + maintenance history list. **Pencil icon** → edit. **Wrench icon** → `VehicleMaintenanceDialog` (clone of `TractorMaintenanceDialog`, km instead of hours).
 
-- **Falta (cash short)** — cash leaves the fund, expense booked.
-  - `pay_method` = fund.id (petty cash)
-  - `destination_acct_code` = `7990` (Otros gastos de explotación)
-  - `account_code` = `7990`
-  - Description prefixed `"Faltante de caja: "`
-- **Sobra (cash over)** — cash enters the fund, income booked.
-  - `pay_method` = `3990` (Otras remuneraciones, subvenciones e ingresos)
-  - `destination_acct_code` = fund.id
-  - `account_code` = `3990`
-  - Description prefixed `"Sobrante de caja: "`
+i18n keys under `equipment.vehicles.*` (es + en).
 
-Both insert `entity_id` from `useEntity().selectedEntityId`, `currency` from the fund, and `name` = fund.account_name. Exact field shape will be verified against `ReplenishmentDialog` and the journal trigger before implementation; if the trigger requires a different driver (e.g. a direct `journal_entries` insert via RPC), I will use that instead — accounting impact must end up as **Dr 7990 / Cr [petty cash GL]** for falta and **Dr [petty cash GL] / Cr 3990** for sobra.
+### 3. Alerts integration
 
-On success: invalidate `petty-cash-transactions`, `petty-cash-gl-balances`, `last-replenishment`, `petty-cash-expenses-since`. Toast confirmation. Close.
+Extend `useAlertData.ts` with `useVehicleAlerts(configs)`:
+- Maintenance due: when km-since-last-maintenance ≥ interval (red) or ≥ 90 % (yellow).
+- Insurance expiring: red if past, yellow if within 30 days.
 
-## Recent transactions table
+Add to the Equipment alert sector in `Alerts.tsx` alongside tractor alerts. Add two new `alert_configurations` rows (`vehicle_maintenance_km`, `vehicle_insurance_expiry`).
 
-Already shows new transactions automatically. The `Tipo` badge currently shows `Recharge` vs `Expense`. Detect cash adjustments by `account_code` and show a third badge value: `Sobra` / `Falta` so they stand out in the ledger.
+### 4. Transactions form — vehicle + km when 5611
 
-## i18n
+In `src/components/transactions/TransactionForm.tsx`, when `master_acct_code === '5611'`:
+- Render two extra inline fields (after amount): **Vehicle** (Select of active vehicles for current entity) and **Km al tanqueo** (number input).
+- On submit, persist `vehicle_id` and `vehicle_km` on the transaction row.
+- After successful insert, if both present and `vehicle_km > vehicle.current_km`, update `vehicles.current_km = vehicle_km` (single client-side update, scoped by entity). No effect when 5611 not selected.
 
-Add Spanish + English keys under `treasury.pc.adjust.*` for: button tooltip, dialog title, type labels, amount label, date label, reason label, submit/cancel, success toast, validation errors, badge labels.
+Existing fuel-from-tank flow (driver wizard / `fuel_transactions`) is **unchanged** in this iteration — vehicle km capture happens only in the manual Transactions form (the "from purchase" path the user described). If needed later, the driver wizard can be extended.
 
-## Out of scope
+### 5. Out of scope
 
-- No new chart-of-accounts entries (using existing 7990 / 3990 per user choice).
-- No changes to replenishment math — the over/short detected during replenishment continues to flow through 0000 as it does today. This new button is for **standalone** adjustments outside a replenishment cycle (e.g. spot count by Accountant).
-- No changes to permissions; same `canManagePettyCashFunds` check as Edit/Replenish.
+- No accounting/journal changes.
+- No changes to tractors, generators, or fuel tanks.
+- No driver-portal vehicle refueling UI.
 
-## Verification
+### Verification
 
-- Falta of RD$100 → ledger shows Dr 7990 100 / Cr 1911 100; petty cash GL balance drops by 100.
-- Sobra of RD$50 → Dr 1911 50 / Cr 3990 50; petty cash GL balance rises by 50.
-- Both rows appear in "Recent Petty Cash Transactions" with the new `Sobra`/`Falta` badge and the user's reason in the description.
-- Closed-period validation blocks dates inside locked periods (same as existing Treasury inserts).
-- Office role can also use the button (since they own petty cash); other read-only roles cannot.
-
-Reply **"go"** (or click Implement) to proceed.
+- Create a pickup with interval 5,000 km, current 12,000.
+- Register a 5611 transaction selecting that vehicle, km = 13,200 → vehicle row shows current_km 13,200, "Km to maintenance" decreases.
+- Cross past the interval → alert appears under Equipment in `/alerts`.
+- Set insurance_expiration to today+10 → yellow alert; -1 → red alert.
+- Eye panel shows all fields including VIN and plate.

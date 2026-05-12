@@ -1607,6 +1607,24 @@ export const es = {
   "treasury.replenish.success": "Reposición de caja chica registrada",
   "treasury.replenish.incomplete": "Datos incompletos para la reposición",
 
+  // Treasury – Cash Adjustment (Sobra/Falta)
+  "treasury.adjust.button": "Registrar sobra/falta de caja",
+  "treasury.adjust.title": "Ajuste de caja — {name}",
+  "treasury.adjust.type": "Tipo de ajuste",
+  "treasury.adjust.sobra": "Sobrante",
+  "treasury.adjust.falta": "Faltante",
+  "treasury.adjust.amount": "Monto *",
+  "treasury.adjust.date": "Fecha *",
+  "treasury.adjust.reason": "Motivo / descripción *",
+  "treasury.adjust.reasonPlaceholder": "Ej: Conteo del día — diferencia detectada al cierre",
+  "treasury.adjust.glHint": "Se contabilizará contra la cuenta {code} — {name}.",
+  "treasury.adjust.submit": "Registrar ajuste",
+  "treasury.adjust.success": "Ajuste de caja registrado",
+  "treasury.adjust.errAmount": "Ingrese un monto válido",
+  "treasury.adjust.errReason": "Indique el motivo del ajuste",
+  "treasury.adjust.faltaPrefix": "Faltante de caja",
+  "treasury.adjust.sobraPrefix": "Sobrante de caja",
+
   // Treasury – Bank Reconciliation hardcoded strings
   "treasury.recon.noNewLines": "Sin líneas nuevas",
   "treasury.recon.allAlreadyImported": "Todas las transacciones ya fueron importadas.",

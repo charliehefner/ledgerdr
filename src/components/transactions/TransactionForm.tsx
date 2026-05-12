@@ -513,6 +513,33 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         }
       }
 
+      // Vehicle linkage for fuel-purchase entries (account 5611).
+      // Stored on transaction; latest km also bumps vehicles.current_km
+      // so maintenance alerts stay current.
+      if (result.id && form.master_acct_code === '5611' && form.vehicle_id) {
+        const km = form.vehicle_km ? parseFloat(form.vehicle_km) : null;
+        try {
+          await supabase
+            .from('transactions')
+            .update({ vehicle_id: form.vehicle_id, vehicle_km: km } as any)
+            .eq('id', result.id);
+          if (km !== null && !Number.isNaN(km)) {
+            const v = vehiclesList.find((x) => x.id === form.vehicle_id);
+            if (v && km > Number(v.current_km)) {
+              await supabase
+                .from('vehicles' as any)
+                .update({ current_km: km })
+                .eq('id', form.vehicle_id);
+              queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+              queryClient.invalidateQueries({ queryKey: ['vehicles-active'] });
+              queryClient.invalidateQueries({ queryKey: ['alert-vehicles'] });
+            }
+          }
+        } catch (e) {
+          console.warn('[vehicle] failed to persist linkage:', e);
+        }
+      }
+
       toast.success(t('txForm.success'));
       setForm(getInitialFormState());
       setFormKey(k => k + 1);

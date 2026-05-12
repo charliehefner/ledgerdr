@@ -328,14 +328,22 @@ export function PayrollSummary({
     return payrollData.map((p) => {
       const employee = employees.find((e) => e.id === p.employee_id);
       const employeeLoans = loans.filter((l) => l.employee_id === p.employee_id);
-      const loanDetails = employeeLoans.map((l) => ({
-        loan_amount: l.loan_amount,
-        payment_amount: l.payment_amount,
-        payment_number: isClosed
-          ? l.number_of_payments - l.remaining_payments
-          : l.number_of_payments - l.remaining_payments + 1,
-        total_payments: l.number_of_payments,
-      }));
+      const empSnaps = loanDeductionSnapshots.filter((s) => s.employee_id === p.employee_id);
+      // Prefer persisted snapshot rows (stable parcela N de M for closed/committed periods).
+      const loanDetails = empSnaps.length > 0
+        ? empSnaps.map((s) => ({
+            loan_amount: Number(s.loan_amount),
+            payment_amount: Number(s.payment_amount),
+            payment_number: s.payment_number,
+            total_payments: s.total_payments,
+          }))
+        : employeeLoans.map((l) => ({
+            loan_amount: l.loan_amount,
+            payment_amount: l.payment_amount,
+            // Open period preview only — shows the installment about to be paid.
+            payment_number: l.number_of_payments - l.remaining_payments + 1,
+            total_payments: l.number_of_payments,
+          }));
       return {
         employee: employee ?? { id: p.employee_id, name: p.employee_name, salary: p.salary, position: "", bank: null, bank_account_number: null },
         regularHours: 0,

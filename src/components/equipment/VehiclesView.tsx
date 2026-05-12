@@ -317,9 +317,14 @@ export function VehiclesView() {
                 <Input type="number" step="0.01" value={form.purchase_cost} onChange={(e) => setForm({ ...form, purchase_cost: e.target.value })} />
               </div>
               <div className="col-span-2">
-                <Label>Km al registro {editing && <span className="text-xs text-muted-foreground">(solo lectura)</span>}</Label>
-                <Input type="number" value={form.current_km} disabled={!!editing}
+                <Label>Km al registro</Label>
+                <Input type="number" value={form.current_km}
                   onChange={(e) => setForm({ ...form, current_km: e.target.value })} />
+                {editing && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Solo corregir si se registró con un valor incorrecto. Afecta el cálculo de mantenimiento.
+                  </p>
+                )}
               </div>
               <div className="col-span-2 grid grid-cols-2 gap-4 border-t pt-3">
                 <div>

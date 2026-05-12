@@ -1122,7 +1122,7 @@ export function CronogramaGrid() {
           </Button>
           <div className="text-center min-w-[200px]">
             <div className="font-medium">
-              {format(weekStart, "d MMM", { locale })} - {format(selectedSaturday, "d MMM yyyy", { locale })}
+              {format(weekStart, "dd/MM", { locale })} - {format(selectedSaturday, "dd/MM/yyyy", { locale })}
             </div>
             <div className="text-xs text-muted-foreground">
               {t("cronograma.weekEnding")}: {format(selectedSaturday, "EEEE d", { locale })}

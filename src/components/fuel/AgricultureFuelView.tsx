@@ -1027,7 +1027,7 @@ export function AgricultureFuelView() {
               return (
               <TableRow key={tx.id} className={isRefill ? "bg-green-50 dark:bg-green-950/20" : isTransfer ? "bg-orange-50 dark:bg-orange-950/20" : ""}>
                 <TableCell>
-                  {format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}
+                  {format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy")}
                 </TableCell>
                 <TableCell>{tx.fuel_tanks.name}</TableCell>
                 <TableCell>{tx.fuel_equipment?.name || (isRefill ? "— Purchase —" : isTransfer ? "— Transfer —" : "-")}</TableCell>
@@ -1090,7 +1090,7 @@ export function AgricultureFuelView() {
               <div className="text-sm text-muted-foreground bg-muted p-2 rounded space-y-1">
                 <p><strong>Tank:</strong> {editingTransaction.fuel_tanks.name}</p>
                 <p><strong>Tractor:</strong> {editingTransaction.fuel_equipment?.name || "-"}</p>
-                <p><strong>Date:</strong> {format(parseDateLocal(editingTransaction.transaction_date), "MMM d, yyyy")}</p>
+                <p><strong>Date:</strong> {format(parseDateLocal(editingTransaction.transaction_date), "dd/MM/yyyy")}</p>
               </div>
             )}
 

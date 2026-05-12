@@ -93,7 +93,7 @@ export function PurchaseHistoryDialog({
                 {purchases.map((purchase) => (
                   <TableRow key={purchase.id}>
                     <TableCell>
-                      {format(parseDateLocal(purchase.purchase_date), "MMM d, yyyy")}
+                      {format(parseDateLocal(purchase.purchase_date), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>{purchase.document_number || "-"}</TableCell>
                     <TableCell className="text-right">

@@ -221,7 +221,7 @@ export function TractorMaintenanceDialog({
                   <span className="text-muted-foreground">Último Mantenimiento</span>
                   <span className="font-medium">
                     {lastMaintenance 
-                      ? `${lastMaintenanceHours.toLocaleString()} hrs (${format(parseDateLocal(lastMaintenance.maintenance_date), "d MMM yyyy", { locale: es })})`
+                      ? `${lastMaintenanceHours.toLocaleString()} hrs (${format(parseDateLocal(lastMaintenance.maintenance_date), "dd/MM/yyyy", { locale: es })})`
                       : "Sin registro"}
                   </span>
                 </div>
@@ -254,7 +254,7 @@ export function TractorMaintenanceDialog({
                         <div>
                           <span className="font-medium">{m.hour_meter_reading.toLocaleString()} hrs</span>
                           <span className="text-muted-foreground ml-2">
-                            {format(parseDateLocal(m.maintenance_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(m.maintenance_date), "dd/MM/yyyy", { locale: es })}
                           </span>
                         </div>
                         <Badge variant="outline" className="capitalize">{m.maintenance_type}</Badge>
@@ -358,7 +358,7 @@ export function TractorMaintenanceDialog({
                   {maintenanceHistory.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell>
-                        {format(parseDateLocal(m.maintenance_date), "d MMM yyyy", { locale: es })}
+                        {format(parseDateLocal(m.maintenance_date), "dd/MM/yyyy", { locale: es })}
                       </TableCell>
                       <TableCell className="font-mono">
                         {m.hour_meter_reading.toLocaleString()} hrs

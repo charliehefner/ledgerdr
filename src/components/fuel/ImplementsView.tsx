@@ -357,7 +357,7 @@ export function ImplementsView() {
                   {isVisible("purchase_date") && (
                     <TableCell>
                       {implement.purchase_date
-                        ? format(parseDateLocal(implement.purchase_date), "MMM d, yyyy")
+                        ? format(parseDateLocal(implement.purchase_date), "dd/MM/yyyy")
                         : "-"}
                     </TableCell>
                   )}

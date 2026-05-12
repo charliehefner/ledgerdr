@@ -373,7 +373,7 @@ export function IndustryFuelView() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From"}
+                  {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "From"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -385,7 +385,7 @@ export function IndustryFuelView() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, "MMM d, yyyy") : "To"}
+                  {dateTo ? format(dateTo, "dd/MM/yyyy") : "To"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

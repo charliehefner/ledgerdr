@@ -430,7 +430,7 @@ export function PrestacionesCalculatorDialog({
                   <div key={`${segment.startDate}-${segment.endDate}-${index}`} className="flex flex-col gap-1 rounded-lg border border-border p-3 text-sm md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-medium">
-                        {format(new Date(`${segment.startDate}T00:00:00`), "d MMM yyyy", { locale: dateFnsLocale })} — {format(new Date(`${segment.endDate}T00:00:00`), "d MMM yyyy", { locale: dateFnsLocale })}
+                        {format(new Date(`${segment.startDate}T00:00:00`), "dd/MM/yyyy", { locale: dateFnsLocale })} — {format(new Date(`${segment.endDate}T00:00:00`), "dd/MM/yyyy", { locale: dateFnsLocale })}
                       </p>
                       <p className="text-muted-foreground">{segment.days} días · {segment.months.toFixed(2)} meses</p>
                     </div>

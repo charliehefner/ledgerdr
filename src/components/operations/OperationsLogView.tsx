@@ -1018,7 +1018,7 @@ export function OperationsLogView() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "MMM d, yyyy") : t("operations.startDate")}
+                {startDate ? format(startDate, "dd/MM/yyyy") : t("operations.startDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -1035,7 +1035,7 @@ export function OperationsLogView() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "MMM d, yyyy") : t("operations.endDate")}
+                {endDate ? format(endDate, "dd/MM/yyyy") : t("operations.endDate")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -1111,7 +1111,7 @@ export function OperationsLogView() {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.operation_date ? format(form.operation_date, "MMM d, yyyy") : t("operations.form.selectDate")}
+                          {form.operation_date ? format(form.operation_date, "dd/MM/yyyy") : t("operations.form.selectDate")}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -1500,7 +1500,7 @@ export function OperationsLogView() {
                       {missingClosingData && (
                         <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" aria-label={t("operations.missingClosingData")} />
                       )}
-                      {format(parseDateLocal(op.operation_date), "MMM d, yyyy")}
+                      {format(parseDateLocal(op.operation_date), "dd/MM/yyyy")}
                     </TableCell>
                   )}
                   {isVisible("field") && <TableCell className="font-medium">{op.fields?.name || "-"}</TableCell>}

@@ -374,12 +374,11 @@ export function VehiclesView() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
               <TableHead>Marca</TableHead>
+              <TableHead>Modelo</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead className="text-right">Km</TableHead>
               <TableHead>Km a mantenimiento</TableHead>
-              <TableHead>Docs</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>

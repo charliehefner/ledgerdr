@@ -31,16 +31,18 @@ export default function Alerts() {
   const hr = useHrAlerts(configs);
   const fuel = useFuelAlerts(configs);
   const equipment = useEquipmentAlerts(configs);
+  const vehicles = useVehicleAlerts(configs);
   const inventory = useInventoryAlerts(configs);
   const operations = useOperationsAlerts(configs);
   const gpsOps = useOperationsGpsAlerts(configs);
   const apAr = useApArOverdueAlerts(configs, selectedEntityId);
   const payroll = usePayrollApproachingAlerts(configs);
 
-  const isLoading = configsLoading || hr.isLoading || fuel.isLoading || equipment.isLoading || inventory.isLoading || operations.isLoading || gpsOps.isLoading || apAr.isLoading || payroll.isLoading;
+  const isLoading = configsLoading || hr.isLoading || fuel.isLoading || equipment.isLoading || vehicles.isLoading || inventory.isLoading || operations.isLoading || gpsOps.isLoading || apAr.isLoading || payroll.isLoading;
 
   const allOpsAlerts = [...operations.alerts, ...gpsOps.alerts];
-  const totalAlerts = hr.alerts.length + fuel.alerts.length + equipment.alerts.length + inventory.alerts.length + allOpsAlerts.length + apAr.alerts.length + payroll.alerts.length;
+  const allEquipmentAlerts = [...equipment.alerts, ...vehicles.alerts];
+  const totalAlerts = hr.alerts.length + fuel.alerts.length + allEquipmentAlerts.length + inventory.alerts.length + allOpsAlerts.length + apAr.alerts.length + payroll.alerts.length;
 
   const isAdmin = user?.role === "admin";
 

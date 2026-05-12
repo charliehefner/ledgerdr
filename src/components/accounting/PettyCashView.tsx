@@ -131,7 +131,7 @@ export function PettyCashView() {
       const orFilter = `pay_method.in.(${idList}),destination_acct_code.in.(${idList})`;
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code")
+        .select("id, legacy_id, transaction_date, description, amount, name, currency, pay_method, destination_acct_code, master_acct_code")
         .or(orFilter)
         .eq("is_void", false)
         .order("transaction_date", { ascending: false })

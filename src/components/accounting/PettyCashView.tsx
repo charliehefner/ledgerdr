@@ -167,7 +167,7 @@ export function PettyCashView() {
     const chronological = [...filteredTx].reverse();
     let balance = startingBalance;
     const withBal = chronological.map(tx => {
-      if (isRecharge(tx)) {
+      if (isRecharge(tx) || isSobra(tx)) {
         balance += tx.amount;
       } else {
         balance -= tx.amount;

@@ -1,0 +1,1 @@
+COMMENT ON FUNCTION public.classify_service_payment_transaction() IS 'Internal trigger function only. Keeps service payment transaction display account aligned to service_entries.master_acct_code.';

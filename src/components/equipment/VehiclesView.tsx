@@ -181,6 +181,7 @@ export function VehiclesView() {
         insurance_expiration: data.insurance_expiration || null,
         purchase_date: data.purchase_date || null,
         purchase_cost: data.purchase_cost ? parseFloat(data.purchase_cost) : null,
+        current_km: parseFloat(data.current_km) || 0,
       };
       let vehicleId: string;
       let entityId: string;
@@ -192,7 +193,6 @@ export function VehiclesView() {
       } else {
         if (!selectedEntityId) throw new Error("Selecciona una entidad antes de crear");
         record.entity_id = selectedEntityId;
-        record.current_km = parseFloat(data.current_km) || 0;
         const { data: ins, error } = await supabase
           .from("vehicles" as any)
           .insert(record)

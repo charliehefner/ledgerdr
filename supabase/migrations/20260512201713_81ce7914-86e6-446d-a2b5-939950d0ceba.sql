@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.classify_service_payment_transaction() FROM PUBLIC, anon, authenticated;

@@ -1,45 +1,42 @@
-# Refactor `register_service_partial_payment` to use central AP routines
+# Preview no se actualiza — Plan simplificado
 
-## Goal
+## Diagnóstico
 
-Eliminate the class of bug where the service-payment RPC hand-rolls AP/GL logic and silently posts to the wrong account. Route everything through the project's canonical AP routines so the rules are enforced in one place.
+El proyecto tuvo un PWA con service worker. Aunque ya existen kill-switches (`public/sw.js`, `public/service-worker.js`, `public/registerSW.js`) que se auto-desregistran, hay tres focos que mantienen la app pegada a versiones viejas:
 
-## Current behavior (problematic)
+1. **`<link rel="manifest" href="/manifest.json">` en `index.html`** sigue anunciando la app como PWA. Algunos navegadores móviles/Chrome aún re-registran automáticamente y reinstalan caché stale entre sesiones.
+2. **Tags `<meta http-equiv="Cache-Control">` en `index.html`** son redundantes — el proxy de Lovable ya envía `Cache-Control: no-cache, must-revalidate, max-age=0` para HTML. Los meta tags no aplican a respuestas servidas con esos headers y solo confunden el debug.
+3. **Probe de versión propio en `src/main.tsx`** (fetch a `/version.json` cada 10 min + reload) compite con la limpieza de SW y puede dejar pestañas en estado intermedio cuando ambos disparan a la vez. Lovable's proxy ya marca `/version.json` como `no-store` y el HTML como `no-cache`, así que esta lógica casera ya no aporta.
 
-The RPC inserts an `ap_ar_documents` row directly without posting a bill journal, then writes a single `transactions` row coded against `2101`. The expense account stored on `service_entries.master_acct_code` is not propagated to the GL. My earlier patch worked around this by stamping the service's expense code onto the transaction — that fixed the symptom but not the architectural problem.
+Resultado neto hoy: el navegador tiene cache fantasma + un SW viejo + dos sistemas distintos intentando "auto-curar". Justo el escenario que la guía de Lovable pide evitar.
 
-## Proposed behavior
+## Cambios
 
-Replace the hand-rolled AP+transaction inserts with two calls to the central routines:
+### 1. `index.html`
+- Quitar `<link rel="manifest" href="/manifest.json">` y `<link rel="apple-touch-icon">`.
+- Quitar los tres `<meta http-equiv="...">` de cache (proxy ya los maneja).
+- Quitar `<script>window.__APP_VERSION__ = "__APP_VERSION__";</script>`.
 
-1. **Bill creation** — when `service.ap_document_id IS NULL`, call `create_ap_ar_document(...)` with:
-   - `p_account_id` = chart id of `2101` (AP control)
-   - `p_offset_account_id` = chart id of `service_entries.master_acct_code` (expense)
-   - `p_post_journal = true`
-   This posts a balanced bill journal: **DR expense / CR 2101**.
+### 2. `src/main.tsx`
+- Conservar **solo** la limpieza de SW: al boot, si hay registrations, desregistrar todas, vaciar `caches`, reload una vez (con guard `__sw_cleanup_reloaded`).
+- Aplicar el guard de iframe/preview-host de la guía oficial de Lovable: en `id-preview--*.lovable.app` o dentro de un iframe, siempre desregistrar SW.
+- **Eliminar** todo el sistema de `BUILT_VERSION` / `checkVersion()` / `purgeAndReload()` / `setInterval` / `visibilitychange`. El proxy ya garantiza HTML fresco en cada navegación.
+- Conservar `dirtyForms` y el `beforeunload` warning (no relacionados con caché).
 
-2. **Payment** — call `apply_ap_ar_payment(p_document_id, p_payment_date, p_amount, p_bank_account_id, p_user_id)`.
-   This posts: **DR 2101 / CR Bank**, creates the `transactions` row, the `ap_ar_payments` row, and handles FX/realized-gain logic for free.
+### 3. `vite.config.ts`
+- Eliminar `buildVersionPlugin()` completo y su uso. Ya no genera `version.json` ni reemplaza `__APP_VERSION__`.
 
-3. **Linking layer** — keep `service_entry_payments` as the bridge, populated with the `transaction_id` and `ap_payment_id` returned by `apply_ap_ar_payment`. Update `service_entries` totals and `is_closed` exactly as today.
+### 4. PWA leftovers
+- `public/manifest.json` y `public/manifest.webmanifest` → **borrar**.
+- `public/sw.js`, `public/service-worker.js`, `public/registerSW.js` → **dejar** (son kill switches que aún protegen a usuarios con SW viejo registrado). Borrarlos en una limpieza futura, no ahora.
 
-## Behavior change to be aware of
+## Verificación
+1. Después del cambio, abrir el preview y confirmar que carga.
+2. DevTools → Application → Service Workers: ninguno activo.
+3. Application → Manifest: vacío (ya no es instalable como PWA).
+4. Editar un texto, guardar → aparece en preview tras un refresh normal en menos de unos segundos.
+5. Confirmar que ni el sitio publicado ni el dev preview tienen errores de consola nuevos.
 
-Under the central pipeline, the `transactions` row for a service payment will carry `master_acct_code = 2101` (it represents the cash payment of an AP, which is correct). The expense (e.g. `7010`) lives on the **bill journal**, not the transaction. So in the Transactions list, the service-payment row will show 2101 again — but this time it is correct, because a separate bill journal already booked the expense.
-
-This differs from my earlier patch, which made the single transaction post DR expense / CR Bank directly, bypassing AP journaling. That shortcut works only when there is no real AP cycle (no aging, no partial payments to reconcile against the bill journal). Since the service module supports partial payments, the canonical path is the right answer long-term.
-
-## Technical details
-
-- Resolve chart account IDs once at the top of the RPC: `2101` and the user's selected expense code. Raise a clear error if either is missing or not posting-allowed.
-- Pass `v_service.entity_id` and `auth.uid()` into both routines.
-- Drop the manual `INSERT INTO transactions` and `INSERT INTO ap_ar_payments`; rely on what `apply_ap_ar_payment` returns.
-- Keep current permission, amount-validation, and `is_final_payment` logic at the top of the RPC unchanged.
-- Preserve the function signature and return shape so the React caller (`ServicePaymentDialog`) needs no changes.
-- One migration; no schema changes; no data migration (you already corrected past rows).
-
-## Out of scope
-
-- Backfilling/re-posting historical service payments — you've handled those manually.
-- Touching `create_ap_ar_document` or `apply_ap_ar_payment` themselves.
-- UI changes.
+## Notas
+- Cambios solo de presentación/infra de cliente. No toca DB, RPCs, ni lógica de negocio.
+- Si el usuario quiere conservar la opción "Add to Home Screen" en el futuro, se puede reintroducir un `manifest.json` mínimo sin SW siguiendo la guía oficial — pero no ahora, porque es justo lo que está causando el problema.

@@ -611,16 +611,36 @@ export function PayrollSummary({
         throw new Error("Debe confirmar la nómina antes de cerrar el período. Haga clic en 'Confirmar y Guardar' primero.");
       }
 
+      // Read persisted loan-deduction snapshots written at commit time.
+      const { data: freshLoanDeds } = await supabase
+        .from("payroll_loan_deductions")
+        .select("employee_id, loan_id, payment_number, total_payments, loan_amount, payment_amount")
+        .eq("period_id", periodId);
+      const loanDedsByEmp = new Map<string, typeof loanDeductionSnapshots>();
+      for (const r of (freshLoanDeds ?? []) as typeof loanDeductionSnapshots) {
+        const arr = loanDedsByEmp.get(r.employee_id) ?? [];
+        arr.push(r);
+        loanDedsByEmp.set(r.employee_id, arr);
+      }
+
       // Build legacy data from DB snapshots (authoritative), not stale preview
       const snapshotLegacyData = freshSnapshots.map((s) => {
         const employee = employees.find((e) => e.id === s.employee_id);
+        const empSnaps = loanDedsByEmp.get(s.employee_id) ?? [];
         const employeeLoans = loans.filter((l) => l.employee_id === s.employee_id);
-        const loanDetails = employeeLoans.map((l) => ({
-          loan_amount: l.loan_amount,
-          payment_amount: l.payment_amount,
-          payment_number: l.number_of_payments - l.remaining_payments,
-          total_payments: l.number_of_payments,
-        }));
+        const loanDetails = empSnaps.length > 0
+          ? empSnaps.map((r) => ({
+              loan_amount: Number(r.loan_amount),
+              payment_amount: Number(r.payment_amount),
+              payment_number: r.payment_number,
+              total_payments: r.total_payments,
+            }))
+          : employeeLoans.map((l) => ({
+              loan_amount: l.loan_amount,
+              payment_amount: l.payment_amount,
+              payment_number: l.number_of_payments - l.remaining_payments,
+              total_payments: l.number_of_payments,
+            }));
         const grossPay = Number(s.gross_pay);
         const netPay = Number(s.net_pay);
         return {

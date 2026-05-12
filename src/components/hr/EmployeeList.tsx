@@ -254,10 +254,10 @@ export function EmployeeList({ onEdit }: EmployeeListProps) {
       case "cedula":
         return <span className="font-mono text-sm">{employee.cedula}</span>;
       case "date_of_hire":
-        return format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es });
+        return format(parseDateLocal(employee.date_of_hire), "dd/MM/yyyy", { locale: es });
       case "date_of_birth":
         return employee.date_of_birth
-          ? format(parseDateLocal(employee.date_of_birth), "d MMM yyyy", { locale: es })
+          ? format(parseDateLocal(employee.date_of_birth), "dd/MM/yyyy", { locale: es })
           : "—";
       case "salary":
         return formatCurrency(employee.salary);

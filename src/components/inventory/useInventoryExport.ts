@@ -139,7 +139,7 @@ export function useInventoryExport({
     doc.text("Inventory Report", 14, 22);
     doc.setFontSize(10);
     doc.text(
-      `Date Range: ${format(startDate, "MMM d, yyyy")} - ${format(endDate, "MMM d, yyyy")}`,
+      `Date Range: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`,
       14,
       30
     );

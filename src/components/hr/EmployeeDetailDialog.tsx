@@ -653,7 +653,7 @@ export function EmployeeDetailDialog({
                     <span className="text-muted-foreground">{t("empDetail.dateOfBirth")}</span>
                     <span>
                       {employee.date_of_birth
-                        ? format(parseDateLocal(employee.date_of_birth), "d MMM yyyy", { locale: es })
+                        ? format(parseDateLocal(employee.date_of_birth), "dd/MM/yyyy", { locale: es })
                         : "—"}
                     </span>
                   </div>
@@ -670,7 +670,7 @@ export function EmployeeDetailDialog({
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t("empDetail.hireDate")}</span>
-                    <span>{format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es })}</span>
+                    <span>{format(parseDateLocal(employee.date_of_hire), "dd/MM/yyyy", { locale: es })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t("empDetail.currentSalary")}</span>
@@ -684,7 +684,7 @@ export function EmployeeDetailDialog({
                     <span className="text-muted-foreground">{t("empDetail.exitDate")}</span>
                     <span>
                       {employee.date_of_termination
-                        ? format(parseDateLocal(employee.date_of_termination), "d MMM yyyy", { locale: es })
+                        ? format(parseDateLocal(employee.date_of_termination), "dd/MM/yyyy", { locale: es })
                         : "—"}
                     </span>
                   </div>
@@ -748,11 +748,11 @@ export function EmployeeDetailDialog({
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-lg border border-border p-4">
                       <p className="text-xs text-muted-foreground">Ingreso</p>
-                      <p className="mt-1 font-semibold">{format(parseDateLocal(employee.date_of_hire), "d MMM yyyy", { locale: es })}</p>
+                      <p className="mt-1 font-semibold">{format(parseDateLocal(employee.date_of_hire), "dd/MM/yyyy", { locale: es })}</p>
                     </div>
                     <div className="rounded-lg border border-border p-4">
                       <p className="text-xs text-muted-foreground">Salida</p>
-                      <p className="mt-1 font-semibold">{employee.date_of_termination ? format(parseDateLocal(employee.date_of_termination), "d MMM yyyy", { locale: es }) : "Activa"}</p>
+                      <p className="mt-1 font-semibold">{employee.date_of_termination ? format(parseDateLocal(employee.date_of_termination), "dd/MM/yyyy", { locale: es }) : "Activa"}</p>
                     </div>
                     <div className="rounded-lg border border-border p-4">
                       <p className="text-xs text-muted-foreground">Antigüedad total</p>
@@ -769,7 +769,7 @@ export function EmployeeDetailDialog({
                       <div key={`${segment.startDate}-${segment.endDate}-${index}`} className="flex flex-col gap-2 rounded-lg border border-border p-4 md:flex-row md:items-center md:justify-between">
                         <div>
                           <p className="font-medium">
-                            {format(parseDateLocal(segment.startDate), "d MMM yyyy", { locale: es })} — {format(parseDateLocal(segment.endDate), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(segment.startDate), "dd/MM/yyyy", { locale: es })} — {format(parseDateLocal(segment.endDate), "dd/MM/yyyy", { locale: es })}
                           </p>
                           <p className="text-sm text-muted-foreground">{segment.days} días · {segment.months.toFixed(2)} meses al mismo salario</p>
                         </div>
@@ -914,7 +914,7 @@ export function EmployeeDetailDialog({
                         return (
                           <TableRow key={record.id}>
                           <TableCell>
-                            {format(parseDateLocal(record.effective_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(record.effective_date), "dd/MM/yyyy", { locale: es })}
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency(record.salary)}
@@ -966,7 +966,7 @@ export function EmployeeDetailDialog({
                       {timesheets?.slice(0, 20).map((ts) => (
                         <TableRow key={ts.id}>
                           <TableCell>
-                            {format(parseDateLocal(ts.work_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(ts.work_date), "dd/MM/yyyy", { locale: es })}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {ts.start_time ? format(new Date(`2000-01-01T${ts.start_time}`), "h:mm a") : "—"}
@@ -1017,7 +1017,7 @@ export function EmployeeDetailDialog({
                       {salaryHistory?.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell>
-                            {format(parseDateLocal(record.effective_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(record.effective_date), "dd/MM/yyyy", { locale: es })}
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(record.salary)}
@@ -1114,10 +1114,10 @@ export function EmployeeDetailDialog({
                         return (
                           <TableRow key={vacation.id}>
                             <TableCell>
-                              {format(parseDateLocal(vacation.start_date), "d MMM yyyy", { locale: es })}
+                              {format(parseDateLocal(vacation.start_date), "dd/MM/yyyy", { locale: es })}
                             </TableCell>
                             <TableCell>
-                              {format(parseDateLocal(vacation.end_date), "d MMM yyyy", { locale: es })}
+                              {format(parseDateLocal(vacation.end_date), "dd/MM/yyyy", { locale: es })}
                             </TableCell>
                             <TableCell className="text-right font-medium">{days}</TableCell>
                             <TableCell className="text-muted-foreground">
@@ -1230,7 +1230,7 @@ export function EmployeeDetailDialog({
                       {incidents?.map((incident) => (
                         <TableRow key={incident.id}>
                           <TableCell>
-                            {format(parseDateLocal(incident.incident_date), "d MMM yyyy", { locale: es })}
+                            {format(parseDateLocal(incident.incident_date), "dd/MM/yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -1340,7 +1340,7 @@ export function EmployeeDetailDialog({
                               : doc.document_type}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(doc.created_at), "d MMM yyyy", { locale: es })}
+                            {format(new Date(doc.created_at), "dd/MM/yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">

@@ -261,7 +261,7 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "MMM d, yyyy") : "Start"}
+                    {startDate ? format(startDate, "dd/MM/yyyy") : "Start"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -285,7 +285,7 @@ export function InventoryMovementReport({ open, onOpenChange }: InventoryMovemen
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "MMM d, yyyy") : "End"}
+                    {endDate ? format(endDate, "dd/MM/yyyy") : "End"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">

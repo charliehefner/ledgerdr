@@ -536,7 +536,7 @@ export function TractorsView() {
                     {isVisible("purchase_date") && (
                       <TableCell>
                         {tractor.purchase_date
-                          ? format(parseDateLocal(tractor.purchase_date), "MMM d, yyyy")
+                          ? format(parseDateLocal(tractor.purchase_date), "dd/MM/yyyy")
                           : "-"}
                       </TableCell>
                     )}

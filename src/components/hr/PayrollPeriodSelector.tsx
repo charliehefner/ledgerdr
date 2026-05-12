@@ -106,7 +106,7 @@ export function PayrollPeriodSelector({
       </Button>
 
       <span className="text-sm text-muted-foreground ml-2">
-        {t("payrollPeriod.payment")}: {format(selectedPeriod.endDate, "d MMM yyyy", { locale: dateLocale })}
+        {t("payrollPeriod.payment")}: {format(selectedPeriod.endDate, "dd/MM/yyyy", { locale: dateLocale })}
       </span>
     </div>
   );

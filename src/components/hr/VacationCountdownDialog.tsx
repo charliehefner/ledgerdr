@@ -220,14 +220,14 @@ export function VacationCountdownDialog({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("vacation.hireDate")}</span>
                   <span className="font-medium">
-                    {format(parseDateLocal(dateOfHire), "d MMM yyyy", { locale: dateLocale })}
+                    {format(parseDateLocal(dateOfHire), "dd/MM/yyyy", { locale: dateLocale })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("vacation.lastVacation")}</span>
                   <span className="font-medium">
                     {lastVacation
-                      ? format(parseDateLocal(lastVacation.end_date), "d MMM yyyy", { locale: dateLocale })
+                      ? format(parseDateLocal(lastVacation.end_date), "dd/MM/yyyy", { locale: dateLocale })
                       : t("vacation.noRecord")}
                   </span>
                 </div>
@@ -248,7 +248,7 @@ export function VacationCountdownDialog({
                         : "text-green-600"
                     }`}
                   >
-                    {format(nextVacationDue, "d MMM yyyy", { locale: dateLocale })}
+                    {format(nextVacationDue, "dd/MM/yyyy", { locale: dateLocale })}
                   </span>
                 </div>
                 {isOverdue && (
@@ -350,10 +350,10 @@ export function VacationCountdownDialog({
                       {vacationHistory.map((vacation) => (
                         <TableRow key={vacation.id}>
                           <TableCell>
-                            {format(parseDateLocal(vacation.start_date), "d MMM yyyy", { locale: dateLocale })}
+                            {format(parseDateLocal(vacation.start_date), "dd/MM/yyyy", { locale: dateLocale })}
                           </TableCell>
                           <TableCell>
-                            {format(parseDateLocal(vacation.end_date), "d MMM yyyy", { locale: dateLocale })}
+                            {format(parseDateLocal(vacation.end_date), "dd/MM/yyyy", { locale: dateLocale })}
                           </TableCell>
                           <TableCell>
                             {calculateVacationDays(vacation.start_date, vacation.end_date)}

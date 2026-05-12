@@ -477,7 +477,7 @@ export function TractorHistoryView() {
             <TableBody>
               {sortedTransactions.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
+                  <TableCell>{format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{tx.fuel_equipment?.name || "-"}</TableCell>
                   <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
                   <TableCell className="font-medium">{tx.gallons.toFixed(1)} gal</TableCell>

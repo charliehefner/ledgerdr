@@ -270,7 +270,7 @@ export function TankHistoryView() {
               const isRefill = tx.transaction_type === "refill";
               return (
               <TableRow key={tx.id} className={isTransfer ? "bg-orange-50 dark:bg-orange-950/20" : isRefill ? "bg-green-50 dark:bg-green-950/20" : ""}>
-                <TableCell>{format(parseDateLocal(tx.transaction_date), "MMM d, yyyy")}</TableCell>
+                <TableCell>{format(parseDateLocal(tx.transaction_date), "dd/MM/yyyy")}</TableCell>
                 <TableCell>{tx.fuel_tanks?.name || "-"}</TableCell>
                 <TableCell>
                   {isTransfer ? (

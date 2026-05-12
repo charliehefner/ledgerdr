@@ -458,7 +458,7 @@ export function DayLaborView() {
                   <DayLaborAttachment weekEndingDate={formatDateLocal(selectedFriday)} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {format(weekStart, "d MMM", { locale: dateFnsLocale })} - {format(weekEnd, "d MMM, yyyy", { locale: dateFnsLocale })}
+                  {format(weekStart, "dd/MM", { locale: dateFnsLocale })} - {format(weekEnd, "dd/MM/yyyy", { locale: dateFnsLocale })}
                 </p>
               </div>
               <Button variant="outline" size="icon" onClick={() => navigateWeek("next")}>
@@ -769,7 +769,7 @@ export function DayLaborView() {
       {/* Info about closing */}
       {!isWeekClosed && !canClose && (
         <p className="text-sm text-muted-foreground text-center">
-          {t("dayLabor.closeAvailableFriday").replace("{date}", format(selectedFriday, "d MMM", { locale: dateFnsLocale }))}
+          {t("dayLabor.closeAvailableFriday").replace("{date}", format(selectedFriday, "dd/MM", { locale: dateFnsLocale }))}
         </p>
       )}
 

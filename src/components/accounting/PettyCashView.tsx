@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, Pencil, Wallet, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Wallet, RefreshCw, Scale } from "lucide-react";
 import { ReplenishmentDialog } from "./ReplenishmentDialog";
+import { CashAdjustmentDialog } from "./CashAdjustmentDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { useAuth } from "@/contexts/AuthContext";

@@ -433,6 +433,13 @@ export function PettyCashView() {
         onOpenChange={open => { if (!open) setReplenishFund(null); }}
         fund={replenishFund}
       />
+
+      {/* Cash Adjustment Dialog (Sobra/Falta) */}
+      <CashAdjustmentDialog
+        open={!!adjustFund}
+        onOpenChange={open => { if (!open) setAdjustFund(null); }}
+        fund={adjustFund}
+      />
     </div>
   );
 }

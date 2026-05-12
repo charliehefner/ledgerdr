@@ -50,6 +50,7 @@ type Transaction = {
   currency: string;
   pay_method?: string;
   destination_acct_code?: string;
+  master_acct_code?: string;
 };
 
 const emptyForm = { account_name: "", bank_name: "Caja Chica", account_number: "", currency: "DOP", chart_account_id: "", fixed_amount: "" };

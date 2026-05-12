@@ -7,7 +7,7 @@ const fmtMoney = (n: number, ccy = "DOP") =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: ccy, minimumFractionDigits: 2 }).format(n || 0);
 
 const fmtDate = (d: string | Date) =>
-  format(typeof d === "string" ? new Date(d) : d, "dd MMM yyyy", { locale: es }).toUpperCase();
+  format(typeof d === "string" ? new Date(d) : d, "dd/MM/yyyy", { locale: es }).toUpperCase();
 
 interface Header {
   entityName: string;

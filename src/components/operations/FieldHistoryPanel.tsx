@@ -149,7 +149,7 @@ export function FieldHistoryPanel({
                     {op.operation_types?.name ?? "—"}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(op.operation_date + "T12:00:00"), "dd MMM yyyy", { locale: es })}
+                    {format(new Date(op.operation_date + "T12:00:00"), "dd/MM/yyyy", { locale: es })}
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">

@@ -25,7 +25,7 @@ import { CasaMatrizStatementExport } from "./CasaMatrizStatementExport";
 
 const fmtMoney = (n: number, c: string) =>
   `${c} ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDate = (d: string | null) => (d ? format(new Date(d), "dd MMM yyyy") : "—");
+const fmtDate = (d: string | null) => (d ? format(new Date(d), "dd/MM/yyyy") : "—");
 
 interface Props {
   highlightAdvId?: string | null;

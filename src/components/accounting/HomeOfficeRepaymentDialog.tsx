@@ -125,7 +125,7 @@ export function HomeOfficeRepaymentDialog({ open, onOpenChange, partyId, partyCu
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(date, "dd MMM yyyy")}
+                  {format(date, "dd/MM/yyyy")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

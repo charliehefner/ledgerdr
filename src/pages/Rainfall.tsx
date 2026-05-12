@@ -344,7 +344,7 @@ export default function Rainfall() {
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(fromDate, "dd MMM yyyy", { locale: dateLocale })}
+                            {format(fromDate, "dd/MM/yyyy", { locale: dateLocale })}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -364,7 +364,7 @@ export default function Rainfall() {
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(toDate, "dd MMM yyyy", { locale: dateLocale })}
+                            {format(toDate, "dd/MM/yyyy", { locale: dateLocale })}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -446,7 +446,7 @@ export default function Rainfall() {
                           return (
                             <tr key={dateStr} className={cn("border-b transition-colors hover:bg-muted/50", editable?.isDirty && "bg-warning/10", !editable?.isDirty && hasRainfall && "bg-blue-50 dark:bg-blue-950/30")}>
                               <td className="p-4 align-middle font-medium">
-                                {format(date, "dd MMM yyyy", { locale: dateLocale })}
+                                {format(date, "dd/MM/yyyy", { locale: dateLocale })}
                               </td>
                               {LOCATIONS.map((loc) => (
                                 <td key={loc} className="p-1 align-middle">

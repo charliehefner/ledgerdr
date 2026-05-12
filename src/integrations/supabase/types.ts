@@ -7802,6 +7802,8 @@ export type Database = {
           state_badge: string
         }[]
       }
+      ensure_current_and_next_period: { Args: never; Returns: undefined }
+      ensure_open_monthly_period: { Args: { p_date: string }; Returns: string }
       ensure_purchasing_settings: {
         Args: { p_entity_id: string }
         Returns: {

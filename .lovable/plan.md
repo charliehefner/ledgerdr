@@ -1,38 +1,63 @@
-## Fix Rolando Coca's duplicate "parcela N de M" labels on payroll receipts
+## Goal
 
-### Root cause
-The receipt label `parcela N de M` is recomputed live from `employee_loans.remaining_payments` every time a receipt is rendered. Once the next period closes, all earlier reprints shift to the new "current" number — so every reprint of Rolando's Feb–Apr 2026 receipts now reads the same `parcela 6 de 15`. Amounts and discounts (RD$1,000 each) are correct.
+Add a dedicated way to register cash overages (**sobras**) and shortages (**faltantes**) of petty cash, separate from the replenishment flow, with a clear audit trail and proper accounting.
 
-### Fix
+## UI changes — `src/components/accounting/PettyCashView.tsx`
 
-1. **New table `payroll_loan_deductions`**
-   - Columns: `period_id`, `employee_id`, `loan_id`, `payment_number`, `total_payments`, `loan_amount`, `payment_amount`, `entity_id`, timestamps.
-   - `UNIQUE (period_id, employee_id, loan_id)` for idempotency.
-   - RLS modeled on `payroll_snapshots` (entity-scoped, role-based).
+In each row of the Petty Cash funds table, add a third icon-button next to the existing **Edit** and **Replenish** icons:
 
-2. **Snapshot at close time**
-   - In the close-period RPC, insert one row per active loan **before** decrementing `remaining_payments`, with `payment_number = number_of_payments - remaining_payments + 1`.
-   - `ON CONFLICT (period_id, employee_id, loan_id) DO NOTHING`.
+- Icon: `Scale` (or `AlertTriangle`) from lucide-react
+- Tooltip: **"Registrar sobra/falta de caja"**
+- Visible only when `canManageFunds` is true and the fund has a `chart_account_id` set
+- Opens a new `CashAdjustmentDialog` for that fund
 
-3. **Backfill historical periods**
-   - For every closed period with `payroll_snapshots.loan_deduction > 0`, assign sequential `payment_number` per (employee, loan) ordered by date, anchored against the loan's current paid count.
-   - Rolando's Feb→Apr 2026 receipts will become parcelas **2, 3, 4, 5, 6 of 15** (parcela 1 = pre-system manual deduction noted on the loan).
+## New component — `src/components/accounting/CashAdjustmentDialog.tsx`
 
-4. **Read-side change** in `src/components/hr/PayrollSummary.tsx`
-   - Fetch `payroll_loan_deductions` for the period being rendered.
-   - Replace inline computations at ~line 312 (`buildLegacyData`) and ~line 591 (`snapshotLegacyData`):
-     - If a snapshot row exists → use its `payment_number` / `total_payments` / `loan_amount` / `payment_amount`.
-     - Else (open preview only) → keep current "next installment" calc.
-   - `src/lib/payrollReceipts.ts` already accepts `loanDetails[]` — no change needed; `parcela N de M` labels remain on every receipt as guidance for staff.
+Modal that captures one cash-difference event.
 
-### Verification after migration
+Fields:
+- **Tipo** (radio / segmented): `Sobra` (over) or `Falta` (short)
+- **Monto** (positive number, DOP/fund currency, font-mono)
+- **Fecha** (defaults to today, validated against closed periods like every other Treasury form)
+- **Motivo / descripción** (textarea, required, e.g. "Conteo del 12 May 2026 — diferencia de RD$50")
 
-- Reprint Rolando's Feb/Mar/Apr 2026 receipts → each must show distinct parcelas (2…6 of 15), correct amounts.
-- Preview of next open period shows `parcela 7 de 15`.
-- Monthly Excel export and ZIP path also pull from snapshot.
-- Confirm no other RPC/trigger paths that touch `employee_loans.remaining_payments` were disturbed (loan close, deactivation flow, snapshot total calcs).
-- Run security scan after migration; fix anything flagged.
+Submit handler inserts a single row into `transactions`, mirroring the pattern used by `ReplenishmentDialog` so the existing journal-generation trigger handles double entry:
 
-### Out of scope
-- No edits to past payroll amounts.
-- No restructuring of the loans module.
+- **Falta (cash short)** — cash leaves the fund, expense booked.
+  - `pay_method` = fund.id (petty cash)
+  - `destination_acct_code` = `7990` (Otros gastos de explotación)
+  - `account_code` = `7990`
+  - Description prefixed `"Faltante de caja: "`
+- **Sobra (cash over)** — cash enters the fund, income booked.
+  - `pay_method` = `3990` (Otras remuneraciones, subvenciones e ingresos)
+  - `destination_acct_code` = fund.id
+  - `account_code` = `3990`
+  - Description prefixed `"Sobrante de caja: "`
+
+Both insert `entity_id` from `useEntity().selectedEntityId`, `currency` from the fund, and `name` = fund.account_name. Exact field shape will be verified against `ReplenishmentDialog` and the journal trigger before implementation; if the trigger requires a different driver (e.g. a direct `journal_entries` insert via RPC), I will use that instead — accounting impact must end up as **Dr 7990 / Cr [petty cash GL]** for falta and **Dr [petty cash GL] / Cr 3990** for sobra.
+
+On success: invalidate `petty-cash-transactions`, `petty-cash-gl-balances`, `last-replenishment`, `petty-cash-expenses-since`. Toast confirmation. Close.
+
+## Recent transactions table
+
+Already shows new transactions automatically. The `Tipo` badge currently shows `Recharge` vs `Expense`. Detect cash adjustments by `account_code` and show a third badge value: `Sobra` / `Falta` so they stand out in the ledger.
+
+## i18n
+
+Add Spanish + English keys under `treasury.pc.adjust.*` for: button tooltip, dialog title, type labels, amount label, date label, reason label, submit/cancel, success toast, validation errors, badge labels.
+
+## Out of scope
+
+- No new chart-of-accounts entries (using existing 7990 / 3990 per user choice).
+- No changes to replenishment math — the over/short detected during replenishment continues to flow through 0000 as it does today. This new button is for **standalone** adjustments outside a replenishment cycle (e.g. spot count by Accountant).
+- No changes to permissions; same `canManagePettyCashFunds` check as Edit/Replenish.
+
+## Verification
+
+- Falta of RD$100 → ledger shows Dr 7990 100 / Cr 1911 100; petty cash GL balance drops by 100.
+- Sobra of RD$50 → Dr 1911 50 / Cr 3990 50; petty cash GL balance rises by 50.
+- Both rows appear in "Recent Petty Cash Transactions" with the new `Sobra`/`Falta` badge and the user's reason in the description.
+- Closed-period validation blocks dates inside locked periods (same as existing Treasury inserts).
+- Office role can also use the button (since they own petty cash); other read-only roles cannot.
+
+Reply **"go"** (or click Implement) to proceed.

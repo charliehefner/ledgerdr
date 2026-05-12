@@ -1,26 +1,38 @@
-## Problem
+## Fix Rolando Coca's duplicate "parcela N de M" labels on payroll receipts
 
-After registering credit card payment **#639**, the "Nuevo Pago de Tarjeta de Crédito" form did not fully clear:
+### Root cause
+The receipt label `parcela N de M` is recomputed live from `employee_loans.remaining_payments` every time a receipt is rendered. Once the next period closes, all earlier reprints shift to the new "current" number — so every reprint of Rolando's Feb–Apr 2026 receipts now reads the same `parcela 6 de 15`. Amounts and discounts (RD$1,000 each) are correct.
 
-- **Banco/Caja Origen** and **Tarjeta de Crédito** selects kept showing the previous selections (visually).
-- Internally the state was reset, but the Radix `<Select>` trigger label stayed displayed.
-- When the user filled in the new date and amount and clicked **Registrar Pago**, the button stayed disabled (gray) because internal state for those two selects is actually empty (`""`), so `isValid()` returns false.
+### Fix
 
-This is the classic Radix Select desync that happens when a controlled value transitions from a real id back to `undefined` while the component instance stays mounted.
+1. **New table `payroll_loan_deductions`**
+   - Columns: `period_id`, `employee_id`, `loan_id`, `payment_number`, `total_payments`, `loan_amount`, `payment_amount`, `entity_id`, timestamps.
+   - `UNIQUE (period_id, employee_id, loan_id)` for idempotency.
+   - RLS modeled on `payroll_snapshots` (entity-scoped, role-based).
 
-## Fix
+2. **Snapshot at close time**
+   - In the close-period RPC, insert one row per active loan **before** decrementing `remaining_payments`, with `payment_number = number_of_payments - remaining_payments + 1`.
+   - `ON CONFLICT (period_id, employee_id, loan_id) DO NOTHING`.
 
-In `src/components/accounting/CreditCardPaymentsView.tsx`:
+3. **Backfill historical periods**
+   - For every closed period with `payroll_snapshots.loan_deduction > 0`, assign sequential `payment_number` per (employee, loan) ordered by date, anchored against the loan's current paid count.
+   - Rolando's Feb→Apr 2026 receipts will become parcelas **2, 3, 4, 5, 6 of 15** (parcela 1 = pre-system manual deduction noted on the loan).
 
-1. Add a `formKey` counter to component state.
-2. Wrap the `<form>` with `key={formKey}` so every successful submit (or **Limpiar** click) fully unmounts and remounts the inputs/selects/calendar — guaranteeing they reflect the cleared state.
-3. After a successful RPC call: `setForm({ ...initialState })` (fresh object, not the shared reference) and `setFormKey(k => k + 1)`.
-4. Apply the same on the **Limpiar** button.
+4. **Read-side change** in `src/components/hr/PayrollSummary.tsx`
+   - Fetch `payroll_loan_deductions` for the period being rendered.
+   - Replace inline computations at ~line 312 (`buildLegacyData`) and ~line 591 (`snapshotLegacyData`):
+     - If a snapshot row exists → use its `payment_number` / `total_payments` / `loan_amount` / `payment_amount`.
+     - Else (open preview only) → keep current "next installment" calc.
+   - `src/lib/payrollReceipts.ts` already accepts `loanDetails[]` — no change needed; `parcela N de M` labels remain on every receipt as guidance for staff.
 
-No backend, RPC, or accounting logic changes — purely a UI state-reset fix.
+### Verification after migration
 
-## Verification
+- Reprint Rolando's Feb/Mar/Apr 2026 receipts → each must show distinct parcelas (2…6 of 15), correct amounts.
+- Preview of next open period shows `parcela 7 de 15`.
+- Monthly Excel export and ZIP path also pull from snapshot.
+- Confirm no other RPC/trigger paths that touch `employee_loans.remaining_payments` were disturbed (loan close, deactivation flow, snapshot total calcs).
+- Run security scan after migration; fix anything flagged.
 
-- Register a CC payment → confirm date, both selects, amount, and description all visibly clear.
-- Immediately register a second CC payment without refreshing → **Registrar Pago** activates as soon as the required fields are filled.
-- Edit / posted-flag / recent list behavior unchanged.
+### Out of scope
+- No edits to past payroll amounts.
+- No restructuring of the loans module.

@@ -196,6 +196,27 @@ export function PayrollSummary({
     },
   });
 
+  // Fetch persisted loan-deduction snapshots for this period (stable parcela N de M on receipts).
+  const { data: loanDeductionSnapshots = [] } = useQuery({
+    queryKey: ["payroll-loan-deductions", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_loan_deductions")
+        .select("employee_id, loan_id, payment_number, total_payments, loan_amount, payment_amount")
+        .eq("period_id", periodId);
+      if (error) throw error;
+      return data as {
+        employee_id: string;
+        loan_id: string;
+        payment_number: number;
+        total_payments: number;
+        loan_amount: number;
+        payment_amount: number;
+      }[];
+    },
+    enabled: !!periodId,
+  });
+
   // Fetch employee benefits (for receipts)
   const { data: employeeBenefits = [] } = useQuery({
     queryKey: ["employee-benefits-for-receipts", selectedEntityId],
@@ -224,6 +245,7 @@ export function PayrollSummary({
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-snapshots-check", periodId] });
       queryClient.invalidateQueries({ queryKey: ["employee-loans-active"] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-loan-deductions", periodId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-period"] });
       toast.success(t("payrollSummary.payrollSaved"));
     },
@@ -306,14 +328,22 @@ export function PayrollSummary({
     return payrollData.map((p) => {
       const employee = employees.find((e) => e.id === p.employee_id);
       const employeeLoans = loans.filter((l) => l.employee_id === p.employee_id);
-      const loanDetails = employeeLoans.map((l) => ({
-        loan_amount: l.loan_amount,
-        payment_amount: l.payment_amount,
-        payment_number: isClosed
-          ? l.number_of_payments - l.remaining_payments
-          : l.number_of_payments - l.remaining_payments + 1,
-        total_payments: l.number_of_payments,
-      }));
+      const empSnaps = loanDeductionSnapshots.filter((s) => s.employee_id === p.employee_id);
+      // Prefer persisted snapshot rows (stable parcela N de M for closed/committed periods).
+      const loanDetails = empSnaps.length > 0
+        ? empSnaps.map((s) => ({
+            loan_amount: Number(s.loan_amount),
+            payment_amount: Number(s.payment_amount),
+            payment_number: s.payment_number,
+            total_payments: s.total_payments,
+          }))
+        : employeeLoans.map((l) => ({
+            loan_amount: l.loan_amount,
+            payment_amount: l.payment_amount,
+            // Open period preview only — shows the installment about to be paid.
+            payment_number: l.number_of_payments - l.remaining_payments + 1,
+            total_payments: l.number_of_payments,
+          }));
       return {
         employee: employee ?? { id: p.employee_id, name: p.employee_name, salary: p.salary, position: "", bank: null, bank_account_number: null },
         regularHours: 0,
@@ -581,16 +611,36 @@ export function PayrollSummary({
         throw new Error("Debe confirmar la nómina antes de cerrar el período. Haga clic en 'Confirmar y Guardar' primero.");
       }
 
+      // Read persisted loan-deduction snapshots written at commit time.
+      const { data: freshLoanDeds } = await supabase
+        .from("payroll_loan_deductions")
+        .select("employee_id, loan_id, payment_number, total_payments, loan_amount, payment_amount")
+        .eq("period_id", periodId);
+      const loanDedsByEmp = new Map<string, typeof loanDeductionSnapshots>();
+      for (const r of (freshLoanDeds ?? []) as typeof loanDeductionSnapshots) {
+        const arr = loanDedsByEmp.get(r.employee_id) ?? [];
+        arr.push(r);
+        loanDedsByEmp.set(r.employee_id, arr);
+      }
+
       // Build legacy data from DB snapshots (authoritative), not stale preview
       const snapshotLegacyData = freshSnapshots.map((s) => {
         const employee = employees.find((e) => e.id === s.employee_id);
+        const empSnaps = loanDedsByEmp.get(s.employee_id) ?? [];
         const employeeLoans = loans.filter((l) => l.employee_id === s.employee_id);
-        const loanDetails = employeeLoans.map((l) => ({
-          loan_amount: l.loan_amount,
-          payment_amount: l.payment_amount,
-          payment_number: l.number_of_payments - l.remaining_payments,
-          total_payments: l.number_of_payments,
-        }));
+        const loanDetails = empSnaps.length > 0
+          ? empSnaps.map((r) => ({
+              loan_amount: Number(r.loan_amount),
+              payment_amount: Number(r.payment_amount),
+              payment_number: r.payment_number,
+              total_payments: r.total_payments,
+            }))
+          : employeeLoans.map((l) => ({
+              loan_amount: l.loan_amount,
+              payment_amount: l.payment_amount,
+              payment_number: l.number_of_payments - l.remaining_payments,
+              total_payments: l.number_of_payments,
+            }));
         const grossPay = Number(s.gross_pay);
         const netPay = Number(s.net_pay);
         return {

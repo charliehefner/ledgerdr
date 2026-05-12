@@ -352,9 +352,15 @@ export function PettyCashView() {
                     <TableCell className="font-mono text-xs text-muted-foreground">{tx.legacy_id ?? "—"}</TableCell>
                     <TableCell>{fmtDate(new Date(tx.transaction_date + "T00:00:00"))}</TableCell>
                     <TableCell>
-                      <Badge variant={isRecharge(tx) ? "default" : "outline"}>
-                        {isRecharge(tx) ? t("treasury.pc.recharge") : t("treasury.pc.expense")}
-                      </Badge>
+                      {isSobra(tx) ? (
+                        <Badge className="bg-primary/15 text-primary hover:bg-primary/20 border-primary/30">{t("treasury.adjust.sobra")}</Badge>
+                      ) : isFalta(tx) ? (
+                        <Badge variant="destructive">{t("treasury.adjust.falta")}</Badge>
+                      ) : isRecharge(tx) ? (
+                        <Badge variant="default">{t("treasury.pc.recharge")}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t("treasury.pc.expense")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>{tx.name || "—"}</TableCell>
                     <TableCell>{tx.description}</TableCell>

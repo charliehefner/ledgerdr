@@ -1606,6 +1606,24 @@ export const en = {
   "treasury.replenish.success": "Petty cash replenishment recorded",
   "treasury.replenish.incomplete": "Incomplete data for replenishment",
 
+  // Treasury – Cash Adjustment (Sobra/Falta)
+  "treasury.adjust.button": "Record cash over/short",
+  "treasury.adjust.title": "Cash Adjustment — {name}",
+  "treasury.adjust.type": "Adjustment type",
+  "treasury.adjust.sobra": "Over",
+  "treasury.adjust.falta": "Short",
+  "treasury.adjust.amount": "Amount *",
+  "treasury.adjust.date": "Date *",
+  "treasury.adjust.reason": "Reason / description *",
+  "treasury.adjust.reasonPlaceholder": "E.g.: End-of-day count — difference detected",
+  "treasury.adjust.glHint": "Will be posted against account {code} — {name}.",
+  "treasury.adjust.submit": "Record adjustment",
+  "treasury.adjust.success": "Cash adjustment recorded",
+  "treasury.adjust.errAmount": "Enter a valid amount",
+  "treasury.adjust.errReason": "Provide a reason for the adjustment",
+  "treasury.adjust.faltaPrefix": "Cash short",
+  "treasury.adjust.sobraPrefix": "Cash over",
+
   // Treasury – Bank Reconciliation hardcoded strings
   "treasury.recon.noNewLines": "No new lines",
   "treasury.recon.allAlreadyImported": "All transactions were already imported.",

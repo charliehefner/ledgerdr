@@ -394,8 +394,8 @@ export function VehiclesView() {
               ].join(" · ");
               return (
                 <TableRow key={v.id}>
-                  <TableCell className="font-medium">{v.name}</TableCell>
-                  <TableCell>{v.brand || "—"}</TableCell>
+                  <TableCell className="font-medium">{v.brand || "—"}</TableCell>
+                  <TableCell>{v.model || "—"}</TableCell>
                   <TableCell>{typeLabel(v.vehicle_type)}</TableCell>
                   <TableCell className="text-right font-mono">{Number(v.current_km).toLocaleString()}</TableCell>
                   <TableCell>
@@ -406,11 +406,6 @@ export function VehiclesView() {
                     ) : (
                       <Badge variant="secondary" className="gap-1"><CheckCircle className="h-3 w-3" />{Math.round(s.remaining).toLocaleString()} km</Badge>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <span title={docTitle} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Paperclip className="h-3 w-3" />{docCount}/2
-                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge variant={v.is_active ? "default" : "secondary"}>

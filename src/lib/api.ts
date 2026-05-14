@@ -184,11 +184,15 @@ export async function fetchPaginatedTransactions(
   offset: number = 0,
   entityId?: string | null
 ): Promise<PaginatedResult<Transaction>> {
-  // Count query (lightweight, no data returned)
+  // Count query (lightweight, no data returned).
+  // Internal transfers (is_internal=true) belong to the Treasury > Internal Transfers
+  // tab and must not appear in the generic Recent Transactions list — otherwise the
+  // same transfer would show twice (once here and once in the transfers tab).
   let countQuery = supabase
     .from('transactions')
     .select('*', { count: 'exact', head: true })
-    .eq('is_void', false);
+    .eq('is_void', false)
+    .eq('is_internal', false);
   if (entityId) countQuery = countQuery.eq('entity_id', entityId);
   const { count, error: countError } = await countQuery;
   if (countError) {
@@ -200,7 +204,8 @@ export async function fetchPaginatedTransactions(
   let query = supabase
     .from('transactions')
     .select(TRANSACTION_SELECT)
-    .eq('is_void', false);
+    .eq('is_void', false)
+    .eq('is_internal', false);
   if (entityId) query = query.eq('entity_id', entityId);
 
   const { data, error } = await query

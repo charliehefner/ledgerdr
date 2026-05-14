@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, ArrowLeftRight, Pencil } from "lucide-react";
+import { CalendarIcon, ArrowLeftRight, Pencil, Ban } from "lucide-react";
 import { EditInternalTransferDialog } from "./EditInternalTransferDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,6 +87,7 @@ export function InternalTransfersView() {
         .from("transactions")
         .select("*")
         .eq("is_internal", true)
+        .eq("is_void", false)
         .in("transaction_direction", ["payment", "investment"])
         .order("transaction_date", { ascending: false })
         .limit(50);
@@ -148,18 +149,13 @@ export function InternalTransfersView() {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.rpc("create_transaction_with_ap_ar" as any, {
-        p_transaction_date: formatDateLocal(form.date!),
-        p_master_acct_code: "0000",
-        p_description: form.description || `Transferencia interna: ${acctName(form.from_account)} → ${acctName(form.to_account)}`,
-        p_currency: fromCur,
+      const { error } = await supabase.rpc("create_internal_transfer" as any, {
+        p_date: formatDateLocal(form.date!),
+        p_from_account: form.from_account,
+        p_to_account: form.to_account,
         p_amount: parseFloat(form.amount),
-        p_pay_method: form.from_account,
-        p_is_internal: true,
-        p_cost_center: "general",
-        p_transaction_direction: "payment",
-        p_destination_acct_code: form.to_account,
         p_destination_amount: isCrossCurrency ? parseFloat(form.dest_amount) : null,
+        p_description: form.description || `Transferencia interna: ${acctName(form.from_account)} → ${acctName(form.to_account)}`,
         p_entity_id: selectedEntityId || null,
       });
       if (error) throw error;
@@ -167,10 +163,28 @@ export function InternalTransfersView() {
       setForm(initialState);
       await refetchRecent();
       queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleVoid = async (row: any) => {
+    if (!confirm(`¿Anular esta transferencia interna por ${Number(row.amount).toLocaleString("es-DO")} ${row.currency}?`)) return;
+    try {
+      const { error } = await supabase.rpc("void_internal_transfer" as any, {
+        p_transaction_id: row.id,
+        p_reason: "Anulada desde Transferencias Internas",
+      });
+      if (error) throw error;
+      toast.success("Transferencia anulada");
+      await refetchRecent();
+      queryClient.invalidateQueries({ queryKey: ["existingTransactions"] });
+      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
     }
   };
 
@@ -392,6 +406,15 @@ export function InternalTransfersView() {
                         title={r._isPosted ? "Asiento ya posteado" : "Editar"}
                       >
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleVoid(r)}
+                        title="Anular"
+                      >
+                        <Ban className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
                   </TableRow>

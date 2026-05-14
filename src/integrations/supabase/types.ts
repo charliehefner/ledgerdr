@@ -7678,6 +7678,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_internal_transfer: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_description: string
+          p_destination_amount: number
+          p_entity_id: string
+          p_from_account: string
+          p_to_account: string
+        }
+        Returns: Json
+      }
       create_journal_from_transaction:
         | {
             Args: {
@@ -7891,6 +7903,10 @@ export type Database = {
       generate_due_recurring_journals: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      generate_internal_transfer_journal: {
+        Args: { p_transaction_id: string }
+        Returns: string
       }
       generate_tss_autodeterminacion: {
         Args: {
@@ -8233,6 +8249,10 @@ export type Database = {
       void_ap_ar_document: {
         Args: { p_document_id: string; p_reason?: string; p_user_id?: string }
         Returns: Json
+      }
+      void_internal_transfer: {
+        Args: { p_reason?: string; p_transaction_id: string }
+        Returns: undefined
       }
     }
     Enums: {

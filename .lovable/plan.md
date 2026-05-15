@@ -1,56 +1,75 @@
 ## Goal
 
-After a Nómina period is **closed**, the admin (and any user with payroll export permission) must always be able to re‑download the snapshot‑based PDF receipts (ZIP), even days or weeks later. The data is frozen in `payroll_snapshots` + `payroll_loan_deductions`, so there is no risk of values changing.
+Today, every press of "Confirmar y Guardar" decrements `employee_loans.remaining_payments` by 1, regardless of whether that period already had a deduction recorded. That's button-driven and unsafe (double-press = double advance).
 
-## Current behavior (what's wrong)
+The fix: make **payroll periods (dates)** the source of truth. A loan deducts exactly once per period in which `loan_date <= period.end_date`, and `remaining_payments` becomes a derived value computed from the actual rows in `payroll_loan_deductions`.
 
-In `src/components/hr/PayrollSummary.tsx` the "Recibos PDF" button is gated by:
+## How it should behave
 
-```ts
-canExportPayroll && payrollData.length > 0
+- A loan with `loan_date = 2026-04-20` and 6 payments will deduct in Nómina 96, 97, 98, 99, 100, 101 — exactly once each.
+- Pressing "Confirmar y Guardar" twice on the same period inserts the deduction row only once (ON CONFLICT DO NOTHING is already there) and **no longer touches** `employee_loans.remaining_payments`.
+- `remaining_payments` and `is_active` on `employee_loans` are kept in sync automatically by a trigger that counts rows in `payroll_loan_deductions`.
+- Reopening a closed period (which already deletes its `payroll_loan_deductions` rows) automatically restores the loan's remaining payments.
+
+## Changes
+
+### 1. Rewrite `calculate_payroll_for_period` (RPC)
+
+In the `IF p_commit THEN` block:
+
+- **Remove** the `UPDATE employee_loans SET remaining_payments = remaining_payments - 1, is_active = ...` block entirely.
+- Keep the `INSERT INTO payroll_loan_deductions … ON CONFLICT DO NOTHING`, but:
+  - Change the `WHERE` from `el.is_active = true AND el.remaining_payments > 0` to a **date-based eligibility check**:
+    - `el.loan_date <= v_period.end_date`
+    - `(SELECT COUNT(*) FROM payroll_loan_deductions pld WHERE pld.loan_id = el.id AND pld.period_id <> p_period_id) < el.number_of_payments`
+  - Recompute `payment_number` from that count + 1 (not from `remaining_payments`).
+
+In the **preview path** (`p_commit = false`), `v_loan_ded` should be calculated the same way (date eligibility + remaining payments derived from `payroll_loan_deductions` count, not from the mutable `remaining_payments` column). This keeps preview and commit consistent and prevents the preview from ever showing a deduction that the date logic would skip.
+
+### 2. New trigger to keep `employee_loans` in sync
+
+```text
+trigger: trg_sync_loan_remaining_payments
+on:      AFTER INSERT OR DELETE ON payroll_loan_deductions
+action:  UPDATE employee_loans
+         SET remaining_payments = number_of_payments - (count of pld rows for this loan_id),
+             is_active          = (number_of_payments - count) > 0,
+             updated_at         = now()
+         WHERE id = NEW.loan_id (or OLD.loan_id on DELETE)
 ```
 
-For a closed period, `payrollData` is rebuilt from `payroll_snapshots`, but two things break receipt generation later:
+This means `EmployeeLoansSection.tsx` and the rest of the UI keep working unchanged — `remaining_payments` still reflects reality, it's just computed from period activity instead of button presses.
 
-1. **Employee join is fragile.** `employees-with-bank` query filters `is_active = true`. Once a worker is deactivated, their snapshot row maps to `employee_name = "?"`, and `buildLegacyData()` falls back to a synthetic employee with `bank: null, bank_account_number: null, position: ""`. The receipt is generated but missing bank info / position.
-2. **Loans query is wrong source for closed periods.** `employee-loans-active` filters `is_active = true AND remaining_payments > 0`. After close, loans may be fully paid or deactivated, so even the fallback `loanDetails` disappears. We already prefer `payroll_loan_deductions` snapshots, but only if the period had snapshot rows written — older periods before that table existed will silently lose loan detail.
-3. **Button visibility/UX** — when a closed period is reopened in the UI, `payrollData` briefly becomes empty (snapshots query loading), disabling the button without explaining why. There is no visible "Period is closed — read‑only" hint near the receipts button.
+### 3. One-time backfill
 
-## Plan
+Recompute every loan from the truth:
 
-### 1. Make snapshots the single source of truth for closed‑period receipts
+```text
+UPDATE employee_loans el
+SET remaining_payments = el.number_of_payments
+                       - COALESCE((SELECT COUNT(*)
+                                   FROM payroll_loan_deductions pld
+                                   WHERE pld.loan_id = el.id), 0),
+    is_active = (el.number_of_payments
+                 - COALESCE((SELECT COUNT(*) FROM payroll_loan_deductions pld
+                             WHERE pld.loan_id = el.id), 0)) > 0,
+    updated_at = now();
+```
 
-In `PayrollSummary.tsx`:
+This corrects any loans whose counters drifted from prior double-commits.
 
-- Replace the `employees-with-bank` query (when `isClosed`) with a query that joins **all employees referenced in this period's snapshots**, regardless of `is_active`:
-  ```ts
-  supabase
-    .from("employees_safe")
-    .select("id, name, salary, position, bank, bank_account_number")
-    .in("id", snapshotEmployeeIds)
-  ```
-  Run this only when `isClosed && snapshots.length > 0`. Keep the existing active‑employee query for open periods.
+### 4. Frontend (small)
 
-- For loan details on closed periods, **only** use `payroll_loan_deductions` (snapshot table). Never fall back to live `employee_loans`. If a closed period has zero rows in `payroll_loan_deductions` but the snapshot's `loan_deduction > 0`, surface a single combined "Préstamo" line in the receipt with the total amount and no parcela counter (graceful degradation for legacy periods).
+`PayrollSummary.tsx` only **reads** `remaining_payments` for display — no changes needed. The two places that compute `payment_number` from `number_of_payments - remaining_payments + 1` will still produce correct values once the trigger keeps the column in sync.
 
-### 2. Always allow download for closed periods
+## Files / artifacts
 
-- Keep the receipts button enabled whenever `isClosed && snapshots.length > 0`, independent of `payrollData.length` (which depends on the employee join finishing). Show a small spinner state while the snapshot/employee queries are still loading.
-- Add a short helper line under the button when `isClosed`: *"Nómina cerrada — recibos disponibles para descarga."* (ES) / *"Payroll closed — receipts available for download."* (EN). Add the two strings to `src/i18n/es.ts` and `src/i18n/en.ts`.
+- **DB migration** (new): rewrite `calculate_payroll_for_period`, add `trg_sync_loan_remaining_payments` + its function, run the backfill.
+- **No frontend code changes** required.
 
-### 3. Keep PDF generator unchanged
+## Verification
 
-`src/lib/payrollReceipts.ts` already accepts the legacy data shape and works for both preview and snapshot inputs. No changes needed there. We only feed it cleaner data.
-
-### 4. Verify
-
-- Open a previously closed Nómina → confirm the "Recibos PDF" button is enabled and produces a ZIP with one PDF per employee (including any employee that has since been deactivated).
-- Spot‑check one PDF: name, position, bank, bank account, base pay, deductions, net pay, and parcela `N de M` for active loans all match the snapshot row.
-- Re‑open the page after a hard refresh and confirm the download still works without re‑previewing or re‑committing.
-
-## Files to change
-
-- `src/components/hr/PayrollSummary.tsx` — add closed‑period employee query, adjust button enablement, drop live‑loans fallback for closed, add status helper text.
-- `src/i18n/es.ts`, `src/i18n/en.ts` — two new strings.
-
-No DB migration required — `payroll_snapshots` and `payroll_loan_deductions` already store everything needed.
+1. On Nómina 97 (status `open`): press "Confirmar y Guardar" twice. Confirm `payroll_loan_deductions` row count for the period is unchanged after the 2nd press, and `employee_loans.remaining_payments` is unchanged.
+2. Inspect the loan currently active for the employee in Nómina 97's deduction: its `remaining_payments` after the trigger backfill should equal `number_of_payments - <real count of pld rows>`.
+3. Create a test loan with `loan_date` in the future of the current period — confirm it does **not** appear in preview or commit.
+4. Reopen a closed period (which deletes its pld rows) — confirm the loan's `remaining_payments` increases by 1 automatically via the trigger.

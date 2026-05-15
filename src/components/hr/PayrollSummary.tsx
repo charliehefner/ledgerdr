@@ -924,6 +924,12 @@ export function PayrollSummary({
         </div>
       </div>
 
+      {isClosed && hasCommittedSnapshots && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          {t("payrollSummary.closedReceiptsAvailable")}
+        </p>
+      )}
+
       {/* Status guard: committed snapshots notice */}
       {hasCommittedSnapshots && isOpen && !hasPreviewedOnce && (
         <Alert>

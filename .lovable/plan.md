@@ -1,56 +1,56 @@
-## Findings
+## Goal
 
-- Your BDI DOP → BHD DOP transfers were created in `transactions` as internal transfers, including the duplicate rows `664` and `665`.
-- The Internal Transfers list query currently does **not exclude voided rows**, so it can behave inconsistently after annulment.
-- Internal transfers are being inserted without any journal tied to them, so the cash movement is not actually reflected in accounting balances.
-- The normal Recent Transactions list currently includes internal transfer rows, which is why you saw them there instead of treating them as treasury-only movements.
-- Annulment uses the generic transaction dialog and `legacy_id`; it partially worked for row `664`, but internal transfers need their own safe void path because they are different from normal purchase/sale transactions.
+After a Nómina period is **closed**, the admin (and any user with payroll export permission) must always be able to re‑download the snapshot‑based PDF receipts (ZIP), even days or weeks later. The data is frozen in `payroll_snapshots` + `payroll_loan_deductions`, so there is no risk of values changing.
+
+## Current behavior (what's wrong)
+
+In `src/components/hr/PayrollSummary.tsx` the "Recibos PDF" button is gated by:
+
+```ts
+canExportPayroll && payrollData.length > 0
+```
+
+For a closed period, `payrollData` is rebuilt from `payroll_snapshots`, but two things break receipt generation later:
+
+1. **Employee join is fragile.** `employees-with-bank` query filters `is_active = true`. Once a worker is deactivated, their snapshot row maps to `employee_name = "?"`, and `buildLegacyData()` falls back to a synthetic employee with `bank: null, bank_account_number: null, position: ""`. The receipt is generated but missing bank info / position.
+2. **Loans query is wrong source for closed periods.** `employee-loans-active` filters `is_active = true AND remaining_payments > 0`. After close, loans may be fully paid or deactivated, so even the fallback `loanDetails` disappears. We already prefer `payroll_loan_deductions` snapshots, but only if the period had snapshot rows written — older periods before that table existed will silently lose loan detail.
+3. **Button visibility/UX** — when a closed period is reopened in the UI, `payrollData` briefly becomes empty (snapshots query loading), disabling the button without explaining why. There is no visible "Period is closed — read‑only" hint near the receipts button.
 
 ## Plan
 
-1. **Database/RPC fix for internal transfers**
-   - Add/replace a `generate_internal_transfer_journal(transaction_id)` database function.
-   - It will resolve the origin and destination `bank_accounts.chart_account_id` values.
-   - For same-currency transfers like BDI DOP → BHD DOP, it will create a balanced journal:
-     - Debit destination bank account.
-     - Credit origin bank account.
-   - For cross-currency transfers, it will use `destination_amount` for the destination debit and keep the source amount/currency fields intact.
-   - It will carry `entity_id` explicitly from the transaction to the journal.
+### 1. Make snapshots the single source of truth for closed‑period receipts
 
-2. **Create transfers through a dedicated internal-transfer RPC**
-   - Add `create_internal_transfer(...)` instead of using the generic `create_transaction_with_ap_ar` RPC.
-   - The RPC will validate:
-     - origin and destination are different,
-     - both bank accounts exist,
-     - amount is positive,
-     - cross-currency destination amount is present,
-     - user has permission for the target entity.
-   - It will insert the transaction and generate its journal in one backend transaction, so the UI cannot show “saved” while accounting remains unchanged.
+In `PayrollSummary.tsx`:
 
-3. **Add safe annulment for internal transfers**
-   - Add `void_internal_transfer(transaction_id, reason)`.
-   - It will mark the transfer as voided and, if a posted journal exists, rely on the existing reversal trigger; if only an unposted journal exists, remove it safely.
-   - This avoids using the generic normal-transaction annul flow for treasury transfers.
+- Replace the `employees-with-bank` query (when `isClosed`) with a query that joins **all employees referenced in this period's snapshots**, regardless of `is_active`:
+  ```ts
+  supabase
+    .from("employees_safe")
+    .select("id, name, salary, position, bank, bank_account_number")
+    .in("id", snapshotEmployeeIds)
+  ```
+  Run this only when `isClosed && snapshots.length > 0`. Keep the existing active‑employee query for open periods.
 
-4. **Fix list visibility**
-   - Internal Transfers recent list: show only `is_internal = true`, non-void transfers, destination not credit card, and selected `entity_id`.
-   - Normal Recent Transactions list: exclude internal transfers by default, so treasury transfers do not appear twice as normal purchases/payments.
-   - After saving or voiding, invalidate both recent transaction queries so the preview refreshes immediately.
+- For loan details on closed periods, **only** use `payroll_loan_deductions` (snapshot table). Never fall back to live `employee_loans`. If a closed period has zero rows in `payroll_loan_deductions` but the snapshot's `loan_deduction > 0`, surface a single combined "Préstamo" line in the receipt with the total amount and no parcela counter (graceful degradation for legacy periods).
 
-5. **Frontend changes**
-   - Update `InternalTransfersView.tsx` to call `create_internal_transfer` and show a clear success/error toast.
-   - Add an annul action in the Internal Transfers list for unposted or reversible transfers.
-   - Keep the edit dialog using `update_internal_transfer`, but ensure it regenerates the internal transfer journal after edits.
+### 2. Always allow download for closed periods
 
-6. **Audit current bad rows**
-   - Leave row `664` voided.
-   - Confirm row `665` is the valid transfer, generate its missing journal, and verify it appears in Internal Transfers but no longer appears in normal Recent Transactions.
+- Keep the receipts button enabled whenever `isClosed && snapshots.length > 0`, independent of `payrollData.length` (which depends on the employee join finishing). Show a small spinner state while the snapshot/employee queries are still loading.
+- Add a short helper line under the button when `isClosed`: *"Nómina cerrada — recibos disponibles para descarga."* (ES) / *"Payroll closed — receipts available for download."* (EN). Add the two strings to `src/i18n/es.ts` and `src/i18n/en.ts`.
 
-## Technical details
+### 3. Keep PDF generator unchanged
 
-- Database changes will be implemented as a migration with new/replaced backend functions only; no table schema changes are required.
-- Frontend changes are limited to:
-  - `src/components/accounting/InternalTransfersView.tsx`
-  - `src/lib/api.ts` or local query filtering used by Recent Transactions
-  - possibly `src/components/transactions/RecentTransactions.tsx` only if needed for cache/query keys.
-- I will validate by querying the affected transaction rows and their journals after the fix.
+`src/lib/payrollReceipts.ts` already accepts the legacy data shape and works for both preview and snapshot inputs. No changes needed there. We only feed it cleaner data.
+
+### 4. Verify
+
+- Open a previously closed Nómina → confirm the "Recibos PDF" button is enabled and produces a ZIP with one PDF per employee (including any employee that has since been deactivated).
+- Spot‑check one PDF: name, position, bank, bank account, base pay, deductions, net pay, and parcela `N de M` for active loans all match the snapshot row.
+- Re‑open the page after a hard refresh and confirm the download still works without re‑previewing or re‑committing.
+
+## Files to change
+
+- `src/components/hr/PayrollSummary.tsx` — add closed‑period employee query, adjust button enablement, drop live‑loans fallback for closed, add status helper text.
+- `src/i18n/es.ts`, `src/i18n/en.ts` — two new strings.
+
+No DB migration required — `payroll_snapshots` and `payroll_loan_deductions` already store everything needed.

@@ -1932,6 +1932,7 @@ export const en = {
   "payrollSummary.exportPdf": "Export to PDF",
   "payrollSummary.exportMonthly": "Export Full Month",
   "payrollSummary.receiptsPdf": "PDF Receipts",
+  "payrollSummary.closedReceiptsAvailable": "Payroll closed — receipts available for download.",
   "payrollSummary.closePeriod": "Close Period",
   "payrollSummary.committedNotice": "This payroll has already been committed. Data shown is read-only.",
   "payrollSummary.adminReRun": " As an administrator, you can re-run the preview if recalculation is needed.",

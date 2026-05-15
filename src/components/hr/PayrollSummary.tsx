@@ -116,10 +116,29 @@ export function PayrollSummary({
   // Read-only export & receipt download (Excel / PDF / Recibos PDF). Office included.
   const canExportPayroll = canManagePayroll || user?.role === "office";
 
-  // Fetch employees with bank info (needed for exports/receipts)
+  // Fetch employees with bank info (needed for exports/receipts).
+  // For OPEN periods: only active employees.
+  // For CLOSED periods: fetch all employees referenced in this period's snapshots,
+  // regardless of is_active, so receipts always have name/bank/position.
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees-with-bank", selectedEntityId],
+    queryKey: ["employees-with-bank", selectedEntityId, periodId, periodStatus],
     queryFn: async () => {
+      if (periodStatus === "closed") {
+        const { data: snapEmps, error: snapErr } = await supabase
+          .from("payroll_snapshots")
+          .select("employee_id")
+          .eq("period_id", periodId);
+        if (snapErr) throw snapErr;
+        const ids = Array.from(new Set((snapEmps ?? []).map((r) => r.employee_id)));
+        if (ids.length === 0) return [] as Employee[];
+        const { data, error } = await supabase
+          .from("employees_safe")
+          .select("id, name, salary, position, bank, bank_account_number")
+          .in("id", ids)
+          .order("name");
+        if (error) throw error;
+        return data as Employee[];
+      }
       let query: any = supabase
         .from("employees_safe")
         .select("id, name, salary, position, bank, bank_account_number")
@@ -329,21 +348,45 @@ export function PayrollSummary({
       const employee = employees.find((e) => e.id === p.employee_id);
       const employeeLoans = loans.filter((l) => l.employee_id === p.employee_id);
       const empSnaps = loanDeductionSnapshots.filter((s) => s.employee_id === p.employee_id);
-      // Prefer persisted snapshot rows (stable parcela N de M for closed/committed periods).
-      const loanDetails = empSnaps.length > 0
-        ? empSnaps.map((s) => ({
+      // Closed periods: only use persisted snapshot rows. If none exist (legacy
+      // periods written before payroll_loan_deductions), surface a single
+      // combined "Préstamo" line from the snapshot total — never fall back to
+      // live employee_loans, which may have been deactivated/paid since.
+      let loanDetails: { loan_amount: number; payment_amount: number; payment_number: number; total_payments: number }[];
+      if (isClosed) {
+        if (empSnaps.length > 0) {
+          loanDetails = empSnaps.map((s) => ({
             loan_amount: Number(s.loan_amount),
             payment_amount: Number(s.payment_amount),
             payment_number: s.payment_number,
             total_payments: s.total_payments,
-          }))
-        : employeeLoans.map((l) => ({
-            loan_amount: l.loan_amount,
-            payment_amount: l.payment_amount,
-            // Open period preview only — shows the installment about to be paid.
-            payment_number: l.number_of_payments - l.remaining_payments + 1,
-            total_payments: l.number_of_payments,
           }));
+        } else if (p.loan_deduction > 0) {
+          loanDetails = [{
+            loan_amount: 0,
+            payment_amount: p.loan_deduction,
+            payment_number: 0,
+            total_payments: 0,
+          }];
+        } else {
+          loanDetails = [];
+        }
+      } else {
+        // Open period: prefer snapshots if already committed, else live loans.
+        loanDetails = empSnaps.length > 0
+          ? empSnaps.map((s) => ({
+              loan_amount: Number(s.loan_amount),
+              payment_amount: Number(s.payment_amount),
+              payment_number: s.payment_number,
+              total_payments: s.total_payments,
+            }))
+          : employeeLoans.map((l) => ({
+              loan_amount: l.loan_amount,
+              payment_amount: l.payment_amount,
+              payment_number: l.number_of_payments - l.remaining_payments + 1,
+              total_payments: l.number_of_payments,
+            }));
+      }
       return {
         employee: employee ?? { id: p.employee_id, name: p.employee_name, salary: p.salary, position: "", bank: null, bank_account_number: null },
         regularHours: 0,
@@ -857,7 +900,16 @@ export function PayrollSummary({
           )}
 
           {canExportPayroll && (
-            <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
+            <Button
+              variant="outline"
+              onClick={handleGenerateReceipts}
+              disabled={
+                isGeneratingReceipts ||
+                (isClosed
+                  ? !hasCommittedSnapshots
+                  : payrollData.length === 0)
+              }
+            >
               {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
               {t("payrollSummary.receiptsPdf")}
             </Button>
@@ -871,6 +923,12 @@ export function PayrollSummary({
           )}
         </div>
       </div>
+
+      {isClosed && hasCommittedSnapshots && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          {t("payrollSummary.closedReceiptsAvailable")}
+        </p>
+      )}
 
       {/* Status guard: committed snapshots notice */}
       {hasCommittedSnapshots && isOpen && !hasPreviewedOnce && (

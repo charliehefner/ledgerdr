@@ -900,7 +900,16 @@ export function PayrollSummary({
           )}
 
           {canExportPayroll && (
-            <Button variant="outline" onClick={handleGenerateReceipts} disabled={isGeneratingReceipts || payrollData.length === 0}>
+            <Button
+              variant="outline"
+              onClick={handleGenerateReceipts}
+              disabled={
+                isGeneratingReceipts ||
+                (isClosed
+                  ? !hasCommittedSnapshots
+                  : payrollData.length === 0)
+              }
+            >
               {isGeneratingReceipts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
               {t("payrollSummary.receiptsPdf")}
             </Button>

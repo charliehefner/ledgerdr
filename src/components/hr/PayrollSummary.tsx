@@ -116,10 +116,29 @@ export function PayrollSummary({
   // Read-only export & receipt download (Excel / PDF / Recibos PDF). Office included.
   const canExportPayroll = canManagePayroll || user?.role === "office";
 
-  // Fetch employees with bank info (needed for exports/receipts)
+  // Fetch employees with bank info (needed for exports/receipts).
+  // For OPEN periods: only active employees.
+  // For CLOSED periods: fetch all employees referenced in this period's snapshots,
+  // regardless of is_active, so receipts always have name/bank/position.
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees-with-bank", selectedEntityId],
+    queryKey: ["employees-with-bank", selectedEntityId, periodId, periodStatus],
     queryFn: async () => {
+      if (periodStatus === "closed") {
+        const { data: snapEmps, error: snapErr } = await supabase
+          .from("payroll_snapshots")
+          .select("employee_id")
+          .eq("period_id", periodId);
+        if (snapErr) throw snapErr;
+        const ids = Array.from(new Set((snapEmps ?? []).map((r) => r.employee_id)));
+        if (ids.length === 0) return [] as Employee[];
+        const { data, error } = await supabase
+          .from("employees_safe")
+          .select("id, name, salary, position, bank, bank_account_number")
+          .in("id", ids)
+          .order("name");
+        if (error) throw error;
+        return data as Employee[];
+      }
       let query: any = supabase
         .from("employees_safe")
         .select("id, name, salary, position, bank, bank_account_number")

@@ -1933,6 +1933,7 @@ export const es = {
   "payrollSummary.exportPdf": "Exportar a PDF",
   "payrollSummary.exportMonthly": "Exportar Mes Completo",
   "payrollSummary.receiptsPdf": "Recibos PDF",
+  "payrollSummary.closedReceiptsAvailable": "Nómina cerrada — recibos disponibles para descarga.",
   "payrollSummary.closePeriod": "Cerrar Período",
   "payrollSummary.committedNotice": "Esta nómina ya fue comprometida. Los datos mostrados son de solo lectura.",
   "payrollSummary.adminReRun": " Como administrador, puede re-ejecutar la vista previa si necesita recalcular.",

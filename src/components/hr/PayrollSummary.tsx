@@ -348,21 +348,45 @@ export function PayrollSummary({
       const employee = employees.find((e) => e.id === p.employee_id);
       const employeeLoans = loans.filter((l) => l.employee_id === p.employee_id);
       const empSnaps = loanDeductionSnapshots.filter((s) => s.employee_id === p.employee_id);
-      // Prefer persisted snapshot rows (stable parcela N de M for closed/committed periods).
-      const loanDetails = empSnaps.length > 0
-        ? empSnaps.map((s) => ({
+      // Closed periods: only use persisted snapshot rows. If none exist (legacy
+      // periods written before payroll_loan_deductions), surface a single
+      // combined "Préstamo" line from the snapshot total — never fall back to
+      // live employee_loans, which may have been deactivated/paid since.
+      let loanDetails: { loan_amount: number; payment_amount: number; payment_number: number; total_payments: number }[];
+      if (isClosed) {
+        if (empSnaps.length > 0) {
+          loanDetails = empSnaps.map((s) => ({
             loan_amount: Number(s.loan_amount),
             payment_amount: Number(s.payment_amount),
             payment_number: s.payment_number,
             total_payments: s.total_payments,
-          }))
-        : employeeLoans.map((l) => ({
-            loan_amount: l.loan_amount,
-            payment_amount: l.payment_amount,
-            // Open period preview only — shows the installment about to be paid.
-            payment_number: l.number_of_payments - l.remaining_payments + 1,
-            total_payments: l.number_of_payments,
           }));
+        } else if (p.loan_deduction > 0) {
+          loanDetails = [{
+            loan_amount: 0,
+            payment_amount: p.loan_deduction,
+            payment_number: 0,
+            total_payments: 0,
+          }];
+        } else {
+          loanDetails = [];
+        }
+      } else {
+        // Open period: prefer snapshots if already committed, else live loans.
+        loanDetails = empSnaps.length > 0
+          ? empSnaps.map((s) => ({
+              loan_amount: Number(s.loan_amount),
+              payment_amount: Number(s.payment_amount),
+              payment_number: s.payment_number,
+              total_payments: s.total_payments,
+            }))
+          : employeeLoans.map((l) => ({
+              loan_amount: l.loan_amount,
+              payment_amount: l.payment_amount,
+              payment_number: l.number_of_payments - l.remaining_payments + 1,
+              total_payments: l.number_of_payments,
+            }));
+      }
       return {
         employee: employee ?? { id: p.employee_id, name: p.employee_name, salary: p.salary, position: "", bank: null, bank_account_number: null },
         regularHours: 0,

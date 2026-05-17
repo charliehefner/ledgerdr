@@ -574,13 +574,24 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
           const isUnmatched = seg.color === UNMATCHED_COLOR;
 
           map.addLayer({
+            id: `${layerId}-casing`,
+            type: "line",
+            source: sourceId,
+            paint: {
+              "line-color": "#ffffff",
+              "line-width": 7,
+              "line-opacity": 0.9,
+            },
+          });
+
+          map.addLayer({
             id: layerId,
             type: "line",
             source: sourceId,
             paint: {
               "line-color": seg.color,
-              "line-width": 3,
-              "line-opacity": 0.9,
+              "line-width": 5,
+              "line-opacity": 1,
               ...(isUnmatched ? { "line-dasharray": [2, 4] } : {}),
             } as any,
           });

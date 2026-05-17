@@ -23,8 +23,8 @@ const FARM_COLORS = [
 ];
 
 const IMPLEMENT_COLORS = [
-  "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
-  "#42d4f4", "#f032e6", "#bfef45", "#469990", "#9A6324",
+  "#e6194b", "#f032e6", "#f58231", "#ffe119", "#911eb4",
+  "#4363d8", "#42d4f4", "#00d084", "#ff7f50", "#7c3aed",
 ];
 
 const UNMATCHED_COLOR = "#999999";
@@ -527,6 +527,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         paint: {
           "line-color": ["get", "color"],
           "line-width": 2,
+          "line-opacity": isTrackMode ? 0.4 : 1,
         },
       });
 
@@ -573,13 +574,24 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
           const isUnmatched = seg.color === UNMATCHED_COLOR;
 
           map.addLayer({
+            id: `${layerId}-casing`,
+            type: "line",
+            source: sourceId,
+            paint: {
+              "line-color": "#ffffff",
+              "line-width": 7,
+              "line-opacity": 0.9,
+            },
+          });
+
+          map.addLayer({
             id: layerId,
             type: "line",
             source: sourceId,
             paint: {
               "line-color": seg.color,
-              "line-width": 3,
-              "line-opacity": 0.9,
+              "line-width": 5,
+              "line-opacity": 1,
               ...(isUnmatched ? { "line-dasharray": [2, 4] } : {}),
             } as any,
           });

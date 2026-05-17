@@ -23,8 +23,8 @@ const FARM_COLORS = [
 ];
 
 const IMPLEMENT_COLORS = [
-  "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
-  "#42d4f4", "#f032e6", "#bfef45", "#469990", "#9A6324",
+  "#e6194b", "#f032e6", "#f58231", "#ffe119", "#911eb4",
+  "#4363d8", "#42d4f4", "#00d084", "#ff7f50", "#7c3aed",
 ];
 
 const UNMATCHED_COLOR = "#999999";

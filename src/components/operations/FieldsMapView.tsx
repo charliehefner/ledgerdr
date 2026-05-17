@@ -527,6 +527,7 @@ export function FieldsMapView({ expanded, onExpandToggle }: FieldsMapViewProps) 
         paint: {
           "line-color": ["get", "color"],
           "line-width": 2,
+          "line-opacity": isTrackMode ? 0.4 : 1,
         },
       });
 
